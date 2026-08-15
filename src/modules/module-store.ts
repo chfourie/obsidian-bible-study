@@ -22,6 +22,14 @@ const manifestPath = (moduleId: string): string =>
 const bookPath = (moduleId: string, book: number): string =>
   `${moduleDir(moduleId)}/${String(book).padStart(3, '0')}.json`
 
+const parseOrNull = <T>(content: string): T | null => {
+  try {
+    return JSON.parse(content) as T
+  } catch {
+    return null
+  }
+}
+
 export class ModuleStore {
   constructor(private readonly dataDir: ModuleDataDir) {}
 
@@ -43,12 +51,12 @@ export class ModuleStore {
     const { book } = decodeVerseId(verseId)
     const content = await this.dataDir.readTextFile(bookPath(moduleId, book))
     if (content === null) return null
-    return (JSON.parse(content) as BookContent)[verseId] ?? null
+    return parseOrNull<BookContent>(content)?.[verseId] ?? null
   }
 
   async manifest(moduleId: string): Promise<ModuleManifest | null> {
     const content = await this.dataDir.readTextFile(manifestPath(moduleId))
-    return content === null ? null : (JSON.parse(content) as ModuleManifest)
+    return content === null ? null : parseOrNull<ModuleManifest>(content)
   }
 
   async deleteModule(moduleId: string): Promise<void> {

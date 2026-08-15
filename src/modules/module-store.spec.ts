@@ -164,6 +164,35 @@ describe('ModuleStore', () => {
     expect(manifests.map((manifest) => manifest.id)).toEqual(['web'])
   })
 
+  it('treats a corrupt manifest as absent', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(webModule())
+    dataDir.files.set('modules/web/manifest.json', '{"id": "we')
+
+    expect(await store.manifest('web')).toBeNull()
+  })
+
+  it('treats verses in a corrupt book file as absent', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(webModule())
+    dataDir.files.set('modules/web/043.json', 'not json')
+
+    expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBeNull()
+  })
+
+  it('skips modules with corrupt manifests when listing, keeping the rest', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(webModule())
+    const kjv = webModule()
+    kjv.manifest.id = 'kjv'
+    await store.saveModule(kjv)
+    dataDir.files.set('modules/kjv/manifest.json', '{"id": "kj')
+
+    const manifests = await store.installedManifests()
+
+    expect(manifests.map((manifest) => manifest.id)).toEqual(['web'])
+  })
+
   it('leaves no manifest behind when an install is interrupted mid-write', async () => {
     const { dataDir, store } = setup()
     const originalWrite = dataDir.writeTextFile.bind(dataDir)
