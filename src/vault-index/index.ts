@@ -1,0 +1,7 @@
+export * from './extract-occurrences'
+export * from './note-vault'
+export * from './obsidian-note-vault'
+export * from './occurrence'
+export * from './vault-index-feature'
+export * from './vault-indexer'
+export * from './vault-reference-index'

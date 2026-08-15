@@ -11,13 +11,13 @@ const DEFAULT_CHUNK_SIZE = 50
 const DEFAULT_DEBOUNCE_MS = 500
 
 const yieldToEventLoop = (): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, 0))
+  new Promise((resolve) => window.setTimeout(resolve, 0))
 
 export class VaultIndexer {
   readonly #chunkSize: number
   readonly #debounceMs: number
   readonly #yieldBetweenChunks: () => Promise<void>
-  readonly #pendingReindexes = new Map<string, ReturnType<typeof setTimeout>>()
+  readonly #pendingReindexes = new Map<string, number>()
 
   constructor(
     private readonly vault: NoteVault,
@@ -45,7 +45,7 @@ export class VaultIndexer {
   }
 
   stop(): void {
-    for (const pending of this.#pendingReindexes.values()) clearTimeout(pending)
+    for (const pending of this.#pendingReindexes.values()) window.clearTimeout(pending)
     this.#pendingReindexes.clear()
   }
 
@@ -53,7 +53,7 @@ export class VaultIndexer {
     this.#cancelPendingReindex(path)
     this.#pendingReindexes.set(
       path,
-      setTimeout(() => {
+      window.setTimeout(() => {
         this.#pendingReindexes.delete(path)
         void this.#indexNote(path)
       }, this.#debounceMs),
@@ -63,7 +63,7 @@ export class VaultIndexer {
   #cancelPendingReindex(path: string): void {
     const pending = this.#pendingReindexes.get(path)
     if (pending === undefined) return
-    clearTimeout(pending)
+    window.clearTimeout(pending)
     this.#pendingReindexes.delete(path)
   }
 
