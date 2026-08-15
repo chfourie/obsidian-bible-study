@@ -20,6 +20,16 @@ describe('SettingsStore', () => {
     expect(await store.loadSettings()).toEqual(DEFAULT_SETTINGS)
   })
 
+  it('defaults the annotation settings per the v1 spec', async () => {
+    const { store } = setup()
+
+    const settings = await store.loadSettings()
+
+    expect(settings.annotationsFolder).toBe('Annotations')
+    expect(settings.annotationTemplatePath).toBe(null)
+    expect(settings.annotationOrdering).toBe('created-oldest-first')
+  })
+
   it('merges stored data over defaults', async () => {
     const { store } = setup({ installedModuleIds: ['web'] })
 
