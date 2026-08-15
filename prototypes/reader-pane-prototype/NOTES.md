@@ -14,6 +14,11 @@ The original A/B/C variant carousel is gone. User verdict on round 1: single lay
 
 Shared everywhere: current-passage highlight (vv. 4–7), entry-context banner ("opened from `{John 15:4-7 web callout}`"), per-verse annotation (●, amber) / intersecting-note (◆n, blue) indicators, translation pills, copyright attribution line.
 
-## Verdict
+## Verdict (final — ticket #6 resolved)
 
-Three-toggle single layout confirmed (this revision *is* the verdict for the layout question). Still open: multi-translation stacked vs columns, indicator style, entry points, toggle defaults in settings. Delete this folder once ticket #6 closes.
+- Single layout (C's shell) with the three toggles above; per-toggle global defaults live in plugin settings, in-pane switching always available.
+- Multi-translation verse view: **stacked** (translation label + text, one under another).
+- Indicators: **as prototyped** — ● (annotation, amber) / ◆n (intersections, blue) trailing the verse text.
+- Entry points: nav icon on rendered `{reference}` (opens at that passage) **+ command palette entry + ribbon icon** (both open at last position).
+
+Prototype kept as the visual reference for spec assembly (#13); delete this folder when the map closes.
