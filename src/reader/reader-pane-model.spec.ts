@@ -83,6 +83,49 @@ const ref = (text: string): Reference => {
   return parsed.reference
 }
 
+describe('reader toggles', () => {
+  it('seeds the three toggles from the configured defaults', () => {
+    const model = modelWith({}, {
+      details: 'side-panel',
+      nav: 'breadcrumb',
+      layout: 'continuous',
+    })
+
+    expect(model.view.toggles).toEqual({
+      details: 'side-panel',
+      nav: 'breadcrumb',
+      layout: 'continuous',
+    })
+  })
+
+  it('switches each toggle independently and notifies subscribers', () => {
+    const model = modelWith()
+    let notified = 0
+    model.subscribe(() => notified++)
+
+    model.setToggle('details', 'side-panel')
+    model.setToggle('layout', 'continuous')
+
+    expect(model.view.toggles).toEqual({
+      details: 'side-panel',
+      nav: 'tree',
+      layout: 'continuous',
+    })
+    expect(notified).toBe(2)
+  })
+
+  it('stops notifying after unsubscribe', () => {
+    const model = modelWith()
+    let notified = 0
+    const unsubscribe = model.subscribe(() => notified++)
+
+    unsubscribe()
+    model.setToggle('nav', 'breadcrumb')
+
+    expect(notified).toBe(0)
+  })
+})
+
 describe('opening the reader at a reference', () => {
   it('loads the chapter containing the reference with per-verse rows', async () => {
     const model = modelWith()

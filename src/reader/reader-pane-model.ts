@@ -49,6 +49,7 @@ export type ReaderPaneView = {
   position: ReaderPosition
   rows: VerseRowView[]
   translations: TranslationPill[]
+  toggles: ReaderToggles
   banner: string | null
 }
 
@@ -73,12 +74,32 @@ export class ReaderPaneModel {
   #rows: VerseRowView[] = []
   #status: ReaderPaneView['status'] = 'loading'
   #installed: ModuleManifest[] = []
+  #toggles: ReaderToggles
+  readonly #listeners = new Set<() => void>()
 
   constructor(
     private readonly deps: ReaderPaneDeps,
     config: ReaderPaneConfig,
   ) {
     this.#translationId = config.translationId
+    this.#toggles = { ...config.toggles }
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener)
+    return () => this.#listeners.delete(listener)
+  }
+
+  #notify(): void {
+    this.#listeners.forEach((listener) => listener())
+  }
+
+  setToggle<Key extends keyof ReaderToggles>(
+    toggle: Key,
+    value: ReaderToggles[Key],
+  ): void {
+    this.#toggles = { ...this.#toggles, [toggle]: value }
+    this.#notify()
   }
 
   get view(): ReaderPaneView {
@@ -92,6 +113,7 @@ export class ReaderPaneModel {
         label: manifest.id.toUpperCase(),
         active: manifest.id === this.#translationId,
       })),
+      toggles: this.#toggles,
       banner:
         this.#entry === null
           ? null
