@@ -106,6 +106,8 @@ export class WorkspaceLeaf {
   view: unknown = null
 
   async setViewState(_state: unknown): Promise<void> {}
+
+  async loadIfDeferred(): Promise<void> {}
 }
 
 export abstract class ItemView {

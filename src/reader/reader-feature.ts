@@ -101,6 +101,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       await leaf.setViewState({ type: READER_VIEW_TYPE, active: true })
     }
     await workspace.revealLeaf(leaf)
+    await leaf.loadIfDeferred()
     if (leaf.view instanceof ReaderView) await action(leaf.view)
   }
 }

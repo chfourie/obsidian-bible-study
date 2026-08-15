@@ -203,6 +203,46 @@ describe('chapter navigation', () => {
   })
 })
 
+describe('overlapping loads', () => {
+  it('ignores a stale chapter load that resolves after a newer one', async () => {
+    let releaseChapter15 = (): void => {}
+    const gate = new Promise<void>((resolve) => {
+      releaseChapter15 = resolve
+    })
+    const texts: MockTexts = {
+      web: {
+        ...john15Texts().web,
+        [makeVerseId(43, 16, 1)]: 'I have spoken these things.',
+      },
+    }
+    const source = passageSourceOver(texts)
+    const model = modelWith({
+      passages: {
+        passage: async (reference, translationId) => {
+          const chapter15 = rangeContains(
+            reference.ranges[0],
+            makeVerseId(43, 15, 1),
+          )
+          if (chapter15) await gate
+          return source.passage(reference, translationId)
+        },
+      },
+    })
+
+    const stale = model.goTo(43, 15)
+    await new Promise((resolve) => window.setTimeout(resolve))
+    await model.goTo(43, 16)
+    releaseChapter15()
+    await stale
+
+    expect(model.view.position).toEqual({ book: 43, chapter: 16 })
+    expect(model.view.status).toBe('ok')
+    expect(model.view.rows.map((row) => row.segments[0].text)).toEqual([
+      'I have spoken these things.',
+    ])
+  })
+})
+
 describe('translation switching', () => {
   it('reloads the chapter in the newly selected translation', async () => {
     const model = modelWith({

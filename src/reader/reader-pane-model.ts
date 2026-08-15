@@ -111,6 +111,7 @@ export class ReaderPaneModel {
   #details: Record<number, VerseDetailsView> = {}
   #attribution: string | null = null
   #bannerDismissed = false
+  #loadToken = 0
   readonly #listeners = new Set<() => void>()
 
   constructor(
@@ -276,10 +277,13 @@ export class ReaderPaneModel {
   }
 
   async #loadChapter(): Promise<void> {
+    const token = ++this.#loadToken
     this.#status = 'loading'
     this.#rows = []
     this.#notify()
-    this.#installed = await this.deps.installedTranslations()
+    const installed = await this.deps.installedTranslations()
+    if (token !== this.#loadToken) return
+    this.#installed = installed
     this.#translationId ??= this.#installed[0]?.id ?? null
     if (this.#translationId === null) {
       this.#status = 'no-translation'
@@ -290,6 +294,7 @@ export class ReaderPaneModel {
       chapterReference(this.#position),
       this.#translationId,
     )
+    if (token !== this.#loadToken) return
     if (passage.status !== 'ok') {
       this.#status = 'unavailable'
       this.#attribution = null

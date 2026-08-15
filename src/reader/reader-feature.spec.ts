@@ -118,6 +118,27 @@ describe('ReaderFeature entry points', () => {
     expect(view.model.view.position).toEqual({ book: 1, chapter: 1 })
   })
 
+  it('loads a deferred reader leaf before navigating it', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const leaf = leaves[0]
+    const deferredView = leaf.view
+    leaf.view = {} as WorkspaceLeaf['view']
+    const loadIfDeferred = vi.fn(async () => {
+      leaf.view = deferredView
+    })
+    leaf.loadIfDeferred = loadIfDeferred
+
+    feature.openReference(ref('Genesis 1:1'), null)
+    await flushAsync()
+
+    expect(loadIfDeferred).toHaveBeenCalled()
+    const view = leaf.view as ReaderView
+    expect(view.model.view.position).toEqual({ book: 1, chapter: 1 })
+  })
+
   it('opens the command entry point at the last position', async () => {
     const { feature, leaves, commands } = harness()
     await feature.load()
