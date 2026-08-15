@@ -35,8 +35,27 @@ export type VerseRowView = {
   label: string
   segments: VerseSegment[]
   highlighted: boolean
+  expanded: boolean
   annotations: number
   mentions: number
+}
+
+export type TranslationRowView = {
+  id: string
+  label: string
+  text: string | null
+}
+
+export type NoteCardView = {
+  file: string
+  annotation: boolean
+}
+
+export type VerseDetailsView = {
+  verseId: number
+  title: string
+  translations: TranslationRowView[]
+  notes: NoteCardView[]
 }
 
 const singleVerseReference = (book: number, verseId: number): Reference => ({
@@ -57,6 +76,8 @@ export type ReaderPaneView = {
   rows: VerseRowView[]
   translations: TranslationPill[]
   toggles: ReaderToggles
+  selectedVerseId: number | null
+  details: Record<number, VerseDetailsView>
   banner: string | null
 }
 
@@ -82,6 +103,9 @@ export class ReaderPaneModel {
   #status: ReaderPaneView['status'] = 'loading'
   #installed: ModuleManifest[] = []
   #toggles: ReaderToggles
+  #selectedVerseId: number | null = null
+  #expanded = new Set<number>()
+  #details: Record<number, VerseDetailsView> = {}
   readonly #listeners = new Set<() => void>()
 
   constructor(
@@ -121,6 +145,8 @@ export class ReaderPaneModel {
         active: manifest.id === this.#translationId,
       })),
       toggles: this.#toggles,
+      selectedVerseId: this.#selectedVerseId,
+      details: this.#details,
       banner:
         this.#entry === null
           ? null
@@ -136,7 +162,73 @@ export class ReaderPaneModel {
     this.#position = { book, chapter }
     if (translationId !== null) this.#translationId = translationId
     this.#entry = reference
+    this.#resetSelection()
     await this.#loadChapter()
+  }
+
+  async selectVerse(verseId: number): Promise<void> {
+    this.#selectedVerseId = verseId
+    if (this.#toggles.details === 'inline') {
+      if (this.#expanded.has(verseId)) {
+        this.#expanded.delete(verseId)
+        this.#refreshRowExpansion()
+        return
+      }
+      this.#expanded.add(verseId)
+      this.#refreshRowExpansion()
+    } else {
+      this.#notify()
+    }
+    if (this.#details[verseId] === undefined) await this.#loadDetails(verseId)
+  }
+
+  #resetSelection(): void {
+    this.#selectedVerseId = null
+    this.#expanded.clear()
+    this.#details = {}
+  }
+
+  #refreshRowExpansion(): void {
+    this.#rows = this.#rows.map((row) => ({
+      ...row,
+      expanded: this.#expanded.has(row.verseId),
+    }))
+    this.#notify()
+  }
+
+  async #loadDetails(verseId: number): Promise<void> {
+    const reference = singleVerseReference(this.#position.book, verseId)
+    const translations = await Promise.all(
+      this.#installed.map(async (installed): Promise<TranslationRowView> => {
+        const passage = await this.deps.passages.passage(
+          reference,
+          installed.id,
+        )
+        return {
+          id: installed.id,
+          label: installed.id.toUpperCase(),
+          text:
+            passage.status === 'ok'
+              ? passage.verses[0].segments
+                  .map((segment) => segment.text)
+                  .join('')
+              : null,
+        }
+      }),
+    )
+    this.#details = {
+      ...this.#details,
+      [verseId]: {
+        verseId,
+        title: formatReference(reference),
+        translations,
+        notes: this.deps.intersecting(reference).map((occurrence) => ({
+          file: occurrence.file,
+          annotation: occurrence.annotation,
+        })),
+      },
+    }
+    this.#notify()
   }
 
   async #loadChapter(): Promise<void> {
@@ -169,6 +261,7 @@ export class ReaderPaneModel {
           this.#entry.ranges.some((range) =>
             rangeContains(range, verse.verseId),
           ),
+        expanded: this.#expanded.has(verse.verseId),
         annotations: groups.filter((occurrence) => occurrence.annotation)
           .length,
         mentions: groups.filter((occurrence) => !occurrence.annotation).length,

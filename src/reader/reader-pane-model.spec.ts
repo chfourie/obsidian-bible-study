@@ -4,6 +4,7 @@ import {
   enumerateVerseIds,
   makeVerseId,
   parseReference,
+  rangeContains,
   type Reference,
 } from '../reference'
 import type { Passage, PassageSource } from '../rendering'
@@ -87,6 +88,64 @@ const group = (file: string, annotation: boolean): OccurrenceGroup => ({
   file,
   annotation,
   occurrences: [],
+})
+
+describe('verse details', () => {
+  const verse4 = makeVerseId(43, 15, 4)
+  const twoTranslations = (): Partial<ReaderPaneDeps> => ({
+    passages: passageSourceOver({
+      ...john15Texts(),
+      kjv: { [makeVerseId(43, 15, 1)]: 'I am the true vine (KJV).' },
+    }),
+    installedTranslations: async () => [manifest('web'), manifest('kjv')],
+    intersecting: (reference) =>
+      reference.ranges.some((range) => rangeContains(range, verse4))
+        ? [group('Annotations/John 15.4.md', true)]
+        : [],
+  })
+
+  it('expands a clicked verse inline with every installed translation stacked', async () => {
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+
+    expect(model.view.rows[3].expanded).toBe(true)
+    expect(model.view.details[verse4]).toEqual({
+      verseId: verse4,
+      title: 'John 15:4',
+      translations: [
+        { id: 'web', label: 'WEB', text: 'Remain in me.' },
+        { id: 'kjv', label: 'KJV', text: null },
+      ],
+      notes: [{ file: 'Annotations/John 15.4.md', annotation: true }],
+    })
+  })
+
+  it('collapses an expanded verse when clicked again', async () => {
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+    await model.selectVerse(verse4)
+
+    expect(model.view.rows[3].expanded).toBe(false)
+  })
+
+  it('selects instead of expanding when details show in the side panel', async () => {
+    const model = modelWith(twoTranslations(), {
+      ...DEFAULT_TOGGLES,
+      details: 'side-panel',
+    })
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+    await model.selectVerse(verse4)
+
+    expect(model.view.selectedVerseId).toBe(verse4)
+    expect(model.view.rows[3].expanded).toBe(false)
+    expect(model.view.details[verse4]?.translations).toHaveLength(2)
+  })
 })
 
 describe('verse indicators', () => {
