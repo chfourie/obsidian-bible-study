@@ -3,9 +3,15 @@
 export type BibleStudySettings = {
   installedModuleIds: string[]
   defaultTranslationId: string | null
+  readerDetailsDefault: 'inline' | 'side-panel'
+  readerNavDefault: 'tree' | 'breadcrumb'
+  readerLayoutDefault: 'verse-per-line' | 'continuous'
 }
 
 export const DEFAULT_SETTINGS: BibleStudySettings = {
   installedModuleIds: [],
   defaultTranslationId: null,
+  readerDetailsDefault: 'inline',
+  readerNavDefault: 'tree',
+  readerLayoutDefault: 'verse-per-line',
 }

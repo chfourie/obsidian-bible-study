@@ -3,10 +3,16 @@ import path from 'node:path'
 
 export default defineConfig({
   resolve: {
-    alias: {
-      obsidian: path.resolve(__dirname, 'tests/mocks/obsidian.ts'),
-      src: path.resolve(__dirname, 'src'),
-    },
+    alias: [
+      // Svelte components are untested view glue; specs exercise the models
+      // behind them, so any .svelte import resolves to an inert stub.
+      {
+        find: /^.+\.svelte$/,
+        replacement: path.resolve(__dirname, 'tests/mocks/svelte-component.ts'),
+      },
+      { find: 'obsidian', replacement: path.resolve(__dirname, 'tests/mocks/obsidian.ts') },
+      { find: 'src', replacement: path.resolve(__dirname, 'src') },
+    ],
   },
   test: {
     environment: 'jsdom',

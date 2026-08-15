@@ -100,6 +100,23 @@ export class MarkdownView {
   previewMode: { rerender: (full?: boolean) => void } = { rerender: () => {} }
 }
 
+// Just enough of WorkspaceLeaf/ItemView for the reader pane: real classes so
+// `instanceof` and subclassing work; specs drive `setViewState` themselves.
+export class WorkspaceLeaf {
+  view: unknown = null
+
+  async setViewState(_state: unknown): Promise<void> {}
+}
+
+export abstract class ItemView {
+  contentEl: HTMLElement = document.createElement('div')
+
+  constructor(readonly leaf: WorkspaceLeaf) {}
+
+  abstract getViewType(): string
+  abstract getDisplayText(): string
+}
+
 export class Plugin {
   constructor(
     public app: App,
