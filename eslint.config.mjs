@@ -19,6 +19,7 @@ export default defineConfig([
       'tests/',
       'scripts/',
       '*.mjs',
+      'vitest.config.ts',
     ],
   },
   ...obsidianmd.configs.recommended,

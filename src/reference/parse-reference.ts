@@ -66,14 +66,18 @@ const parseVerseSpec = (bookId: number, spec: string): Reference | null => {
     const match = SEGMENT_PATTERN.exec(segment)
     if (!match) return null
     const [, startChapter, startVerse, endChapter, endVerse] = match
-    const chapter = startChapter ? Number(startChapter) : currentChapter
+    const chapter: number | null = startChapter
+      ? Number(startChapter)
+      : currentChapter
     if (chapter === null) return null
     const startId = verseIdAt(bookId, chapter, Number(startVerse))
     if (startId === null) return null
     currentChapter = chapter
     let endId = startId
     if (endVerse) {
-      const rangeEndChapter = endChapter ? Number(endChapter) : currentChapter
+      const rangeEndChapter: number = endChapter
+        ? Number(endChapter)
+        : currentChapter
       const id = verseIdAt(bookId, rangeEndChapter, Number(endVerse))
       if (id === null || id < startId) return null
       endId = id
