@@ -1,9 +1,11 @@
-import type { BookContent, ModuleManifest } from '../modules'
+import type { BookContent, ModuleManifest, VerseContent } from '../modules'
+import { isTaggedVerse } from '../modules'
 import { enumerateVerseIds, type Reference } from '../reference'
 
 export type VerseSegment = {
   text: string
   redLetter: boolean
+  strongs?: string[]
 }
 
 export type PassageVerse = {
@@ -34,6 +36,26 @@ export type PassageStore = {
   bookContent(moduleId: string, book: number): Promise<BookContent | null>
 }
 
+const verseSegments = (verse: VerseContent): VerseSegment[] => {
+  if (!isTaggedVerse(verse)) return [{ text: verse, redLetter: false }]
+  const segments: VerseSegment[] = []
+  let cursor = 0
+  const orderedTags = [...verse.tags].sort((a, b) => a.start - b.start)
+  for (const tag of orderedTags) {
+    if (tag.start > cursor)
+      segments.push({ text: verse.text.slice(cursor, tag.start), redLetter: false })
+    segments.push({
+      text: verse.text.slice(tag.start, tag.end),
+      redLetter: false,
+      strongs: tag.strongs,
+    })
+    cursor = tag.end
+  }
+  if (cursor < verse.text.length)
+    segments.push({ text: verse.text.slice(cursor), redLetter: false })
+  return segments
+}
+
 const attributionFor = (manifest: ModuleManifest): string | null => {
   const license = manifest.license.trim()
   if (license === '' || /^public domain$/i.test(license)) return null
@@ -54,9 +76,9 @@ export class ModulePassageSource implements PassageSource {
     const verses: PassageVerse[] = []
     for (const range of reference.ranges) {
       for (const verseId of enumerateVerseIds(range)) {
-        const text = content[verseId]
-        if (text === undefined) continue
-        verses.push({ verseId, segments: [{ text, redLetter: false }] })
+        const verse = content[verseId]
+        if (verse === undefined) continue
+        verses.push({ verseId, segments: verseSegments(verse) })
       }
     }
     if (verses.length === 0) return { status: 'unavailable' }

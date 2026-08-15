@@ -100,6 +100,42 @@ describe('ModulePassageSource', () => {
     })
   })
 
+  it('splits a Strong-tagged verse into segments carrying their tags', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => ({
+        ...webManifest('Public Domain'),
+        id: 'bsb',
+        capabilities: { strongsTagged: true },
+      }),
+      bookContent: async () => ({
+        [john(15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          tags: [
+            { start: 0, end: 6, strongs: ['G3306'] },
+            { start: 10, end: 12, strongs: ['G1473'] },
+          ],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:4'), 'bsb')
+
+    expect(passage).toMatchObject({
+      status: 'ok',
+      verses: [
+        {
+          verseId: john(15, 4),
+          segments: [
+            { text: 'Remain', redLetter: false, strongs: ['G3306'] },
+            { text: ' in ', redLetter: false },
+            { text: 'Me', redLetter: false, strongs: ['G1473'] },
+            { text: ', and I in you.', redLetter: false },
+          ],
+        },
+      ],
+    })
+  })
+
   it('shows no attribution for public domain or unlicensed modules', async () => {
     const publicDomain = await setup('Public Domain').passage(
       ref('John 15:4'),
