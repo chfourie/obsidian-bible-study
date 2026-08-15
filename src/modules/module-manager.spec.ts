@@ -4,7 +4,14 @@ import { makeVerseId } from '../reference'
 import type { ModuleDataDir } from './module-data-dir'
 import { ChecksumMismatchError, ModuleManager } from './module-manager'
 import { ModuleStore } from './module-store'
-import type { GetBibleTranslation } from './normalize-getbible-translation'
+import type {
+  GetBibleTranslation,
+  NormalizedModule,
+} from './normalize-getbible-translation'
+import type {
+  PrebuiltModuleDownload,
+  PrebuiltModuleSource,
+} from './prebuilt-module-source'
 import type {
   TranslationDownload,
   TranslationSource,
@@ -88,6 +95,46 @@ class FakeTranslationSource implements TranslationSource {
   }
 }
 
+const bsbModule = (): NormalizedModule => ({
+  manifest: {
+    id: 'bsb',
+    name: 'Berean Standard Bible',
+    language: 'English',
+    license: 'Public Domain',
+    source: 'https://example.com/bsb-module.json',
+    sourceChecksum: 'sha-bsb-1',
+    formatVersion: 1,
+    capabilities: { strongsTagged: true },
+  },
+  books: new Map([
+    [
+      43,
+      {
+        [makeVerseId(43, 15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          tags: [{ start: 0, end: 6, strongs: ['G3306'] }],
+        },
+      },
+    ],
+  ]),
+})
+
+class FakePrebuiltSource implements PrebuiltModuleSource {
+  download: PrebuiltModuleDownload = {
+    module: bsbModule(),
+    checksum: 'sha-bsb-1',
+  }
+  published: string | null = 'sha-bsb-1'
+
+  async fetchModule(): Promise<PrebuiltModuleDownload> {
+    return this.download
+  }
+
+  async fetchChecksum(): Promise<string | null> {
+    return this.published
+  }
+}
+
 const inMemorySettingsStore = () => {
   let data: unknown = null
   return new SettingsStore({
@@ -102,8 +149,11 @@ const setup = () => {
   const source = new FakeTranslationSource()
   const store = new ModuleStore(new InMemoryModuleDataDir())
   const settingsStore = inMemorySettingsStore()
-  const manager = new ModuleManager(source, store, settingsStore)
-  return { source, store, settingsStore, manager }
+  const prebuilt = new FakePrebuiltSource()
+  const manager = new ModuleManager(source, store, settingsStore, {
+    bsb: prebuilt,
+  })
+  return { source, store, settingsStore, prebuilt, manager }
 }
 
 describe('ModuleManager download', () => {
@@ -157,6 +207,57 @@ describe('ModuleManager download', () => {
     const manifest = await manager.downloadModule('web')
 
     expect(manifest.sourceChecksum).toBe('sha-web-1')
+  })
+})
+
+describe('ModuleManager prebuilt modules', () => {
+  it('installs a prebuilt tagged module and records its id', async () => {
+    const { store, settingsStore, manager } = setup()
+
+    const manifest = await manager.downloadModule('bsb')
+
+    expect(manifest.capabilities.strongsTagged).toBe(true)
+    expect(await store.verseText('bsb', makeVerseId(43, 15, 4))).toBe(
+      'Remain in Me, and I in you.',
+    )
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'bsb',
+    ])
+  })
+
+  it('rejects a prebuilt download whose bytes do not match the published checksum', async () => {
+    const { store, prebuilt, manager } = setup()
+    prebuilt.published = 'sha-bsb-2'
+
+    await expect(manager.downloadModule('bsb')).rejects.toBeInstanceOf(
+      ChecksumMismatchError,
+    )
+    expect(await store.manifest('bsb')).toBeNull()
+  })
+
+  it('installs a prebuilt module when no published checksum exists', async () => {
+    const { prebuilt, manager } = setup()
+    prebuilt.published = null
+
+    const manifest = await manager.downloadModule('bsb')
+
+    expect(manifest.id).toBe('bsb')
+  })
+
+  it('reports a prebuilt module update when its published checksum changes', async () => {
+    const { prebuilt, manager } = setup()
+    await manager.downloadModule('bsb')
+
+    prebuilt.published = 'sha-bsb-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['bsb'])
+  })
+
+  it('reports no prebuilt update when checksums still match', async () => {
+    const { manager } = setup()
+    await manager.downloadModule('bsb')
+
+    expect(await manager.modulesWithUpdates()).toEqual([])
   })
 })
 
