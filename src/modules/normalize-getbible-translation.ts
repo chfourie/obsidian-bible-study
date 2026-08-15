@@ -1,4 +1,4 @@
-import { makeVerseId } from '../reference'
+import { BOOK_COUNT, isValidVerseId, makeVerseId } from '../reference'
 import {
   MODULE_FORMAT_VERSION,
   type ModuleManifest,
@@ -50,11 +50,12 @@ export const normalizeGetBibleTranslation = (
 ): NormalizedModule => {
   const books = new Map<number, BookContent>()
   for (const book of translation.books) {
+    if (book.nr < 1 || book.nr > BOOK_COUNT) continue
     const content: BookContent = {}
     for (const chapter of book.chapters) {
       for (const verse of chapter.verses) {
-        content[makeVerseId(book.nr, verse.chapter, verse.verse)] =
-          verse.text.trim()
+        const verseId = makeVerseId(book.nr, verse.chapter, verse.verse)
+        if (isValidVerseId(verseId)) content[verseId] = verse.text.trim()
       }
     }
     books.set(book.nr, content)

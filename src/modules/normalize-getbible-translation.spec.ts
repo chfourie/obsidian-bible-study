@@ -68,6 +68,38 @@ describe('normalizeGetBibleTranslation', () => {
     })
   })
 
+  it('drops verses and books that fall outside the canonical grid', () => {
+    const fixture = webFixture()
+    fixture.books[0].chapters[0].verses.push({
+      chapter: 15,
+      verse: 999,
+      name: 'John 15:999',
+      text: 'Beyond the grid.',
+    })
+    fixture.books.push({
+      nr: 67,
+      name: 'Tobit',
+      chapters: [
+        {
+          chapter: 1,
+          name: 'Tobit 1',
+          verses: [
+            { chapter: 1, verse: 1, name: 'Tobit 1:1', text: 'Apocryphal.' },
+          ],
+        },
+      ],
+    })
+
+    const normalized = normalizeGetBibleTranslation(fixture, {
+      source: 'https://api.getbible.net/v2/web.json',
+      sourceChecksum: 'abc123',
+    })
+
+    expect(normalized.books.has(67)).toBe(false)
+    expect(normalized.books.get(43)?.[makeVerseId(43, 15, 999)]).toBeUndefined()
+    expect(normalized.books.get(43)?.[makeVerseId(43, 15, 4)]).toBeDefined()
+  })
+
   it('keys each verse text by canonical verse id within its book', () => {
     const normalized = normalizeGetBibleTranslation(webFixture(), {
       source: 'https://api.getbible.net/v2/web.json',
