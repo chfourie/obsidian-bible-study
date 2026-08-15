@@ -3,6 +3,7 @@ import {
   DEFAULT_SETTINGS,
   type BibleStudySettings,
 } from './bible-study-settings.type'
+import { applyTranslationBootstrap } from './bootstrap-translations'
 
 type SettingsData = Pick<Plugin, 'loadData' | 'saveData'>
 
@@ -27,7 +28,9 @@ export class SettingsStore {
   async updateSettings(
     update: (settings: BibleStudySettings) => BibleStudySettings,
   ): Promise<BibleStudySettings> {
-    const settings = update(await this.loadSettings())
+    const settings = applyTranslationBootstrap(
+      update(await this.loadSettings()),
+    )
     await this.plugin.saveData(settings)
     this.#listeners.forEach((listener) => listener(settings))
     return settings

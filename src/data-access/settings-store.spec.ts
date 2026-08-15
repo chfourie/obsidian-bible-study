@@ -65,6 +65,34 @@ describe('SettingsStore', () => {
     expect(seen).toEqual([updated])
   })
 
+  it('bootstraps the default and fallback translations on every update', async () => {
+    const { store } = setup()
+
+    const updated = await store.updateSettings((settings) => ({
+      ...settings,
+      installedModuleIds: ['web'],
+    }))
+
+    expect(updated.defaultTranslationId).toBe('web')
+    expect(updated.fallbackTranslationId).toBe('web')
+  })
+
+  it('unsets the translation pickers when the last module is deleted', async () => {
+    const { store } = setup({
+      installedModuleIds: ['web'],
+      defaultTranslationId: 'web',
+      fallbackTranslationId: 'web',
+    })
+
+    const updated = await store.updateSettings((settings) => ({
+      ...settings,
+      installedModuleIds: [],
+    }))
+
+    expect(updated.defaultTranslationId).toBe(null)
+    expect(updated.fallbackTranslationId).toBe(null)
+  })
+
   it('applies updates on top of the latest stored data', async () => {
     const { store } = setup({ installedModuleIds: ['web'] })
 

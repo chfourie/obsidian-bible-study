@@ -7,6 +7,8 @@ export type BibleStudySettings = {
   defaultTranslationId: string | null
   fallbackTranslationId: string | null
   apiBibleKey: string | null
+  enabledOnlineTranslationIds: string[]
+  languageFilter: string
   readerDetailsDefault: 'inline' | 'side-panel'
   readerNavDefault: 'tree' | 'breadcrumb'
   readerLayoutDefault: 'verse-per-line' | 'continuous'
@@ -21,6 +23,8 @@ export const DEFAULT_SETTINGS: BibleStudySettings = {
   defaultTranslationId: null,
   fallbackTranslationId: null,
   apiBibleKey: null,
+  enabledOnlineTranslationIds: [],
+  languageFilter: 'English',
   readerDetailsDefault: 'inline',
   readerNavDefault: 'tree',
   readerLayoutDefault: 'verse-per-line',
