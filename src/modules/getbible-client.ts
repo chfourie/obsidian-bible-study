@@ -22,6 +22,18 @@ const sha1Hex = async (text: string): Promise<string> => {
     .join('')
 }
 
+export type DownloadableTranslation = {
+  id: string
+  name: string
+  language: string
+}
+
+type CatalogEntry = {
+  abbreviation?: string
+  translation?: string
+  language?: string
+}
+
 export class GetBibleClient implements TranslationSource {
   constructor(private readonly fetchText: TextTransport = requestUrlTransport) {}
 
@@ -33,6 +45,16 @@ export class GetBibleClient implements TranslationSource {
       checksum: await sha1Hex(raw),
       url,
     }
+  }
+
+  async fetchAvailableTranslations(): Promise<DownloadableTranslation[]> {
+    const raw = await this.fetchText(`${GETBIBLE_BASE_URL}/translations.json`)
+    const catalog = JSON.parse(raw) as Record<string, CatalogEntry>
+    return Object.entries(catalog).map(([id, entry]) => ({
+      id,
+      name: entry.translation ?? id,
+      language: entry.language ?? '',
+    }))
   }
 
   async fetchChecksums(): Promise<Record<string, string>> {

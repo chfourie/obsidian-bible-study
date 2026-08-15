@@ -26,6 +26,21 @@ describe('GetBibleClient', () => {
     expect(download.url).toBe('https://api.getbible.net/v2/web.json')
   })
 
+  it('lists the downloadable translations with name and language', async () => {
+    const client = new GetBibleClient(
+      fakeTransport({
+        'https://api.getbible.net/v2/translations.json':
+          '{"web":{"abbreviation":"web","translation":"World English Bible","language":"English"},' +
+          '"aov":{"abbreviation":"aov","translation":"Ou Vertaling","language":"Afrikaans"}}',
+      }),
+    )
+
+    expect(await client.fetchAvailableTranslations()).toEqual([
+      { id: 'web', name: 'World English Bible', language: 'English' },
+      { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
+    ])
+  })
+
   it('fetches the published checksums for all translations', async () => {
     const client = new GetBibleClient(
       fakeTransport({
