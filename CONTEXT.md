@@ -45,7 +45,7 @@ One appearance of a reference at a position in a vault note (in the body or in a
 A vault note dedicated to commenting on a reference, with the reference in its frontmatter as source of truth. Indexed like any note but always surfaced in the reader beside its verses.
 
 ### Tagged Translation
-A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently KJV is the only one; the capability is per-translation, not KJV-specific.
+A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB is the only one (built from the public-domain Berean word-level tables); the capability is per-translation, not BSB-specific.
 
 ### Strong's Dictionaries
 The shared dictionary module (STEPBible TBESH/TBESG, CC BY 4.0) mapping Strong's numbers to lemma, transliteration, gloss, and definition. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
