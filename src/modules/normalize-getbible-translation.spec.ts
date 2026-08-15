@@ -50,6 +50,24 @@ const webFixture = (): GetBibleTranslation => ({
 })
 
 describe('normalizeGetBibleTranslation', () => {
+  it('builds the module manifest from translation metadata and source info', () => {
+    const normalized = normalizeGetBibleTranslation(webFixture(), {
+      source: 'https://api.getbible.net/v2/web.json',
+      sourceChecksum: 'abc123',
+    })
+
+    expect(normalized.manifest).toEqual({
+      id: 'web',
+      name: 'World English Bible',
+      language: 'English',
+      license: 'Public Domain',
+      source: 'https://api.getbible.net/v2/web.json',
+      sourceChecksum: 'abc123',
+      formatVersion: 1,
+      capabilities: { strongsTagged: false },
+    })
+  })
+
   it('keys each verse text by canonical verse id within its book', () => {
     const normalized = normalizeGetBibleTranslation(webFixture(), {
       source: 'https://api.getbible.net/v2/web.json',

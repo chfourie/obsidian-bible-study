@@ -1,4 +1,8 @@
 import { makeVerseId } from '../reference'
+import {
+  MODULE_FORMAT_VERSION,
+  type ModuleManifest,
+} from './module-manifest'
 
 export type GetBibleVerse = {
   chapter: number
@@ -31,6 +35,7 @@ export type GetBibleTranslation = {
 export type BookContent = Record<number, string>
 
 export type NormalizedModule = {
+  manifest: ModuleManifest
   books: Map<number, BookContent>
 }
 
@@ -41,7 +46,7 @@ export type SourceInfo = {
 
 export const normalizeGetBibleTranslation = (
   translation: GetBibleTranslation,
-  _sourceInfo: SourceInfo,
+  sourceInfo: SourceInfo,
 ): NormalizedModule => {
   const books = new Map<number, BookContent>()
   for (const book of translation.books) {
@@ -54,5 +59,17 @@ export const normalizeGetBibleTranslation = (
     }
     books.set(book.nr, content)
   }
-  return { books }
+  return {
+    manifest: {
+      id: translation.abbreviation,
+      name: translation.translation,
+      language: translation.language,
+      license: translation.distribution_license,
+      source: sourceInfo.source,
+      sourceChecksum: sourceInfo.sourceChecksum,
+      formatVersion: MODULE_FORMAT_VERSION,
+      capabilities: { strongsTagged: false },
+    },
+    books,
+  }
 }
