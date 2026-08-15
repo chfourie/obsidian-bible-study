@@ -61,6 +61,12 @@ describe('bookIdForName', () => {
     expect(bookIdForName('1Jn')).toBe(62)
   })
 
+  it('matches common alternate names', () => {
+    expect(bookIdForName('Psalm')).toBe(19)
+    expect(bookIdForName('psalm')).toBe(19)
+    expect(bookIdForName('Song of Songs')).toBe(22)
+  })
+
   it('accepts an optional trailing period', () => {
     expect(bookIdForName('Gen.')).toBe(1)
     expect(bookIdForName('Matt.')).toBe(40)

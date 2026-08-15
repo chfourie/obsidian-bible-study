@@ -3,9 +3,15 @@ export type Book = {
   name: string
   osis: string
   abbrev: string
+  aliases: readonly string[]
 }
 
-const BOOK_NAMES: readonly [name: string, osis: string, abbrev: string][] = [
+const BOOK_NAMES: readonly [
+  name: string,
+  osis: string,
+  abbrev: string,
+  ...aliases: string[],
+][] = [
   ['Genesis', 'Gen', 'Gen'],
   ['Exodus', 'Exod', 'Exo'],
   ['Leviticus', 'Lev', 'Lev'],
@@ -24,10 +30,10 @@ const BOOK_NAMES: readonly [name: string, osis: string, abbrev: string][] = [
   ['Nehemiah', 'Neh', 'Neh'],
   ['Esther', 'Esth', 'Est'],
   ['Job', 'Job', 'Job'],
-  ['Psalms', 'Ps', 'Psa'],
+  ['Psalms', 'Ps', 'Psa', 'Psalm'],
   ['Proverbs', 'Prov', 'Pro'],
   ['Ecclesiastes', 'Eccl', 'Ecc'],
-  ['Song of Solomon', 'Song', 'Sng'],
+  ['Song of Solomon', 'Song', 'Sng', 'Song of Songs'],
   ['Isaiah', 'Isa', 'Isa'],
   ['Jeremiah', 'Jer', 'Jer'],
   ['Lamentations', 'Lam', 'Lam'],
@@ -75,15 +81,21 @@ const BOOK_NAMES: readonly [name: string, osis: string, abbrev: string][] = [
 ]
 
 export const BOOKS: readonly Book[] = BOOK_NAMES.map(
-  ([name, osis, abbrev], index) => ({ id: index + 1, name, osis, abbrev }),
+  ([name, osis, abbrev, ...aliases], index) => ({
+    id: index + 1,
+    name,
+    osis,
+    abbrev,
+    aliases,
+  }),
 )
 
 const normalizeName = (name: string): string =>
   name.toLowerCase().replace(/\.$/, '').replace(/\s+/g, '')
 
 const BOOK_ID_BY_NORMALIZED_NAME = new Map<string, number>(
-  BOOKS.flatMap(({ id, name, osis, abbrev }) =>
-    [name, osis, abbrev].map(
+  BOOKS.flatMap(({ id, name, osis, abbrev, aliases }) =>
+    [name, osis, abbrev, ...aliases].map(
       (alias) => [normalizeName(alias), id] as [string, number],
     ),
   ),

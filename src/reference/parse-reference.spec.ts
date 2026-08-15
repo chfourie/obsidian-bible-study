@@ -119,6 +119,51 @@ describe('parseReference — verse forms', () => {
   })
 })
 
+describe('parseReference — single-chapter books', () => {
+  const jude = (verse: number) => makeVerseId(65, 1, verse)
+
+  it('parses a bare verse number as a verse in the only chapter', () => {
+    expect(parseReference('Jude 3')?.reference).toEqual({
+      book: 65,
+      ranges: [{ startId: jude(3), endId: jude(3) }],
+    })
+    expect(parseReference('Obadiah 21')?.reference).toEqual({
+      book: 31,
+      ranges: [{ startId: makeVerseId(31, 1, 21), endId: makeVerseId(31, 1, 21) }],
+    })
+    expect(parseReference('Philemon 6')?.reference).toEqual({
+      book: 57,
+      ranges: [{ startId: makeVerseId(57, 1, 6), endId: makeVerseId(57, 1, 6) }],
+    })
+  })
+
+  it('parses bare verse ranges and comma lists', () => {
+    expect(parseReference('Jude 3-5')?.reference).toEqual({
+      book: 65,
+      ranges: [{ startId: jude(3), endId: jude(5) }],
+    })
+    expect(parseReference('Jude 3,5')?.reference).toEqual({
+      book: 65,
+      ranges: [
+        { startId: jude(3), endId: jude(3) },
+        { startId: jude(5), endId: jude(5) },
+      ],
+    })
+  })
+
+  it('still accepts the explicit chapter form', () => {
+    expect(parseReference('Jude 1:3')?.reference).toEqual({
+      book: 65,
+      ranges: [{ startId: jude(3), endId: jude(3) }],
+    })
+  })
+
+  it('rejects out-of-range verses and chapters', () => {
+    expect(parseReference('Jude 26')).toBeNull()
+    expect(parseReference('Jude 2:1')).toBeNull()
+  })
+})
+
 describe('parseReference — book name forms', () => {
   it('parses multi-word book names', () => {
     expect(parseReference('Song of Solomon 2:1')?.reference.book).toBe(22)

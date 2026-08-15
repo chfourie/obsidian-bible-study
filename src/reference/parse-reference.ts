@@ -1,6 +1,6 @@
 import { bookIdForName } from './books'
 import { makeVerseId } from './verse-id'
-import { verseCount } from './versification'
+import { chapterCount, verseCount } from './versification'
 import { mergeRanges, type Reference, type VerseRange } from './verse-range'
 
 export type DisplayMode = 'inline' | 'callout'
@@ -57,11 +57,14 @@ const parseWholeChapter = (bookId: number, spec: string): Reference | null => {
 const SEGMENT_PATTERN = /^(?:(\d+):)?(\d+)(?:-(?:(\d+):)?(\d+))?$/
 
 const parseVerseSpec = (bookId: number, spec: string): Reference | null => {
-  const wholeChapter = parseWholeChapter(bookId, spec)
-  if (wholeChapter) return wholeChapter
+  const singleChapterBook = chapterCount(bookId) === 1
+  if (!singleChapterBook) {
+    const wholeChapter = parseWholeChapter(bookId, spec)
+    if (wholeChapter) return wholeChapter
+  }
 
   const ranges: VerseRange[] = []
-  let currentChapter: number | null = null
+  let currentChapter: number | null = singleChapterBook ? 1 : null
   for (const segment of spec.split(',')) {
     const match = SEGMENT_PATTERN.exec(segment)
     if (!match) return null

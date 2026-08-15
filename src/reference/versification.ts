@@ -14,15 +14,13 @@ export const isValidVerseId = (verseId: number): boolean => {
   return verse >= 1 && verse <= verseCount(book, chapter)
 }
 
-const cumulativeVersesBefore = (): {
-  byBook: number[]
+const chapterStartOrdinals = (): {
   byChapter: number[][]
+  total: number
 } => {
-  const byBook: number[] = []
   const byChapter: number[][] = []
   let total = 0
   for (const chapters of VERSES_PER_CHAPTER) {
-    byBook.push(total)
     const chapterStarts: number[] = []
     for (const verses of chapters) {
       chapterStarts.push(total)
@@ -30,12 +28,13 @@ const cumulativeVersesBefore = (): {
     }
     byChapter.push(chapterStarts)
   }
-  return { byBook, byChapter }
+  return { byChapter, total }
 }
 
-const { byChapter: ordinalOfChapterStart } = cumulativeVersesBefore()
+const { byChapter: ordinalOfChapterStart, total: canonVerseCount } =
+  chapterStartOrdinals()
 
-export const CANON_VERSE_COUNT = 31102
+export const CANON_VERSE_COUNT = canonVerseCount
 
 export const verseIdToOrdinal = (verseId: number): number | null => {
   if (!isValidVerseId(verseId)) return null
