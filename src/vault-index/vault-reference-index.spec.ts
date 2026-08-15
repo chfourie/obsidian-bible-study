@@ -19,15 +19,15 @@ const johnRef = (
 describe('VaultReferenceIndex', () => {
   it('excludes occurrences sharing no verse with the query', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('note.md', '{John 15:1-3} and {Luke 15:4}', null)
+    index.indexNote('note.md', '{John 15:1-3} and {Luke 15:4}')
 
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
   })
 
   it('replaces a note occurrences when re-indexed', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('note.md', '{John 15:4}', null)
-    index.indexNote('note.md', '{John 3:16}', null)
+    index.indexNote('note.md', '{John 15:4}')
+    index.indexNote('note.md', '{John 3:16}')
 
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
     expect(index.intersectingOccurrences(johnRef(3, 16))).toHaveLength(1)
@@ -35,15 +35,15 @@ describe('VaultReferenceIndex', () => {
 
   it('drops a note re-indexed with no references left', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('note.md', '{John 15:4}', null)
-    index.indexNote('note.md', 'plain text now', null)
+    index.indexNote('note.md', '{John 15:4}')
+    index.indexNote('note.md', 'plain text now')
 
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
   })
 
   it('evicts a removed note', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('note.md', '{John 15:4}', null)
+    index.indexNote('note.md', '{John 15:4}')
     index.removeNote('note.md')
 
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
@@ -51,7 +51,7 @@ describe('VaultReferenceIndex', () => {
 
   it('moves occurrences to the new path on rename', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('old.md', '{John 15:4}', null)
+    index.indexNote('old.md', '{John 15:4}')
     index.renameNote('old.md', 'folder/new.md')
 
     const groups = index.intersectingOccurrences(johnRef(15, 4))
@@ -61,11 +61,7 @@ describe('VaultReferenceIndex', () => {
 
   it('flags a group as annotation when its frontmatter ref intersects', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote(
-      'Annotations/John 15.4.md',
-      '---\nref: John 15:4\n---\nnotes',
-      'John 15:4',
-    )
+    index.indexNote('Annotations/John 15.4.md', '---\nref: John 15:4\n---\nnotes')
 
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([
       {
@@ -88,7 +84,6 @@ describe('VaultReferenceIndex', () => {
     index.indexNote(
       'Annotations/John 15.4.md',
       '---\nref: John 15:4\n---\ncompare {Luke 15:4}',
-      'John 15:4',
     )
 
     const groups = index.intersectingOccurrences({
@@ -100,13 +95,9 @@ describe('VaultReferenceIndex', () => {
 
   it('orders groups annotations first, then file path A-Z', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('b-mention.md', '{John 15:4}', null)
-    index.indexNote('a-mention.md', '{John 15:1-17}', null)
-    index.indexNote(
-      'z-annotation.md',
-      '---\nref: John 15:4\n---\n',
-      'John 15:4',
-    )
+    index.indexNote('b-mention.md', '{John 15:4}')
+    index.indexNote('a-mention.md', '{John 15:1-17}')
+    index.indexNote('z-annotation.md', '---\nref: John 15:4\n---\n')
 
     expect(
       index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file),
@@ -115,7 +106,7 @@ describe('VaultReferenceIndex', () => {
 
   it('orders occurrences within a group by position', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('note.md', '{John 15:9} then {John 15:4}', null)
+    index.indexNote('note.md', '{John 15:9} then {John 15:4}')
 
     const groups = index.intersectingOccurrences(johnRef(15, 1, 15, 17))
     expect(groups[0].occurrences.map((o) => o.position)).toEqual([0, 17])
@@ -123,7 +114,7 @@ describe('VaultReferenceIndex', () => {
 
   it('returns an indexed occurrence intersecting the queried reference', () => {
     const index = new VaultReferenceIndex()
-    index.indexNote('Sermons/Abiding.md', 'On {John 15:1-17} we see', null)
+    index.indexNote('Sermons/Abiding.md', 'On {John 15:1-17} we see')
 
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([
       {

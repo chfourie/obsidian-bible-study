@@ -78,10 +78,6 @@ export class VaultIndexer {
   }
 
   async #indexNote(path: string): Promise<void> {
-    this.index.indexNote(
-      path,
-      await this.vault.readNote(path),
-      this.vault.frontmatterRef(path),
-    )
+    this.index.indexNote(path, await this.vault.readNote(path))
   }
 }

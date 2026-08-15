@@ -16,14 +16,6 @@ export class ObsidianNoteVault implements NoteVault {
     return file ? this.plugin.app.vault.cachedRead(file) : ''
   }
 
-  frontmatterRef(path: string): string | null {
-    const file = this.plugin.app.vault.getFileByPath(path)
-    if (!file) return null
-    const ref: unknown =
-      this.plugin.app.metadataCache.getFileCache(file)?.frontmatter?.ref
-    return typeof ref === 'string' ? ref : null
-  }
-
   onLayoutReady(listener: () => void): void {
     this.plugin.app.workspace.onLayoutReady(listener)
   }

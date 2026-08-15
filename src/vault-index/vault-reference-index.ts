@@ -11,10 +11,11 @@ export type OccurrenceGroup = {
 export class VaultReferenceIndex {
   readonly #occurrencesByFile = new Map<string, Occurrence[]>()
 
-  indexNote(file: string, content: string, frontmatterRef: string | null): void {
-    const occurrences = extractOccurrences(content, frontmatterRef).map(
-      (occurrence) => ({ ...occurrence, file }),
-    )
+  indexNote(file: string, content: string): void {
+    const occurrences = extractOccurrences(content).map((occurrence) => ({
+      ...occurrence,
+      file,
+    }))
     if (occurrences.length > 0) this.#occurrencesByFile.set(file, occurrences)
     else this.#occurrencesByFile.delete(file)
   }

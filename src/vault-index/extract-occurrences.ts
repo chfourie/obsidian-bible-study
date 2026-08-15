@@ -82,11 +82,28 @@ const FRONTMATTER_PATTERN = /^---\n.*?\n(?:---|\.\.\.)(?:\n|$)/s
 const frontmatterLength = (content: string): number =>
   FRONTMATTER_PATTERN.exec(content)?.[0].length ?? 0
 
+const FRONTMATTER_REF_PATTERN = /^ref:[ \t]*(.*?)[ \t]*$/m
+
+const unquote = (value: string): string =>
+  value.length >= 2 &&
+  (value[0] === '"' || value[0] === "'") &&
+  value.endsWith(value[0])
+    ? value.slice(1, -1)
+    : value
+
+const frontmatterRef = (frontmatter: string): string | null => {
+  const match = FRONTMATTER_REF_PATTERN.exec(frontmatter)
+  if (!match) return null
+  const value = unquote(match[1])
+  return value === '' ? null : value
+}
+
 const annotationOccurrence = (
-  frontmatterRef: string | null,
+  frontmatter: string,
 ): ExtractedOccurrence | null => {
-  if (frontmatterRef === null) return null
-  const parsed = parseReference(frontmatterRef)
+  const ref = frontmatterRef(frontmatter)
+  if (ref === null) return null
+  const parsed = parseReference(ref)
   if (!parsed) return null
   return {
     position: 0,
@@ -95,15 +112,13 @@ const annotationOccurrence = (
   }
 }
 
-export const extractOccurrences = (
-  content: string,
-  frontmatterRef: string | null,
-): ExtractedOccurrence[] => {
+export const extractOccurrences = (content: string): ExtractedOccurrence[] => {
   const occurrences: ExtractedOccurrence[] = []
-  const annotation = annotationOccurrence(frontmatterRef)
+  const frontmatterEnd = frontmatterLength(content)
+  const annotation = annotationOccurrence(content.slice(0, frontmatterEnd))
   if (annotation) occurrences.push(annotation)
   if (!content.includes('{')) return occurrences
-  let lineStart = frontmatterLength(content)
+  let lineStart = frontmatterEnd
   let openFence: Fence | null = null
   for (const line of content.slice(lineStart).split('\n')) {
     if (openFence) {

@@ -14,17 +14,15 @@ const johnRef = (chapter: number, verse: number): Reference => ({
   ],
 })
 
-type FakeNote = { content: string; frontmatterRef: string | null }
-
 class FakeNoteVault implements NoteVault {
-  readonly #notes = new Map<string, FakeNote>()
+  readonly #notes = new Map<string, string>()
   readonly #layoutReadyListeners: Array<() => void> = []
   readonly #changedListeners: Array<(path: string) => void> = []
   readonly #renamedListeners: Array<(path: string, oldPath: string) => void> = []
   readonly #deletedListeners: Array<(path: string) => void> = []
 
-  setNote(path: string, content: string, frontmatterRef: string | null = null) {
-    this.#notes.set(path, { content, frontmatterRef })
+  setNote(path: string, content: string) {
+    this.#notes.set(path, content)
   }
 
   deleteNote(path: string) {
@@ -36,13 +34,9 @@ class FakeNoteVault implements NoteVault {
   }
 
   async readNote(path: string): Promise<string> {
-    const note = this.#notes.get(path)
-    if (!note) throw new Error(`no note at ${path}`)
-    return note.content
-  }
-
-  frontmatterRef(path: string): string | null {
-    return this.#notes.get(path)?.frontmatterRef ?? null
+    const content = this.#notes.get(path)
+    if (content === undefined) throw new Error(`no note at ${path}`)
+    return content
   }
 
   onLayoutReady(listener: () => void): void {
@@ -135,7 +129,7 @@ describe('VaultIndexer full scan', () => {
   it('indexes every markdown file, bodies and annotations alike', async () => {
     const { vault, index, indexer } = setup()
     vault.setNote('mention.md', 'see {John 15:4}')
-    vault.setNote('Annotations/John 15.4.md', '---\nref: John 15:4\n---\n', 'John 15:4')
+    vault.setNote('Annotations/John 15.4.md', '---\nref: John 15:4\n---\n')
     vault.setNote('plain.md', 'no references here')
 
     await indexer.scanVault()
@@ -143,6 +137,18 @@ describe('VaultIndexer full scan', () => {
     expect(
       index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file),
     ).toEqual(['Annotations/John 15.4.md', 'mention.md'])
+  })
+
+  it('indexes annotation refs from note content alone on the initial scan', async () => {
+    const { vault, index, indexer } = setup()
+    vault.setNote('Annotations/John 15.4.md', '---\nref: John 15:4\n---\nthoughts')
+    indexer.start()
+
+    vault.fireLayoutReady()
+    await flushMicrotasks()
+
+    const groups = index.intersectingOccurrences(johnRef(15, 4))
+    expect(groups.map((group) => group.annotation)).toEqual([true])
   })
 })
 
