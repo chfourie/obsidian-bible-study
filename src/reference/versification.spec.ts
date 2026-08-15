@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { chapterCount, verseCount } from './versification'
+import {
+  chapterCount,
+  isValidVerseId,
+  nextVerse,
+  verseCount,
+} from './versification'
+import { makeVerseId } from './verse-id'
 
 const KJV_CHAPTER_COUNTS = [
   50, 40, 27, 36, 34, 24, 21, 4, 31, 24, 22, 25, 29, 36, 10, 13, 10, 42, 150,
@@ -64,5 +70,51 @@ describe('verseCount', () => {
       }
     }
     expect(total).toBe(31102)
+  })
+})
+
+describe('isValidVerseId', () => {
+  it('accepts verses on the grid', () => {
+    expect(isValidVerseId(makeVerseId(43, 15, 4))).toBe(true)
+    expect(isValidVerseId(makeVerseId(1, 1, 1))).toBe(true)
+    expect(isValidVerseId(makeVerseId(66, 22, 21))).toBe(true)
+    expect(isValidVerseId(makeVerseId(19, 119, 176))).toBe(true)
+  })
+
+  it('rejects out-of-range verse numbers', () => {
+    expect(isValidVerseId(makeVerseId(43, 15, 28))).toBe(false)
+    expect(isValidVerseId(makeVerseId(43, 15, 0))).toBe(false)
+  })
+
+  it('rejects out-of-range chapters', () => {
+    expect(isValidVerseId(makeVerseId(43, 22, 1))).toBe(false)
+    expect(isValidVerseId(makeVerseId(43, 0, 1))).toBe(false)
+  })
+
+  it('rejects out-of-range books', () => {
+    expect(isValidVerseId(makeVerseId(67, 1, 1))).toBe(false)
+    expect(isValidVerseId(makeVerseId(0, 1, 1))).toBe(false)
+  })
+})
+
+describe('nextVerse', () => {
+  it('steps within a chapter', () => {
+    expect(nextVerse(makeVerseId(43, 15, 4))).toBe(makeVerseId(43, 15, 5))
+  })
+
+  it('steps across a chapter boundary', () => {
+    expect(nextVerse(makeVerseId(43, 15, 27))).toBe(makeVerseId(43, 16, 1))
+  })
+
+  it('steps across a book boundary', () => {
+    expect(nextVerse(makeVerseId(39, 4, 6))).toBe(makeVerseId(40, 1, 1))
+  })
+
+  it('returns null after the last verse of the canon', () => {
+    expect(nextVerse(makeVerseId(66, 22, 21))).toBeNull()
+  })
+
+  it('returns null for an off-grid id', () => {
+    expect(nextVerse(makeVerseId(43, 15, 28))).toBeNull()
   })
 })
