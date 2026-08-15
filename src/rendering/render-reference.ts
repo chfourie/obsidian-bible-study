@@ -120,11 +120,62 @@ const renderInline = (
   return mountPassage(host, model, deps, renderQuotedRun)
 }
 
+const calloutTitle = (model: ReferenceRenderModel): string =>
+  model.translationId === null
+    ? model.referenceText
+    : `${model.referenceText} · ${model.translationId.toUpperCase()}`
+
+const renderProse = (host: HTMLElement, view: PassageView): void => {
+  const prose = host.createEl('p', { cls: 'bible-study-prose' })
+  view.verses.forEach((block, index) => {
+    if (index > 0) prose.appendText(' ')
+    renderSegments(prose, block)
+  })
+  if (view.attribution !== null) {
+    host.createDiv({
+      cls: 'bible-study-attribution',
+      text: view.attribution,
+    })
+  }
+}
+
+const renderCallout = (
+  parent: HTMLElement,
+  model: ReferenceRenderModel,
+  deps: ReferenceRenderDeps,
+): Promise<void> => {
+  const callout = parent.createDiv({
+    cls: 'callout bible-study-callout',
+    attr: { 'data-callout': 'bible' },
+  })
+  const title = callout.createDiv({ cls: 'callout-title' })
+  const icon = title.createDiv({ cls: 'callout-icon' })
+  setIcon(icon, 'book-open')
+  title.createDiv({
+    cls: 'callout-title-inner',
+    text: calloutTitle(model),
+  })
+  const nav = title.createSpan({
+    cls: 'bible-study-callout-nav',
+    attr: { role: 'button', tabindex: 0, 'aria-label': 'Open in reader' },
+  })
+  setIcon(nav, 'arrow-right')
+  nav.addEventListener('click', () => deps.openReference(model))
+  const content = callout.createDiv({ cls: 'callout-content' })
+  const host = content.createDiv({ cls: 'bible-study-passage' })
+  return mountPassage(host, model, deps, renderProse)
+}
+
 export const renderReference = async (
   parent: HTMLElement,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
 ): Promise<void> => {
+  if (model.display === 'callout') {
+    await renderCallout(parent, model, deps)
+    renderInvalidTokens(parent, model)
+    return
+  }
   renderChip(parent, model, deps)
   renderInvalidTokens(parent, model)
   if (model.display === 'inline') await renderInline(parent, model, deps)

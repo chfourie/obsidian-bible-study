@@ -204,3 +204,82 @@ describe('renderReference inline', () => {
     expect(parent.querySelector('.bible-study-unavailable')).not.toBeNull()
   })
 })
+
+describe('renderReference callout', () => {
+  it('renders a bible callout instead of a chip', async () => {
+    const { parent, deps } = setup()
+
+    await renderReference(parent, model('John 15:4 callout'), deps)
+
+    expect(parent.querySelector('.bible-study-chip')).toBeNull()
+    expect(
+      parent.querySelector('.callout[data-callout="bible"]'),
+    ).not.toBeNull()
+  })
+
+  it('titles the callout with the reference and the served translation', async () => {
+    const { parent, deps } = setup()
+
+    await renderReference(parent, model('jhn 15:4 callout'), deps)
+
+    expect(
+      parent.querySelector('.callout-title-inner')?.textContent,
+    ).toBe('John 15:4 · WEB')
+  })
+
+  it('opens the reader from the title nav icon', async () => {
+    const { parent, deps, openReference } = setup()
+
+    await renderReference(parent, model('John 15:4 callout'), deps)
+
+    parent
+      .querySelector('.bible-study-callout-nav')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(openReference).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceText: 'John 15:4' }),
+    )
+  })
+
+  it('renders body prose with verse numbers even for a single verse', async () => {
+    const { parent, deps } = setup(passageOf('Remain in me, and I in you.'))
+
+    await renderReference(parent, model('John 15:4 callout'), deps)
+
+    const content = parent.querySelector('.callout-content')
+    const sup = content?.querySelector('sup.bible-study-verse-number')
+    expect(sup?.textContent).toBe('4')
+    expect(content?.textContent).toContain('Remain in me, and I in you.')
+  })
+
+  it('shows a muted attribution line when the translation carries one', async () => {
+    const attributed: Passage = {
+      ...passageOf('Remain.'),
+      attribution: 'Copyright © 1982, Thomas Nelson',
+    } as Passage
+    const { parent, deps } = setup(attributed)
+
+    await renderReference(parent, model('John 15:4 callout'), deps)
+
+    expect(
+      parent.querySelector('.bible-study-attribution')?.textContent,
+    ).toBe('Copyright © 1982, Thomas Nelson')
+  })
+
+  it('shows no attribution line without a copyright string', async () => {
+    const { parent, deps } = setup(passageOf('Remain.'))
+
+    await renderReference(parent, model('John 15:4 callout'), deps)
+
+    expect(parent.querySelector('.bible-study-attribution')).toBeNull()
+  })
+
+  it('degrades the callout body when the passage is unavailable', async () => {
+    const { parent, deps } = setup({ status: 'unavailable' })
+
+    await renderReference(parent, model('John 15:4 callout'), deps)
+
+    expect(
+      parent.querySelector('.callout-content .bible-study-unavailable'),
+    ).not.toBeNull()
+  })
+})
