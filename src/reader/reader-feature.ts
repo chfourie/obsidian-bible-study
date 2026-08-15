@@ -132,7 +132,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   }
 
   openNote(file: string): void {
-    void this.plugin.app.workspace.openLinkText(file, '', true)
+    void this.plugin.app.workspace.openLinkText(file, '', 'split')
   }
 
   openReference(reference: Reference, translationId: string | null): void {
