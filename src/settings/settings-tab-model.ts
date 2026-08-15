@@ -39,6 +39,8 @@ export type TranslationRowView = {
   tier: 'downloadable' | 'online'
   installed: boolean
   enabled: boolean
+  busy: 'downloading' | 'removing' | null
+  error: string | null
   updateAvailable: boolean
   strongsTagged: boolean
 }
@@ -57,14 +59,59 @@ export class SettingsTabModel {
   #manifests: ModuleManifest[] = []
   #catalog: SettingsCatalogEntry[] = []
   #updates: string[] = []
+  readonly #busy = new Map<string, 'downloading' | 'removing'>()
+  readonly #errors = new Map<string, string>()
+  readonly #listeners = new Set<() => void>()
 
   constructor(private readonly deps: SettingsTabDeps) {}
+
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener)
+    return () => this.#listeners.delete(listener)
+  }
+
+  #notify(): void {
+    this.#listeners.forEach((listener) => listener())
+  }
 
   async refresh(): Promise<void> {
     this.#settings = await this.deps.settingsStore.loadSettings()
     this.#manifests = await this.deps.installedManifests()
     this.#catalog = await this.deps.availableTranslations()
     this.#updates = await this.deps.modulesWithUpdates()
+    this.#notify()
+  }
+
+  async download(translationId: string): Promise<void> {
+    await this.#moduleAction(translationId, 'downloading', () =>
+      this.deps.downloadModule(translationId),
+    )
+  }
+
+  async remove(moduleId: string): Promise<void> {
+    await this.#moduleAction(moduleId, 'removing', () =>
+      this.deps.deleteModule(moduleId),
+    )
+  }
+
+  async #moduleAction(
+    moduleId: string,
+    busy: 'downloading' | 'removing',
+    action: () => Promise<unknown>,
+  ): Promise<void> {
+    this.#busy.set(moduleId, busy)
+    this.#errors.delete(moduleId)
+    this.#notify()
+    try {
+      await action()
+    } catch (error) {
+      this.#errors.set(
+        moduleId,
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+    this.#busy.delete(moduleId)
+    await this.refresh()
   }
 
   get view(): SettingsTabView {
@@ -85,7 +132,9 @@ export class SettingsTabModel {
   }
 
   #downloadableRows(): TranslationRowView[] {
-    const installedIds = installedTranslationModuleIds(this.#settings)
+    const installedIds = this.#manifests
+      .filter(isTranslationManifest)
+      .map((installed) => installed.id)
     const listed = this.#catalog.filter(
       (entry) =>
         entry.language === this.#settings.languageFilter ||
@@ -94,11 +143,7 @@ export class SettingsTabModel {
     const catalogIds = listed.map((entry) => entry.id)
     const installedOnly = this.#manifests
       .filter(isTranslationManifest)
-      .filter(
-        (installed) =>
-          installedIds.includes(installed.id) &&
-          !catalogIds.includes(installed.id),
-      )
+      .filter((installed) => !catalogIds.includes(installed.id))
       .map((installed) => ({
         id: installed.id,
         name: installed.name,
@@ -110,6 +155,8 @@ export class SettingsTabModel {
       tier: 'downloadable',
       installed: installedIds.includes(entry.id),
       enabled: false,
+      busy: this.#busy.get(entry.id) ?? null,
+      error: this.#errors.get(entry.id) ?? null,
       updateAvailable: this.#updates.includes(entry.id),
       strongsTagged:
         this.#manifests.find((installed) => installed.id === entry.id)
@@ -126,6 +173,8 @@ export class SettingsTabModel {
       tier: 'online',
       installed: false,
       enabled: this.#settings.enabledOnlineTranslationIds.includes(online.id),
+      busy: null,
+      error: null,
       updateAvailable: false,
       strongsTagged: false,
     }))

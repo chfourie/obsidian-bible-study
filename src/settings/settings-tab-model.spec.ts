@@ -178,6 +178,104 @@ describe('SettingsTabModel translation management list', () => {
     ])
   })
 
+  it('shows download progress on the row until the module lands', async () => {
+    let resolveDownload: () => void = () => {}
+    const { model } = setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+      downloadModule: vi.fn(
+        () => new Promise<void>((resolve) => (resolveDownload = resolve)),
+      ),
+    })
+    await model.refresh()
+
+    const download = model.download('web')
+    expect(model.view.rows[0].busy).toBe('downloading')
+
+    resolveDownload()
+    await download
+    expect(model.view.rows[0].busy).toBe(null)
+  })
+
+  it('surfaces a failed download on the row and clears the busy state', async () => {
+    const { model } = setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+      downloadModule: vi.fn(async () => {
+        throw new Error('network gone')
+      }),
+    })
+    await model.refresh()
+
+    await model.download('web')
+
+    expect(model.view.rows[0].busy).toBe(null)
+    expect(model.view.rows[0].error).toBe('network gone')
+  })
+
+  it('reflects the fresh settings and manifests after a download', async () => {
+    let installed = false
+    const { model, settingsStore } = setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+      installedManifests: async () =>
+        installed ? [manifest('web', 'World English Bible')] : [],
+      downloadModule: vi.fn(async () => {
+        installed = true
+        await settingsStore.updateSettings((settings) => ({
+          ...settings,
+          installedModuleIds: ['web'],
+        }))
+      }),
+    })
+    await model.refresh()
+
+    await model.download('web')
+
+    expect(model.view.rows[0].installed).toBe(true)
+    expect(model.view.settings.defaultTranslationId).toBe('web')
+  })
+
+  it('deletes a module and reflects the remaining state', async () => {
+    let installed = true
+    const deleteModule = vi.fn(async () => {
+      installed = false
+    })
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['web'] },
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+      installedManifests: async () =>
+        installed ? [manifest('web', 'World English Bible')] : [],
+      deleteModule,
+    })
+    await model.refresh()
+
+    await model.remove('web')
+
+    expect(deleteModule).toHaveBeenCalledWith('web')
+    expect(model.view.rows[0].installed).toBe(false)
+  })
+
+  it('notifies subscribers when an action changes the view', async () => {
+    const { model } = setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+    })
+    await model.refresh()
+    let notified = 0
+    model.subscribe(() => (notified += 1))
+
+    await model.download('web')
+
+    expect(notified).toBeGreaterThanOrEqual(2)
+  })
+
   it('offers the catalog languages for the filter dropdown', async () => {
     const { model } = setup({
       availableTranslations: async () => [
