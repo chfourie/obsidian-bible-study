@@ -90,6 +90,56 @@ const group = (file: string, annotation: boolean): OccurrenceGroup => ({
   occurrences: [],
 })
 
+describe('opening without an entry reference', () => {
+  it('opens at a plain position with no banner or highlight', async () => {
+    const model = modelWith()
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    const view = model.view
+    expect(view.status).toBe('ok')
+    expect(view.banner).toBe(null)
+    expect(view.rows.every((row) => !row.highlighted)).toBe(true)
+  })
+})
+
+describe('entry banner dismissal', () => {
+  it('hides the banner but keeps the highlight', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:4-5'), 'web')
+
+    model.dismissBanner()
+
+    expect(model.view.banner).toBe(null)
+    expect(model.view.rows[3].highlighted).toBe(true)
+  })
+})
+
+describe('attribution', () => {
+  it('surfaces the passage attribution line under the chapter', async () => {
+    const model = modelWith({
+      passages: {
+        passage: async () => ({
+          status: 'ok',
+          verses: [
+            {
+              verseId: makeVerseId(43, 15, 1),
+              segments: [{ text: 'I am the true vine.', redLetter: false }],
+            },
+          ],
+          attribution: 'New King James Version®, Copyright © 1982',
+        }),
+      },
+    })
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.view.attribution).toBe(
+      'New King James Version®, Copyright © 1982',
+    )
+  })
+})
+
 describe('chapter navigation', () => {
   const openJohn15 = async (
     overrides: Partial<ReaderPaneDeps> = {},

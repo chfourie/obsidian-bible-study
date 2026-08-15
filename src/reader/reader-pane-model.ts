@@ -80,6 +80,7 @@ export type ReaderPaneView = {
   toggles: ReaderToggles
   selectedVerseId: number | null
   details: Record<number, VerseDetailsView>
+  attribution: string | null
   banner: string | null
 }
 
@@ -108,6 +109,8 @@ export class ReaderPaneModel {
   #selectedVerseId: number | null = null
   #expanded = new Set<number>()
   #details: Record<number, VerseDetailsView> = {}
+  #attribution: string | null = null
+  #bannerDismissed = false
   readonly #listeners = new Set<() => void>()
 
   constructor(
@@ -149,8 +152,9 @@ export class ReaderPaneModel {
       toggles: this.#toggles,
       selectedVerseId: this.#selectedVerseId,
       details: this.#details,
+      attribution: this.#attribution,
       banner:
-        this.#entry === null
+        this.#entry === null || this.#bannerDismissed
           ? null
           : `Opened at ${formatReference(this.#entry)}`,
     }
@@ -164,8 +168,21 @@ export class ReaderPaneModel {
     this.#position = { book, chapter }
     if (translationId !== null) this.#translationId = translationId
     this.#entry = reference
+    this.#bannerDismissed = false
     this.#resetSelection()
     await this.#loadChapter()
+  }
+
+  async openPosition(position: ReaderPosition): Promise<void> {
+    this.#position = { ...position }
+    this.#entry = null
+    this.#resetSelection()
+    await this.#loadChapter()
+  }
+
+  dismissBanner(): void {
+    this.#bannerDismissed = true
+    this.#notify()
   }
 
   async goTo(book: number, chapter: number): Promise<void> {
@@ -275,9 +292,11 @@ export class ReaderPaneModel {
     )
     if (passage.status !== 'ok') {
       this.#status = 'unavailable'
+      this.#attribution = null
       this.#notify()
       return
     }
+    this.#attribution = passage.attribution
     this.#rows = passage.verses.map((verse) => {
       const groups = this.deps.intersecting(
         singleVerseReference(this.#position.book, verse.verseId),
