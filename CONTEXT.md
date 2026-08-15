@@ -27,7 +27,7 @@ The scripture content a reference resolves to in a specific translation: referen
 A specific bible text (e.g. NIV, WEB) whose content is projected onto the Canonical Grid.
 
 ### Module
-A downloadable, locally-stored data bundle — a full translation download or a Strong's package (tagged text + dictionary). The unit of storage and settings management. Lives in the plugin data dir (never vault files, never synced); stored in normalized form: per-book JSON keyed by verse id, plus a manifest (metadata, license string, source checksum, format version).
+A downloadable, locally-stored data bundle — a full translation download or the Strong's Dictionaries. The unit of storage and settings management. Lives in the plugin data dir (never vault files, never synced); stored in normalized form: per-book JSON keyed by verse id, plus a manifest (metadata, license string, source checksum, format version).
 
 ### Tier
 A translation's licensing class, which dictates its storage model. **Downloadable** (public domain / open license): fetched once as a full module, works offline. **Online** (licensed, e.g. NIV/NKJV): fetched per passage via the user's API key, held only in the passage cache.
@@ -43,3 +43,12 @@ One appearance of a reference at a position in a vault note (in the body or in a
 
 ### Annotation
 A vault note dedicated to commenting on a reference, with the reference in its frontmatter as source of truth. Indexed like any note but always surfaced in the reader beside its verses.
+
+### Tagged Translation
+A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently KJV is the only one; the capability is per-translation, not KJV-specific.
+
+### Strong's Dictionaries
+The shared dictionary module (STEPBible TBESH/TBESG, CC BY 4.0) mapping Strong's numbers to lemma, transliteration, gloss, and definition. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
+
+### Strong's Mode
+A reader-toolbar toggle (visible only when the viewed translation is tagged and the Strong's Dictionaries are installed) that makes tagged words tappable. Tapping renders the word's dictionary entries in the reader details surface, with CC BY attribution.
