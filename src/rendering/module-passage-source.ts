@@ -11,8 +11,18 @@ export type PassageVerse = {
   segments: VerseSegment[]
 }
 
+export type FallbackSubstitution = {
+  requested: string
+  served: string
+}
+
 export type Passage =
-  | { status: 'ok'; verses: PassageVerse[]; attribution: string | null }
+  | {
+      status: 'ok'
+      verses: PassageVerse[]
+      attribution: string | null
+      fallback?: FallbackSubstitution
+    }
   | { status: 'unavailable' }
 
 export interface PassageSource {
