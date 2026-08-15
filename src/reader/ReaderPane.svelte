@@ -15,6 +15,8 @@
     openNote: (file: string) => void
   } = $props()
 
+  // Initial snapshot only — the model subscription below keeps it fresh.
+  // svelte-ignore state_referenced_locally
   let view = $state.raw(model.view)
   $effect(() =>
     model.subscribe(() => {

@@ -76,7 +76,7 @@ const ref = (text: string): Reference => {
 }
 
 const flushAsync = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  await new Promise((resolve) => window.setTimeout(resolve, 0))
 }
 
 describe('ReaderFeature entry points', () => {
