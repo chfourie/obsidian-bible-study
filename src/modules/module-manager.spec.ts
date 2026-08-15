@@ -135,3 +135,31 @@ describe('ModuleManager download', () => {
     expect(manifest.sourceChecksum).toBe('sha-web-1')
   })
 })
+
+describe('ModuleManager update detection', () => {
+  it('reports an installed module whose published checksum has changed', async () => {
+    const { source, manager } = setup()
+    await manager.downloadModule('web')
+
+    source.checksums.web = 'sha-web-2'
+    source.downloads.web.checksum = 'sha-web-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['web'])
+  })
+
+  it('reports nothing when installed modules match the published checksums', async () => {
+    const { manager } = setup()
+    await manager.downloadModule('web')
+
+    expect(await manager.modulesWithUpdates()).toEqual([])
+  })
+
+  it('reports nothing for modules the source no longer publishes', async () => {
+    const { source, manager } = setup()
+    await manager.downloadModule('web')
+
+    delete source.checksums.web
+
+    expect(await manager.modulesWithUpdates()).toEqual([])
+  })
+})

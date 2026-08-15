@@ -32,4 +32,17 @@ export class ModuleManager {
     await this.store.saveModule(module)
     return module.manifest
   }
+
+  async modulesWithUpdates(): Promise<string[]> {
+    const [installed, checksums] = await Promise.all([
+      this.store.installedManifests(),
+      this.source.fetchChecksums(),
+    ])
+    return installed
+      .filter((manifest) => {
+        const published = checksums[manifest.id]
+        return published !== undefined && published !== manifest.sourceChecksum
+      })
+      .map((manifest) => manifest.id)
+  }
 }
