@@ -37,10 +37,22 @@ const parseOrNull = <T>(content: string | null): T | null => {
 }
 
 export class PassageCache {
+  readonly #bookFileOps = new Map<string, Promise<unknown>>()
+
   constructor(
     private readonly dataDir: ModuleDataDir,
     private readonly now: Clock = Date.now,
   ) {}
+
+  #serializedOnBookFile<T>(path: string, op: () => Promise<T>): Promise<T> {
+    const previous = this.#bookFileOps.get(path) ?? Promise.resolve()
+    const run = previous.then(op, op)
+    this.#bookFileOps.set(
+      path,
+      run.catch(() => undefined),
+    )
+    return run
+  }
 
   async readVerses(
     translationId: string,
@@ -64,18 +76,16 @@ export class PassageCache {
   ): Promise<void> {
     const fetchedAt = this.now()
     for (const book of booksOf([...verses.keys()])) {
-      const content =
-        parseOrNull<CachedBook>(
-          await this.dataDir.readTextFile(bookPath(translationId, book)),
-        ) ?? {}
-      for (const [verseId, text] of verses) {
-        if (decodeVerseId(verseId).book === book)
-          content[verseId] = { text, fetchedAt }
-      }
-      await this.dataDir.writeTextFile(
-        bookPath(translationId, book),
-        JSON.stringify(content),
-      )
+      const path = bookPath(translationId, book)
+      await this.#serializedOnBookFile(path, async () => {
+        const content =
+          parseOrNull<CachedBook>(await this.dataDir.readTextFile(path)) ?? {}
+        for (const [verseId, text] of verses) {
+          if (decodeVerseId(verseId).book === book)
+            content[verseId] = { text, fetchedAt }
+        }
+        await this.dataDir.writeTextFile(path, JSON.stringify(content))
+      })
     }
   }
 
@@ -116,21 +126,23 @@ export class PassageCache {
     book: number,
   ): Promise<CachedBook | null> {
     const path = bookPath(translationId, book)
-    const content = parseOrNull<CachedBook>(
-      await this.dataDir.readTextFile(path),
-    )
-    if (content === null) return null
-    const fresh: CachedBook = {}
-    let purged = false
-    for (const [key, entry] of Object.entries(content)) {
-      if (this.now() - entry.fetchedAt >= PASSAGE_CACHE_TTL_MS) {
-        purged = true
-      } else {
-        fresh[Number(key)] = entry
+    return this.#serializedOnBookFile(path, async () => {
+      const content = parseOrNull<CachedBook>(
+        await this.dataDir.readTextFile(path),
+      )
+      if (content === null) return null
+      const fresh: CachedBook = {}
+      let purged = false
+      for (const [key, entry] of Object.entries(content)) {
+        if (this.now() - entry.fetchedAt >= PASSAGE_CACHE_TTL_MS) {
+          purged = true
+        } else {
+          fresh[Number(key)] = entry
+        }
       }
-    }
-    if (purged) await this.dataDir.writeTextFile(path, JSON.stringify(fresh))
-    return fresh
+      if (purged) await this.dataDir.writeTextFile(path, JSON.stringify(fresh))
+      return fresh
+    })
   }
 }
 

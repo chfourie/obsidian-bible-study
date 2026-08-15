@@ -77,6 +77,7 @@ const passageResponse = JSON.stringify({
 const setup = (options?: {
   apiKey?: string | null
   responses?: Record<string, string>
+  dataDir?: FakeModuleDataDir
 }) => {
   const calls: string[] = []
   const fumsTokens: string[] = []
@@ -89,7 +90,7 @@ const setup = (options?: {
     if (response === undefined) throw new Error(`no response for ${url}`)
     return response
   }
-  const dataDir = new FakeModuleDataDir()
+  const dataDir = options?.dataDir ?? new FakeModuleDataDir()
   const cache = new PassageCache(dataDir, () => 1_000_000)
   const source = new OnlinePassageSource({
     client: new ApiBibleClient(
@@ -101,7 +102,7 @@ const setup = (options?: {
     apiBibleIdFor: (translationId) =>
       translationId === 'nkjv' ? NKJV_BIBLE_ID : null,
   })
-  return { source, cache, calls, fumsTokens }
+  return { source, cache, calls, fumsTokens, dataDir }
 }
 
 describe('OnlinePassageSource', () => {
@@ -158,15 +159,27 @@ describe('OnlinePassageSource', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it('is unavailable without an api key unless fully cached', async () => {
-    const withKey = setup()
-    await withKey.source.passage(john15_4to5, 'nkjv')
-
+  it('is unavailable without an api key when nothing is cached', async () => {
     const { source, calls } = setup({ apiKey: null })
 
     expect(await source.passage(john15_4to5, 'nkjv')).toEqual({
       status: 'unavailable',
     })
+    expect(calls).toHaveLength(0)
+  })
+
+  it('serves a fully cached passage without an api key and without fetching', async () => {
+    const withKey = setup()
+    await withKey.source.passage(john15_4to5, 'nkjv')
+
+    const { source, calls } = setup({ apiKey: null, dataDir: withKey.dataDir })
+    const passage = await source.passage(john15_4to5, 'nkjv')
+
+    expect(passage.status).toBe('ok')
+    if (passage.status === 'ok') {
+      expect(passage.verses).toHaveLength(2)
+      expect(passage.attribution).toBe('Copyright © 1982 Thomas Nelson')
+    }
     expect(calls).toHaveLength(0)
   })
 

@@ -130,6 +130,22 @@ describe('PassageCache', () => {
     expect(dataDir.files.size).toBe(0)
   })
 
+  it('keeps every verse when concurrent fetches store into the same book', async () => {
+    const { cache } = setup()
+
+    await Promise.all([
+      cache.storeVerses('nkjv', new Map([[JOHN_15_4, 'Abide in Me.']])),
+      cache.storeVerses('nkjv', new Map([[JOHN_15_5, 'I am the vine.']])),
+    ])
+
+    expect(await cache.readVerses('nkjv', [JOHN_15_4, JOHN_15_5])).toEqual(
+      new Map([
+        [JOHN_15_4, 'Abide in Me.'],
+        [JOHN_15_5, 'I am the vine.'],
+      ]),
+    )
+  })
+
   it('lays entries out per book under cache/<translation>/', async () => {
     const { cache, dataDir } = setup()
     await cache.storeVerses(
