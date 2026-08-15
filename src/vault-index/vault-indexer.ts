@@ -32,6 +32,21 @@ export class VaultIndexer {
   start(): void {
     this.vault.onLayoutReady(() => void this.scanVault())
     this.vault.onNoteChanged((path) => this.#scheduleReindex(path))
+    this.vault.onNoteRenamed((path, oldPath) => {
+      const changePending = this.#pendingReindexes.has(oldPath)
+      this.#cancelPendingReindex(oldPath)
+      this.index.renameNote(oldPath, path)
+      if (changePending) this.#scheduleReindex(path)
+    })
+    this.vault.onNoteDeleted((path) => {
+      this.#cancelPendingReindex(path)
+      this.index.removeNote(path)
+    })
+  }
+
+  stop(): void {
+    for (const pending of this.#pendingReindexes.values()) clearTimeout(pending)
+    this.#pendingReindexes.clear()
   }
 
   #scheduleReindex(path: string): void {

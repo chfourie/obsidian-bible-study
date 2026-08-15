@@ -197,4 +197,67 @@ describe('VaultIndexer incremental updates', () => {
       index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file),
     ).toEqual(['fresh.md'])
   })
+
+  it('fixes up occurrence paths on rename without re-reading the note', async () => {
+    const { vault, index, indexer } = setup()
+    vault.setNote('old.md', '{John 15:4}')
+    await indexer.scanVault()
+    indexer.start()
+
+    vault.deleteNote('old.md')
+    vault.fireRenamed('folder/new.md', 'old.md')
+
+    expect(
+      index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file),
+    ).toEqual(['folder/new.md'])
+  })
+
+  it('re-indexes at the new path when a change was pending at rename time', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    vault.setNote('old.md', '{John 15:4}')
+    await indexer.scanVault()
+    indexer.start()
+
+    vault.setNote('old.md', '{John 3:16}')
+    vault.fireChanged('old.md')
+    const content = await vault.readNote('old.md')
+    vault.deleteNote('old.md')
+    vault.setNote('new.md', content)
+    vault.fireRenamed('new.md', 'old.md')
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(
+      index.intersectingOccurrences(johnRef(3, 16)).map((group) => group.file),
+    ).toEqual(['new.md'])
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+  })
+
+  it('evicts a deleted note and abandons its pending re-index', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    vault.setNote('note.md', '{John 15:4}')
+    await indexer.scanVault()
+    indexer.start()
+
+    vault.fireChanged('note.md')
+    vault.deleteNote('note.md')
+    vault.fireDeleted('note.md')
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+  })
+
+  it('abandons pending re-indexes once stopped', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    vault.setNote('note.md', '{John 15:4}')
+    await indexer.scanVault()
+    indexer.start()
+
+    vault.setNote('note.md', '{John 3:16}')
+    vault.fireChanged('note.md')
+    indexer.stop()
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toHaveLength(1)
+    expect(index.intersectingOccurrences(johnRef(3, 16))).toEqual([])
+  })
 })
