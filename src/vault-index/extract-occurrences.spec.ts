@@ -39,6 +39,19 @@ describe('extractOccurrences', () => {
     expect(extractOccurrences('\\{John 15:4}', null)).toEqual([])
   })
 
+  it('never parses inside inline code spans', () => {
+    expect(extractOccurrences('use `{John 15:4}` literally', null)).toEqual([])
+  })
+
+  it('parses after an inline code span closes', () => {
+    const occurrences = extractOccurrences('`code` then {John 15:4}', null)
+    expect(occurrences.map((o) => o.position)).toEqual([12])
+  })
+
+  it('treats a double-backtick span as one code span', () => {
+    expect(extractOccurrences('`` `{John 15:4}` `` text', null)).toEqual([])
+  })
+
   it('recovers a reference nested inside stray braces', () => {
     const occurrences = extractOccurrences('{{John 15:4}}', null)
     expect(occurrences.map((o) => o.position)).toEqual([1])
