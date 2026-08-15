@@ -1,7 +1,7 @@
 import { bookIdForName } from './books'
 import { makeVerseId } from './verse-id'
 import { verseCount } from './versification'
-import type { Reference } from './verse-range'
+import { mergeRanges, type Reference, type VerseRange } from './verse-range'
 
 export type DisplayMode = 'inline' | 'callout'
 
@@ -29,14 +29,60 @@ const matchBook = (
   return null
 }
 
+const verseIdAt = (
+  bookId: number,
+  chapter: number,
+  verse: number,
+): number | null =>
+  verse >= 1 && verse <= verseCount(bookId, chapter)
+    ? makeVerseId(bookId, chapter, verse)
+    : null
+
+const parseWholeChapter = (bookId: number, spec: string): Reference | null => {
+  if (!/^\d+$/.test(spec)) return null
+  const chapter = Number(spec)
+  const lastVerse = verseCount(bookId, chapter)
+  if (lastVerse === 0) return null
+  return {
+    book: bookId,
+    ranges: [
+      {
+        startId: makeVerseId(bookId, chapter, 1),
+        endId: makeVerseId(bookId, chapter, lastVerse),
+      },
+    ],
+  }
+}
+
+const SEGMENT_PATTERN = /^(?:(\d+):)?(\d+)(?:-(?:(\d+):)?(\d+))?$/
+
 const parseVerseSpec = (bookId: number, spec: string): Reference | null => {
-  const match = /^(\d+):(\d+)$/.exec(spec)
-  if (!match) return null
-  const chapter = Number(match[1])
-  const verse = Number(match[2])
-  if (verse < 1 || verse > verseCount(bookId, chapter)) return null
-  const verseId = makeVerseId(bookId, chapter, verse)
-  return { book: bookId, ranges: [{ startId: verseId, endId: verseId }] }
+  const wholeChapter = parseWholeChapter(bookId, spec)
+  if (wholeChapter) return wholeChapter
+
+  const ranges: VerseRange[] = []
+  let currentChapter: number | null = null
+  for (const segment of spec.split(',')) {
+    const match = SEGMENT_PATTERN.exec(segment)
+    if (!match) return null
+    const [, startChapter, startVerse, endChapter, endVerse] = match
+    const chapter = startChapter ? Number(startChapter) : currentChapter
+    if (chapter === null) return null
+    const startId = verseIdAt(bookId, chapter, Number(startVerse))
+    if (startId === null) return null
+    currentChapter = chapter
+    let endId = startId
+    if (endVerse) {
+      const rangeEndChapter = endChapter ? Number(endChapter) : currentChapter
+      const id = verseIdAt(bookId, rangeEndChapter, Number(endVerse))
+      if (id === null || id < startId) return null
+      endId = id
+      currentChapter = rangeEndChapter
+    }
+    ranges.push({ startId, endId })
+  }
+  if (ranges.length === 0) return null
+  return { book: bookId, ranges: mergeRanges(ranges) }
 }
 
 export const parseReference = (text: string): ParsedReference | null => {
