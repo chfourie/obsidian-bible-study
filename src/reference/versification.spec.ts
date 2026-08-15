@@ -3,7 +3,9 @@ import {
   chapterCount,
   isValidVerseId,
   nextVerse,
+  ordinalToVerseId,
   verseCount,
+  verseIdToOrdinal,
 } from './versification'
 import { makeVerseId } from './verse-id'
 
@@ -116,5 +118,46 @@ describe('nextVerse', () => {
 
   it('returns null for an off-grid id', () => {
     expect(nextVerse(makeVerseId(43, 15, 28))).toBeNull()
+  })
+})
+
+describe('ordinal mapping', () => {
+  it('maps Genesis 1:1 to ordinal 0', () => {
+    expect(verseIdToOrdinal(makeVerseId(1, 1, 1))).toBe(0)
+  })
+
+  it('maps Genesis 2:1 to ordinal 31 (after the 31 verses of chapter 1)', () => {
+    expect(verseIdToOrdinal(makeVerseId(1, 2, 1))).toBe(31)
+  })
+
+  it('maps Matthew 1:1 to ordinal 23,145 (the OT verse total)', () => {
+    expect(verseIdToOrdinal(makeVerseId(40, 1, 1))).toBe(23145)
+  })
+
+  it('maps John 1:1 to ordinal 26,045', () => {
+    expect(verseIdToOrdinal(makeVerseId(43, 1, 1))).toBe(26045)
+  })
+
+  it('maps Revelation 22:21 to ordinal 31,101 (last verse of the canon)', () => {
+    expect(verseIdToOrdinal(makeVerseId(66, 22, 21))).toBe(31101)
+  })
+
+  it('returns null for an off-grid id', () => {
+    expect(verseIdToOrdinal(makeVerseId(43, 15, 28))).toBeNull()
+  })
+
+  it('returns null for an out-of-range ordinal', () => {
+    expect(ordinalToVerseId(-1)).toBeNull()
+    expect(ordinalToVerseId(31102)).toBeNull()
+  })
+
+  it('round-trips every ordinal on the grid', () => {
+    let verseId: number | null = makeVerseId(1, 1, 1)
+    for (let ordinal = 0; ordinal < 31102; ordinal++) {
+      expect(ordinalToVerseId(ordinal)).toBe(verseId)
+      expect(verseIdToOrdinal(verseId as number)).toBe(ordinal)
+      verseId = nextVerse(verseId as number)
+    }
+    expect(verseId).toBeNull()
   })
 })
