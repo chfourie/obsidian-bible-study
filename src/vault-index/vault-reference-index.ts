@@ -10,6 +10,16 @@ export type OccurrenceGroup = {
 
 export class VaultReferenceIndex {
   readonly #occurrencesByFile = new Map<string, Occurrence[]>()
+  readonly #changeListeners = new Set<() => void>()
+
+  onChanged(listener: () => void): () => void {
+    this.#changeListeners.add(listener)
+    return () => this.#changeListeners.delete(listener)
+  }
+
+  #notifyChanged(): void {
+    this.#changeListeners.forEach((listener) => listener())
+  }
 
   indexNote(file: string, content: string): void {
     const occurrences = extractOccurrences(content).map((occurrence) => ({
@@ -18,10 +28,12 @@ export class VaultReferenceIndex {
     }))
     if (occurrences.length > 0) this.#occurrencesByFile.set(file, occurrences)
     else this.#occurrencesByFile.delete(file)
+    this.#notifyChanged()
   }
 
   removeNote(file: string): void {
     this.#occurrencesByFile.delete(file)
+    this.#notifyChanged()
   }
 
   renameNote(oldPath: string, newPath: string): void {
@@ -32,6 +44,7 @@ export class VaultReferenceIndex {
       newPath,
       occurrences.map((occurrence) => ({ ...occurrence, file: newPath })),
     )
+    this.#notifyChanged()
   }
 
   intersectingOccurrences(reference: Reference): OccurrenceGroup[] {

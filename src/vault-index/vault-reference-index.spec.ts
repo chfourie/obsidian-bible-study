@@ -132,3 +132,28 @@ describe('VaultReferenceIndex', () => {
     ])
   })
 })
+
+describe('VaultReferenceIndex change events', () => {
+  it('notifies subscribers when a note is indexed, removed, or renamed', () => {
+    const index = new VaultReferenceIndex()
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.indexNote('note.md', '{John 15:4}')
+    index.renameNote('note.md', 'moved.md')
+    index.removeNote('moved.md')
+
+    expect(notified).toBe(3)
+  })
+
+  it('stops notifying after unsubscribe', () => {
+    const index = new VaultReferenceIndex()
+    let notified = 0
+    const unsubscribe = index.onChanged(() => notified++)
+
+    unsubscribe()
+    index.indexNote('note.md', '{John 15:4}')
+
+    expect(notified).toBe(0)
+  })
+})
