@@ -4,6 +4,8 @@ export type ModuleCapabilities = {
   strongsTagged: boolean
 }
 
+export type ModuleKind = 'translation' | 'strongs-dictionaries'
+
 export type ModuleManifest = {
   id: string
   name: string
@@ -12,5 +14,10 @@ export type ModuleManifest = {
   source: string
   sourceChecksum: string
   formatVersion: number
+  // Absent means 'translation' — manifests written before kinds existed.
+  kind?: ModuleKind
   capabilities: ModuleCapabilities
 }
+
+export const isTranslationManifest = (manifest: ModuleManifest): boolean =>
+  manifest.kind === undefined || manifest.kind === 'translation'
