@@ -1,0 +1,3 @@
+# Fixture slices keep their upstream byte-for-byte line endings.
+tests/fixtures/*.tsv -text
+tests/fixtures/*.txt -text

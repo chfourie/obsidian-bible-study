@@ -81,7 +81,7 @@ export const parseBsbTables = (tsv: string): BsbBooks => {
     books.set(currentBook, bookContent)
   }
 
-  for (const line of tsv.split('\n')) {
+  for (const line of tsv.split(/\r?\n/)) {
     const row = line.split('\t')
     const marker = row[COLUMN.verseId]?.trim() ?? ''
     if (marker !== '') {
