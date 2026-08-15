@@ -51,34 +51,28 @@ const processTextNode = (
   escaped: EscapedInners,
 ): Promise<void>[] => {
   const text = node.textContent ?? ''
-  const document = node.ownerDocument
-  const fragment = document.createDocumentFragment()
+  const parts: (string | HTMLElement)[] = []
   const renders: Promise<void>[] = []
   let consumed = 0
   for (const match of text.matchAll(CANDIDATE_PATTERN)) {
     const [candidate, inner] = match
     if (candidate.startsWith('\\')) {
-      fragment.appendChild(
-        document.createTextNode(text.slice(consumed, match.index)),
-      )
-      fragment.appendChild(document.createTextNode(candidate.slice(1)))
+      parts.push(text.slice(consumed, match.index), candidate.slice(1))
       consumed = match.index + candidate.length
       continue
     }
     const model = buildReferenceRenderModel(inner, context)
     if (!model || escaped.consume(inner)) continue
-    fragment.appendChild(
-      document.createTextNode(text.slice(consumed, match.index)),
-    )
-    const holder = document.createElement('span')
-    holder.className = 'bible-study-reference'
+    parts.push(text.slice(consumed, match.index))
+    const holder = createSpan({ cls: 'bible-study-reference' })
     renders.push(renderReference(holder, model, deps))
-    fragment.appendChild(holder)
+    parts.push(holder)
     consumed = match.index + candidate.length
   }
   if (consumed === 0) return renders
-  fragment.appendChild(document.createTextNode(text.slice(consumed)))
-  node.replaceWith(fragment)
+  parts.push(text.slice(consumed))
+  node.before(...parts)
+  node.remove()
   return renders
 }
 

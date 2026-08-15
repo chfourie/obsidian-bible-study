@@ -81,6 +81,11 @@ export default defineConfig([
     // suggested replacements would throw. Plain DOM construction is correct
     // here; the rule still guards every shipped module.
     files: ['src/**/*.spec.ts'],
-    rules: { 'obsidianmd/prefer-create-el': 'off' },
+    rules: {
+      'obsidianmd/prefer-create-el': 'off',
+      // Specs build static DOM fixtures from literals; there is no
+      // untrusted input to sanitize.
+      '@microsoft/sdl/no-inner-html': 'off',
+    },
   },
 ])

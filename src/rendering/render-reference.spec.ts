@@ -189,7 +189,7 @@ describe('renderReference inline', () => {
     parent
       .querySelector('.bible-study-retry')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
 
     expect(parent.querySelector('.bible-study-passage')?.textContent).toBe(
       '“Remain.”',

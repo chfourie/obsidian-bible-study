@@ -1,2 +1,138 @@
 /* Bible Study — plugin styles. Svelte component styles are injected by the
    build; this file holds vault-level styles and is shipped alongside main.js. */
+
+body {
+  /* Words of Christ — theme-adjustable (spec §3.4). */
+  --bible-study-red-letter-color: var(--color-red);
+}
+
+/* ---- Reference chip (spec §3.1) ---------------------------------------- */
+
+.bible-study-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.05em 0.5em;
+  border-radius: var(--radius-s);
+  background-color: hsla(var(--interactive-accent-hsl), 0.12);
+  color: var(--text-accent);
+  font-size: 0.92em;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bible-study-chip:hover {
+  background-color: hsla(var(--interactive-accent-hsl), 0.22);
+}
+
+.bible-study-chip-translation {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.bible-study-chip-translation::before {
+  content: '· ';
+}
+
+.bible-study-chip-icon,
+.bible-study-callout-nav,
+.bible-study-retry {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.bible-study-chip-icon svg,
+.bible-study-callout-nav svg,
+.bible-study-retry svg {
+  width: 0.85em;
+  height: 0.85em;
+}
+
+/* Invalid trailing option tokens: highlighted and ignored (spec §2). */
+.bible-study-invalid-token {
+  margin-left: 0.3em;
+  padding: 0 0.25em;
+  border-radius: var(--radius-s);
+  background-color: rgba(var(--color-red-rgb), 0.12);
+  color: var(--color-red);
+  text-decoration: line-through;
+  font-size: 0.9em;
+}
+
+/* ---- Inline mode (spec §3.2) ------------------------------------------- */
+
+span.bible-study-passage {
+  margin-left: 0.35em;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.bible-study-verse-number {
+  margin-right: 0.15em;
+  color: var(--text-faint);
+  font-size: 0.7em;
+  font-style: normal;
+}
+
+.bible-study-red-letter {
+  color: var(--bible-study-red-letter-color);
+}
+
+/* ---- Async states (spec §3.5) ------------------------------------------ */
+
+.bible-study-loading {
+  color: var(--text-faint);
+  animation: bible-study-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes bible-study-shimmer {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.bible-study-unavailable {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.bible-study-retry {
+  margin-left: 0.3em;
+}
+
+/* ---- Callout mode (spec §3.3) ------------------------------------------ */
+
+.callout[data-callout='bible'] {
+  --callout-color: var(--color-accent-rgb, 158, 130, 255);
+  --callout-icon: lucide-book-open;
+}
+
+.bible-study-callout .callout-title {
+  align-items: center;
+}
+
+.bible-study-callout .bible-study-callout-nav {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+
+.bible-study-callout .bible-study-callout-nav:hover {
+  color: var(--text-normal);
+}
+
+.bible-study-attribution {
+  margin-top: 0.5em;
+  color: var(--text-faint);
+  font-size: var(--font-smallest);
+}
+
+/* Reading mode wraps each rendered reference in this holder. */
+.bible-study-reference .callout {
+  margin: 0.5em 0;
+}
