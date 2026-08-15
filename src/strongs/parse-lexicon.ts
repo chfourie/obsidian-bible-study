@@ -18,7 +18,7 @@ const COLUMN = {
 
 export const parseLexicon = (text: string): Map<string, StrongsEntry> => {
   const entries = new Map<string, StrongsEntry>()
-  for (const line of text.replace(/^﻿/, '').split(/\r?\n/)) {
+  for (const line of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
     const row = line.split('\t')
     const strongs = row[COLUMN.eStrong]?.trim() ?? ''
     if (!ENTRY_NUMBER.test(strongs)) continue

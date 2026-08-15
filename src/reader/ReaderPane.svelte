@@ -42,11 +42,22 @@
       : (view.details[view.selectedVerseId] ?? null),
   )
 
-  const toggleGroups: {
+  type ToggleGroup = {
     key: keyof ReaderToggles
     label: string
     options: { value: string; label: string }[]
-  }[] = [
+  }
+
+  const strongsToggleGroup: ToggleGroup = {
+    key: 'strongs',
+    label: "Strong's",
+    options: [
+      { value: 'off', label: 'Off' },
+      { value: 'on', label: 'On' },
+    ],
+  }
+
+  const toggleGroups: ToggleGroup[] = [
     {
       key: 'details',
       label: 'Details',
@@ -88,6 +99,15 @@
   const onVerseClick = (event: MouseEvent, verseId: number): void => {
     if (event.shiftKey) model.extendSelectionTo(verseId)
     else void model.selectVerse(verseId)
+  }
+
+  const onWordClick = (
+    event: MouseEvent,
+    verseId: number,
+    strongs: string[],
+  ): void => {
+    event.stopPropagation()
+    void model.selectWord(verseId, strongs)
   }
 
   const inSelectionSpan = (verseId: number): boolean => {
@@ -176,11 +196,32 @@
   {/if}
 {/snippet}
 
+{#snippet strongsBlock(details: VerseDetailsView)}
+  {#if details.strongs.length > 0}
+    <div class="bsr-group-label">Strong's</div>
+    {#each details.strongs as entry (entry.strongs)}
+      <div class="bsr-strongs-entry">
+        <div class="bsr-strongs-head">
+          <span class="bsr-strongs-number">{entry.strongs}</span>
+          <span class="bsr-strongs-lemma">{entry.lemma}</span>
+          <span class="bsr-strongs-translit">{entry.transliteration}</span>
+        </div>
+        <div class="bsr-strongs-gloss">{entry.gloss}</div>
+        <div class="bsr-strongs-definition">{entry.definition}</div>
+      </div>
+    {/each}
+    {#if details.strongsAttribution !== null}
+      <div class="bsr-strongs-attribution">{details.strongsAttribution}</div>
+    {/if}
+  {/if}
+{/snippet}
+
 {#snippet detailsBlock(details: VerseDetailsView | null)}
   {#if details === null}
     <div class="bsr-details-empty">Loading…</div>
   {:else}
     <div class="bsr-details-title">{details.title}</div>
+    {@render strongsBlock(details)}
     <table class="bsr-trans-table">
       <tbody>
         {#each details.translations as row (row.id)}
@@ -203,7 +244,14 @@
 
 {#snippet verseText(row: VerseRowView)}
   {#each row.segments as segment, index (index)}
-    {#if segment.redLetter}
+    {#if view.strongsMode && segment.strongs !== undefined}
+      <button
+        type="button"
+        class="bsr-strongs-word"
+        class:bible-study-red-letter={segment.redLetter}
+        onclick={(event) => onWordClick(event, row.verseId, segment.strongs ?? [])}
+      >{segment.text}</button>
+    {:else if segment.redLetter}
       <span class="bible-study-red-letter">{segment.text}</span>
     {:else}
       {segment.text}
@@ -224,7 +272,7 @@
   {/if}
 
   <div class="bsr-toolbar">
-    {#each toggleGroups as toggleGroup (toggleGroup.key)}
+    {#each view.strongsAvailable ? [...toggleGroups, strongsToggleGroup] : toggleGroups as toggleGroup (toggleGroup.key)}
       <span class="bsr-seg-group">
         <span class="bsr-seg-label">{toggleGroup.label}</span>
         <span class="bsr-seg">
@@ -387,27 +435,29 @@
             <div class="bsr-details-empty">Select a verse to see details.</div>
           {:else if selectedDetails === null}
             <div class="bsr-details-empty">Loading…</div>
-          {:else if sideTab === 'translations'}
-            <div class="bsr-details-title">{selectedDetails.title}</div>
-            <table class="bsr-trans-table">
-              <tbody>
-                {#each selectedDetails.translations as row (row.id)}
-                  <tr>
-                    <td class="bsr-trans-id">{row.label}</td>
-                    <td class="bsr-trans-text">
-                      {#if row.text === null}
-                        <span class="bsr-unavailable">Unavailable</span>
-                      {:else}
-                        {row.text}
-                      {/if}
-                    </td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
           {:else}
             <div class="bsr-details-title">{selectedDetails.title}</div>
-            {@render notesBlock(selectedDetails)}
+            {@render strongsBlock(selectedDetails)}
+            {#if sideTab === 'translations'}
+              <table class="bsr-trans-table">
+                <tbody>
+                  {#each selectedDetails.translations as row (row.id)}
+                    <tr>
+                      <td class="bsr-trans-id">{row.label}</td>
+                      <td class="bsr-trans-text">
+                        {#if row.text === null}
+                          <span class="bsr-unavailable">Unavailable</span>
+                        {:else}
+                          {row.text}
+                        {/if}
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            {:else}
+              {@render notesBlock(selectedDetails)}
+            {/if}
           {/if}
         </div>
       </div>
@@ -861,6 +911,76 @@
     color: var(--text-faint);
     font-style: italic;
     margin: 12px 0;
+  }
+
+  .bsr-strongs-word {
+    display: inline;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline dotted var(--text-accent);
+    text-underline-offset: 3px;
+  }
+
+  .bsr-strongs-word:hover {
+    background: hsla(var(--interactive-accent-hsl), 0.15);
+    border-radius: 2px;
+  }
+
+  .bsr-strongs-entry {
+    border: 1px solid var(--background-modifier-border);
+    border-left: 3px solid var(--text-accent);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+    margin: 6px 0;
+    padding: 6px 10px;
+    font-size: var(--font-ui-small);
+  }
+
+  .bsr-strongs-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .bsr-strongs-number {
+    color: var(--text-accent);
+    font-weight: 600;
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bsr-strongs-lemma {
+    font-size: 1.1em;
+  }
+
+  .bsr-strongs-translit {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .bsr-strongs-gloss {
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .bsr-strongs-definition {
+    margin-top: 4px;
+    color: var(--text-muted);
+    white-space: pre-line;
+    max-height: 200px;
+    overflow-y: auto;
+    user-select: text;
+  }
+
+  .bsr-strongs-attribution {
+    color: var(--text-faint);
+    font-size: var(--font-smallest);
+    margin: 4px 0 8px;
   }
 
   .bsr-side {

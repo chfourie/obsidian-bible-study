@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { SettingsStore } from '../data-access'
-import type { ModuleDataDir } from '../modules'
+import type { ModuleDataDir, ModuleManifest } from '../modules'
 import type { LexiconSource } from './lexicon-source'
 import { STRONGS_DICTIONARIES_ID, StrongsDictionaries } from './strongs-dictionaries'
 
@@ -84,12 +84,10 @@ describe('StrongsDictionaries install', () => {
 
     const manifest = JSON.parse(
       dataDir.files.get('modules/strongs-dictionaries/manifest.json') ?? 'null',
-    )
-    expect(manifest).toMatchObject({
-      id: STRONGS_DICTIONARIES_ID,
-      kind: 'strongs-dictionaries',
-      license: expect.stringContaining('CC BY 4.0'),
-    })
+    ) as ModuleManifest
+    expect(manifest.id).toBe(STRONGS_DICTIONARIES_ID)
+    expect(manifest.kind).toBe('strongs-dictionaries')
+    expect(manifest.license).toContain('CC BY 4.0')
   })
 })
 
