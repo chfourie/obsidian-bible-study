@@ -25,10 +25,11 @@ export class ModuleManager {
     if (published !== undefined && published !== download.checksum) {
       throw new ChecksumMismatchError(translationId)
     }
-    const module = normalizeGetBibleTranslation(download.document, {
-      source: download.url,
-      sourceChecksum: download.checksum,
-    })
+    const module = normalizeGetBibleTranslation(
+      translationId,
+      download.document,
+      { source: download.url, sourceChecksum: download.checksum },
+    )
     await this.store.saveModule(module)
     return module.manifest
   }

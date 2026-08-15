@@ -140,6 +140,44 @@ describe('ModuleStore', () => {
     expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBeNull()
   })
 
+  it('refuses module ids that are not a plain path segment', async () => {
+    const { dataDir, store } = setup()
+    const evil = webModule()
+    evil.manifest.id = '../../evil'
+
+    await expect(store.saveModule(evil)).rejects.toThrow('module id')
+    await expect(store.deleteModule('../../evil')).rejects.toThrow('module id')
+    await expect(store.manifest('a/b')).rejects.toThrow('module id')
+    await expect(
+      store.verseText('..', makeVerseId(43, 15, 4)),
+    ).rejects.toThrow('module id')
+    expect(dataDir.files.size).toBe(0)
+  })
+
+  it('skips directories that are not valid module ids when listing manifests', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(webModule())
+    dataDir.files.set('modules/str.ange dir/manifest.json', '{}')
+
+    const manifests = await store.installedManifests()
+
+    expect(manifests.map((manifest) => manifest.id)).toEqual(['web'])
+  })
+
+  it('leaves no manifest behind when an install is interrupted mid-write', async () => {
+    const { dataDir, store } = setup()
+    const originalWrite = dataDir.writeTextFile.bind(dataDir)
+    dataDir.writeTextFile = async (path, content) => {
+      if (path.endsWith('064.json')) throw new Error('disk full')
+      await originalWrite(path, content)
+    }
+
+    await expect(store.saveModule(webModule())).rejects.toThrow('disk full')
+
+    expect(await store.manifest('web')).toBeNull()
+    expect(await store.installedManifests()).toEqual([])
+  })
+
   it('drops content of a previous install when a module is saved again', async () => {
     const { store } = setup()
     await store.saveModule(webModule())

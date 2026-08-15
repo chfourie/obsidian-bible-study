@@ -44,7 +44,11 @@ export type SourceInfo = {
   sourceChecksum: string
 }
 
+const fitsBcvDigits = (value: number): boolean =>
+  Number.isInteger(value) && value >= 1 && value <= 999
+
 export const normalizeGetBibleTranslation = (
+  moduleId: string,
   translation: GetBibleTranslation,
   sourceInfo: SourceInfo,
 ): NormalizedModule => {
@@ -54,6 +58,8 @@ export const normalizeGetBibleTranslation = (
     const content: BookContent = {}
     for (const chapter of book.chapters) {
       for (const verse of chapter.verses) {
+        if (!fitsBcvDigits(verse.chapter) || !fitsBcvDigits(verse.verse))
+          continue
         const verseId = makeVerseId(book.nr, verse.chapter, verse.verse)
         if (isValidVerseId(verseId)) content[verseId] = verse.text.trim()
       }
@@ -62,7 +68,7 @@ export const normalizeGetBibleTranslation = (
   }
   return {
     manifest: {
-      id: translation.abbreviation,
+      id: moduleId,
       name: translation.translation,
       language: translation.language,
       license: translation.distribution_license,

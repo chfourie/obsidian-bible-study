@@ -8,7 +8,13 @@ import type {
 
 const MODULES_ROOT = 'modules'
 
-const moduleDir = (moduleId: string): string => `${MODULES_ROOT}/${moduleId}`
+const SAFE_MODULE_ID = /^[A-Za-z0-9_-]+$/
+
+const moduleDir = (moduleId: string): string => {
+  if (!SAFE_MODULE_ID.test(moduleId))
+    throw new Error(`unsafe module id: ${moduleId}`)
+  return `${MODULES_ROOT}/${moduleId}`
+}
 
 const manifestPath = (moduleId: string): string =>
   `${moduleDir(moduleId)}/manifest.json`
@@ -21,16 +27,16 @@ export class ModuleStore {
 
   async saveModule(module: NormalizedModule): Promise<void> {
     await this.dataDir.removeDir(moduleDir(module.manifest.id))
-    await this.dataDir.writeTextFile(
-      manifestPath(module.manifest.id),
-      JSON.stringify(module.manifest, null, 2),
-    )
     for (const [book, content] of module.books) {
       await this.dataDir.writeTextFile(
         bookPath(module.manifest.id, book),
         JSON.stringify(content),
       )
     }
+    await this.dataDir.writeTextFile(
+      manifestPath(module.manifest.id),
+      JSON.stringify(module.manifest, null, 2),
+    )
   }
 
   async verseText(moduleId: string, verseId: number): Promise<string | null> {
@@ -52,7 +58,9 @@ export class ModuleStore {
   async installedManifests(): Promise<ModuleManifest[]> {
     const moduleIds = await this.dataDir.listDirs(MODULES_ROOT)
     const manifests = await Promise.all(
-      moduleIds.map((moduleId) => this.manifest(moduleId)),
+      moduleIds
+        .filter((moduleId) => SAFE_MODULE_ID.test(moduleId))
+        .map((moduleId) => this.manifest(moduleId)),
     )
     return manifests.filter((manifest) => manifest !== null)
   }

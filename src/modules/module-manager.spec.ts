@@ -126,6 +126,17 @@ describe('ModuleManager download', () => {
     expect(await store.manifest('web')).toBeNull()
   })
 
+  it('stores the module under the requested translation id, whatever the download claims', async () => {
+    const { source, store, manager } = setup()
+    source.downloads.web.document.abbreviation = '../../evil'
+
+    const manifest = await manager.downloadModule('web')
+
+    expect(manifest.id).toBe('web')
+    expect(await store.manifest('web')).toEqual(manifest)
+    expect(await manager.modulesWithUpdates()).toEqual([])
+  })
+
   it('installs with the downloaded checksum when no published checksum exists', async () => {
     const { source, manager } = setup()
     delete source.checksums.web
@@ -143,6 +154,16 @@ describe('ModuleManager update detection', () => {
 
     source.checksums.web = 'sha-web-2'
     source.downloads.web.checksum = 'sha-web-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['web'])
+  })
+
+  it('detects updates by translation id even when the download misreports its abbreviation', async () => {
+    const { source, manager } = setup()
+    source.downloads.web.document.abbreviation = 'not-web'
+    await manager.downloadModule('web')
+
+    source.checksums.web = 'sha-web-2'
 
     expect(await manager.modulesWithUpdates()).toEqual(['web'])
   })
