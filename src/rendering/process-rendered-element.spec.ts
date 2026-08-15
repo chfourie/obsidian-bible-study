@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Passage } from './module-passage-source'
-import {
-  escapedReferenceInners,
-  processRenderedElement,
-} from './process-rendered-element'
+import { processRenderedElement } from './process-rendered-element'
 import type { ReferenceRenderDeps } from './render-reference'
 import type { RenderContext } from './reference-render-model'
 
@@ -30,8 +27,8 @@ const setup = () => {
 const process = (
   root: HTMLElement,
   deps: ReferenceRenderDeps,
-  escaped: string[] = [],
-) => processRenderedElement(root, context, deps, escaped)
+  sectionSource = '',
+) => processRenderedElement(root, context, deps, sectionSource)
 
 describe('processRenderedElement', () => {
   it('replaces a brace reference with a chip, keeping surrounding text', async () => {
@@ -86,14 +83,49 @@ describe('processRenderedElement', () => {
     expect(root.textContent).toBe('{John 15:4}')
   })
 
-  it('skips candidates the source marked as escaped, one occurrence each', async () => {
+  it('escapes exactly the occurrence the source escaped, later position', async () => {
     const { root, deps } = setup()
     root.innerHTML = '<p>{John 15:4} then {John 15:4}</p>'
 
-    await process(root, deps, ['John 15:4'])
+    await process(root, deps, '{John 15:4} then \\{John 15:4}')
 
     expect(root.querySelectorAll('.bible-study-chip')).toHaveLength(1)
-    expect(root.textContent).toContain('{John 15:4}')
+    expect(root.querySelector('p')?.textContent).toBe(
+      'John 15:4 then {John 15:4}',
+    )
+  })
+
+  it('escapes exactly the occurrence the source escaped, earlier position', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p>{John 15:4} then {John 15:4}</p>'
+
+    await process(root, deps, '\\{John 15:4} then {John 15:4}')
+
+    expect(root.querySelectorAll('.bible-study-chip')).toHaveLength(1)
+    expect(root.querySelector('p')?.textContent).toBe(
+      '{John 15:4} then John 15:4',
+    )
+  })
+
+  it('suppresses every occurrence when the source escapes them all', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p>{John 15:4} then {John 15:4}</p>'
+
+    await process(root, deps, '\\{John 15:4} then \\{John 15:4}')
+
+    expect(root.querySelector('.bible-study-chip')).toBeNull()
+    expect(root.querySelector('p')?.textContent).toBe(
+      '{John 15:4} then {John 15:4}',
+    )
+  })
+
+  it('ignores code-span candidates when matching source escapes', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p><code>{John 15:4}</code> then {John 15:4}</p>'
+
+    await process(root, deps, '`{John 15:4}` then \\{John 15:4}')
+
+    expect(root.querySelector('.bible-study-chip')).toBeNull()
   })
 
   it('renders inline passages inside the flow', async () => {
@@ -105,17 +137,5 @@ describe('processRenderedElement', () => {
     expect(root.querySelector('.bible-study-passage')?.textContent).toBe(
       '“Remain.”',
     )
-  })
-})
-
-describe('escapedReferenceInners', () => {
-  it('collects the inner text of escaped brace references', () => {
-    expect(
-      escapedReferenceInners('a \\{John 15:4} b {John 15:9} c \\{not a ref}'),
-    ).toEqual(['John 15:4', 'not a ref'])
-  })
-
-  it('collects nothing when the source has no escapes', () => {
-    expect(escapedReferenceInners('plain {John 15:4}')).toEqual([])
   })
 })

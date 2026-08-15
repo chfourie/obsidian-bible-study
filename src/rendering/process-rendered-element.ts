@@ -1,3 +1,4 @@
+import { maskInlineCodeSpans } from '../reference'
 import {
   buildReferenceRenderModel,
   type RenderContext,
@@ -11,11 +12,6 @@ const CANDIDATE_PATTERN = /\\?\{([^{}\n]*)\}/g
 
 const EXEMPT_SELECTOR = 'code, pre'
 
-export const escapedReferenceInners = (source: string): string[] =>
-  [...source.matchAll(CANDIDATE_PATTERN)]
-    .filter((match) => match[0].startsWith('\\'))
-    .map((match) => match[1])
-
 const textNodesUnder = (root: HTMLElement): Text[] => {
   const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT)
   const nodes: Text[] = []
@@ -27,20 +23,27 @@ const textNodesUnder = (root: HTMLElement): Text[] => {
   return nodes
 }
 
-class EscapedInners {
-  readonly #remaining = new Map<string, number>()
+// Escaped-flag queues per inner text, in source order. Markdown rendering
+// swallows the escape backslash, so the DOM alone cannot tell an escaped
+// occurrence from a genuine one; matching each rendered occurrence against
+// the source positionally (per inner text) recovers which one was escaped.
+class SectionEscapes {
+  readonly #flagsByInner = new Map<string, boolean[]>()
 
-  constructor(inners: readonly string[]) {
-    for (const inner of inners) {
-      this.#remaining.set(inner, (this.#remaining.get(inner) ?? 0) + 1)
+  constructor(sectionSource: string) {
+    for (const line of sectionSource.split('\n')) {
+      for (const match of maskInlineCodeSpans(line).matchAll(
+        CANDIDATE_PATTERN,
+      )) {
+        const flags = this.#flagsByInner.get(match[1]) ?? []
+        flags.push(match[0].startsWith('\\'))
+        this.#flagsByInner.set(match[1], flags)
+      }
     }
   }
 
-  consume(inner: string): boolean {
-    const count = this.#remaining.get(inner) ?? 0
-    if (count === 0) return false
-    this.#remaining.set(inner, count - 1)
-    return true
+  consumeNextOccurrence(inner: string): boolean {
+    return this.#flagsByInner.get(inner)?.shift() ?? false
   }
 }
 
@@ -48,7 +51,7 @@ const processTextNode = (
   node: Text,
   context: RenderContext,
   deps: ReferenceRenderDeps,
-  escaped: EscapedInners,
+  escapes: SectionEscapes,
 ): Promise<void>[] => {
   const text = node.textContent ?? ''
   const parts: (string | HTMLElement)[] = []
@@ -56,13 +59,14 @@ const processTextNode = (
   let consumed = 0
   for (const match of text.matchAll(CANDIDATE_PATTERN)) {
     const [candidate, inner] = match
+    const escapedInSource = escapes.consumeNextOccurrence(inner)
     if (candidate.startsWith('\\')) {
       parts.push(text.slice(consumed, match.index), candidate.slice(1))
       consumed = match.index + candidate.length
       continue
     }
     const model = buildReferenceRenderModel(inner, context)
-    if (!model || escaped.consume(inner)) continue
+    if (!model || escapedInSource) continue
     parts.push(text.slice(consumed, match.index))
     const holder = createSpan({ cls: 'bible-study-reference' })
     renders.push(renderReference(holder, model, deps))
@@ -80,11 +84,11 @@ export const processRenderedElement = async (
   root: HTMLElement,
   context: RenderContext,
   deps: ReferenceRenderDeps,
-  escapedInners: readonly string[] = [],
+  sectionSource = '',
 ): Promise<void> => {
-  const escaped = new EscapedInners(escapedInners)
+  const escapes = new SectionEscapes(sectionSource)
   const renders = textNodesUnder(root).flatMap((node) =>
-    processTextNode(node, context, deps, escaped),
+    processTextNode(node, context, deps, escapes),
   )
   await Promise.all(renders)
 }

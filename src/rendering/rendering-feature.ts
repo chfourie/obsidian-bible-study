@@ -1,17 +1,23 @@
-import type { MarkdownPostProcessorContext, Plugin } from 'obsidian'
+import type { EditorView } from '@codemirror/view'
+import {
+  MarkdownView,
+  type Editor,
+  type MarkdownPostProcessorContext,
+  type Plugin,
+} from 'obsidian'
 import {
   NOOP_REFERENCE_NAVIGATOR,
   type ReferenceNavigator,
 } from '../contracts'
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
-import { createLivePreviewExtension } from './live-preview-extension'
+import {
+  createLivePreviewExtension,
+  refreshRenderedReferences,
+} from './live-preview-extension'
 import { ModulePassageSource } from './module-passage-source'
 import { PassageRepository } from './passage-repository'
-import {
-  escapedReferenceInners,
-  processRenderedElement,
-} from './process-rendered-element'
+import { processRenderedElement } from './process-rendered-element'
 import { renderContextFromSettings } from './render-context'
 import type { ReferenceRenderDeps } from './render-reference'
 
@@ -51,7 +57,7 @@ export class RenderingFeature extends PluginFeature {
         element,
         renderContextFromSettings(this.settings),
         this.#deps,
-        escapedReferenceInners(sectionSource(element, context)),
+        sectionSource(element, context),
       ),
     )
     this.plugin.registerEditorExtension(
@@ -64,5 +70,15 @@ export class RenderingFeature extends PluginFeature {
 
   override onExternalSettingsChange(): void {
     this.#repository.clear()
+    this.#refreshLivePreviewEditors()
+  }
+
+  #refreshLivePreviewEditors(): void {
+    this.plugin.app.workspace.iterateAllLeaves((leaf) => {
+      const view = leaf.view
+      if (!(view instanceof MarkdownView)) return
+      const editorView = (view.editor as Editor & { cm?: EditorView }).cm
+      if (editorView) refreshRenderedReferences(editorView)
+    })
   }
 }

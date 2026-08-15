@@ -13,6 +13,15 @@ export type ReferenceRenderDeps = {
   openReference: (model: ReferenceRenderModel) => void
 }
 
+const activateAsButton = (element: HTMLElement, action: () => void): void => {
+  element.addEventListener('click', action)
+  element.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    action()
+  })
+}
+
 const renderChip = (
   parent: HTMLElement,
   model: ReferenceRenderModel,
@@ -31,7 +40,7 @@ const renderChip = (
   }
   const icon = chip.createSpan({ cls: 'bible-study-chip-icon' })
   setIcon(icon, 'book-open')
-  chip.addEventListener('click', () => deps.openReference(model))
+  activateAsButton(chip, () => deps.openReference(model))
 }
 
 const renderInvalidTokens = (
@@ -84,7 +93,7 @@ const renderUnavailable = (
     attr: { role: 'button', tabindex: 0, 'aria-label': 'Retry' },
   })
   setIcon(retryIcon, 'refresh-cw')
-  retryIcon.addEventListener('click', retry)
+  activateAsButton(retryIcon, retry)
 }
 
 const mountPassage = async (
@@ -160,7 +169,7 @@ const renderCallout = (
     attr: { role: 'button', tabindex: 0, 'aria-label': 'Open in reader' },
   })
   setIcon(nav, 'arrow-right')
-  nav.addEventListener('click', () => deps.openReference(model))
+  activateAsButton(nav, () => deps.openReference(model))
   const content = callout.createDiv({ cls: 'callout-content' })
   const host = content.createDiv({ cls: 'bible-study-passage' })
   return mountPassage(host, model, deps, renderProse)

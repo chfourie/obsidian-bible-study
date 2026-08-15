@@ -34,6 +34,28 @@ const closingBacktickRunEnd = (
   return -1
 }
 
+export const maskInlineCodeSpans = (line: string): string => {
+  let masked = ''
+  let i = 0
+  while (i < line.length) {
+    if (line[i] !== '`') {
+      masked += line[i]
+      i++
+      continue
+    }
+    const runLength = backtickRunLength(line, i)
+    const spanEnd = closingBacktickRunEnd(line, i + runLength, runLength)
+    if (spanEnd === -1) {
+      masked += line.slice(i, i + runLength)
+      i += runLength
+      continue
+    }
+    masked += ' '.repeat(spanEnd - i)
+    i = spanEnd
+  }
+  return masked
+}
+
 const scanLine = (
   line: string,
   lineStart: number,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildReferenceRenderModel } from './reference-render-model'
+import {
+  buildReferenceRenderModel,
+  sameRenderModel,
+  type ReferenceRenderModel,
+} from './reference-render-model'
 
 const context = {
   knownTranslationIds: ['web', 'nkjv'],
@@ -67,5 +71,47 @@ describe('buildReferenceRenderModel', () => {
     const model = buildReferenceRenderModel('John 15:4', context)
 
     expect(model?.reference.book).toBe(43)
+  })
+})
+
+describe('sameRenderModel', () => {
+  const build = (
+    text: string,
+    modelContext = context,
+  ): ReferenceRenderModel => {
+    const model = buildReferenceRenderModel(text, modelContext)
+    if (!model) throw new Error(`unparseable: ${text}`)
+    return model
+  }
+
+  it('matches models built from the same text and context', () => {
+    expect(
+      sameRenderModel(build('John 15:4 inline'), build('John 15:4 inline')),
+    ).toBe(true)
+  })
+
+  it('differs when the resolved translation differs', () => {
+    const other = build('John 15:4', {
+      knownTranslationIds: ['web', 'nkjv'],
+      defaultTranslationId: 'nkjv',
+    })
+
+    expect(sameRenderModel(build('John 15:4'), other)).toBe(false)
+  })
+
+  it('differs when a token becomes a known translation', () => {
+    const other = build('John 15:4 kjv', {
+      knownTranslationIds: ['kjv'],
+      defaultTranslationId: 'kjv',
+    })
+
+    expect(sameRenderModel(build('John 15:4 kjv'), other)).toBe(false)
+  })
+
+  it('differs across references and display modes', () => {
+    expect(sameRenderModel(build('John 15:4'), build('John 15:9'))).toBe(false)
+    expect(
+      sameRenderModel(build('John 15:4'), build('John 15:4 callout')),
+    ).toBe(false)
   })
 })

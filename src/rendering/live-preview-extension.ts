@@ -1,4 +1,4 @@
-import type { Extension } from '@codemirror/state'
+import { StateEffect, type Extension } from '@codemirror/state'
 import {
   Decoration,
   EditorView,
@@ -9,10 +9,19 @@ import {
 } from '@codemirror/view'
 import { editorLivePreviewField } from 'obsidian'
 import { liveDecorationSpecs } from './live-decoration-specs'
-import type { ReferenceRenderModel, RenderContext } from './reference-render-model'
+import {
+  sameRenderModel,
+  type ReferenceRenderModel,
+  type RenderContext,
+} from './reference-render-model'
 import { renderReference, type ReferenceRenderDeps } from './render-reference'
 
-class ReferenceWidget extends WidgetType {
+export const renderContextChangedEffect = StateEffect.define<null>()
+
+export const refreshRenderedReferences = (view: EditorView): void =>
+  view.dispatch({ effects: renderContextChangedEffect.of(null) })
+
+export class ReferenceWidget extends WidgetType {
   constructor(
     private readonly source: string,
     private readonly model: ReferenceRenderModel,
@@ -22,7 +31,9 @@ class ReferenceWidget extends WidgetType {
   }
 
   override eq(other: ReferenceWidget): boolean {
-    return other.source === this.source
+    return (
+      other.source === this.source && sameRenderModel(other.model, this.model)
+    )
   }
 
   override toDOM(): HTMLElement {
@@ -32,23 +43,34 @@ class ReferenceWidget extends WidgetType {
   }
 }
 
+const hasRenderContextChange = (update: ViewUpdate): boolean =>
+  update.transactions.some((transaction) =>
+    transaction.effects.some((effect) =>
+      effect.is(renderContextChangedEffect),
+    ),
+  )
+
 export const createLivePreviewExtension = (
   contextProvider: () => RenderContext,
   deps: ReferenceRenderDeps,
 ): Extension => {
   const buildDecorations = (view: EditorView): DecorationSet => {
     if (!view.state.field(editorLivePreviewField)) return Decoration.none
-    const docText = view.state.doc.toString()
     const selections = view.state.selection.ranges.map((range) => ({
       from: range.from,
       to: range.to,
     }))
-    const specs = liveDecorationSpecs(docText, selections, contextProvider())
+    const specs = liveDecorationSpecs(
+      view.visibleRanges,
+      (from, to) => view.state.sliceDoc(from, to),
+      selections,
+      contextProvider(),
+    )
     return Decoration.set(
       specs.map((spec) =>
         Decoration.replace({
           widget: new ReferenceWidget(
-            docText.slice(spec.start, spec.end),
+            view.state.sliceDoc(spec.start, spec.end),
             spec.model,
             deps,
           ),
@@ -66,7 +88,12 @@ export const createLivePreviewExtension = (
       }
 
       update(update: ViewUpdate): void {
-        if (update.docChanged || update.selectionSet || update.viewportChanged) {
+        if (
+          update.docChanged ||
+          update.selectionSet ||
+          update.viewportChanged ||
+          hasRenderContextChange(update)
+        ) {
           this.decorations = buildDecorations(update.view)
         }
       }

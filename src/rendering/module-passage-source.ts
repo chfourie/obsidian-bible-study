@@ -49,6 +49,7 @@ export class ModulePassageSource implements PassageSource {
         verses.push({ verseId, segments: [{ text, redLetter: false }] })
       }
     }
+    if (verses.length === 0) return { status: 'unavailable' }
     return { status: 'ok', verses, attribution: attributionFor(manifest) }
   }
 }

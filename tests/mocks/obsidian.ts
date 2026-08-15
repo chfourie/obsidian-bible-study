@@ -7,6 +7,8 @@ test: TFile/TFolder/TAbstractFile (real classes so `instanceof` works),
 the plugin as features start touching more of the API.
 */
 
+import { StateField } from '@codemirror/state'
+
 export class Vault {}
 
 export class TAbstractFile {
@@ -73,6 +75,19 @@ export type PluginManifest = {
 
 export class App {
   vault: Vault = new Vault()
+}
+
+// Real Obsidian exposes the Live Preview flag as a CodeMirror state field;
+// tests default to Live Preview being active.
+export const editorLivePreviewField = StateField.define<boolean>({
+  create: () => true,
+  update: (value) => value,
+})
+
+// Just enough of MarkdownView for `instanceof` checks; specs assign the
+// members they need (e.g. `editor`) onto instances directly.
+export class MarkdownView {
+  editor: unknown = null
 }
 
 export class Plugin {

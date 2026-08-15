@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { scanReferenceMatches } from './scan-references'
+import { maskInlineCodeSpans, scanReferenceMatches } from './scan-references'
 import { makeVerseId } from './verse-id'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
+
+describe('maskInlineCodeSpans', () => {
+  it('blanks code spans while preserving length and surrounding text', () => {
+    expect(maskInlineCodeSpans('a `{John 15:4}` b')).toBe(
+      `a ${' '.repeat('`{John 15:4}`'.length)} b`,
+    )
+  })
+
+  it('leaves unclosed backtick runs and plain text untouched', () => {
+    expect(maskInlineCodeSpans('no code here')).toBe('no code here')
+    expect(maskInlineCodeSpans('open ` {John 15:4}')).toBe('open ` {John 15:4}')
+  })
+})
 
 describe('scanReferenceMatches', () => {
   it('finds a match with brace-inclusive start and end offsets', () => {

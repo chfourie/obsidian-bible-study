@@ -33,6 +33,17 @@ export const modelFromParsed = (
   invalidTokens: parsed.invalidTokens.map((token) => token.text),
 })
 
+export const sameRenderModel = (
+  a: ReferenceRenderModel,
+  b: ReferenceRenderModel,
+): boolean =>
+  a.referenceText === b.referenceText &&
+  a.translationId === b.translationId &&
+  a.chipLabel === b.chipLabel &&
+  a.display === b.display &&
+  a.invalidTokens.length === b.invalidTokens.length &&
+  a.invalidTokens.every((token, index) => token === b.invalidTokens[index])
+
 export const buildReferenceRenderModel = (
   text: string,
   context: RenderContext,

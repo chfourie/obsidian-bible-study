@@ -65,6 +65,24 @@ describe('renderReference chip', () => {
     expect([...labels].map((label) => label.textContent)).toEqual(['NKJV'])
   })
 
+  it('opens the reader from the keyboard with Enter and Space', async () => {
+    const { parent, deps, openReference } = setup()
+
+    await renderReference(parent, model('John 15:4'), deps)
+
+    const chip = parent.querySelector('.bible-study-chip')
+    chip?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+    )
+    chip?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
+    )
+    chip?.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'a', bubbles: true }),
+    )
+    expect(openReference).toHaveBeenCalledTimes(2)
+  })
+
   it('renders a nav icon inside the chip', async () => {
     const { parent, deps } = setup()
 
@@ -196,6 +214,26 @@ describe('renderReference inline', () => {
     )
   })
 
+  it('retries the passage from the keyboard', async () => {
+    let available = false
+    const { parent, deps } = setup(() =>
+      available ? passageOf('Remain.') : { status: 'unavailable' },
+    )
+
+    await renderReference(parent, model('John 15:4 inline'), deps)
+    available = true
+    parent
+      .querySelector('.bible-study-retry')
+      ?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+      )
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+    expect(parent.querySelector('.bible-study-passage')?.textContent).toBe(
+      '“Remain.”',
+    )
+  })
+
   it('treats a fully absent passage as unavailable', async () => {
     const { parent, deps } = setup(passageOf())
 
@@ -235,6 +273,21 @@ describe('renderReference callout', () => {
     parent
       .querySelector('.bible-study-callout-nav')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(openReference).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceText: 'John 15:4' }),
+    )
+  })
+
+  it('opens the reader from the title nav icon with the keyboard', async () => {
+    const { parent, deps, openReference } = setup()
+
+    await renderReference(parent, model('John 15:4 callout'), deps)
+
+    parent
+      .querySelector('.bible-study-callout-nav')
+      ?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
+      )
     expect(openReference).toHaveBeenCalledWith(
       expect.objectContaining({ referenceText: 'John 15:4' }),
     )

@@ -78,10 +78,16 @@ describe('ModulePassageSource', () => {
     })
   })
 
-  it('serves an absent book as an empty passage', async () => {
-    const passage = await setup().passage(ref('Genesis 1:1'), 'web')
+  it('reports an absent book as unavailable so retries can succeed', async () => {
+    expect(await setup().passage(ref('Genesis 1:1'), 'web')).toEqual({
+      status: 'unavailable',
+    })
+  })
 
-    expect(passage).toMatchObject({ status: 'ok', verses: [] })
+  it('reports a reference whose verses are all content gaps as unavailable', async () => {
+    expect(await setup().passage(ref('John 15:6'), 'web')).toEqual({
+      status: 'unavailable',
+    })
   })
 
   it('carries a copyright attribution from the manifest', async () => {
