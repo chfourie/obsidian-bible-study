@@ -13,7 +13,7 @@ export class RefPromptModal extends Modal {
     this.titleEl.setText('New annotation')
     const input = this.contentEl.createEl('input', {
       cls: 'bible-study-ref-input',
-      attr: { type: 'text', placeholder: 'e.g. John 15:4-6,9' },
+      attr: { type: 'text', placeholder: 'John 15:4-6,9' },
     })
     input.value = this.initialValue
     const error = this.contentEl.createDiv({ cls: 'bible-study-ref-error' })

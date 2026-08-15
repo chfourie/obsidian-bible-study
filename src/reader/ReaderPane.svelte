@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BOOK_COUNT, bookName, chapterCount } from '../reference'
+  import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
   import type {
     ReaderPaneModel,
     ReaderToggles,
@@ -10,9 +10,13 @@
   let {
     model,
     openNote,
+    onAnnotate,
+    renderMarkdown,
   }: {
     model: ReaderPaneModel
     openNote: (file: string) => void
+    onAnnotate: (reference: Reference) => void
+    renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) => void
   } = $props()
 
   // Initial snapshot only — the model subscription below keeps it fresh.
@@ -81,6 +85,37 @@
   const detailsFor = (row: VerseRowView): VerseDetailsView | null =>
     row.expanded ? (view.details[row.verseId] ?? null) : null
 
+  const onVerseClick = (event: MouseEvent, verseId: number): void => {
+    if (event.shiftKey) model.extendSelectionTo(verseId)
+    else void model.selectVerse(verseId)
+  }
+
+  const inSelectionSpan = (verseId: number): boolean => {
+    if (view.selectedVerseId === null || view.selectionEndId === null) return false
+    const low = Math.min(view.selectedVerseId, view.selectionEndId)
+    const high = Math.max(view.selectedVerseId, view.selectionEndId)
+    return verseId >= low && verseId <= high
+  }
+
+  const verseSelected = (verseId: number): boolean =>
+    inSelectionSpan(verseId) ||
+    (view.toggles.details === 'side-panel' && view.selectedVerseId === verseId)
+
+  const annotateSelection = (): void => {
+    const reference = model.selectionReference()
+    if (reference !== null) onAnnotate(reference)
+  }
+
+  type MarkdownBody = { text: string; path: string }
+  const markdown = (el: HTMLElement, body: MarkdownBody) => {
+    const render = (value: MarkdownBody): void => {
+      el.replaceChildren()
+      renderMarkdown(el, value.text, value.path)
+    }
+    render(body)
+    return { update: render }
+  }
+
   const onBookPicked = (event: Event): void => {
     const book = Number((event.target as HTMLSelectElement).value)
     void model.goTo(book, 1)
@@ -90,6 +125,48 @@
     void model.goTo(view.position.book, Number((event.target as HTMLSelectElement).value))
   }
 </script>
+
+{#snippet notesBlock(details: VerseDetailsView)}
+  <div class="bsr-notes-head">
+    <span class="bsr-group-label">Annotations</span>
+    <button type="button" class="bsr-annotate" onclick={annotateSelection}>Annotate</button>
+  </div>
+  {#if details.annotations.length === 0}
+    <div class="bsr-details-empty">No annotations.</div>
+  {:else}
+    {#each details.annotations as block (block.file)}
+      <details class="bsr-anno-block" open>
+        <summary class="bsr-anno-summary">
+          <span class="bsr-anno-title">{block.title}</span>
+          <button
+            type="button"
+            class="bsr-anno-edit"
+            aria-label="Open annotation in editor"
+            onclick={(event) => {
+              event.preventDefault()
+              openNote(block.file)
+            }}
+          >✎</button>
+        </summary>
+        <div class="bsr-anno-body" use:markdown={{ text: block.body, path: block.file }}></div>
+      </details>
+    {/each}
+  {/if}
+  <div class="bsr-group-label">Mentions</div>
+  {#if details.mentions.length === 0}
+    <div class="bsr-details-empty">No intersecting notes.</div>
+  {:else}
+    {#each details.mentions as note (note.file)}
+      <button
+        type="button"
+        class="bsr-note-card"
+        onclick={() => openNote(note.file)}
+      >
+        <span class="bsr-note-path">{note.file}</span>
+      </button>
+    {/each}
+  {/if}
+{/snippet}
 
 {#snippet detailsBlock(details: VerseDetailsView | null)}
   {#if details === null}
@@ -112,20 +189,7 @@
         {/each}
       </tbody>
     </table>
-    {#if details.notes.length === 0}
-      <div class="bsr-details-empty">No annotations or intersecting notes.</div>
-    {:else}
-      {#each details.notes as note (note.file)}
-        <button
-          type="button"
-          class="bsr-note-card"
-          class:bsr-note-anno={note.annotation}
-          onclick={() => openNote(note.file)}
-        >
-          <span class="bsr-note-path">{note.file}</span>
-        </button>
-      {/each}
-    {/if}
+    {@render notesBlock(details)}
   {/if}
 {/snippet}
 
@@ -242,10 +306,10 @@
               <div
                 class="bsr-verse-line"
                 class:bsr-hl={row.highlighted}
-                class:bsr-sel={view.toggles.details === 'side-panel' && view.selectedVerseId === row.verseId}
+                class:bsr-sel={verseSelected(row.verseId)}
                 role="button"
                 tabindex="0"
-                onclick={() => void model.selectVerse(row.verseId)}
+                onclick={(event) => onVerseClick(event, row.verseId)}
                 onkeydown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault()
@@ -266,10 +330,10 @@
                 <span
                   class="bsr-verse-span"
                   class:bsr-hl={row.highlighted}
-                  class:bsr-sel={view.toggles.details === 'side-panel' && view.selectedVerseId === row.verseId}
+                  class:bsr-sel={verseSelected(row.verseId)}
                   role="button"
                   tabindex="0"
-                  onclick={() => void model.selectVerse(row.verseId)}
+                  onclick={(event) => onVerseClick(event, row.verseId)}
                   onkeydown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
@@ -335,20 +399,7 @@
             </table>
           {:else}
             <div class="bsr-details-title">{selectedDetails.title}</div>
-            {#if selectedDetails.notes.length === 0}
-              <div class="bsr-details-empty">No annotations or intersecting notes.</div>
-            {:else}
-              {#each selectedDetails.notes as note (note.file)}
-                <button
-                  type="button"
-                  class="bsr-note-card"
-                  class:bsr-note-anno={note.annotation}
-                  onclick={() => openNote(note.file)}
-                >
-                  <span class="bsr-note-path">{note.file}</span>
-                </button>
-              {/each}
-            {/if}
+            {@render notesBlock(selectedDetails)}
           {/if}
         </div>
       </div>
@@ -699,12 +750,83 @@
     border-color: var(--text-accent);
   }
 
-  .bsr-note-card.bsr-note-anno {
-    border-left-color: var(--color-yellow);
-  }
-
   .bsr-note-path {
     color: var(--text-muted);
+  }
+
+  .bsr-notes-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  .bsr-group-label {
+    display: block;
+    margin-top: 8px;
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .bsr-notes-head .bsr-group-label {
+    margin-top: 0;
+  }
+
+  .bsr-annotate {
+    background: hsla(var(--interactive-accent-hsl), 0.15);
+    border: none;
+    border-radius: var(--radius-s);
+    box-shadow: none;
+    padding: 2px 10px;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-accent);
+    cursor: pointer;
+  }
+
+  .bsr-anno-block {
+    border: 1px solid var(--background-modifier-border);
+    border-left: 3px solid var(--color-yellow);
+    border-radius: var(--radius-m);
+    background: var(--background-secondary);
+    margin: 6px 0;
+    padding: 4px 10px;
+    font-size: var(--font-ui-small);
+  }
+
+  .bsr-anno-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .bsr-anno-title {
+    flex: 1;
+    color: var(--text-normal);
+    font-weight: 600;
+  }
+
+  .bsr-anno-edit {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0 4px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsr-anno-edit:hover {
+    color: var(--text-accent);
+  }
+
+  .bsr-anno-body {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 4px 0 6px;
+    user-select: text;
   }
 
   .bsr-nudge {

@@ -93,6 +93,18 @@ export const editorLivePreviewField = StateField.define<boolean>({
   },
 })
 
+// Markdown never actually renders in tests; view glue passes bodies through
+// this stub and specs assert on the model instead.
+export const MarkdownRenderer = {
+  render: async (
+    _app: App,
+    _markdown: string,
+    _el: HTMLElement,
+    _sourcePath: string,
+    _component: unknown,
+  ): Promise<void> => {},
+}
+
 // Just enough of Modal for glue that prompts the user: open/close call the
 // lifecycle hooks synchronously; specs reach into `contentEl` to drive the UI.
 export class Modal {
@@ -132,6 +144,7 @@ export class WorkspaceLeaf {
 }
 
 export abstract class ItemView {
+  app: App = new App()
   contentEl: HTMLElement = document.createElement('div')
 
   constructor(readonly leaf: WorkspaceLeaf) {}
