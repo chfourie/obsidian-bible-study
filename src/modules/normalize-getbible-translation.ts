@@ -3,6 +3,7 @@ import {
   MODULE_FORMAT_VERSION,
   type ModuleManifest,
 } from './module-manifest'
+import type { VerseContent } from './verse-content'
 
 export type GetBibleVerse = {
   chapter: number
@@ -32,7 +33,7 @@ export type GetBibleTranslation = {
   books: GetBibleBook[]
 }
 
-export type BookContent = Record<number, string>
+export type BookContent = Record<number, VerseContent>
 
 export type NormalizedModule = {
   manifest: ModuleManifest

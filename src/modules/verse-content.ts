@@ -10,3 +10,9 @@ export type TaggedVerse = {
 }
 
 export type VerseContent = string | TaggedVerse
+
+export const isTaggedVerse = (content: VerseContent): content is TaggedVerse =>
+  typeof content !== 'string'
+
+export const verseTextOf = (content: VerseContent): string =>
+  isTaggedVerse(content) ? content.text : content

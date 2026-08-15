@@ -5,6 +5,7 @@ import type {
   BookContent,
   NormalizedModule,
 } from './normalize-getbible-translation'
+import { verseTextOf } from './verse-content'
 
 const MODULES_ROOT = 'modules'
 
@@ -49,7 +50,8 @@ export class ModuleStore {
 
   async verseText(moduleId: string, verseId: number): Promise<string | null> {
     const { book } = decodeVerseId(verseId)
-    return (await this.bookContent(moduleId, book))?.[verseId] ?? null
+    const content = (await this.bookContent(moduleId, book))?.[verseId]
+    return content === undefined ? null : verseTextOf(content)
   }
 
   async bookContent(

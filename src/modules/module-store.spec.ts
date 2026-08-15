@@ -227,6 +227,24 @@ describe('ModuleStore', () => {
     expect(await store.installedManifests()).toEqual([])
   })
 
+  it('serves plain verse text from a Strong-tagged verse', async () => {
+    const { store } = setup()
+    const bsb = webModule()
+    bsb.manifest.id = 'bsb'
+    bsb.books.set(43, {
+      [makeVerseId(43, 15, 4)]: {
+        text: 'Remain in Me, and I will remain in you.',
+        tags: [{ start: 0, end: 6, strongs: ['G3306'] }],
+      },
+    })
+
+    await store.saveModule(bsb)
+
+    expect(await store.verseText('bsb', makeVerseId(43, 15, 4))).toBe(
+      'Remain in Me, and I will remain in you.',
+    )
+  })
+
   it('drops content of a previous install when a module is saved again', async () => {
     const { store } = setup()
     await store.saveModule(webModule())
