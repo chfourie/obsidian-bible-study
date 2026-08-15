@@ -118,3 +118,81 @@ describe('parseReference — verse forms', () => {
     expect(parseReference('John 15:4,')).toBeNull()
   })
 })
+
+describe('parseReference — book name forms', () => {
+  it('parses multi-word book names', () => {
+    expect(parseReference('Song of Solomon 2:1')?.reference.book).toBe(22)
+    expect(parseReference('1 Samuel 3:10')?.reference.book).toBe(9)
+    expect(parseReference('2 Kings 2:11')?.reference.book).toBe(12)
+  })
+
+  it('parses abbreviations with an optional trailing period', () => {
+    expect(parseReference('Gen. 1:1')?.reference.book).toBe(1)
+    expect(parseReference('Jhn 3:16')?.reference.book).toBe(43)
+    expect(parseReference('1Jn 1:9')?.reference.book).toBe(62)
+    expect(parseReference('1 Jn 1:9')?.reference.book).toBe(62)
+  })
+
+  it('matches book names case-insensitively', () => {
+    expect(parseReference('john 15:4')?.reference.book).toBe(43)
+    expect(parseReference('SONG OF SOLOMON 2:1')?.reference.book).toBe(22)
+  })
+})
+
+describe('parseReference — option tokens', () => {
+  const options = { translationIds: ['nkjv', 'web', 'kjv'] }
+
+  it('parses a translation token', () => {
+    const parsed = parseReference('John 15:4 nkjv', options)
+    expect(parsed?.translation).toBe('nkjv')
+    expect(parsed?.display).toBeNull()
+    expect(parsed?.invalidTokens).toEqual([])
+  })
+
+  it('parses translation and display keyword in any order', () => {
+    const first = parseReference('John 15:4 nkjv callout', options)
+    expect(first?.translation).toBe('nkjv')
+    expect(first?.display).toBe('callout')
+
+    const second = parseReference('John 15:4 inline web', options)
+    expect(second?.translation).toBe('web')
+    expect(second?.display).toBe('inline')
+  })
+
+  it('matches option tokens case-insensitively', () => {
+    const parsed = parseReference('John 15:4 NKJV Inline', options)
+    expect(parsed?.translation).toBe('nkjv')
+    expect(parsed?.display).toBe('inline')
+  })
+
+  it('flags unknown tokens as invalid and keeps the reference valid', () => {
+    const parsed = parseReference('John 15:4 bogus', options)
+    expect(parsed?.reference.book).toBe(43)
+    expect(parsed?.translation).toBeNull()
+    expect(parsed?.invalidTokens).toEqual([
+      { text: 'bogus', start: 10, end: 15 },
+    ])
+  })
+
+  it('keeps the first valid token when duplicates or conflicts follow', () => {
+    const duplicated = parseReference('John 15:4 nkjv web', options)
+    expect(duplicated?.translation).toBe('nkjv')
+    expect(duplicated?.invalidTokens).toEqual([
+      { text: 'web', start: 15, end: 18 },
+    ])
+
+    const conflicting = parseReference('John 15:4 callout inline', options)
+    expect(conflicting?.display).toBe('callout')
+    expect(conflicting?.invalidTokens).toEqual([
+      { text: 'inline', start: 18, end: 24 },
+    ])
+  })
+
+  it('treats every non-keyword token as invalid when no translations are known', () => {
+    const parsed = parseReference('John 15:4 nkjv')
+    expect(parsed?.translation).toBeNull()
+    expect(parsed?.invalidTokens).toEqual([
+      { text: 'nkjv', start: 10, end: 14 },
+    ])
+  })
+})

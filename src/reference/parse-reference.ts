@@ -85,13 +85,59 @@ const parseVerseSpec = (bookId: number, spec: string): Reference | null => {
   return { book: bookId, ranges: mergeRanges(ranges) }
 }
 
-export const parseReference = (text: string): ParsedReference | null => {
-  const words = text.trim().split(/\s+/)
-  const bookMatch = matchBook(words)
+export type ParseOptions = {
+  translationIds?: readonly string[]
+}
+
+const tokenize = (text: string): ReferenceToken[] =>
+  [...text.matchAll(/\S+/g)].map((match) => ({
+    text: match[0],
+    start: match.index,
+    end: match.index + match[0].length,
+  }))
+
+const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'callout']
+
+const classifyOptionTokens = (
+  tokens: ReferenceToken[],
+  translationIds: readonly string[],
+): Pick<ParsedReference, 'translation' | 'display' | 'invalidTokens'> => {
+  let translation: string | null = null
+  let display: DisplayMode | null = null
+  const invalidTokens: ReferenceToken[] = []
+  for (const token of tokens) {
+    const lowered = token.text.toLowerCase()
+    const displayMode = DISPLAY_MODES.find((mode) => mode === lowered)
+    const translationId = translationIds.find(
+      (id) => id.toLowerCase() === lowered,
+    )
+    if (displayMode && display === null) {
+      display = displayMode
+    } else if (translationId !== undefined && translation === null) {
+      translation = translationId
+    } else {
+      invalidTokens.push(token)
+    }
+  }
+  return { translation, display, invalidTokens }
+}
+
+export const parseReference = (
+  text: string,
+  options: ParseOptions = {},
+): ParsedReference | null => {
+  const tokens = tokenize(text)
+  const bookMatch = matchBook(tokens.map((token) => token.text))
   if (!bookMatch) return null
-  const specWord = words[bookMatch.wordsUsed]
-  if (!specWord) return null
-  const reference = parseVerseSpec(bookMatch.bookId, specWord)
+  const specToken = tokens[bookMatch.wordsUsed]
+  if (!specToken) return null
+  const reference = parseVerseSpec(bookMatch.bookId, specToken.text)
   if (!reference) return null
-  return { reference, translation: null, display: null, invalidTokens: [] }
+  return {
+    reference,
+    ...classifyOptionTokens(
+      tokens.slice(bookMatch.wordsUsed + 1),
+      options.translationIds ?? [],
+    ),
+  }
 }
