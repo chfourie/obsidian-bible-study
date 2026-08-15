@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <!-- PROTOTYPE — throwaway. Wayfinder ticket #6: what should the reader pane look and behave like?
-     Three variants on one page, switchable via ?variant=A|B|C or the floating bar / arrow keys.
-     Mock data only (John 15, public-domain translations, approximate text). Delete when the ticket resolves. -->
+     Revision 2: single layout (C's shell) with three independent toggles:
+       1) details: inline expand vs right side panel
+       2) nav: left tree panel vs breadcrumb top links
+       3) layout: verse-per-line vs continuous prose (respects paragraph info)
+     Mock data only (John 15, public-domain/approximate text). Delete when the ticket resolves. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -24,10 +27,6 @@
   }
   #app { height: 100vh; overflow: hidden; }
   button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
-  select {
-    font: inherit; color: var(--text); background: var(--bg3);
-    border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px;
-  }
   ::-webkit-scrollbar { width: 10px; }
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; }
 
@@ -44,7 +43,6 @@
     border-radius: 8px; padding: 0 4px; background: var(--bg3); color: var(--muted);
   }
 
-  /* entry-context banner (shared) */
   .entry-banner {
     display: flex; align-items: center; gap: 8px; padding: 6px 14px;
     background: var(--accent-dim); border-bottom: 1px solid var(--border);
@@ -53,92 +51,94 @@
   .entry-banner code { background: rgba(0,0,0,.25); padding: 1px 6px; border-radius: 4px; }
   .entry-banner button { margin-left: auto; color: var(--muted); }
 
-  /* ============ VARIANT A — Book ============ */
-  .va { display: flex; flex-direction: column; height: 100%; }
-  .va-toolbar {
-    display: flex; align-items: center; gap: 10px; padding: 8px 16px;
-    background: var(--bg2); border-bottom: 1px solid var(--border);
+  /* toolbar + toggles */
+  .toolbar {
+    display: flex; align-items: center; gap: 14px; padding: 7px 14px;
+    background: var(--bg2); border-bottom: 1px solid var(--border); flex-wrap: wrap;
   }
-  .va-toolbar .spacer { flex: 1; }
-  .va-step { padding: 4px 10px; border-radius: 6px; color: var(--muted); }
-  .va-step:hover { background: var(--bg3); color: var(--text); }
-  .va-scroll { flex: 1; overflow-y: auto; }
-  .va-page { max-width: 620px; margin: 0 auto; padding: 32px 24px 120px; }
-  .va-page h1 { font-family: Georgia, serif; font-weight: 500; font-size: 1.6rem; margin: 0 0 20px; }
-  .va-prose { font-family: Georgia, "Times New Roman", serif; font-size: 1.08rem; line-height: 1.85; }
-  .va-verse { cursor: pointer; border-radius: 3px; padding: 1px 2px; position: relative; }
-  .va-verse:hover { background: var(--bg3); }
-  .va-verse sup { color: var(--accent); font-size: .68em; margin-right: 3px; font-family: -apple-system, sans-serif; }
-  .va-verse.hl { background: var(--highlight); box-shadow: -3px 0 0 var(--highlight-border); }
-  .va-verse .marks { font-size: .62em; vertical-align: super; margin-left: 2px; letter-spacing: 1px; }
-  .va-sheet {
-    position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: min(640px, 100vw);
-    max-height: 46vh; overflow-y: auto; background: var(--bg2); border: 1px solid var(--border);
-    border-bottom: none; border-radius: 12px 12px 0 0; padding: 14px 18px 70px;
-    box-shadow: 0 -8px 30px rgba(0,0,0,.5); z-index: 40;
-  }
-  .va-sheet h3 { margin: 0 0 10px; font-size: .95rem; display: flex; align-items: center; }
-  .va-sheet h3 button { margin-left: auto; color: var(--muted); }
+  .toolbar .spacer { flex: 1; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .seg button { padding: 3px 10px; font-size: .78rem; color: var(--muted); background: var(--bg3); }
+  .seg button.on { background: var(--accent-dim); color: var(--accent); }
+  .seg-label { font-size: .68rem; color: var(--faint); text-transform: uppercase; letter-spacing: .05em; margin-right: 4px; }
 
-  /* ============ VARIANT B — Study split ============ */
-  .vb { display: flex; flex-direction: column; height: 100%; }
-  .vb-crumb {
-    display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  /* shell */
+  .shell { display: flex; flex-direction: column; height: 100%; }
+  .main { flex: 1; display: flex; min-height: 0; }
+
+  /* left tree (nav = tree) */
+  .tree {
+    width: 205px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 10px 0 40px; font-size: .88rem;
+  }
+  .tree .grp { padding: 4px 14px; color: var(--faint); text-transform: uppercase; font-size: .68rem; letter-spacing: .06em; margin-top: 8px; }
+  .tree-book { display: block; width: 100%; text-align: left; padding: 3px 14px; color: var(--muted); }
+  .tree-book:hover { color: var(--text); background: var(--bg3); }
+  .tree-book.on { color: var(--accent); }
+  .tree-chapters { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 14px 8px 22px; }
+  .tree-ch { width: 30px; height: 26px; border-radius: 5px; background: var(--bg3); color: var(--muted); font-size: .78rem; }
+  .tree-ch.on { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
+
+  /* breadcrumb (nav = crumb) */
+  .crumb {
+    display: flex; align-items: center; gap: 6px; padding: 6px 16px;
     background: var(--bg2); border-bottom: 1px solid var(--border); font-size: .9rem;
   }
-  .vb-crumb .spacer { flex: 1; }
-  .vb-main { flex: 1; display: flex; min-height: 0; }
-  .vb-verses { flex: 1.4; overflow-y: auto; padding: 20px 8px 120px 0; }
-  .vb-row { display: flex; gap: 8px; padding: 5px 10px; border-radius: 6px; cursor: pointer; line-height: 1.6; }
-  .vb-row:hover { background: var(--bg3); }
-  .vb-row.sel { background: var(--accent-dim); }
-  .vb-row.hl { box-shadow: inset 3px 0 0 var(--highlight-border); background: var(--highlight); }
-  .vb-row.hl.sel { background: var(--accent-dim); }
-  .vb-gutter { width: 58px; flex-shrink: 0; text-align: right; color: var(--faint); font-size: .8rem; padding-top: 3px; }
-  .vb-gutter .vnum { color: var(--accent); font-weight: 600; margin-left: 4px; }
-  .vb-side {
-    flex: 1; border-left: 1px solid var(--border); background: var(--bg2);
-    display: flex; flex-direction: column; min-width: 280px; max-width: 380px;
-  }
-  .vb-tabs { display: flex; border-bottom: 1px solid var(--border); }
-  .vb-tab { flex: 1; padding: 8px; font-size: .85rem; color: var(--muted); border-bottom: 2px solid transparent; }
-  .vb-tab.on { color: var(--accent); border-bottom-color: var(--accent); }
-  .vb-side-body { flex: 1; overflow-y: auto; padding: 12px 14px 120px; }
-  .vb-footer {
-    display: flex; justify-content: center; gap: 14px; padding: 6px;
-    border-top: 1px solid var(--border); background: var(--bg2); font-size: .85rem; color: var(--muted);
-  }
+  .crumb button.link { color: var(--accent); }
+  .crumb .hint { color: var(--faint); font-size: .78rem; }
+  .crumb .spacer { flex: 1; }
+  .crumb .step { color: var(--muted); padding: 2px 8px; border-radius: 5px; }
+  .crumb .step:hover { background: var(--bg3); color: var(--text); }
 
-  /* ============ VARIANT C — Tree + inline expand ============ */
-  .vc { display: flex; height: 100%; }
-  .vc-tree {
-    width: 210px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border);
-    overflow-y: auto; padding: 10px 0 120px; font-size: .88rem;
-  }
-  .vc-tree .grp { padding: 4px 14px; color: var(--faint); text-transform: uppercase; font-size: .68rem; letter-spacing: .06em; margin-top: 8px; }
-  .vc-book { display: block; width: 100%; text-align: left; padding: 3px 14px; color: var(--muted); border-radius: 0; }
-  .vc-book:hover { color: var(--text); background: var(--bg3); }
-  .vc-book.on { color: var(--accent); }
-  .vc-chapters { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 14px 8px 22px; }
-  .vc-ch { width: 30px; height: 26px; border-radius: 5px; background: var(--bg3); color: var(--muted); font-size: .78rem; }
-  .vc-ch.on { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
-  .vc-body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  .vc-tabs { display: flex; gap: 4px; padding: 8px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
-  .vc-scroll { flex: 1; overflow-y: auto; padding: 20px 26px 120px; max-width: 760px; }
-  .vc-verse { padding: 4px 8px; border-radius: 6px; cursor: pointer; line-height: 1.65; }
-  .vc-verse:hover { background: var(--bg3); }
-  .vc-verse.hl { background: var(--highlight); box-shadow: inset 3px 0 0 var(--highlight-border); }
-  .vc-verse .vnum { color: var(--accent); font-size: .75em; font-weight: 700; margin-right: 6px; }
-  .vc-expand {
+  /* content */
+  .content-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .scroll { flex: 1; overflow-y: auto; padding: 18px 26px 60px; }
+  .scroll .inner { max-width: 700px; }
+  .scroll h1 { font-size: 1.3rem; font-weight: 600; margin: 0 0 14px; }
+  .scroll h1 .tid { color: var(--faint); font-size: .85rem; font-weight: 400; }
+
+  /* verse-per-line */
+  .v-line { padding: 4px 8px; border-radius: 6px; cursor: pointer; line-height: 1.65; }
+  .v-line:hover { background: var(--bg3); }
+  .v-line.hl { background: var(--highlight); box-shadow: inset 3px 0 0 var(--highlight-border); border-radius: 0 6px 6px 0; }
+  .v-line.sel { background: var(--accent-dim); }
+  .v-line .vnum { color: var(--accent); font-size: .75em; font-weight: 700; margin-right: 6px; }
+  .v-line .marks { font-size: .7rem; margin-left: 4px; }
+
+  /* continuous prose */
+  .prose { font-family: Georgia, "Times New Roman", serif; font-size: 1.06rem; line-height: 1.85; }
+  .prose p { margin: 0 0 1em; }
+  .v-span { cursor: pointer; border-radius: 3px; padding: 1px 2px; }
+  .v-span:hover { background: var(--bg3); }
+  .v-span.hl { background: var(--highlight); box-shadow: -3px 0 0 var(--highlight-border); }
+  .v-span.sel { background: var(--accent-dim); }
+  .v-span sup { color: var(--accent); font-size: .68em; margin-right: 3px; font-family: -apple-system, sans-serif; }
+  .v-span .marks { font-size: .62em; vertical-align: super; margin-left: 2px; letter-spacing: 1px; }
+
+  /* inline expand */
+  .expand {
     margin: 4px 0 10px 24px; border: 1px solid var(--border); border-radius: 8px;
     background: var(--bg2); padding: 10px 14px; font-size: .92rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
-  .vc-expand table { width: 100%; border-collapse: collapse; }
-  .vc-expand td { padding: 5px 8px; vertical-align: top; border-top: 1px solid var(--border); }
-  .vc-expand td:first-child { color: var(--accent); font-weight: 600; width: 52px; border: none; }
-  .vc-expand tr:first-child td { border-top: none; }
+  .prose .expand { margin: 6px 0 14px; }
+  .expand table { width: 100%; border-collapse: collapse; }
+  .expand td { padding: 5px 8px; vertical-align: top; border-top: 1px solid var(--border); }
+  .expand td:first-child { color: var(--accent); font-weight: 600; width: 52px; border: none; }
+  .expand tr:first-child td { border-top: none; }
+  .expand .exp-title { font-size: .78rem; color: var(--faint); margin-bottom: 6px; }
 
-  /* shared note cards */
+  /* side panel */
+  .side {
+    flex-shrink: 0; width: 320px; border-left: 1px solid var(--border); background: var(--bg2);
+    display: flex; flex-direction: column;
+  }
+  .side-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .side-tab { flex: 1; padding: 8px; font-size: .85rem; color: var(--muted); border-bottom: 2px solid transparent; }
+  .side-tab.on { color: var(--accent); border-bottom-color: var(--accent); }
+  .side-body { flex: 1; overflow-y: auto; padding: 12px 14px 40px; }
+
+  /* note cards / translations */
   .note-card {
     border: 1px solid var(--border); border-radius: 8px; background: var(--bg3);
     padding: 8px 10px; margin: 8px 0; font-size: .88rem; cursor: pointer;
@@ -149,35 +149,17 @@
   .note-card.inter { border-left: 3px solid var(--inter); }
   .trans-row { margin: 6px 0; }
   .trans-row .tid { color: var(--accent); font-weight: 600; font-size: .8rem; margin-right: 8px; }
-  .attrib { color: var(--faint); font-size: .72rem; margin-top: 10px; }
-
-  /* floating switcher */
-  #switcher {
-    position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 100;
-    display: flex; align-items: center; gap: 10px; padding: 8px 14px;
-    background: #0d0d0d; border: 1px solid #555; border-radius: 999px;
-    box-shadow: 0 4px 18px rgba(0,0,0,.6); font-size: .85rem; color: #eee;
-  }
-  #switcher button { font-size: 1rem; padding: 0 6px; color: #bbb; }
-  #switcher button:hover { color: #fff; }
-  #switcher b { color: var(--accent); }
+  .attrib { color: var(--faint); font-size: .72rem; margin-top: 14px; }
 </style>
 </head>
 <body>
 <div id="app"></div>
-<div id="switcher">
-  <button id="sw-prev" title="Previous variant (←)">←</button>
-  <span id="sw-label"></span>
-  <button id="sw-next" title="Next variant (→)">→</button>
-</div>
 
 <script>
 /* ---------------- mock data ---------------- */
 const TRANSLATIONS = ["WEB", "KJV", "ASV", "BSB"];
-const BOOKS = ["Genesis","Psalms","Isaiah","Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","Ephesians","Revelation"];
-const CHAPTERS = 21; // John
-
-// John 15:1-17 — public-domain / mock approximations, per translation.
+const BOOKS_BEFORE = ["Matthew","Mark","Luke"], BOOKS_AFTER = ["Acts","Romans","1 Corinthians","Ephesians","Revelation"];
+const CHAPTERS = 21;
 const WEB = {
 1:"I am the true vine, and my Father is the farmer.",
 2:"Every branch in me that doesn’t bear fruit, he takes away. Every branch that bears fruit, he prunes, that it may bear more fruit.",
@@ -219,9 +201,11 @@ const KJV = {
 const TEXTS = {
   WEB, KJV,
   ASV: Object.fromEntries(Object.entries(KJV).map(([k,v]) => [k, v.replace(/\bye\b/g,"you").replace(/hath/g,"has")])),
-  BSB: Object.fromEntries(Object.entries(WEB).map(([k,v]) => [k, v.replace(/Remain/g,"Remain").replace(/farmer/,"keeper of the vineyard")]))
+  BSB: Object.fromEntries(Object.entries(WEB).map(([k,v]) => [k, v.replace(/farmer/,"keeper of the vineyard")]))
 };
 const VERSE_COUNT = 17;
+// paragraph (pericope) structure — verse numbers that START a paragraph
+const PARAGRAPHS = [1, 5, 9, 12, 16];
 const HIGHLIGHT = { from: 4, to: 7 };  // opened from {John 15:4-7 web callout}
 const NOTES = {
   4: { anno: { path: "Bible Study/Annotations/John 15.4 — Abide.md",
@@ -239,17 +223,22 @@ const NOTES = {
 const ATTRIB = { WEB: "World English Bible — public domain", KJV: "King James Version — public domain",
                  ASV: "American Standard Version — public domain (mock text)", BSB: "Berean Standard Bible — free use (mock text)" };
 
-/* ---------------- shared state ---------------- */
+/* ---------------- state ---------------- */
 const state = {
   translation: "WEB",
+  details: "inline",   // 'inline' | 'side'   — toggle 1
+  nav: "tree",         // 'tree' | 'crumb'    — toggle 2
+  layout: "line",      // 'line' | 'continuous' — toggle 3
   selected: 4,
-  sheetOpen: false,   // A
-  sideTab: "trans",   // B
-  expanded: new Set([4]), // C
-  bookOpen: true,     // C tree
+  expanded: new Set([4]),
+  sideTab: "trans",
+  bookOpen: true,
   bannerDismissed: false,
 };
+
+/* ---------------- helpers ---------------- */
 function verseText(v, t = state.translation) { return (TEXTS[t] && TEXTS[t][v]) || "…"; }
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 function marks(v) {
   const n = NOTES[v]; if (!n) return "";
   let s = "";
@@ -257,7 +246,6 @@ function marks(v) {
   if (n.inter.length) s += `<span class="icon-inter" title="${n.inter.length} intersecting note(s)">◆${n.inter.length > 1 ? n.inter.length : ""}</span>`;
   return s;
 }
-function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
 function noteCards(v) {
   const n = NOTES[v]; if (!n || (!n.anno && !n.inter.length))
     return `<div style="color:var(--faint);font-size:.85rem;margin:8px 0;">No annotations or intersecting notes. <span style="color:var(--accent);cursor:pointer;">+ Annotate John 15:${v}</span></div>`;
@@ -269,8 +257,7 @@ function noteCards(v) {
 }
 function transStack(v) {
   return TRANSLATIONS.map(t =>
-    `<div class="trans-row"><span class="tid">${t}</span>${esc(verseText(v, t))}</div>`).join("") +
-    `<div class="attrib">${ATTRIB[state.translation]}</div>`;
+    `<div class="trans-row"><span class="tid">${t}</span>${esc(verseText(v, t))}</div>`).join("");
 }
 function banner() {
   if (state.bannerDismissed) return "";
@@ -281,153 +268,122 @@ function transChips() {
   return TRANSLATIONS.map(t =>
     `<button class="chip ${t === state.translation ? "active" : ""}" onclick="state.translation='${t}';render()">${t}</button>`).join(" ");
 }
-function bookSelect() {
-  return `<select onchange="/* mock */"><option>John</option>${BOOKS.filter(b=>b!=="John").map(b=>`<option>${b}</option>`).join("")}</select>
-          <select onchange="/* mock */">${Array.from({length:CHAPTERS},(_,i)=>`<option ${i===14?"selected":""}>${i+1}</option>`).join("")}</select>`;
+function seg(label, key, opts) {
+  return `<span><span class="seg-label">${label}</span><span class="seg">${opts.map(([val, text]) =>
+    `<button class="${state[key] === val ? "on" : ""}" onclick="state.${key}='${val}';render()">${text}</button>`).join("")}</span></span>`;
+}
+function clickVerse(v) {
+  state.selected = v;
+  if (state.details === "inline") {
+    state.expanded.has(v) ? state.expanded.delete(v) : state.expanded.add(v);
+  }
+  render();
 }
 
-/* ---------------- Variant A — Book ---------------- */
-function renderA() {
-  const prose = [];
-  for (let v = 1; v <= VERSE_COUNT; v++) {
-    prose.push(`<span class="va-verse ${v >= HIGHLIGHT.from && v <= HIGHLIGHT.to ? "hl" : ""}"
-      onclick="state.selected=${v};state.sheetOpen=true;render()">
-      <sup>${v}</sup>${esc(verseText(v))}<span class="marks">${marks(v)}</span></span> `);
-  }
-  const sheet = !state.sheetOpen ? "" : `
-    <div class="va-sheet">
-      <h3>John 15:${state.selected} — all translations &amp; notes
-        <button onclick="state.sheetOpen=false;render()">✕</button></h3>
-      ${transStack(state.selected)}
-      <hr style="border-color:var(--border);border-style:solid none none;">
-      ${noteCards(state.selected)}
-    </div>`;
-  return `<div class="va">
-    ${banner()}
-    <div class="va-toolbar">
-      ${bookSelect()}
-      <button class="va-step" title="Previous chapter">‹ ch 14</button>
-      <button class="va-step" title="Next chapter">ch 16 ›</button>
-      <div class="spacer"></div>
-      ${transChips()}
-    </div>
-    <div class="va-scroll"><div class="va-page">
-      <h1>John 15 <span style="color:var(--faint);font-size:.9rem;">· ${state.translation}</span></h1>
-      <div class="va-prose">${prose.join("")}</div>
-      <div class="attrib">${ATTRIB[state.translation]}</div>
-    </div></div>
-    ${sheet}
+/* ---------------- pieces ---------------- */
+function toolbar() {
+  return `<div class="toolbar">
+    ${seg("Details", "details", [["inline","Inline"],["side","Side panel"]])}
+    ${seg("Nav", "nav", [["tree","Tree"],["crumb","Breadcrumb"]])}
+    ${seg("Layout", "layout", [["line","Verse / line"],["continuous","Continuous"]])}
+    <div class="spacer"></div>
+    ${transChips()}
   </div>`;
 }
-
-/* ---------------- Variant B — Study split ---------------- */
-function renderB() {
-  const rows = [];
-  for (let v = 1; v <= VERSE_COUNT; v++) {
-    const cls = ["vb-row", v === state.selected ? "sel" : "", v >= HIGHLIGHT.from && v <= HIGHLIGHT.to ? "hl" : ""].join(" ");
-    rows.push(`<div class="${cls}" onclick="state.selected=${v};render()">
-      <div class="vb-gutter">${marks(v)}<span class="vnum">${v}</span></div>
-      <div>${esc(verseText(v))}</div></div>`);
-  }
-  const tab = state.sideTab;
-  const side = tab === "trans" ? transStack(state.selected) : noteCards(state.selected);
-  return `<div class="vb">
-    ${banner()}
-    <div class="vb-crumb">
-      <button style="color:var(--accent)">John</button> ›
-      <button style="color:var(--accent)">15</button>
-      <span style="color:var(--faint);font-size:.8rem;">(click to change)</span>
-      <div class="spacer"></div>
-      ${transChips()}
-    </div>
-    <div class="vb-main">
-      <div class="vb-verses">${rows.join("")}</div>
-      <div class="vb-side">
-        <div class="vb-tabs">
-          <button class="vb-tab ${tab==="trans"?"on":""}" onclick="state.sideTab='trans';render()">Translations</button>
-          <button class="vb-tab ${tab==="notes"?"on":""}" onclick="state.sideTab='notes';render()">Notes ${(NOTES[state.selected] && (NOTES[state.selected].anno || NOTES[state.selected].inter.length)) ? `<span class="badge">${(NOTES[state.selected].anno?1:0)+NOTES[state.selected].inter.length}</span>` : ""}</button>
-        </div>
-        <div class="vb-side-body">
-          <div style="font-size:.8rem;color:var(--faint);margin-bottom:6px;">John 15:${state.selected}</div>
-          ${side}
-        </div>
-      </div>
-    </div>
-    <div class="vb-footer"><button>‹ John 14</button><span>·</span><button>John 16 ›</button></div>
-  </div>`;
-}
-
-/* ---------------- Variant C — Tree + inline expand ---------------- */
-function renderC() {
+function tree() {
   const chips = Array.from({ length: CHAPTERS }, (_, i) =>
-    `<button class="vc-ch ${i === 14 ? "on" : ""}">${i + 1}</button>`).join("");
-  const tree = `<div class="vc-tree">
+    `<button class="tree-ch ${i === 14 ? "on" : ""}">${i + 1}</button>`).join("");
+  return `<div class="tree">
     <div class="grp">New Testament</div>
-    ${["Matthew","Mark","Luke"].map(b=>`<button class="vc-book">${b}</button>`).join("")}
-    <button class="vc-book on" onclick="state.bookOpen=!state.bookOpen;render()">${state.bookOpen ? "▾" : "▸"} John</button>
-    ${state.bookOpen ? `<div class="vc-chapters">${chips}</div>` : ""}
-    ${["Acts","Romans","1 Corinthians","Ephesians","Revelation"].map(b=>`<button class="vc-book">${b}</button>`).join("")}
+    ${BOOKS_BEFORE.map(b=>`<button class="tree-book">${b}</button>`).join("")}
+    <button class="tree-book on" onclick="state.bookOpen=!state.bookOpen;render()">${state.bookOpen ? "▾" : "▸"} John</button>
+    ${state.bookOpen ? `<div class="tree-chapters">${chips}</div>` : ""}
+    ${BOOKS_AFTER.map(b=>`<button class="tree-book">${b}</button>`).join("")}
   </div>`;
-  const verses = [];
+}
+function crumb() {
+  return `<div class="crumb">
+    <button class="link">John</button> ›
+    <button class="link">15</button>
+    <span class="hint">(click to change)</span>
+    <div class="spacer"></div>
+    <button class="step">‹ John 14</button>
+    <button class="step">John 16 ›</button>
+  </div>`;
+}
+function expandBox(v) {
+  return `<div class="expand">
+    <div class="exp-title">John 15:${v} — other translations &amp; notes</div>
+    <table>${TRANSLATIONS.filter(t => t !== state.translation).map(t =>
+      `<tr><td>${t}</td><td>${esc(verseText(v, t))}</td></tr>`).join("")}</table>
+    ${noteCards(v)}
+  </div>`;
+}
+function versesLine() {
+  const out = [];
   for (let v = 1; v <= VERSE_COUNT; v++) {
-    const open = state.expanded.has(v);
-    verses.push(`<div class="vc-verse ${v >= HIGHLIGHT.from && v <= HIGHLIGHT.to ? "hl" : ""}"
-        onclick="state.expanded.has(${v}) ? state.expanded.delete(${v}) : state.expanded.add(${v});render()">
-      <span class="vnum">${v}</span>${esc(verseText(v))} <span style="font-size:.7rem;">${marks(v)}</span>
-    </div>`);
-    if (open) {
-      verses.push(`<div class="vc-expand">
-        <table>${TRANSLATIONS.filter(t => t !== state.translation).map(t =>
-          `<tr><td>${t}</td><td>${esc(verseText(v, t))}</td></tr>`).join("")}</table>
-        ${noteCards(v)}
-      </div>`);
-    }
+    const cls = ["v-line",
+      v >= HIGHLIGHT.from && v <= HIGHLIGHT.to ? "hl" : "",
+      state.details === "side" && v === state.selected ? "sel" : ""].join(" ");
+    out.push(`<div class="${cls}" onclick="clickVerse(${v})">
+      <span class="vnum">${v}</span>${esc(verseText(v))}<span class="marks">${marks(v)}</span></div>`);
+    if (state.details === "inline" && state.expanded.has(v)) out.push(expandBox(v));
   }
-  return `<div class="vc">
-    ${tree}
-    <div class="vc-body">
-      ${banner()}
-      <div class="vc-tabs">${transChips()}
-        <span style="flex:1"></span>
-        <span style="color:var(--faint);font-size:.78rem;align-self:center;">click a verse to expand translations &amp; notes</span>
-      </div>
-      <div class="vc-scroll">
-        <h1 style="font-size:1.3rem;font-weight:600;">John 15</h1>
-        ${verses.join("")}
-        <div class="attrib">${ATTRIB[state.translation]}</div>
-      </div>
+  return out.join("");
+}
+function versesContinuous() {
+  const paras = [];
+  let current = [], pendingExpands = [];
+  const flush = () => {
+    if (current.length) paras.push(`<p>${current.join(" ")}</p>${pendingExpands.join("")}`);
+    current = []; pendingExpands = [];
+  };
+  for (let v = 1; v <= VERSE_COUNT; v++) {
+    if (PARAGRAPHS.includes(v) && v !== 1) flush();
+    const cls = ["v-span",
+      v >= HIGHLIGHT.from && v <= HIGHLIGHT.to ? "hl" : "",
+      state.details === "side" && v === state.selected ? "sel" : ""].join(" ");
+    current.push(`<span class="${cls}" onclick="clickVerse(${v})"><sup>${v}</sup>${esc(verseText(v))}<span class="marks">${marks(v)}</span></span>`);
+    if (state.details === "inline" && state.expanded.has(v)) pendingExpands.push(expandBox(v));
+  }
+  flush();
+  return `<div class="prose">${paras.join("")}</div>`;
+}
+function sidePanel() {
+  const tab = state.sideTab;
+  const n = NOTES[state.selected];
+  const count = n ? (n.anno ? 1 : 0) + n.inter.length : 0;
+  return `<div class="side">
+    <div class="side-tabs">
+      <button class="side-tab ${tab==="trans"?"on":""}" onclick="state.sideTab='trans';render()">Translations</button>
+      <button class="side-tab ${tab==="notes"?"on":""}" onclick="state.sideTab='notes';render()">Notes ${count ? `<span class="badge">${count}</span>` : ""}</button>
+    </div>
+    <div class="side-body">
+      <div style="font-size:.8rem;color:var(--faint);margin-bottom:6px;">John 15:${state.selected}</div>
+      ${tab === "trans" ? transStack(state.selected) : noteCards(state.selected)}
     </div>
   </div>`;
 }
 
-/* ---------------- switcher ---------------- */
-const VARIANTS = {
-  A: { name: "Book — immersive prose, bottom sheet", render: renderA },
-  B: { name: "Study split — verse list + side panel", render: renderB },
-  C: { name: "Tree + inline expand", render: renderC },
-};
-const KEYS = Object.keys(VARIANTS);
-function currentVariant() {
-  const v = new URLSearchParams(location.search).get("variant");
-  return KEYS.includes(v) ? v : "A";
-}
-function setVariant(v) {
-  const u = new URL(location); u.searchParams.set("variant", v);
-  history.replaceState(null, "", u); render();
-}
-function cycle(d) { setVariant(KEYS[(KEYS.indexOf(currentVariant()) + d + KEYS.length) % KEYS.length]); }
+/* ---------------- render ---------------- */
 function render() {
-  const v = currentVariant();
-  document.getElementById("app").innerHTML = VARIANTS[v].render();
-  document.getElementById("sw-label").innerHTML = `<b>${v}</b> — ${VARIANTS[v].name}`;
+  document.getElementById("app").innerHTML = `<div class="shell">
+    ${banner()}
+    ${toolbar()}
+    ${state.nav === "crumb" ? crumb() : ""}
+    <div class="main">
+      ${state.nav === "tree" ? tree() : ""}
+      <div class="content-col">
+        <div class="scroll"><div class="inner">
+          <h1>John 15 <span class="tid">· ${state.translation}</span></h1>
+          ${state.layout === "line" ? versesLine() : versesContinuous()}
+          <div class="attrib">${ATTRIB[state.translation]}</div>
+        </div></div>
+      </div>
+      ${state.details === "side" ? sidePanel() : ""}
+    </div>
+  </div>`;
 }
-document.getElementById("sw-prev").onclick = () => cycle(-1);
-document.getElementById("sw-next").onclick = () => cycle(1);
-document.addEventListener("keydown", e => {
-  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
-  if (e.key === "ArrowLeft") cycle(-1);
-  if (e.key === "ArrowRight") cycle(1);
-});
 render();
 </script>
 </body>

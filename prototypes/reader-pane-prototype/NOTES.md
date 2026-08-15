@@ -2,16 +2,18 @@
 
 **Question** ([wayfinder ticket #6](https://github.com/chfourie/obsidian-bible-study/issues/6)): what should the reader pane look and behave like?
 
-**Run:** open `index.html` in any browser. Switch variants with the floating bar, `?variant=A|B|C`, or ←/→ keys. Mock data only (John 15; public-domain/approximate text).
+**Run:** open `index.html` in any browser. Mock data only (John 15; public-domain/approximate text).
 
-## Variants
+## Revision 2 — decided direction
 
-- **A — Book**: immersive prose paragraphs, superscript verse numbers, top toolbar (book/chapter selects, chapter steppers, translation pills). Clicking a verse opens a bottom sheet with the multi-translation stack + annotation/intersecting-note cards. Annotation/intersection markers as tiny superscript dots.
-- **B — Study split**: verse-per-line list with a gutter (verse number + annotation ●/intersection ◆ icons), persistent right side panel with Translations/Notes tabs for the selected verse. Breadcrumb nav on top, prev/next chapter footer.
-- **C — Tree + inline expand**: Obsidian-explorer-style book/chapter tree on the left; verse-per-line main area; clicking a verse expands an inline accordion with a translation comparison table + note cards. Translation pills as tabs on top.
+The original A/B/C variant carousel is gone. User verdict on round 1: single layout (variant C's shell) with **three independent user toggles**, each with a globally configured default plus in-pane switching:
 
-All variants share: current-passage highlight (vv. 4–7, left border + tint), entry-context banner ("opened from `{John 15:4-7 web callout}`"), per-verse annotation (●, amber) and intersecting-note (◆n, blue) indicators, copyright attribution line.
+1. **Details** — reference material (other translations + notes) as *inline expand* under the clicked verse, or in a persistent *right side panel* (Translations/Notes tabs).
+2. **Nav** — book/chapter picker as *left tree panel* (Obsidian-explorer style) or *breadcrumb top links* ("John › 15", click to change) with prev/next chapter steppers.
+3. **Layout** — *verse-per-line* or *continuous* prose; continuous respects paragraph (pericope) structure when the data provides it (mock: paragraphs at vv. 1, 5, 9, 12, 16).
+
+Shared everywhere: current-passage highlight (vv. 4–7), entry-context banner ("opened from `{John 15:4-7 web callout}`"), per-verse annotation (●, amber) / intersecting-note (◆n, blue) indicators, translation pills, copyright attribution line.
 
 ## Verdict
 
-_(pending — fill in which variant/mix won and why, then delete this folder)_
+Three-toggle single layout confirmed (this revision *is* the verdict for the layout question). Still open: multi-translation stacked vs columns, indicator style, entry points, toggle defaults in settings. Delete this folder once ticket #6 closes.
