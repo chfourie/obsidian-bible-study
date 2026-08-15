@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { SettingsStore } from '../data-access'
 import { makeVerseId } from '../reference'
 import type { ModuleDataDir } from './module-data-dir'
 import { ChecksumMismatchError, ModuleManager } from './module-manager'
@@ -87,11 +88,22 @@ class FakeTranslationSource implements TranslationSource {
   }
 }
 
+const inMemorySettingsStore = () => {
+  let data: unknown = null
+  return new SettingsStore({
+    loadData: async () => data,
+    saveData: async (value) => {
+      data = value
+    },
+  })
+}
+
 const setup = () => {
   const source = new FakeTranslationSource()
   const store = new ModuleStore(new InMemoryModuleDataDir())
-  const manager = new ModuleManager(source, store)
-  return { source, store, manager }
+  const settingsStore = inMemorySettingsStore()
+  const manager = new ModuleManager(source, store, settingsStore)
+  return { source, store, settingsStore, manager }
 }
 
 describe('ModuleManager download', () => {
@@ -117,13 +129,14 @@ describe('ModuleManager download', () => {
   })
 
   it('rejects a download whose bytes do not match the published checksum', async () => {
-    const { source, store, manager } = setup()
+    const { source, store, settingsStore, manager } = setup()
     source.checksums.web = 'sha-web-2'
 
     await expect(manager.downloadModule('web')).rejects.toBeInstanceOf(
       ChecksumMismatchError,
     )
     expect(await store.manifest('web')).toBeNull()
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([])
   })
 
   it('stores the module under the requested translation id, whatever the download claims', async () => {
@@ -144,6 +157,45 @@ describe('ModuleManager download', () => {
     const manifest = await manager.downloadModule('web')
 
     expect(manifest.sourceChecksum).toBe('sha-web-1')
+  })
+})
+
+describe('ModuleManager installed-module ids in settings', () => {
+  it('records the module id on install', async () => {
+    const { settingsStore, manager } = setup()
+
+    await manager.downloadModule('web')
+
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'web',
+    ])
+  })
+
+  it('does not duplicate the id when re-downloading an installed module', async () => {
+    const { settingsStore, manager } = setup()
+    await manager.downloadModule('web')
+
+    await manager.downloadModule('web')
+
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'web',
+    ])
+  })
+
+  it('removes the module and its id on delete, keeping other ids', async () => {
+    const { store, settingsStore, manager } = setup()
+    await settingsStore.updateSettings((settings) => ({
+      ...settings,
+      installedModuleIds: ['bsb'],
+    }))
+    await manager.downloadModule('web')
+
+    await manager.deleteModule('web')
+
+    expect(await store.manifest('web')).toBeNull()
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'bsb',
+    ])
   })
 })
 

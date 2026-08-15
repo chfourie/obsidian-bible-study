@@ -1,3 +1,4 @@
+import type { SettingsStore } from '../data-access'
 import type { ModuleManifest } from './module-manifest'
 import type { ModuleStore } from './module-store'
 import { normalizeGetBibleTranslation } from './normalize-getbible-translation'
@@ -14,6 +15,7 @@ export class ModuleManager {
   constructor(
     private readonly source: TranslationSource,
     private readonly store: ModuleStore,
+    private readonly settingsStore: SettingsStore,
   ) {}
 
   async downloadModule(translationId: string): Promise<ModuleManifest> {
@@ -31,7 +33,13 @@ export class ModuleManager {
       { source: download.url, sourceChecksum: download.checksum },
     )
     await this.store.saveModule(module)
+    await this.#recordInstalled(translationId)
     return module.manifest
+  }
+
+  async deleteModule(moduleId: string): Promise<void> {
+    await this.store.deleteModule(moduleId)
+    await this.#recordDeleted(moduleId)
   }
 
   async modulesWithUpdates(): Promise<string[]> {
@@ -45,5 +53,25 @@ export class ModuleManager {
         return published !== undefined && published !== manifest.sourceChecksum
       })
       .map((manifest) => manifest.id)
+  }
+
+  async #recordInstalled(moduleId: string): Promise<void> {
+    await this.settingsStore.updateSettings((settings) =>
+      settings.installedModuleIds.includes(moduleId)
+        ? settings
+        : {
+            ...settings,
+            installedModuleIds: [...settings.installedModuleIds, moduleId],
+          },
+    )
+  }
+
+  async #recordDeleted(moduleId: string): Promise<void> {
+    await this.settingsStore.updateSettings((settings) => ({
+      ...settings,
+      installedModuleIds: settings.installedModuleIds.filter(
+        (id) => id !== moduleId,
+      ),
+    }))
   }
 }

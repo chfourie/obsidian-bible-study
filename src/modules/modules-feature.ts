@@ -1,5 +1,5 @@
 import type { Plugin } from 'obsidian'
-import { PluginFeature } from '../data-access'
+import { PluginFeature, SettingsStore } from '../data-access'
 import { GetBibleClient } from './getbible-client'
 import { ModuleManager } from './module-manager'
 import { ModuleStore } from './module-store'
@@ -12,6 +12,10 @@ export class ModulesFeature extends PluginFeature {
   constructor(plugin: Plugin) {
     super(plugin)
     this.store = new ModuleStore(new ObsidianModuleDataDir(plugin))
-    this.manager = new ModuleManager(new GetBibleClient(), this.store)
+    this.manager = new ModuleManager(
+      new GetBibleClient(),
+      this.store,
+      new SettingsStore(plugin),
+    )
   }
 }
