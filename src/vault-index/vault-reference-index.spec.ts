@@ -168,6 +168,23 @@ describe('VaultReferenceIndex change events', () => {
     expect(notified).toBe(0)
   })
 
+  it('notifies when an annotation note is re-indexed with unchanged occurrences (body-only edit)', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote(
+      'Annotations/John 15.4.md',
+      '---\nref: John 15:4\n---\noriginal thoughts',
+    )
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.indexNote(
+      'Annotations/John 15.4.md',
+      '---\nref: John 15:4\n---\nrevised thoughts',
+    )
+
+    expect(notified).toBe(1)
+  })
+
   it('notifies when a re-index changes the occurrences', () => {
     const index = new VaultReferenceIndex()
     index.indexNote('note.md', '{John 15:4}')

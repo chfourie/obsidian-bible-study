@@ -46,7 +46,13 @@ export class VaultReferenceIndex {
       file,
     }))
     const previous = this.#occurrencesByFile.get(file) ?? []
-    if (sameOccurrences(previous, occurrences)) return
+    // Annotation notes always notify: a body-only edit leaves occurrences
+    // unchanged but the reader renders the body (spec §5, modify events
+    // refresh on save).
+    const isAnnotation = occurrences.some(
+      (occurrence) => occurrence.source === 'annotation-frontmatter',
+    )
+    if (!isAnnotation && sameOccurrences(previous, occurrences)) return
     if (occurrences.length > 0) this.#occurrencesByFile.set(file, occurrences)
     else this.#occurrencesByFile.delete(file)
     this.#notifyChanged()
