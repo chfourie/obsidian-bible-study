@@ -27,7 +27,16 @@ The scripture content a reference resolves to in a specific translation: referen
 A specific bible text (e.g. NIV, WEB) whose content is projected onto the Canonical Grid.
 
 ### Module
-A downloadable, locally-stored data bundle — a full translation download or a Strong's package (tagged text + dictionary). The unit of storage and settings management.
+A downloadable, locally-stored data bundle — a full translation download or a Strong's package (tagged text + dictionary). The unit of storage and settings management. Lives in the plugin data dir (never vault files, never synced); stored in normalized form: per-book JSON keyed by verse id, plus a manifest (metadata, license string, source checksum, format version).
+
+### Tier
+A translation's licensing class, which dictates its storage model. **Downloadable** (public domain / open license): fetched once as a full module, works offline. **Online** (licensed, e.g. NIV/NKJV): fetched per passage via the user's API key, held only in the passage cache.
+
+### Passage Cache
+The local store of online-tier verses: normalized verse-id→text entries stamped with fetch time. Hard 14-day expiry (expired = purged, never served), at most 500 consecutive verses, never synced. Compliance mechanism, not an optimization.
+
+### Fallback Translation
+The single user-configured translation (restricted to installed modules) served when a requested translation is unavailable. Substitution is always visible — the rendered output names the translation actually served. Never applied in the reader's multi-translation stacked view.
 
 ### Occurrence
 One appearance of a reference at a position in a vault note (in the body or in annotation frontmatter). The unit the vault index stores; intersection queries return occurrences.
