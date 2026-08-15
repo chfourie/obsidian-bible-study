@@ -17,6 +17,21 @@ export type ReaderToggles = {
   details: 'inline' | 'side-panel'
   nav: 'tree' | 'breadcrumb'
   layout: 'verse-per-line' | 'continuous'
+  strongs: 'off' | 'on'
+}
+
+export type StrongsEntryView = {
+  strongs: string
+  lemma: string
+  transliteration: string
+  gloss: string
+  definition: string
+}
+
+export type ReaderStrongsDeps = {
+  dictionariesInstalled: () => Promise<boolean>
+  entriesFor: (numbers: string[]) => Promise<StrongsEntryView[]>
+  attribution: string
 }
 
 export type ReaderPosition = { book: number; chapter: number }
@@ -33,6 +48,7 @@ export type ReaderPaneDeps = {
   installedTranslations: () => Promise<ModuleManifest[]>
   intersecting: (reference: Reference) => OccurrenceGroup[]
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
+  strongs: ReaderStrongsDeps
 }
 
 export type ReaderPaneConfig = {
@@ -73,6 +89,8 @@ export type VerseDetailsView = {
   translations: TranslationRowView[]
   annotations: AnnotationBlockView[]
   mentions: NoteCardView[]
+  strongs: StrongsEntryView[]
+  strongsAttribution: string | null
 }
 
 const noteTitle = (file: string): string => {
@@ -111,6 +129,8 @@ export type ReaderPaneView = {
   details: Record<number, VerseDetailsView>
   attribution: string | null
   banner: string | null
+  strongsAvailable: boolean
+  strongsMode: boolean
 }
 
 const chapterReference = (position: ReaderPosition): Reference => ({
@@ -141,6 +161,8 @@ export class ReaderPaneModel {
   #details: Record<number, VerseDetailsView> = {}
   #attribution: string | null = null
   #bannerDismissed = false
+  #strongsAvailable = false
+  #wordStrongs: { verseId: number; numbers: string[] } | null = null
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
 
@@ -194,6 +216,8 @@ export class ReaderPaneModel {
       selectionEndId: this.#selectionEnd,
       details: this.#details,
       attribution: this.#attribution,
+      strongsAvailable: this.#strongsAvailable,
+      strongsMode: this.#strongsAvailable && this.#toggles.strongs === 'on',
       banner:
         this.#entry === null || this.#bannerDismissed
           ? null
@@ -251,7 +275,21 @@ export class ReaderPaneModel {
     await this.#loadChapter()
   }
 
+  async selectWord(verseId: number, strongsNumbers: string[]): Promise<void> {
+    this.#wordStrongs = { verseId, numbers: strongsNumbers }
+    this.#selectedVerseId = verseId
+    this.#selectionEnd = null
+    if (this.#toggles.details === 'inline') {
+      this.#expanded.add(verseId)
+      this.#refreshRowExpansion()
+    } else {
+      this.#notify()
+    }
+    await this.#loadDetails(verseId)
+  }
+
   async selectVerse(verseId: number): Promise<void> {
+    this.#wordStrongs = null
     this.#selectedVerseId = verseId
     this.#selectionEnd = null
     if (this.#toggles.details === 'inline') {
@@ -266,12 +304,15 @@ export class ReaderPaneModel {
     } else {
       this.#notify()
     }
-    if (this.#details[verseId] === undefined) await this.#loadDetails(verseId)
+    const existing = this.#details[verseId]
+    if (existing === undefined || existing.strongs.length > 0)
+      await this.#loadDetails(verseId)
   }
 
   #resetSelection(): void {
     this.#selectedVerseId = null
     this.#selectionEnd = null
+    this.#wordStrongs = null
     this.#expanded.clear()
     this.#details = {}
   }
@@ -378,6 +419,10 @@ export class ReaderPaneModel {
     const annotations = await this.#annotationBlocks(
       groups.filter((occurrence) => occurrence.annotation),
     )
+    const strongs =
+      this.#wordStrongs !== null && this.#wordStrongs.verseId === verseId
+        ? await this.deps.strongs.entriesFor(this.#wordStrongs.numbers)
+        : []
     this.#details = {
       ...this.#details,
       [verseId]: {
@@ -388,6 +433,9 @@ export class ReaderPaneModel {
         mentions: groups
           .filter((occurrence) => !occurrence.annotation)
           .map((occurrence) => ({ file: occurrence.file })),
+        strongs,
+        strongsAttribution:
+          strongs.length > 0 ? this.deps.strongs.attribution : null,
       },
     }
     this.#notify()
@@ -432,6 +480,8 @@ export class ReaderPaneModel {
       this.#notify()
       return
     }
+    await this.#refreshStrongsAvailability()
+    if (token !== this.#loadToken) return
     const passage = await this.deps.passages.passage(
       chapterReference(this.#position),
       this.#translationId,
@@ -456,5 +506,14 @@ export class ReaderPaneModel {
     }))
     this.#status = 'ok'
     this.#notify()
+  }
+
+  async #refreshStrongsAvailability(): Promise<void> {
+    const current = this.#installed.find(
+      (installed) => installed.id === this.#translationId,
+    )
+    this.#strongsAvailable =
+      current?.capabilities.strongsTagged === true &&
+      (await this.deps.strongs.dictionariesInstalled())
   }
 }

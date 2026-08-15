@@ -33,7 +33,12 @@ type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 
 type FakeNote = { content: string; ctime: number }
 
-const harness = (notes: Record<string, FakeNote> = {}) => {
+type HarnessOptions = { store?: ModuleStore }
+
+const harness = (
+  notes: Record<string, FakeNote> = {},
+  options: HarnessOptions = {},
+) => {
   const leaves: FakeLeaf[] = []
   let factory: ((leaf: WorkspaceLeaf) => unknown) | null = null
   const revealLeaf = vi.fn(async () => {})
@@ -72,9 +77,13 @@ const harness = (notes: Record<string, FakeNote> = {}) => {
     },
   } as unknown as Plugin
   const index = new VaultReferenceIndex()
-  const feature = new ReaderFeature(plugin, fakeStore(), index, undefined, {
-    indexRefreshDebounceMs: 0,
-  })
+  const feature = new ReaderFeature(
+    plugin,
+    options.store ?? fakeStore(),
+    index,
+    undefined,
+    { indexRefreshDebounceMs: 0 },
+  )
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
   return { feature, index, leaves, commands, ribbons, revealLeaf }
 }
@@ -346,6 +355,7 @@ describe('ReaderFeature entry points', () => {
       readerDetailsDefault: 'side-panel',
       readerNavDefault: 'breadcrumb',
       readerLayoutDefault: 'continuous',
+      readerStrongsDefault: 'on',
     })
     await feature.load()
 
@@ -357,6 +367,37 @@ describe('ReaderFeature entry points', () => {
       details: 'side-panel',
       nav: 'breadcrumb',
       layout: 'continuous',
+      strongs: 'on',
     })
+  })
+})
+
+describe('ReaderFeature translation listing', () => {
+  it('keeps the dictionaries module out of the translation pills', async () => {
+    const store = {
+      installedManifests: async () => [
+        manifest('web'),
+        {
+          ...manifest('strongs-dictionaries'),
+          kind: 'strongs-dictionaries' as const,
+        },
+      ],
+      manifest: async (moduleId: string) =>
+        moduleId === 'web' ? manifest('web') : null,
+      bookContent: async (moduleId: string, book: number) =>
+        moduleId === 'web' && book === 43
+          ? { [makeVerseId(43, 15, 1)]: 'I am the true vine.' }
+          : {},
+    } as unknown as ModuleStore
+    const { feature, leaves } = harness({}, { store })
+    await feature.load()
+
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.translations.map((pill) => pill.id)).toEqual([
+      'web',
+    ])
   })
 })

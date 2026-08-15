@@ -10,6 +10,7 @@ export type BibleStudySettings = {
   readerDetailsDefault: 'inline' | 'side-panel'
   readerNavDefault: 'tree' | 'breadcrumb'
   readerLayoutDefault: 'verse-per-line' | 'continuous'
+  readerStrongsDefault: 'off' | 'on'
   annotationsFolder: string
   annotationTemplatePath: string | null
   annotationOrdering: AnnotationOrdering
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: BibleStudySettings = {
   readerDetailsDefault: 'inline',
   readerNavDefault: 'tree',
   readerLayoutDefault: 'verse-per-line',
+  readerStrongsDefault: 'off',
   annotationsFolder: 'Annotations',
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',

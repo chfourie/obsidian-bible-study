@@ -51,6 +51,7 @@ const DEFAULT_TOGGLES: ReaderToggles = {
   details: 'inline',
   nav: 'tree',
   layout: 'verse-per-line',
+  strongs: 'off',
 }
 
 const john15Texts = (): MockTexts => ({
@@ -75,6 +76,11 @@ const modelWith = (
       installedTranslations: async () => [manifest('web')],
       intersecting: () => [],
       annotationDetails: async () => null,
+      strongs: {
+        dictionariesInstalled: async () => false,
+        entriesFor: async () => [],
+        attribution: 'STEPBible CC BY 4.0',
+      },
       ...overrides,
     },
     { toggles, translationId, annotationOrdering },
@@ -315,6 +321,8 @@ describe('verse details', () => {
         },
       ],
       mentions: [{ file: 'Sermons/Fruitfulness.md' }],
+      strongs: [],
+      strongsAttribution: null,
     })
   })
 
@@ -589,17 +597,19 @@ describe('occurrence refresh', () => {
 })
 
 describe('reader toggles', () => {
-  it('seeds the three toggles from the configured defaults', () => {
+  it('seeds the toggles from the configured defaults', () => {
     const model = modelWith({}, {
       details: 'side-panel',
       nav: 'breadcrumb',
       layout: 'continuous',
+      strongs: 'on',
     })
 
     expect(model.view.toggles).toEqual({
       details: 'side-panel',
       nav: 'breadcrumb',
       layout: 'continuous',
+      strongs: 'on',
     })
   })
 
@@ -615,6 +625,7 @@ describe('reader toggles', () => {
       details: 'side-panel',
       nav: 'tree',
       layout: 'continuous',
+      strongs: 'off',
     })
     expect(notified).toBe(2)
   })
@@ -691,5 +702,155 @@ describe('opening the reader at a reference', () => {
       true,
     ])
     expect(view.banner).toBe('Opened at John 15:4-5')
+  })
+})
+
+const taggedManifest = (id: string): ModuleManifest => ({
+  ...manifest(id),
+  capabilities: { strongsTagged: true },
+})
+
+const strongsEntry = (strongs: string) => ({
+  strongs,
+  lemma: `lemma-${strongs}`,
+  transliteration: `translit-${strongs}`,
+  gloss: `gloss-${strongs}`,
+  definition: `definition of ${strongs}`,
+})
+
+const strongsDeps = (
+  installed = true,
+): Pick<ReaderPaneDeps, 'installedTranslations' | 'strongs'> => ({
+  installedTranslations: async () => [taggedManifest('bsb')],
+  strongs: {
+    dictionariesInstalled: async () => installed,
+    entriesFor: async (numbers) => numbers.map(strongsEntry),
+    attribution: 'STEPBible CC BY 4.0',
+  },
+})
+
+const bsbTexts = (): MockTexts => ({
+  bsb: john15Texts().web,
+})
+
+describe("Strong's mode availability", () => {
+  it('offers the toggle when the translation is tagged and dictionaries are installed', async () => {
+    const model = modelWith(
+      { passages: passageSourceOver(bsbTexts()), ...strongsDeps() },
+      DEFAULT_TOGGLES,
+      'bsb',
+    )
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(model.view.strongsAvailable).toBe(true)
+  })
+
+  it('offers no toggle for an untagged translation', async () => {
+    const model = modelWith({
+      strongs: strongsDeps().strongs,
+    })
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(model.view.strongsAvailable).toBe(false)
+  })
+
+  it('offers no toggle when the dictionaries are not installed', async () => {
+    const model = modelWith({
+      passages: passageSourceOver(bsbTexts()),
+      ...strongsDeps(false),
+    })
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(model.view.strongsAvailable).toBe(false)
+  })
+
+  it('is inactive while unavailable even when toggled on by default', async () => {
+    const model = modelWith(
+      { strongs: strongsDeps().strongs },
+      { ...DEFAULT_TOGGLES, strongs: 'on' },
+    )
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(model.view.strongsMode).toBe(false)
+  })
+
+  it('activates from the configured default when available', async () => {
+    const model = modelWith(
+      { passages: passageSourceOver(bsbTexts()), ...strongsDeps() },
+      { ...DEFAULT_TOGGLES, strongs: 'on' },
+      'bsb',
+    )
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(model.view.strongsMode).toBe(true)
+  })
+
+  it('activates via the toggle', async () => {
+    const model = modelWith(
+      { passages: passageSourceOver(bsbTexts()), ...strongsDeps() },
+      DEFAULT_TOGGLES,
+      'bsb',
+    )
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    model.setToggle('strongs', 'on')
+
+    expect(model.view.strongsMode).toBe(true)
+  })
+})
+
+describe("Strong's word lookup", () => {
+  const openedModel = async (): Promise<ReaderPaneModel> => {
+    const model = modelWith(
+      { passages: passageSourceOver(bsbTexts()), ...strongsDeps() },
+      { ...DEFAULT_TOGGLES, strongs: 'on' },
+      'bsb',
+    )
+    await model.openPosition({ book: 43, chapter: 15 })
+    return model
+  }
+
+  it('renders dictionary entries for a tapped word in tag order with attribution', async () => {
+    const model = await openedModel()
+    const verseId = makeVerseId(43, 15, 4)
+
+    await model.selectWord(verseId, ['G3306', 'G1722'])
+
+    const details = model.view.details[verseId]
+    expect(details.strongs.map((entry) => entry.strongs)).toEqual([
+      'G3306',
+      'G1722',
+    ])
+    expect(details.strongs[0].gloss).toBe('gloss-G3306')
+    expect(details.strongsAttribution).toBe('STEPBible CC BY 4.0')
+  })
+
+  it('replaces the entries when another word is tapped', async () => {
+    const model = await openedModel()
+    const verseId = makeVerseId(43, 15, 4)
+    await model.selectWord(verseId, ['G3306'])
+
+    await model.selectWord(verseId, ['G2222'])
+
+    expect(
+      model.view.details[verseId].strongs.map((entry) => entry.strongs),
+    ).toEqual(['G2222'])
+  })
+
+  it('keeps a plain verse selection free of dictionary entries', async () => {
+    const model = await openedModel()
+    const verseId = makeVerseId(43, 15, 4)
+    await model.selectWord(verseId, ['G3306'])
+    await model.selectVerse(verseId)
+
+    await model.selectVerse(verseId)
+
+    expect(model.view.details[verseId].strongs).toEqual([])
+    expect(model.view.details[verseId].strongsAttribution).toBe(null)
   })
 })
