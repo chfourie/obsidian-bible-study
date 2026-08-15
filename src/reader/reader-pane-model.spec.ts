@@ -90,6 +90,69 @@ const group = (file: string, annotation: boolean): OccurrenceGroup => ({
   occurrences: [],
 })
 
+describe('chapter navigation', () => {
+  const openJohn15 = async (
+    overrides: Partial<ReaderPaneDeps> = {},
+  ): Promise<ReaderPaneModel> => {
+    const model = modelWith(overrides)
+    await model.openAt(ref('John 15:4'), 'web')
+    return model
+  }
+
+  it('steps to the next and previous chapter within a book', async () => {
+    const model = await openJohn15()
+
+    await model.nextChapter()
+    expect(model.view.position).toEqual({ book: 43, chapter: 16 })
+
+    await model.previousChapter()
+    expect(model.view.position).toEqual({ book: 43, chapter: 15 })
+  })
+
+  it('crosses book boundaries at the edges of a book', async () => {
+    const model = await openJohn15()
+
+    await model.goTo(43, 21)
+    await model.nextChapter()
+    expect(model.view.position).toEqual({ book: 44, chapter: 1 })
+
+    await model.previousChapter()
+    expect(model.view.position).toEqual({ book: 43, chapter: 21 })
+  })
+
+  it('stays put at the very start and end of the canon', async () => {
+    const model = await openJohn15()
+
+    await model.goTo(1, 1)
+    await model.previousChapter()
+    expect(model.view.position).toEqual({ book: 1, chapter: 1 })
+
+    await model.goTo(66, 22)
+    await model.nextChapter()
+    expect(model.view.position).toEqual({ book: 66, chapter: 22 })
+  })
+
+  it('clears entry highlight and banner once the user navigates away', async () => {
+    const model = await openJohn15()
+
+    await model.nextChapter()
+    await model.previousChapter()
+
+    expect(model.view.banner).toBe(null)
+    expect(model.view.rows.every((row) => !row.highlighted)).toBe(true)
+  })
+
+  it('notifies subscribers as a navigation loads', async () => {
+    const model = await openJohn15()
+    let notified = 0
+    model.subscribe(() => notified++)
+
+    await model.nextChapter()
+
+    expect(notified).toBeGreaterThanOrEqual(2)
+  })
+})
+
 describe('translation switching', () => {
   it('reloads the chapter in the newly selected translation', async () => {
     const model = modelWith({

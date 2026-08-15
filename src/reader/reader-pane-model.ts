@@ -1,6 +1,8 @@
 import type { ModuleManifest } from '../modules'
 import {
+  BOOK_COUNT,
   bookName,
+  chapterCount,
   decodeVerseId,
   formatReference,
   makeVerseId,
@@ -166,6 +168,25 @@ export class ReaderPaneModel {
     await this.#loadChapter()
   }
 
+  async goTo(book: number, chapter: number): Promise<void> {
+    this.#position = { book, chapter }
+    this.#entry = null
+    this.#resetSelection()
+    await this.#loadChapter()
+  }
+
+  async nextChapter(): Promise<void> {
+    const { book, chapter } = this.#position
+    if (chapter < chapterCount(book)) await this.goTo(book, chapter + 1)
+    else if (book < BOOK_COUNT) await this.goTo(book + 1, 1)
+  }
+
+  async previousChapter(): Promise<void> {
+    const { book, chapter } = this.#position
+    if (chapter > 1) await this.goTo(book, chapter - 1)
+    else if (book > 1) await this.goTo(book - 1, chapterCount(book - 1))
+  }
+
   async setTranslation(translationId: string): Promise<void> {
     this.#translationId = translationId
     this.#resetSelection()
@@ -240,10 +261,12 @@ export class ReaderPaneModel {
   async #loadChapter(): Promise<void> {
     this.#status = 'loading'
     this.#rows = []
+    this.#notify()
     this.#installed = await this.deps.installedTranslations()
     this.#translationId ??= this.#installed[0]?.id ?? null
     if (this.#translationId === null) {
       this.#status = 'no-translation'
+      this.#notify()
       return
     }
     const passage = await this.deps.passages.passage(
@@ -252,6 +275,7 @@ export class ReaderPaneModel {
     )
     if (passage.status !== 'ok') {
       this.#status = 'unavailable'
+      this.#notify()
       return
     }
     this.#rows = passage.verses.map((verse) => {
@@ -274,5 +298,6 @@ export class ReaderPaneModel {
       }
     })
     this.#status = 'ok'
+    this.#notify()
   }
 }
