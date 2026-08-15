@@ -72,6 +72,43 @@ describe('extractOccurrences', () => {
     expect(extractOccurrences('~~~\n{John 15:4}\n~~~\n', null)).toEqual([])
   })
 
+  it('indexes a valid frontmatter ref as an annotation-frontmatter occurrence', () => {
+    const content = '---\nref: John 15:4-6,9\n---\nMy thoughts.'
+    expect(extractOccurrences(content, 'John 15:4-6,9')).toEqual([
+      {
+        position: 0,
+        reference: {
+          book: 43,
+          ranges: [
+            { startId: john(15, 4), endId: john(15, 6) },
+            { startId: john(15, 9), endId: john(15, 9) },
+          ],
+        },
+        source: 'annotation-frontmatter',
+      },
+    ])
+  })
+
+  it('silently skips an invalid frontmatter ref', () => {
+    expect(extractOccurrences('---\nref: Nowhere 3\n---\n', 'Nowhere 3')).toEqual([])
+  })
+
+  it('never scans the frontmatter block as body text', () => {
+    const content = '---\ntitle: "{John 15:4}"\n---\nbody'
+    expect(extractOccurrences(content, null)).toEqual([])
+  })
+
+  it('keeps absolute body positions below a frontmatter block', () => {
+    const content = '---\nref: John 15:4\n---\nsee {John 15:9}'
+    const occurrences = extractOccurrences(content, 'John 15:4')
+    expect(
+      occurrences.map((o) => ({ position: o.position, source: o.source })),
+    ).toEqual([
+      { position: 0, source: 'annotation-frontmatter' },
+      { position: content.indexOf('{John 15:9}'), source: 'body' },
+    ])
+  })
+
   it('recovers a reference nested inside stray braces', () => {
     const occurrences = extractOccurrences('{{John 15:4}}', null)
     expect(occurrences.map((o) => o.position)).toEqual([1])

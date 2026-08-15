@@ -77,16 +77,35 @@ const closesFence = (line: string, open: Fence): boolean => {
   )
 }
 
+const FRONTMATTER_PATTERN = /^---\n.*?\n(?:---|\.\.\.)(?:\n|$)/s
+
+const frontmatterLength = (content: string): number =>
+  FRONTMATTER_PATTERN.exec(content)?.[0].length ?? 0
+
+const annotationOccurrence = (
+  frontmatterRef: string | null,
+): ExtractedOccurrence | null => {
+  if (frontmatterRef === null) return null
+  const parsed = parseReference(frontmatterRef)
+  if (!parsed) return null
+  return {
+    position: 0,
+    reference: parsed.reference,
+    source: 'annotation-frontmatter',
+  }
+}
+
 export const extractOccurrences = (
   content: string,
   frontmatterRef: string | null,
 ): ExtractedOccurrence[] => {
-  void frontmatterRef
   const occurrences: ExtractedOccurrence[] = []
+  const annotation = annotationOccurrence(frontmatterRef)
+  if (annotation) occurrences.push(annotation)
   if (!content.includes('{')) return occurrences
-  let lineStart = 0
+  let lineStart = frontmatterLength(content)
   let openFence: Fence | null = null
-  for (const line of content.split('\n')) {
+  for (const line of content.slice(lineStart).split('\n')) {
     if (openFence) {
       if (closesFence(line, openFence)) openFence = null
     } else {
