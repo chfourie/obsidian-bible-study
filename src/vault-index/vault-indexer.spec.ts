@@ -96,7 +96,42 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
+const flushMicrotasks = async (ticks = 20) => {
+  for (let tick = 0; tick < ticks; tick++) await Promise.resolve()
+}
+
 describe('VaultIndexer full scan', () => {
+  it('scans the vault when the layout becomes ready', async () => {
+    const { vault, index, indexer } = setup()
+    vault.setNote('mention.md', '{John 15:4}')
+    indexer.start()
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+    vault.fireLayoutReady()
+    await flushMicrotasks()
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toHaveLength(1)
+  })
+
+  it('yields between chunks so the UI stays responsive', async () => {
+    const vault = new FakeNoteVault()
+    const index = new VaultReferenceIndex()
+    let yields = 0
+    const indexer = new VaultIndexer(vault, index, {
+      chunkSize: 2,
+      yieldBetweenChunks: () => {
+        yields++
+        return Promise.resolve()
+      },
+    })
+    for (let i = 0; i < 5; i++) vault.setNote(`note-${i}.md`, '{John 15:4}')
+
+    await indexer.scanVault()
+
+    expect(yields).toBe(2)
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toHaveLength(5)
+  })
+
   it('indexes every markdown file, bodies and annotations alike', async () => {
     const { vault, index, indexer } = setup()
     vault.setNote('mention.md', 'see {John 15:4}')
