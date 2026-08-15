@@ -1,9 +1,19 @@
 import { App, Plugin, type PluginManifest } from 'obsidian'
 import { AnnotationsFeature } from '../annotations'
 import { SettingsStore } from '../data-access'
-import { apiBibleIdFor, ModulesFeature } from '../modules'
+import {
+  apiBibleIdFor,
+  ModulesFeature,
+  ObsidianModuleDataDir,
+} from '../modules'
 import { ReaderFeature } from '../reader'
 import { OnlinePassageSource, RenderingFeature } from '../rendering'
+import {
+  formatDefinition,
+  StepBibleLexiconClient,
+  STRONGS_ATTRIBUTION,
+  StrongsDictionaries,
+} from '../strongs'
 import { VaultIndexFeature } from '../vault-index'
 import { PluginFeatureSet } from './plugin-feature-set'
 
@@ -19,11 +29,27 @@ export default class BibleStudyPlugin extends Plugin {
     reportFums: (fumsToken) => void this.modules.fumsReporter.report(fumsToken),
     apiBibleIdFor,
   })
+  readonly strongsDictionaries = new StrongsDictionaries(
+    new ObsidianModuleDataDir(this),
+    new StepBibleLexiconClient(),
+    this.settingsStore,
+  )
   readonly reader = new ReaderFeature(
     this,
     this.modules.store,
     this.vaultIndex.index,
     this.#onlineSource,
+    {
+      strongs: {
+        dictionariesInstalled: () => this.strongsDictionaries.isInstalled(),
+        entriesFor: async (numbers) =>
+          (await this.strongsDictionaries.entriesFor(numbers)).map((entry) => ({
+            ...entry,
+            definition: formatDefinition(entry.definition),
+          })),
+        attribution: STRONGS_ATTRIBUTION,
+      },
+    },
   )
   readonly rendering = new RenderingFeature(
     this,
