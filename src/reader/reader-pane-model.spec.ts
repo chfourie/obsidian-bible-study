@@ -1,0 +1,115 @@
+import { describe, expect, it } from 'vitest'
+import type { ModuleManifest } from '../modules'
+import {
+  enumerateVerseIds,
+  makeVerseId,
+  parseReference,
+  type Reference,
+} from '../reference'
+import type { Passage, PassageSource } from '../rendering'
+import type { OccurrenceGroup } from '../vault-index'
+import {
+  ReaderPaneModel,
+  type ReaderPaneDeps,
+  type ReaderToggles,
+} from './reader-pane-model'
+
+type MockTexts = Record<string, Record<number, string>>
+
+const manifest = (id: string): ModuleManifest => ({
+  id,
+  name: id.toUpperCase(),
+  language: 'en',
+  license: 'Public Domain',
+  source: 'test',
+  sourceChecksum: '',
+  formatVersion: 1,
+  capabilities: { strongsTagged: false },
+})
+
+const passageSourceOver = (texts: MockTexts): PassageSource => ({
+  passage: async (
+    reference: Reference,
+    translationId: string,
+  ): Promise<Passage> => {
+    const content = texts[translationId]
+    if (!content) return { status: 'unavailable' }
+    const verses = reference.ranges
+      .flatMap(enumerateVerseIds)
+      .filter((verseId) => content[verseId] !== undefined)
+      .map((verseId) => ({
+        verseId,
+        segments: [{ text: content[verseId], redLetter: false }],
+      }))
+    if (verses.length === 0) return { status: 'unavailable' }
+    return { status: 'ok', verses, attribution: null }
+  },
+})
+
+const DEFAULT_TOGGLES: ReaderToggles = {
+  details: 'inline',
+  nav: 'tree',
+  layout: 'verse-per-line',
+}
+
+const john15Texts = (): MockTexts => ({
+  web: {
+    [makeVerseId(43, 15, 1)]: 'I am the true vine.',
+    [makeVerseId(43, 15, 2)]: 'Every branch in me.',
+    [makeVerseId(43, 15, 3)]: 'You are already pruned.',
+    [makeVerseId(43, 15, 4)]: 'Remain in me.',
+    [makeVerseId(43, 15, 5)]: 'I am the vine.',
+  },
+})
+
+const modelWith = (
+  overrides: Partial<ReaderPaneDeps> = {},
+  toggles: ReaderToggles = DEFAULT_TOGGLES,
+  translationId: string | null = 'web',
+): ReaderPaneModel =>
+  new ReaderPaneModel(
+    {
+      passages: passageSourceOver(john15Texts()),
+      installedTranslations: async () => [manifest('web')],
+      intersecting: () => [],
+      ...overrides,
+    },
+    { toggles, translationId },
+  )
+
+const ref = (text: string): Reference => {
+  const parsed = parseReference(text, { translationIds: [] })
+  if (parsed === null) throw new Error(`unparseable reference: ${text}`)
+  return parsed.reference
+}
+
+describe('opening the reader at a reference', () => {
+  it('loads the chapter containing the reference with per-verse rows', async () => {
+    const model = modelWith()
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    const view = model.view
+    expect(view.status).toBe('ok')
+    expect(view.title).toBe('John 15')
+    expect(view.position).toEqual({ book: 43, chapter: 15 })
+    expect(view.rows.map((row) => row.label)).toEqual(['1', '2', '3', '4', '5'])
+    expect(view.rows[3].segments[0].text).toBe('Remain in me.')
+  })
+
+  it('highlights the verses of the entry reference and shows the banner', async () => {
+    const model = modelWith()
+
+    await model.openAt(ref('John 15:4-5'), 'web')
+
+    const view = model.view
+    expect(view.rows.map((row) => row.highlighted)).toEqual([
+      false,
+      false,
+      false,
+      true,
+      true,
+    ])
+    expect(view.banner).toBe('Opened at John 15:4-5')
+  })
+})
