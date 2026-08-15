@@ -147,6 +147,26 @@ describe('AnnotationsFeature', () => {
     expect(notes.size).toBe(0)
   })
 
+  it('rejects a ref prompt entry with trailing junk after a valid reference', async () => {
+    const { feature, notes } = harness()
+
+    expect(feature.submitRefText('John 15:4 Luke 2:1')).toBe(false)
+    expect(feature.submitRefText('John 15:4 asdf')).toBe(false)
+    await flushAsync()
+
+    expect(notes.size).toBe(0)
+  })
+
+  it('rejects a ref prompt entry with display or translation tokens', async () => {
+    const { feature, notes } = harness()
+
+    expect(feature.submitRefText('John 15:4 inline')).toBe(false)
+    expect(feature.submitRefText('John 15:4 callout')).toBe(false)
+    await flushAsync()
+
+    expect(notes.size).toBe(0)
+  })
+
   it('pre-fills the ref prompt from the reader selection', () => {
     const { feature } = harness()
     feature.usePrefill(() => ref('John 15:4-6'))

@@ -38,7 +38,12 @@ export class AnnotationsFeature extends PluginFeature {
 
   submitRefText(text: string): boolean {
     const parsed = parseReference(text)
-    if (parsed === null) return false
+    const referenceOnly =
+      parsed !== null &&
+      parsed.invalidTokens.length === 0 &&
+      parsed.translation === null &&
+      parsed.display === null
+    if (!referenceOnly) return false
     void this.annotate(parsed.reference)
     return true
   }
