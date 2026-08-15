@@ -149,6 +149,41 @@ describe('extractOccurrences', () => {
     ])
   })
 
+  it('reads the frontmatter ref of a CRLF annotation note', () => {
+    const content = '---\r\nref: John 15:4\r\n---\r\nMy thoughts.'
+    expect(extractOccurrences(content)).toEqual([
+      {
+        position: 0,
+        reference: { book: 43, ranges: [{ startId: john(15, 4), endId: john(15, 4) }] },
+        source: 'annotation-frontmatter',
+      },
+    ])
+  })
+
+  it('never scans a CRLF frontmatter block as body text', () => {
+    const content = '---\r\ntitle: "{John 15:4}"\r\n---\r\nbody'
+    expect(extractOccurrences(content)).toEqual([])
+  })
+
+  it('keeps absolute body positions in a CRLF note', () => {
+    const content = '---\r\nref: John 15:4\r\n---\r\nsee {John 15:9}'
+    const occurrences = extractOccurrences(content)
+    expect(
+      occurrences.map((o) => ({ position: o.position, source: o.source })),
+    ).toEqual([
+      { position: 0, source: 'annotation-frontmatter' },
+      { position: content.indexOf('{John 15:9}'), source: 'body' },
+    ])
+  })
+
+  it('never parses inside CRLF fenced code blocks', () => {
+    const content = 'before\r\n```\r\n{John 15:4}\r\n```\r\nafter {John 15:9}'
+    const occurrences = extractOccurrences(content)
+    expect(occurrences.map((o) => o.position)).toEqual([
+      content.indexOf('{John 15:9}'),
+    ])
+  })
+
   it('recovers a reference nested inside stray braces', () => {
     const occurrences = extractOccurrences('{{John 15:4}}')
     expect(occurrences.map((o) => o.position)).toEqual([1])

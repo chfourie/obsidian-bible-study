@@ -77,7 +77,7 @@ const closesFence = (line: string, open: Fence): boolean => {
   )
 }
 
-const FRONTMATTER_PATTERN = /^---\n.*?\n(?:---|\.\.\.)(?:\n|$)/s
+const FRONTMATTER_PATTERN = /^---\r?\n.*?\r?\n(?:---|\.\.\.)(?:\r?\n|$)/s
 
 const frontmatterLength = (content: string): number =>
   FRONTMATTER_PATTERN.exec(content)?.[0].length ?? 0
@@ -120,7 +120,8 @@ export const extractOccurrences = (content: string): ExtractedOccurrence[] => {
   if (!content.includes('{')) return occurrences
   let lineStart = frontmatterEnd
   let openFence: Fence | null = null
-  for (const line of content.slice(lineStart).split('\n')) {
+  for (const rawLine of content.slice(lineStart).split('\n')) {
+    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
     if (openFence) {
       if (closesFence(line, openFence)) openFence = null
     } else {
@@ -128,7 +129,7 @@ export const extractOccurrences = (content: string): ExtractedOccurrence[] => {
       if (fence) openFence = fence
       else scanLine(line, lineStart, occurrences)
     }
-    lineStart += line.length + 1
+    lineStart += rawLine.length + 1
   }
   return occurrences
 }
