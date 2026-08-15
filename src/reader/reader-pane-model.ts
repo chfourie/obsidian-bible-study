@@ -21,15 +21,24 @@ export type ReaderToggles = {
 
 export type ReaderPosition = { book: number; chapter: number }
 
+export type AnnotationOrdering = 'created-oldest-first' | 'path-a-z'
+
+export type AnnotationDetails = {
+  body: string
+  created: number
+}
+
 export type ReaderPaneDeps = {
   passages: PassageSource
   installedTranslations: () => Promise<ModuleManifest[]>
   intersecting: (reference: Reference) => OccurrenceGroup[]
+  annotationDetails: (file: string) => Promise<AnnotationDetails | null>
 }
 
 export type ReaderPaneConfig = {
   toggles: ReaderToggles
   translationId: string | null
+  annotationOrdering?: AnnotationOrdering
 }
 
 export type VerseRowView = {
@@ -50,14 +59,25 @@ export type TranslationRowView = {
 
 export type NoteCardView = {
   file: string
-  annotation: boolean
+}
+
+export type AnnotationBlockView = {
+  file: string
+  title: string
+  body: string
 }
 
 export type VerseDetailsView = {
   verseId: number
   title: string
   translations: TranslationRowView[]
-  notes: NoteCardView[]
+  annotations: AnnotationBlockView[]
+  mentions: NoteCardView[]
+}
+
+const noteTitle = (file: string): string => {
+  const basename = file.split('/').pop() ?? file
+  return basename.replace(/\.md$/, '')
 }
 
 const singleVerseReference = (book: number, verseId: number): Reference => ({
@@ -79,6 +99,7 @@ export type ReaderPaneView = {
   translations: TranslationPill[]
   toggles: ReaderToggles
   selectedVerseId: number | null
+  selectionEndId: number | null
   details: Record<number, VerseDetailsView>
   attribution: string | null
   banner: string | null
@@ -107,6 +128,7 @@ export class ReaderPaneModel {
   #installed: ModuleManifest[] = []
   #toggles: ReaderToggles
   #selectedVerseId: number | null = null
+  #selectionEnd: number | null = null
   #expanded = new Set<number>()
   #details: Record<number, VerseDetailsView> = {}
   #attribution: string | null = null
@@ -114,12 +136,15 @@ export class ReaderPaneModel {
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
 
+  readonly #annotationOrdering: AnnotationOrdering
+
   constructor(
     private readonly deps: ReaderPaneDeps,
     config: ReaderPaneConfig,
   ) {
     this.#translationId = config.translationId
     this.#toggles = { ...config.toggles }
+    this.#annotationOrdering = config.annotationOrdering ?? 'created-oldest-first'
   }
 
   subscribe(listener: () => void): () => void {
@@ -152,6 +177,7 @@ export class ReaderPaneModel {
       })),
       toggles: this.#toggles,
       selectedVerseId: this.#selectedVerseId,
+      selectionEndId: this.#selectionEnd,
       details: this.#details,
       attribution: this.#attribution,
       banner:
@@ -213,6 +239,7 @@ export class ReaderPaneModel {
 
   async selectVerse(verseId: number): Promise<void> {
     this.#selectedVerseId = verseId
+    this.#selectionEnd = null
     if (this.#toggles.details === 'inline') {
       if (this.#expanded.has(verseId)) {
         this.#expanded.delete(verseId)
@@ -229,8 +256,48 @@ export class ReaderPaneModel {
 
   #resetSelection(): void {
     this.#selectedVerseId = null
+    this.#selectionEnd = null
     this.#expanded.clear()
     this.#details = {}
+  }
+
+  extendSelectionTo(verseId: number): void {
+    if (this.#selectedVerseId === null) return
+    this.#selectionEnd = verseId
+    this.#notify()
+  }
+
+  selectionReference(): Reference | null {
+    if (this.#selectedVerseId === null) return null
+    const anchor = this.#selectedVerseId
+    const end = this.#selectionEnd ?? anchor
+    return {
+      book: this.#position.book,
+      ranges: [
+        { startId: Math.min(anchor, end), endId: Math.max(anchor, end) },
+      ],
+    }
+  }
+
+  async refreshOccurrences(): Promise<void> {
+    this.#rows = this.#rows.map((row) => ({
+      ...row,
+      ...this.#occurrenceCounts(row.verseId),
+    }))
+    for (const details of Object.values(this.#details)) {
+      await this.#loadDetails(details.verseId)
+    }
+    this.#notify()
+  }
+
+  #occurrenceCounts(verseId: number): { annotations: number; mentions: number } {
+    const groups = this.deps.intersecting(
+      singleVerseReference(this.#position.book, verseId),
+    )
+    return {
+      annotations: groups.filter((occurrence) => occurrence.annotation).length,
+      mentions: groups.filter((occurrence) => !occurrence.annotation).length,
+    }
   }
 
   #refreshRowExpansion(): void {
@@ -261,19 +328,48 @@ export class ReaderPaneModel {
         }
       }),
     )
+    const groups = this.deps.intersecting(reference)
+    const annotations = await this.#annotationBlocks(
+      groups.filter((occurrence) => occurrence.annotation),
+    )
     this.#details = {
       ...this.#details,
       [verseId]: {
         verseId,
         title: formatReference(reference),
         translations,
-        notes: this.deps.intersecting(reference).map((occurrence) => ({
-          file: occurrence.file,
-          annotation: occurrence.annotation,
-        })),
+        annotations,
+        mentions: groups
+          .filter((occurrence) => !occurrence.annotation)
+          .map((occurrence) => ({ file: occurrence.file })),
       },
     }
     this.#notify()
+  }
+
+  async #annotationBlocks(
+    groups: OccurrenceGroup[],
+  ): Promise<AnnotationBlockView[]> {
+    const blocks = await Promise.all(
+      groups.map(async (occurrence) => {
+        const details = await this.deps.annotationDetails(occurrence.file)
+        if (details === null) return null
+        return {
+          file: occurrence.file,
+          title: noteTitle(occurrence.file),
+          body: details.body,
+          created: details.created,
+        }
+      }),
+    )
+    return blocks
+      .filter((block) => block !== null)
+      .sort((a, b) =>
+        this.#annotationOrdering === 'created-oldest-first'
+          ? a.created - b.created
+          : a.file.localeCompare(b.file),
+      )
+      .map(({ file, title, body }) => ({ file, title, body }))
   }
 
   async #loadChapter(): Promise<void> {
@@ -302,25 +398,16 @@ export class ReaderPaneModel {
       return
     }
     this.#attribution = passage.attribution
-    this.#rows = passage.verses.map((verse) => {
-      const groups = this.deps.intersecting(
-        singleVerseReference(this.#position.book, verse.verseId),
-      )
-      return {
-        verseId: verse.verseId,
-        label: `${decodeVerseId(verse.verseId).verse}`,
-        segments: verse.segments,
-        highlighted:
-          this.#entry !== null &&
-          this.#entry.ranges.some((range) =>
-            rangeContains(range, verse.verseId),
-          ),
-        expanded: this.#expanded.has(verse.verseId),
-        annotations: groups.filter((occurrence) => occurrence.annotation)
-          .length,
-        mentions: groups.filter((occurrence) => !occurrence.annotation).length,
-      }
-    })
+    this.#rows = passage.verses.map((verse) => ({
+      verseId: verse.verseId,
+      label: `${decodeVerseId(verse.verseId).verse}`,
+      segments: verse.segments,
+      highlighted:
+        this.#entry !== null &&
+        this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),
+      expanded: this.#expanded.has(verse.verseId),
+      ...this.#occurrenceCounts(verse.verseId),
+    }))
     this.#status = 'ok'
     this.#notify()
   }

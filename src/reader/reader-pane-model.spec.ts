@@ -67,15 +67,17 @@ const modelWith = (
   overrides: Partial<ReaderPaneDeps> = {},
   toggles: ReaderToggles = DEFAULT_TOGGLES,
   translationId: string | null = 'web',
+  annotationOrdering?: 'created-oldest-first' | 'path-a-z',
 ): ReaderPaneModel =>
   new ReaderPaneModel(
     {
       passages: passageSourceOver(john15Texts()),
       installedTranslations: async () => [manifest('web')],
       intersecting: () => [],
+      annotationDetails: async () => null,
       ...overrides,
     },
-    { toggles, translationId },
+    { toggles, translationId, annotationOrdering },
   )
 
 const ref = (text: string): Reference => {
@@ -276,8 +278,15 @@ describe('verse details', () => {
     installedTranslations: async () => [manifest('web'), manifest('kjv')],
     intersecting: (reference) =>
       reference.ranges.some((range) => rangeContains(range, verse4))
-        ? [group('Annotations/John 15.4.md', true)]
+        ? [
+            group('Annotations/John 15.4.md', true),
+            group('Sermons/Fruitfulness.md', false),
+          ]
         : [],
+    annotationDetails: async (file) =>
+      file === 'Annotations/John 15.4.md'
+        ? { body: 'Abiding means remaining.', created: 1000 }
+        : null,
   })
 
   it('expands a clicked verse inline with every installed translation stacked', async () => {
@@ -294,7 +303,14 @@ describe('verse details', () => {
         { id: 'web', label: 'WEB', text: 'Remain in me.' },
         { id: 'kjv', label: 'KJV', text: null },
       ],
-      notes: [{ file: 'Annotations/John 15.4.md', annotation: true }],
+      annotations: [
+        {
+          file: 'Annotations/John 15.4.md',
+          title: 'John 15.4',
+          body: 'Abiding means remaining.',
+        },
+      ],
+      mentions: [{ file: 'Sermons/Fruitfulness.md' }],
     })
   })
 
@@ -324,6 +340,53 @@ describe('verse details', () => {
   })
 })
 
+describe('annotation ordering in details', () => {
+  const verse4 = makeVerseId(43, 15, 4)
+  const annotated = (
+    ordering?: 'created-oldest-first' | 'path-a-z',
+  ): ReaderPaneModel =>
+    modelWith(
+      {
+        intersecting: (reference) =>
+          reference.ranges.some((range) => rangeContains(range, verse4))
+            ? [
+                group('Annotations/Zeal.md', true),
+                group('Annotations/Abide.md', true),
+              ]
+            : [],
+        annotationDetails: async (file) =>
+          file === 'Annotations/Zeal.md'
+            ? { body: 'older note', created: 100 }
+            : { body: 'newer note', created: 200 },
+      },
+      DEFAULT_TOGGLES,
+      'web',
+      ordering,
+    )
+
+  it('orders annotations by creation date oldest first by default', async () => {
+    const model = annotated()
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+
+    expect(
+      model.view.details[verse4].annotations.map((block) => block.file),
+    ).toEqual(['Annotations/Zeal.md', 'Annotations/Abide.md'])
+  })
+
+  it('orders annotations by file path when configured', async () => {
+    const model = annotated('path-a-z')
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+
+    expect(
+      model.view.details[verse4].annotations.map((block) => block.file),
+    ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
+  })
+})
+
 describe('verse indicators', () => {
   it('marks verses with annotation and intersecting-note counts', async () => {
     const verse4 = makeVerseId(43, 15, 4)
@@ -345,6 +408,78 @@ describe('verse indicators', () => {
     expect(rows[3].mentions).toBe(2)
     expect(rows[0].annotations).toBe(0)
     expect(rows[0].mentions).toBe(0)
+  })
+})
+
+describe('annotate selection', () => {
+  const verse2 = makeVerseId(43, 15, 2)
+  const verse4 = makeVerseId(43, 15, 4)
+
+  it('has no selection reference before a verse is selected', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.selectionReference()).toBe(null)
+  })
+
+  it('spans the selected verse when only one is selected', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.selectVerse(verse4)
+
+    expect(model.selectionReference()).toEqual(ref('John 15:4'))
+  })
+
+  it('spans from the selected verse to an extended one', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.selectVerse(verse4)
+    model.extendSelectionTo(verse2)
+
+    expect(model.selectionReference()).toEqual(ref('John 15:2-4'))
+    expect(model.view.selectionEndId).toBe(verse2)
+  })
+
+  it('clears the extended selection when a new verse is selected', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.selectVerse(verse4)
+    model.extendSelectionTo(verse2)
+    await model.selectVerse(verse2)
+
+    expect(model.selectionReference()).toEqual(ref('John 15:2'))
+  })
+})
+
+describe('occurrence refresh', () => {
+  it('re-counts indicators and reloads open details from the index', async () => {
+    const verse4 = makeVerseId(43, 15, 4)
+    let groups: OccurrenceGroup[] = []
+    const model = modelWith({
+      intersecting: (reference) =>
+        reference.ranges.some((range) => rangeContains(range, verse4))
+          ? groups
+          : [],
+      annotationDetails: async () => ({ body: 'note body', created: 1 }),
+    })
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+    expect(model.view.rows[3].annotations).toBe(0)
+
+    groups = [group('Annotations/John 15.4.md', true)]
+    await model.refreshOccurrences()
+
+    expect(model.view.rows[3].annotations).toBe(1)
+    expect(model.view.details[verse4].annotations).toEqual([
+      {
+        file: 'Annotations/John 15.4.md',
+        title: 'John 15.4',
+        body: 'note body',
+      },
+    ])
   })
 })
 
