@@ -1,6 +1,7 @@
 import {
   formatReference,
   parseReference,
+  type ParsedReference,
   type Reference,
 } from '../reference'
 
@@ -20,6 +21,18 @@ export type ReferenceRenderModel = {
   invalidTokens: string[]
 }
 
+export const modelFromParsed = (
+  parsed: ParsedReference,
+  context: RenderContext,
+): ReferenceRenderModel => ({
+  reference: parsed.reference,
+  referenceText: formatReference(parsed.reference),
+  translationId: parsed.translation ?? context.defaultTranslationId,
+  chipLabel: parsed.translation?.toUpperCase() ?? null,
+  display: parsed.display ?? 'chip',
+  invalidTokens: parsed.invalidTokens.map((token) => token.text),
+})
+
 export const buildReferenceRenderModel = (
   text: string,
   context: RenderContext,
@@ -27,13 +40,5 @@ export const buildReferenceRenderModel = (
   const parsed = parseReference(text, {
     translationIds: context.knownTranslationIds,
   })
-  if (!parsed) return null
-  return {
-    reference: parsed.reference,
-    referenceText: formatReference(parsed.reference),
-    translationId: parsed.translation ?? context.defaultTranslationId,
-    chipLabel: parsed.translation?.toUpperCase() ?? null,
-    display: parsed.display ?? 'chip',
-    invalidTokens: parsed.invalidTokens.map((token) => token.text),
-  }
+  return parsed === null ? null : modelFromParsed(parsed, context)
 }
