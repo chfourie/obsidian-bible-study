@@ -52,6 +52,12 @@ export function requestUrl(request: RequestUrlParam): Promise<never> {
   )
 }
 
+// Real Obsidian injects an SVG icon; tests only need to see which icon a
+// element asked for.
+export function setIcon(el: HTMLElement, iconId: string): void {
+  el.setAttribute('data-icon', iconId)
+}
+
 export function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/\/$/, '') || '/'
 }
