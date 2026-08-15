@@ -4,7 +4,7 @@ import { ObsidianModuleDataDir } from './obsidian-module-data-dir'
 
 class FakeDataAdapter {
   readonly files = new Map<string, string>()
-  readonly dirs = new Set<string>(['.obsidian/plugins/bible-study'])
+  readonly dirs = new Set<string>(['cfg/plugins/bible-study'])
 
   async exists(path: string): Promise<boolean> {
     return this.files.has(path) || this.dirs.has(path)
@@ -56,8 +56,8 @@ class FakeDataAdapter {
 const setup = () => {
   const adapter = new FakeDataAdapter()
   const plugin = {
-    app: { vault: { adapter, configDir: '.obsidian' } },
-    manifest: { id: 'bible-study', dir: '.obsidian/plugins/bible-study' },
+    app: { vault: { adapter, configDir: 'cfg' } },
+    manifest: { id: 'bible-study', dir: 'cfg/plugins/bible-study' },
   } as unknown as Plugin
   return { adapter, dataDir: new ObsidianModuleDataDir(plugin) }
 }
@@ -72,7 +72,7 @@ describe('ObsidianModuleDataDir', () => {
       '{"id":"web"}',
     )
     expect(
-      adapter.files.get('.obsidian/plugins/bible-study/modules/web/manifest.json'),
+      adapter.files.get('cfg/plugins/bible-study/modules/web/manifest.json'),
     ).toBe('{"id":"web"}')
   })
 

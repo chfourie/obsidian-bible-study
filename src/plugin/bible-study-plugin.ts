@@ -1,4 +1,5 @@
 import { App, Plugin, type PluginManifest } from 'obsidian'
+import { ModulesFeature } from '../modules'
 import { VaultIndexFeature } from '../vault-index'
 import { PluginFeatureSet } from './plugin-feature-set'
 
@@ -6,11 +7,13 @@ export default class BibleStudyPlugin extends Plugin {
   readonly #features: PluginFeatureSet = new PluginFeatureSet()
 
   readonly vaultIndex = new VaultIndexFeature(this)
+  readonly modules = new ModulesFeature(this)
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
     // Features register here as they land (parser, reader, annotations, …).
     this.#features.addFeature(this.vaultIndex)
+    this.#features.addFeature(this.modules)
   }
 
   readonly onExternalSettingsChange = this.#features.onExternalSettingsChange
