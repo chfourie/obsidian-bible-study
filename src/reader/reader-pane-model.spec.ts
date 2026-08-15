@@ -97,6 +97,38 @@ describe('opening the reader at a reference', () => {
     expect(view.rows[3].segments[0].text).toBe('Remain in me.')
   })
 
+  it('shows an unavailable state when the translation has no content', async () => {
+    const model = modelWith({}, DEFAULT_TOGGLES, 'nkjv')
+
+    await model.openAt(ref('John 15:4'), 'nkjv')
+
+    expect(model.view.status).toBe('unavailable')
+    expect(model.view.rows).toEqual([])
+  })
+
+  it('nudges installation when no translation is available at all', async () => {
+    const model = modelWith(
+      { installedTranslations: async () => [] },
+      DEFAULT_TOGGLES,
+      null,
+    )
+
+    await model.openAt(ref('John 15:4'), null)
+
+    expect(model.view.status).toBe('no-translation')
+  })
+
+  it('falls back to the first installed translation when none is configured', async () => {
+    const model = modelWith({}, DEFAULT_TOGGLES, null)
+
+    await model.openAt(ref('John 15:4'), null)
+
+    expect(model.view.status).toBe('ok')
+    expect(model.view.translations).toEqual([
+      { id: 'web', label: 'WEB', active: true },
+    ])
+  })
+
   it('highlights the verses of the entry reference and shows the banner', async () => {
     const model = modelWith()
 

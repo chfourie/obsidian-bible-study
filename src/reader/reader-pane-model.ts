@@ -37,11 +37,18 @@ export type VerseRowView = {
   highlighted: boolean
 }
 
+export type TranslationPill = {
+  id: string
+  label: string
+  active: boolean
+}
+
 export type ReaderPaneView = {
-  status: 'loading' | 'ok'
+  status: 'loading' | 'ok' | 'unavailable' | 'no-translation'
   title: string
   position: ReaderPosition
   rows: VerseRowView[]
+  translations: TranslationPill[]
   banner: string | null
 }
 
@@ -65,6 +72,7 @@ export class ReaderPaneModel {
   #entry: Reference | null = null
   #rows: VerseRowView[] = []
   #status: ReaderPaneView['status'] = 'loading'
+  #installed: ModuleManifest[] = []
 
   constructor(
     private readonly deps: ReaderPaneDeps,
@@ -79,6 +87,11 @@ export class ReaderPaneModel {
       title: `${bookName(this.#position.book)} ${this.#position.chapter}`,
       position: this.#position,
       rows: this.#rows,
+      translations: this.#installed.map((manifest) => ({
+        id: manifest.id,
+        label: manifest.id.toUpperCase(),
+        active: manifest.id === this.#translationId,
+      })),
       banner:
         this.#entry === null
           ? null
@@ -99,11 +112,21 @@ export class ReaderPaneModel {
 
   async #loadChapter(): Promise<void> {
     this.#status = 'loading'
+    this.#rows = []
+    this.#installed = await this.deps.installedTranslations()
+    this.#translationId ??= this.#installed[0]?.id ?? null
+    if (this.#translationId === null) {
+      this.#status = 'no-translation'
+      return
+    }
     const passage = await this.deps.passages.passage(
       chapterReference(this.#position),
-      this.#translationId ?? '',
+      this.#translationId,
     )
-    if (passage.status !== 'ok') return
+    if (passage.status !== 'ok') {
+      this.#status = 'unavailable'
+      return
+    }
     this.#rows = passage.verses.map((verse) => ({
       verseId: verse.verseId,
       label: `${decodeVerseId(verse.verseId).verse}`,
