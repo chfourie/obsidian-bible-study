@@ -1,6 +1,7 @@
 import type { Plugin } from 'obsidian'
 import { PluginFeature, type SettingsStore } from '../data-access'
 import { ApiBibleClient } from './api-bible-client'
+import { BSB_MODULE_ID, BsbReleaseClient } from './bsb-release-client'
 import { FumsReporter } from './fums-reporter'
 import { GetBibleClient } from './getbible-client'
 import { ModuleManager } from './module-manager'
@@ -36,6 +37,7 @@ export class ModulesFeature extends PluginFeature {
       new GetBibleClient(),
       this.store,
       settingsStore,
+      { [BSB_MODULE_ID]: new BsbReleaseClient() },
     )
     this.passageCache = new PassageCache(dataDir)
     this.apiBibleClient = new ApiBibleClient(() => this.settings.apiBibleKey)
