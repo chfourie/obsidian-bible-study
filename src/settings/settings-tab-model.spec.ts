@@ -290,3 +290,137 @@ describe('SettingsTabModel translation management list', () => {
     expect(model.view.languages).toEqual(['Afrikaans', 'English'])
   })
 })
+
+describe('SettingsTabModel settings mutations', () => {
+  it('stores a trimmed API key and unmasks the online tier', async () => {
+    const { model, settingsStore } = setup()
+    await model.refresh()
+
+    await model.setApiBibleKey('  key-123  ')
+
+    expect((await settingsStore.loadSettings()).apiBibleKey).toBe('key-123')
+    expect(model.view.rows.some((row) => row.tier === 'online')).toBe(true)
+  })
+
+  it('clears the API key when the input is blanked', async () => {
+    const { model, settingsStore } = setup({
+      storedSettings: { apiBibleKey: 'key-123' },
+    })
+    await model.refresh()
+
+    await model.setApiBibleKey('   ')
+
+    expect((await settingsStore.loadSettings()).apiBibleKey).toBe(null)
+  })
+
+  it('persists the language filter', async () => {
+    const { model, settingsStore } = setup()
+    await model.refresh()
+
+    await model.setLanguageFilter('Afrikaans')
+
+    expect((await settingsStore.loadSettings()).languageFilter).toBe('Afrikaans')
+  })
+
+  it('enables an online translation, making it a default candidate', async () => {
+    const { model, settingsStore } = setup({
+      storedSettings: { apiBibleKey: 'key-123' },
+    })
+    await model.refresh()
+
+    await model.setOnlineEnabled('nkjv', true)
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.enabledOnlineTranslationIds).toEqual(['nkjv'])
+    expect(settings.defaultTranslationId).toBe('nkjv')
+  })
+
+  it('disables an online translation again', async () => {
+    const { model, settingsStore } = setup({
+      storedSettings: {
+        apiBibleKey: 'key-123',
+        enabledOnlineTranslationIds: ['nkjv'],
+      },
+    })
+    await model.refresh()
+
+    await model.setOnlineEnabled('nkjv', false)
+
+    expect(
+      (await settingsStore.loadSettings()).enabledOnlineTranslationIds,
+    ).toEqual([])
+  })
+
+  it('clears cached passages for an online translation', async () => {
+    const clearPassageCache = vi.fn(async () => {})
+    const { model } = setup({ clearPassageCache })
+    await model.refresh()
+
+    await model.clearCache('nkjv')
+
+    expect(clearPassageCache).toHaveBeenCalledWith('nkjv')
+  })
+
+  it('persists picker and preference choices through a shared updater', async () => {
+    const { model, settingsStore } = setup({
+      storedSettings: { installedModuleIds: ['web', 'bsb'] },
+      installedManifests: async () => [manifest('web'), manifest('bsb')],
+    })
+    await model.refresh()
+
+    await model.updateSettings((settings) => ({
+      ...settings,
+      defaultTranslationId: 'bsb',
+      readerNavDefault: 'breadcrumb',
+    }))
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.defaultTranslationId).toBe('bsb')
+    expect(settings.readerNavDefault).toBe('breadcrumb')
+    expect(model.view.settings.readerNavDefault).toBe('breadcrumb')
+  })
+})
+
+describe('SettingsTabModel Strongs section', () => {
+  it('reports whether the dictionaries and any tagged translation are installed', async () => {
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['bsb'] },
+      installedManifests: async () => [
+        manifest('bsb', 'Berean Standard Bible', true),
+      ],
+      strongs: {
+        isInstalled: async () => true,
+        install: vi.fn(async () => {}),
+        remove: vi.fn(async () => {}),
+      },
+    })
+
+    await model.refresh()
+
+    expect(model.view.strongsInstalled).toBe(true)
+    expect(model.view.taggedTranslationInstalled).toBe(true)
+  })
+
+  it('downloads the dictionaries when Strongs is enabled and removes them when disabled', async () => {
+    let installed = false
+    const strongs = {
+      isInstalled: async () => installed,
+      install: vi.fn(async () => {
+        installed = true
+      }),
+      remove: vi.fn(async () => {
+        installed = false
+      }),
+    }
+    const { model } = setup({ strongs })
+    await model.refresh()
+
+    await model.setStrongsEnabled(true)
+    expect(strongs.install).toHaveBeenCalled()
+    expect(model.view.strongsInstalled).toBe(true)
+
+    await model.setStrongsEnabled(false)
+    expect(strongs.remove).toHaveBeenCalled()
+    expect(model.view.strongsInstalled).toBe(false)
+  })
+})

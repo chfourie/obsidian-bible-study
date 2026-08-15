@@ -52,6 +52,9 @@ export type SettingsTabView = {
   noTranslationsAvailable: boolean
   rows: TranslationRowView[]
   languages: string[]
+  strongsInstalled: boolean
+  strongsBusy: boolean
+  taggedTranslationInstalled: boolean
 }
 
 export class SettingsTabModel {
@@ -62,6 +65,8 @@ export class SettingsTabModel {
   readonly #busy = new Map<string, 'downloading' | 'removing'>()
   readonly #errors = new Map<string, string>()
   readonly #listeners = new Set<() => void>()
+  #strongsInstalled = false
+  #strongsBusy = false
 
   constructor(private readonly deps: SettingsTabDeps) {}
 
@@ -79,7 +84,61 @@ export class SettingsTabModel {
     this.#manifests = await this.deps.installedManifests()
     this.#catalog = await this.deps.availableTranslations()
     this.#updates = await this.deps.modulesWithUpdates()
+    this.#strongsInstalled = await this.deps.strongs.isInstalled()
     this.#notify()
+  }
+
+  async updateSettings(
+    update: (settings: BibleStudySettings) => BibleStudySettings,
+  ): Promise<void> {
+    this.#settings = await this.deps.settingsStore.updateSettings(update)
+    this.#notify()
+  }
+
+  async setApiBibleKey(key: string): Promise<void> {
+    const trimmed = key.trim()
+    await this.updateSettings((settings) => ({
+      ...settings,
+      apiBibleKey: trimmed === '' ? null : trimmed,
+    }))
+  }
+
+  async setLanguageFilter(language: string): Promise<void> {
+    await this.updateSettings((settings) => ({
+      ...settings,
+      languageFilter: language,
+    }))
+  }
+
+  async setOnlineEnabled(
+    translationId: string,
+    enabled: boolean,
+  ): Promise<void> {
+    await this.updateSettings((settings) => ({
+      ...settings,
+      enabledOnlineTranslationIds: enabled
+        ? [...new Set([...settings.enabledOnlineTranslationIds, translationId])]
+        : settings.enabledOnlineTranslationIds.filter(
+            (id) => id !== translationId,
+          ),
+    }))
+  }
+
+  async clearCache(translationId: string): Promise<void> {
+    await this.deps.clearPassageCache(translationId)
+    this.#notify()
+  }
+
+  async setStrongsEnabled(enabled: boolean): Promise<void> {
+    this.#strongsBusy = true
+    this.#notify()
+    try {
+      if (enabled) await this.deps.strongs.install()
+      else await this.deps.strongs.remove()
+    } finally {
+      this.#strongsBusy = false
+    }
+    await this.refresh()
   }
 
   async download(translationId: string): Promise<void> {
@@ -128,6 +187,11 @@ export class SettingsTabModel {
       languages: [
         ...new Set(this.#catalog.map((entry) => entry.language)),
       ].sort(),
+      strongsInstalled: this.#strongsInstalled,
+      strongsBusy: this.#strongsBusy,
+      taggedTranslationInstalled: this.#manifests.some(
+        (installed) => installed.capabilities.strongsTagged,
+      ),
     }
   }
 
