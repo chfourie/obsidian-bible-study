@@ -30,3 +30,4 @@ deploy-targets.json
 
 # Repo root accidentally opened as an Obsidian vault.
 /.obsidian/
+.api-bible-key
