@@ -68,7 +68,7 @@ export class RenderingFeature extends PluginFeature {
     )
   }
 
-  override onExternalSettingsChange(): void {
+  override onSettingsChanged(): void {
     this.#repository.clear()
     this.#refreshLivePreviewEditors()
   }

@@ -38,10 +38,10 @@ export class PluginFeatureSet {
     })
   }
 
-  readonly onExternalSettingsChange = (): void => {
+  readonly onSettingsChanged = (): void => {
     this.#pluginFeatures.forEach((feature) => {
       try {
-        feature.onExternalSettingsChange()
+        feature.onSettingsChanged()
       } catch (e) {
         console.error(e)
       }

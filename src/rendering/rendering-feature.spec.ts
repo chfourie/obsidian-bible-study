@@ -30,7 +30,7 @@ describe('RenderingFeature settings changes', () => {
       { view: markdownView({ cm: { dispatch: second } }) },
     ])
 
-    feature.onExternalSettingsChange()
+    feature.onSettingsChanged()
 
     for (const dispatch of [first, second]) {
       expect(dispatch).toHaveBeenCalledTimes(1)
@@ -47,6 +47,6 @@ describe('RenderingFeature settings changes', () => {
       { view: markdownView({}) },
     ])
 
-    expect(() => feature.onExternalSettingsChange()).not.toThrow()
+    expect(() => feature.onSettingsChanged()).not.toThrow()
   })
 })

@@ -42,6 +42,19 @@ describe('SettingsStore', () => {
     expect(await store.loadSettings()).toEqual(updated)
   })
 
+  it('notifies listeners with the settings each update persists', async () => {
+    const { store } = setup()
+    const seen: unknown[] = []
+    store.onSettingsChanged((settings) => seen.push(settings))
+
+    const updated = await store.updateSettings((settings) => ({
+      ...settings,
+      installedModuleIds: ['web'],
+    }))
+
+    expect(seen).toEqual([updated])
+  })
+
   it('applies updates on top of the latest stored data', async () => {
     const { store } = setup({ installedModuleIds: ['web'] })
 

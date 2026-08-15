@@ -61,8 +61,8 @@ export const createLivePreviewExtension = (
       to: range.to,
     }))
     const specs = liveDecorationSpecs(
+      view.state.doc.toString(),
       view.visibleRanges,
-      (from, to) => view.state.sliceDoc(from, to),
       selections,
       contextProvider(),
     )

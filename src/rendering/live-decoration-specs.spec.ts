@@ -10,14 +10,10 @@ const context: RenderContext = {
 const specsFor = (
   doc: string,
   selections: { from: number; to: number }[] = [],
-  ranges: { from: number; to: number }[] = [{ from: 0, to: doc.length }],
-) =>
-  liveDecorationSpecs(
-    ranges,
-    (from, to) => doc.slice(from, to),
-    selections,
-    context,
-  )
+  visibleRanges: { from: number; to: number }[] = [
+    { from: 0, to: doc.length },
+  ],
+) => liveDecorationSpecs(doc, visibleRanges, selections, context)
 
 describe('liveDecorationSpecs', () => {
   it('decorates each valid reference with its render model', () => {
@@ -39,7 +35,7 @@ describe('liveDecorationSpecs', () => {
     expect(specsFor(doc)).toEqual([])
   })
 
-  it('scans only the given ranges, reporting document offsets', () => {
+  it('keeps only references inside the visible ranges, at document offsets', () => {
     const doc = '{John 15:4}\n{John 15:9}\n{John 15:11}'
 
     const specs = specsFor(doc, [], [{ from: 12, to: 23 }])
@@ -48,8 +44,36 @@ describe('liveDecorationSpecs', () => {
     expect(specs[0].model.referenceText).toBe('John 15:9')
   })
 
-  it('scans nothing when given no ranges', () => {
+  it('scans nothing when no range is visible', () => {
     expect(specsFor('{John 15:4}', [], [])).toEqual([])
+  })
+
+  it('honors a code fence opened above the visible range', () => {
+    const doc = '```\n{John 15:4}\n```\n'
+
+    expect(specsFor(doc, [], [{ from: 4, to: doc.length }])).toEqual([])
+  })
+
+  it('does not mistake a visible-range-initial hr line for frontmatter', () => {
+    const doc = 'intro\n---\n{John 15:4}\n---\ntail'
+
+    const specs = specsFor(doc, [], [{ from: 6, to: doc.length }])
+
+    expect(specs.map((spec) => [spec.start, spec.end])).toEqual([[10, 21]])
+  })
+
+  it('skips frontmatter even when the visible range starts inside it', () => {
+    const doc = '---\nref: {John 15:4}\n---\n{John 15:9}'
+
+    const specs = specsFor(doc, [], [{ from: 4, to: doc.length }])
+
+    expect(specs.map((spec) => spec.model.referenceText)).toEqual(['John 15:9'])
+  })
+
+  it('honors an escaping backslash just above the visible range start', () => {
+    const doc = 'x \\{John 15:4}'
+
+    expect(specsFor(doc, [], [{ from: 3, to: doc.length }])).toEqual([])
   })
 
   it('collapses to source when the cursor enters the range', () => {

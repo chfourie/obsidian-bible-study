@@ -16,25 +16,27 @@ export type LiveDecorationSpec = {
   model: ReferenceRenderModel
 }
 
-const touches = (
-  spec: { start: number; end: number },
-  selection: DocRange,
-): boolean => selection.from <= spec.end && selection.to >= spec.start
+type Span = { start: number; end: number }
 
+const overlapsRange = (span: Span, range: DocRange): boolean =>
+  span.start < range.to && span.end > range.from
+
+const touches = (span: Span, selection: DocRange): boolean =>
+  selection.from <= span.end && selection.to >= span.start
+
+// Scans the full document so fence state, frontmatter, and escape context
+// carry into the visible ranges, then keeps only the visible matches.
 export const liveDecorationSpecs = (
+  doc: string,
   visibleRanges: readonly DocRange[],
-  sliceDoc: (from: number, to: number) => string,
   selections: readonly DocRange[],
   context: RenderContext,
 ): LiveDecorationSpec[] =>
-  visibleRanges
-    .flatMap(({ from, to }) =>
-      scanReferenceMatches(sliceDoc(from, to), {
-        translationIds: context.knownTranslationIds,
-      }).map((match) => ({
-        start: from + match.start,
-        end: from + match.end,
-        model: modelFromParsed(match.parsed, context),
-      })),
-    )
-    .filter((spec) => !selections.some((selection) => touches(spec, selection)))
+  scanReferenceMatches(doc, { translationIds: context.knownTranslationIds })
+    .filter((match) => visibleRanges.some((range) => overlapsRange(match, range)))
+    .filter((match) => !selections.some((selection) => touches(match, selection)))
+    .map((match) => ({
+      start: match.start,
+      end: match.end,
+      model: modelFromParsed(match.parsed, context),
+    }))
