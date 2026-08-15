@@ -95,6 +95,26 @@ describe('ModuleStore', () => {
     expect(await store.verseText('kjv', makeVerseId(43, 15, 4))).toBeNull()
   })
 
+  it('serves a whole book keyed by verse id', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+
+    expect(await store.bookContent('web', 43)).toEqual({
+      [makeVerseId(43, 15, 4)]: 'Remain in me, and I in you.',
+      [makeVerseId(43, 15, 5)]: 'I am the vine. You are the branches.',
+    })
+  })
+
+  it('treats missing or corrupt book files as an absent book', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(webModule())
+    dataDir.files.set('modules/web/064.json', 'not json')
+
+    expect(await store.bookContent('web', 1)).toBeNull()
+    expect(await store.bookContent('web', 64)).toBeNull()
+    expect(await store.bookContent('kjv', 43)).toBeNull()
+  })
+
   it('lays a module out as modules/<id>/manifest.json plus zero-padded book files', async () => {
     const { dataDir, store } = setup()
 

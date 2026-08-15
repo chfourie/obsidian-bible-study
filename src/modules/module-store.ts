@@ -49,9 +49,15 @@ export class ModuleStore {
 
   async verseText(moduleId: string, verseId: number): Promise<string | null> {
     const { book } = decodeVerseId(verseId)
+    return (await this.bookContent(moduleId, book))?.[verseId] ?? null
+  }
+
+  async bookContent(
+    moduleId: string,
+    book: number,
+  ): Promise<BookContent | null> {
     const content = await this.dataDir.readTextFile(bookPath(moduleId, book))
-    if (content === null) return null
-    return parseOrNull<BookContent>(content)?.[verseId] ?? null
+    return content === null ? null : parseOrNull<BookContent>(content)
   }
 
   async manifest(moduleId: string): Promise<ModuleManifest | null> {
