@@ -31,7 +31,9 @@ const fakeStore = (): ModuleStore =>
 
 type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 
-const harness = () => {
+type FakeNote = { content: string; ctime: number }
+
+const harness = (notes: Record<string, FakeNote> = {}) => {
   const leaves: FakeLeaf[] = []
   let factory: ((leaf: WorkspaceLeaf) => unknown) | null = null
   const revealLeaf = vi.fn(async () => {})
@@ -50,8 +52,13 @@ const harness = () => {
     },
     revealLeaf,
   }
+  const vault = {
+    getFileByPath: (path: string) =>
+      notes[path] ? { path, stat: { ctime: notes[path].ctime } } : null,
+    cachedRead: async (file: { path: string }) => notes[file.path].content,
+  }
   const plugin = {
-    app: { workspace },
+    app: { workspace, vault },
     registerView: (_type: string, viewFactory: (leaf: WorkspaceLeaf) => unknown) => {
       factory = viewFactory
     },
@@ -64,9 +71,10 @@ const harness = () => {
       return document.createElement('div')
     },
   } as unknown as Plugin
-  const feature = new ReaderFeature(plugin, fakeStore(), new VaultReferenceIndex())
+  const index = new VaultReferenceIndex()
+  const feature = new ReaderFeature(plugin, fakeStore(), index)
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
-  return { feature, leaves, commands, ribbons, revealLeaf }
+  return { feature, index, leaves, commands, ribbons, revealLeaf }
 }
 
 const ref = (text: string): Reference => {
@@ -152,6 +160,81 @@ describe('ReaderFeature entry points', () => {
     const reopened = leaves[1].view as ReaderView
     expect(reopened.model.view.position).toEqual({ book: 43, chapter: 15 })
     expect(reopened.model.view.banner).toBe(null)
+  })
+
+  it('serves annotation bodies from the vault to reader details', async () => {
+    const { feature, index, leaves } = harness({
+      'Annotations/John 15.1.md': {
+        content: '---\nref: John 15:1\n---\nThe vine is Christ.\n',
+        ctime: 42,
+      },
+    })
+    await feature.load()
+    index.indexNote(
+      'Annotations/John 15.1.md',
+      '---\nref: John 15:1\n---\nThe vine is Christ.\n',
+    )
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+
+    await view.model.selectVerse(makeVerseId(43, 15, 1))
+
+    expect(
+      view.model.view.details[makeVerseId(43, 15, 1)].annotations,
+    ).toEqual([
+      {
+        file: 'Annotations/John 15.1.md',
+        title: 'John 15.1',
+        body: 'The vine is Christ.\n',
+      },
+    ])
+  })
+
+  it('refreshes open reader panes when the index changes', async () => {
+    const { feature, index, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.rows[0].mentions).toBe(0)
+
+    index.indexNote('Sermons/Vine.md', '{John 15:1}')
+    await flushAsync()
+
+    expect(view.model.view.rows[0].mentions).toBe(1)
+  })
+
+  it('passes the annotation ordering setting to new panes', async () => {
+    const { feature, index, leaves } = harness({
+      'Annotations/Zeal.md': {
+        content: '---\nref: John 15:1\n---\nolder\n',
+        ctime: 1,
+      },
+      'Annotations/Abide.md': {
+        content: '---\nref: John 15:1\n---\nnewer\n',
+        ctime: 2,
+      },
+    })
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      annotationOrdering: 'path-a-z',
+    })
+    await feature.load()
+    index.indexNote('Annotations/Zeal.md', '---\nref: John 15:1\n---\nolder\n')
+    index.indexNote('Annotations/Abide.md', '---\nref: John 15:1\n---\nnewer\n')
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+
+    await view.model.selectVerse(makeVerseId(43, 15, 1))
+
+    expect(
+      view.model.view.details[makeVerseId(43, 15, 1)].annotations.map(
+        (block) => block.file,
+      ),
+    ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
   it('seeds new panes with the reader toggle defaults from settings', async () => {

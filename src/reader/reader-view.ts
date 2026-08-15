@@ -63,6 +63,7 @@ export class ReaderView extends ItemView {
   }
 
   override async onClose(): Promise<void> {
+    this.feature.releaseModel(this.model)
     if (this.#component !== null) await unmount(this.#component)
     this.#component = null
   }
