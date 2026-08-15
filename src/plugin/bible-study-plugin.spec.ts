@@ -65,4 +65,29 @@ describe('BibleStudyPlugin same-device settings changes', () => {
 
     expect(plugin.rendering.navigator).toBe(plugin.reader)
   })
+
+  it('propagates settings changes to the annotations feature', async () => {
+    const plugin = pluginWithStorage()
+    const useSettings = vi.spyOn(plugin.annotations, 'useSettings')
+
+    await plugin.settingsStore.updateSettings((settings) => ({
+      ...settings,
+      annotationsFolder: 'Bible/Notes',
+    }))
+
+    expect(useSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ annotationsFolder: 'Bible/Notes' }),
+    )
+  })
+
+  it('prefills new annotations from the open reader', () => {
+    const plugin = pluginWithStorage()
+    const prefillReference = vi
+      .spyOn(plugin.reader, 'prefillReference')
+      .mockReturnValue(null)
+
+    plugin.annotations.prefillRefText()
+
+    expect(prefillReference).toHaveBeenCalled()
+  })
 })

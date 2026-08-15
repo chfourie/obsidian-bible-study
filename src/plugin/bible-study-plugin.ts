@@ -1,4 +1,5 @@
 import { App, Plugin, type PluginManifest } from 'obsidian'
+import { AnnotationsFeature } from '../annotations'
 import { SettingsStore } from '../data-access'
 import { apiBibleIdFor, ModulesFeature } from '../modules'
 import { ReaderFeature } from '../reader'
@@ -30,14 +31,16 @@ export default class BibleStudyPlugin extends Plugin {
     this.reader,
     this.#onlineSource,
   )
+  readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
-    // Features register here as they land (annotations, …).
+    this.annotations.usePrefill(() => this.reader.prefillReference())
     this.#features.addFeature(this.vaultIndex)
     this.#features.addFeature(this.modules)
     this.#features.addFeature(this.reader)
     this.#features.addFeature(this.rendering)
+    this.#features.addFeature(this.annotations)
     this.settingsStore.onSettingsChanged((settings) => {
       this.#features.useSettings(settings)
       this.#features.onSettingsChanged()
