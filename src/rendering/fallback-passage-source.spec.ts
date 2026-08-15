@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_SETTINGS } from '../data-access'
 import { makeVerseId, type Reference } from '../reference'
-import { FallbackPassageSource } from './fallback-passage-source'
+import {
+  FallbackPassageSource,
+  resolveFallbackTranslationId,
+} from './fallback-passage-source'
 import type { Passage, PassageSource } from './module-passage-source'
 
 const JOHN_15_4 = makeVerseId(43, 15, 4)
@@ -74,5 +78,47 @@ describe('FallbackPassageSource', () => {
     expect(await fallback.passage(john15_4, 'nkjv')).toEqual({
       status: 'unavailable',
     })
+  })
+})
+
+describe('resolveFallbackTranslationId', () => {
+  it('uses the configured fallback when it is an installed module', () => {
+    expect(
+      resolveFallbackTranslationId({
+        ...DEFAULT_SETTINGS,
+        installedModuleIds: ['web', 'kjv'],
+        fallbackTranslationId: 'kjv',
+      }),
+    ).toBe('kjv')
+  })
+
+  it('defaults to the first installed module when none is configured', () => {
+    expect(
+      resolveFallbackTranslationId({
+        ...DEFAULT_SETTINGS,
+        installedModuleIds: ['web', 'kjv'],
+        fallbackTranslationId: null,
+      }),
+    ).toBe('web')
+  })
+
+  it('ignores a configured fallback that is no longer installed', () => {
+    expect(
+      resolveFallbackTranslationId({
+        ...DEFAULT_SETTINGS,
+        installedModuleIds: ['web'],
+        fallbackTranslationId: 'kjv',
+      }),
+    ).toBe('web')
+  })
+
+  it('resolves to none when no modules are installed', () => {
+    expect(
+      resolveFallbackTranslationId({
+        ...DEFAULT_SETTINGS,
+        installedModuleIds: [],
+        fallbackTranslationId: 'kjv',
+      }),
+    ).toBeNull()
   })
 })

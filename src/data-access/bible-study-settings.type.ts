@@ -3,6 +3,8 @@
 export type BibleStudySettings = {
   installedModuleIds: string[]
   defaultTranslationId: string | null
+  fallbackTranslationId: string | null
+  apiBibleKey: string | null
   readerDetailsDefault: 'inline' | 'side-panel'
   readerNavDefault: 'tree' | 'breadcrumb'
   readerLayoutDefault: 'verse-per-line' | 'continuous'
@@ -11,6 +13,8 @@ export type BibleStudySettings = {
 export const DEFAULT_SETTINGS: BibleStudySettings = {
   installedModuleIds: [],
   defaultTranslationId: null,
+  fallbackTranslationId: null,
+  apiBibleKey: null,
   readerDetailsDefault: 'inline',
   readerNavDefault: 'tree',
   readerLayoutDefault: 'verse-per-line',

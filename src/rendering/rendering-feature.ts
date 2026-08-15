@@ -12,11 +12,19 @@ import {
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
 import {
+  FallbackPassageSource,
+  resolveFallbackTranslationId,
+} from './fallback-passage-source'
+import {
   createLivePreviewExtension,
   refreshRenderedReferences,
 } from './live-preview-extension'
-import { ModulePassageSource } from './module-passage-source'
+import {
+  ModulePassageSource,
+  type PassageSource,
+} from './module-passage-source'
 import { PassageRepository } from './passage-repository'
+import { TieredPassageSource } from './tiered-passage-source'
 import { processRenderedElement } from './process-rendered-element'
 import { renderContextFromSettings } from './render-context'
 import type { ReferenceRenderDeps } from './render-reference'
@@ -41,9 +49,18 @@ export class RenderingFeature extends PluginFeature {
     plugin: Plugin,
     store: ModuleStore,
     readonly navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR,
+    onlineSource?: PassageSource,
   ) {
     super(plugin)
-    this.#repository = new PassageRepository(new ModulePassageSource(store))
+    const moduleSource = new ModulePassageSource(store)
+    const tiered = onlineSource
+      ? new TieredPassageSource(moduleSource, onlineSource)
+      : moduleSource
+    this.#repository = new PassageRepository(
+      new FallbackPassageSource(tiered, () =>
+        resolveFallbackTranslationId(this.settings),
+      ),
+    )
     this.#deps = {
       passages: this.#repository,
       openReference: (model) =>

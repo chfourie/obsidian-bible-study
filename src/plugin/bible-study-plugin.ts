@@ -1,8 +1,8 @@
 import { App, Plugin, type PluginManifest } from 'obsidian'
 import { SettingsStore } from '../data-access'
-import { ModulesFeature } from '../modules'
+import { apiBibleIdFor, ModulesFeature } from '../modules'
 import { ReaderFeature } from '../reader'
-import { RenderingFeature } from '../rendering'
+import { OnlinePassageSource, RenderingFeature } from '../rendering'
 import { VaultIndexFeature } from '../vault-index'
 import { PluginFeatureSet } from './plugin-feature-set'
 
@@ -12,12 +12,24 @@ export default class BibleStudyPlugin extends Plugin {
 
   readonly vaultIndex = new VaultIndexFeature(this)
   readonly modules = new ModulesFeature(this, this.settingsStore)
+  readonly #onlineSource = new OnlinePassageSource({
+    client: this.modules.apiBibleClient,
+    cache: this.modules.passageCache,
+    reportFums: (fumsToken) => void this.modules.fumsReporter.report(fumsToken),
+    apiBibleIdFor,
+  })
   readonly reader = new ReaderFeature(
     this,
     this.modules.store,
     this.vaultIndex.index,
+    this.#onlineSource,
   )
-  readonly rendering = new RenderingFeature(this, this.modules.store, this.reader)
+  readonly rendering = new RenderingFeature(
+    this,
+    this.modules.store,
+    this.reader,
+    this.#onlineSource,
+  )
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)

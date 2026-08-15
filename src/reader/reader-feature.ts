@@ -3,7 +3,12 @@ import type { ReferenceNavigator } from '../contracts'
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
 import type { Reference } from '../reference'
-import { ModulePassageSource, PassageRepository } from '../rendering'
+import {
+  ModulePassageSource,
+  PassageRepository,
+  TieredPassageSource,
+  type PassageSource,
+} from '../rendering'
 import type { VaultReferenceIndex } from '../vault-index'
 import {
   ReaderPaneModel,
@@ -23,9 +28,17 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     plugin: Plugin,
     private readonly store: ModuleStore,
     private readonly index: VaultReferenceIndex,
+    onlineSource?: PassageSource,
   ) {
     super(plugin)
-    this.#repository = new PassageRepository(new ModulePassageSource(store))
+    const moduleSource = new ModulePassageSource(store)
+    // The reader's stacked view never substitutes the fallback translation
+    // (spec §6.4), so tiers compose here without a FallbackPassageSource.
+    this.#repository = new PassageRepository(
+      onlineSource
+        ? new TieredPassageSource(moduleSource, onlineSource)
+        : moduleSource,
+    )
   }
 
   override async load(): Promise<void> {
