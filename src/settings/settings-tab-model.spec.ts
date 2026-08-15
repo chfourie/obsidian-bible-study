@@ -95,3 +95,100 @@ describe('SettingsTabModel general section', () => {
     expect(model.view.noTranslationsAvailable).toBe(true)
   })
 })
+
+describe('SettingsTabModel translation management list', () => {
+  it('lists downloadable rows matching the language filter, then online rows when a key is set', async () => {
+    const { model } = setup({
+      storedSettings: { apiBibleKey: 'key-123' },
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+        { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
+        { id: 'bsb', name: 'Berean Standard Bible', language: 'English', strongsTagged: true },
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.rows).toEqual([
+      expect.objectContaining({ id: 'web', tier: 'downloadable', installed: false }),
+      expect.objectContaining({ id: 'bsb', tier: 'downloadable', strongsTagged: true }),
+      expect.objectContaining({
+        id: 'nkjv',
+        name: 'New King James Version',
+        tier: 'online',
+        enabled: false,
+      }),
+    ])
+  })
+
+  it('hides online rows without an API key', async () => {
+    const { model } = setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.rows.map((row) => row.tier)).toEqual(['downloadable'])
+  })
+
+  it('always lists installed modules even when the catalog omits or filters them', async () => {
+    const { model } = setup({
+      storedSettings: {
+        installedModuleIds: ['aov'],
+        languageFilter: 'English',
+      },
+      installedManifests: async () => [manifest('aov', 'Ou Vertaling')],
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+        { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.rows).toEqual([
+      expect.objectContaining({ id: 'web', installed: false }),
+      expect.objectContaining({ id: 'aov', installed: true }),
+    ])
+  })
+
+  it('marks installed rows that have updates and carries the Strongs badge from the manifest', async () => {
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['bsb'] },
+      installedManifests: async () => [
+        manifest('bsb', 'Berean Standard Bible', true),
+      ],
+      availableTranslations: async () => [
+        { id: 'bsb', name: 'Berean Standard Bible', language: 'English' },
+      ],
+      modulesWithUpdates: async () => ['bsb'],
+    })
+
+    await model.refresh()
+
+    expect(model.view.rows).toEqual([
+      expect.objectContaining({
+        id: 'bsb',
+        installed: true,
+        updateAvailable: true,
+        strongsTagged: true,
+      }),
+    ])
+  })
+
+  it('offers the catalog languages for the filter dropdown', async () => {
+    const { model } = setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+        { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
+        { id: 'kjv', name: 'King James Version', language: 'English' },
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.languages).toEqual(['Afrikaans', 'English'])
+  })
+})

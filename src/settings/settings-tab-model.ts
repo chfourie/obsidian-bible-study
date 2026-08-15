@@ -33,22 +33,38 @@ export type SettingsTabDeps = {
 
 export type TranslationOption = { id: string; label: string }
 
+export type TranslationRowView = {
+  id: string
+  name: string
+  tier: 'downloadable' | 'online'
+  installed: boolean
+  enabled: boolean
+  updateAvailable: boolean
+  strongsTagged: boolean
+}
+
 export type SettingsTabView = {
   settings: BibleStudySettings
   defaultTranslationOptions: TranslationOption[]
   fallbackTranslationOptions: TranslationOption[]
   noTranslationsAvailable: boolean
+  rows: TranslationRowView[]
+  languages: string[]
 }
 
 export class SettingsTabModel {
   #settings: BibleStudySettings = DEFAULT_SETTINGS
   #manifests: ModuleManifest[] = []
+  #catalog: SettingsCatalogEntry[] = []
+  #updates: string[] = []
 
   constructor(private readonly deps: SettingsTabDeps) {}
 
   async refresh(): Promise<void> {
     this.#settings = await this.deps.settingsStore.loadSettings()
     this.#manifests = await this.deps.installedManifests()
+    this.#catalog = await this.deps.availableTranslations()
+    this.#updates = await this.deps.modulesWithUpdates()
   }
 
   get view(): SettingsTabView {
@@ -61,7 +77,58 @@ export class SettingsTabModel {
       defaultTranslationOptions,
       fallbackTranslationOptions: this.#installedTranslationOptions(),
       noTranslationsAvailable: defaultTranslationOptions.length === 0,
+      rows: [...this.#downloadableRows(), ...this.#onlineRows()],
+      languages: [
+        ...new Set(this.#catalog.map((entry) => entry.language)),
+      ].sort(),
     }
+  }
+
+  #downloadableRows(): TranslationRowView[] {
+    const installedIds = installedTranslationModuleIds(this.#settings)
+    const listed = this.#catalog.filter(
+      (entry) =>
+        entry.language === this.#settings.languageFilter ||
+        installedIds.includes(entry.id),
+    )
+    const catalogIds = listed.map((entry) => entry.id)
+    const installedOnly = this.#manifests
+      .filter(isTranslationManifest)
+      .filter(
+        (installed) =>
+          installedIds.includes(installed.id) &&
+          !catalogIds.includes(installed.id),
+      )
+      .map((installed) => ({
+        id: installed.id,
+        name: installed.name,
+        language: installed.language,
+      }))
+    return [...listed, ...installedOnly].map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      tier: 'downloadable',
+      installed: installedIds.includes(entry.id),
+      enabled: false,
+      updateAvailable: this.#updates.includes(entry.id),
+      strongsTagged:
+        this.#manifests.find((installed) => installed.id === entry.id)
+          ?.capabilities.strongsTagged ??
+        ('strongsTagged' in entry && entry.strongsTagged === true),
+    }))
+  }
+
+  #onlineRows(): TranslationRowView[] {
+    if (!hasApiKey(this.#settings)) return []
+    return this.deps.onlineTranslations.map((online) => ({
+      id: online.id,
+      name: online.name,
+      tier: 'online',
+      installed: false,
+      enabled: this.#settings.enabledOnlineTranslationIds.includes(online.id),
+      updateAvailable: false,
+      strongsTagged: false,
+    }))
   }
 
   #installedTranslationOptions(): TranslationOption[] {
