@@ -86,6 +86,9 @@ export default defineConfig([
       // Specs build static DOM fixtures from literals; there is no
       // untrusted input to sanitize.
       '@microsoft/sdl/no-inner-html': 'off',
+      // Specs run under Vitest on Node — fixture files and hashes may use
+      // Node built-ins that shipped plugin code must avoid.
+      'obsidianmd/no-nodejs-modules': 'off',
     },
   },
 ])
