@@ -40,7 +40,7 @@ export class RenderingFeature extends PluginFeature {
   constructor(
     plugin: Plugin,
     store: ModuleStore,
-    navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR,
+    readonly navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR,
   ) {
     super(plugin)
     this.#repository = new PassageRepository(new ModulePassageSource(store))

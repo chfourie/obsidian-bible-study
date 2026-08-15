@@ -45,4 +45,24 @@ describe('BibleStudyPlugin same-device settings changes', () => {
 
     expect(plugin.modules.settingsStore).toBe(plugin.settingsStore)
   })
+
+  it('propagates settings changes to the reader feature', async () => {
+    const plugin = pluginWithStorage()
+    const useSettings = vi.spyOn(plugin.reader, 'useSettings')
+
+    await plugin.settingsStore.updateSettings((settings) => ({
+      ...settings,
+      readerNavDefault: 'breadcrumb',
+    }))
+
+    expect(useSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ readerNavDefault: 'breadcrumb' }),
+    )
+  })
+
+  it('routes rendered-reference navigation to the reader feature', () => {
+    const plugin = pluginWithStorage()
+
+    expect(plugin.rendering.navigator).toBe(plugin.reader)
+  })
 })
