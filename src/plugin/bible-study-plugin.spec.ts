@@ -80,6 +80,18 @@ describe('BibleStudyPlugin same-device settings changes', () => {
     )
   })
 
+  it('routes annotate-from-reader to the annotations feature', () => {
+    const plugin = pluginWithStorage()
+    const annotate = vi
+      .spyOn(plugin.annotations, 'annotate')
+      .mockResolvedValue()
+    const reference = { book: 43, ranges: [{ startId: 43015004, endId: 43015004 }] }
+
+    plugin.reader.annotateReference(reference)
+
+    expect(annotate).toHaveBeenCalledWith(reference)
+  })
+
   it('prefills new annotations from the open reader', () => {
     const plugin = pluginWithStorage()
     const prefillReference = vi

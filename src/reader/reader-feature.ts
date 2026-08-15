@@ -25,6 +25,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   readonly #models = new Set<ReaderPaneModel>()
   #unsubscribeIndex: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
+  #annotator: (reference: Reference) => void = () => {}
 
   constructor(
     plugin: Plugin,
@@ -113,6 +114,14 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       body: content.slice(frontmatterLength(content)),
       created: noteFile.stat.ctime,
     }
+  }
+
+  useAnnotator(annotator: (reference: Reference) => void): void {
+    this.#annotator = annotator
+  }
+
+  annotateReference(reference: Reference): void {
+    this.#annotator(reference)
   }
 
   prefillReference(): Reference | null {

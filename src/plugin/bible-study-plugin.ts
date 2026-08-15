@@ -36,6 +36,9 @@ export default class BibleStudyPlugin extends Plugin {
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
     this.annotations.usePrefill(() => this.reader.prefillReference())
+    this.reader.useAnnotator(
+      (reference) => void this.annotations.annotate(reference),
+    )
     this.#features.addFeature(this.vaultIndex)
     this.#features.addFeature(this.modules)
     this.#features.addFeature(this.reader)
