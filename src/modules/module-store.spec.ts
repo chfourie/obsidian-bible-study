@@ -73,4 +73,25 @@ describe('ModuleStore', () => {
 
     expect(await store.manifest('web')).toEqual(webManifest())
   })
+
+  it('serves verse text by verse id from a saved module', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+
+    expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBe(
+      'Remain in me, and I in you.',
+    )
+    expect(await store.verseText('web', makeVerseId(64, 1, 1))).toBe(
+      'The elder to Gaius the beloved.',
+    )
+  })
+
+  it('treats content gaps and missing modules as absent verses', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+
+    expect(await store.verseText('web', makeVerseId(43, 15, 6))).toBeNull()
+    expect(await store.verseText('web', makeVerseId(1, 1, 1))).toBeNull()
+    expect(await store.verseText('kjv', makeVerseId(43, 15, 4))).toBeNull()
+  })
 })
