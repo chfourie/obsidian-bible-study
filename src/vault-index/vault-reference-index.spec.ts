@@ -17,6 +17,30 @@ const johnRef = (
 })
 
 describe('VaultReferenceIndex', () => {
+  it('excludes occurrences sharing no verse with the query', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', '{John 15:1-3} and {Luke 15:4}', null)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+  })
+
+  it('replaces a note occurrences when re-indexed', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', '{John 15:4}', null)
+    index.indexNote('note.md', '{John 3:16}', null)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+    expect(index.intersectingOccurrences(johnRef(3, 16))).toHaveLength(1)
+  })
+
+  it('drops a note re-indexed with no references left', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', '{John 15:4}', null)
+    index.indexNote('note.md', 'plain text now', null)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+  })
+
   it('returns an indexed occurrence intersecting the queried reference', () => {
     const index = new VaultReferenceIndex()
     index.indexNote('Sermons/Abiding.md', 'On {John 15:1-17} we see', null)
