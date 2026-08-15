@@ -42,6 +42,16 @@ export const Platform = {
   isTablet: false,
 }
 
+// Network requests never leave the test environment; specs inject their own
+// transports. Anything that reaches this stub is a wiring mistake.
+export type RequestUrlParam = { url: string; [key: string]: unknown }
+
+export function requestUrl(request: RequestUrlParam): Promise<never> {
+  return Promise.reject(
+    new Error(`network access attempted in tests: ${request.url}`)
+  )
+}
+
 export function normalizePath(path: string): string {
   return path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/\/$/, '') || '/'
 }
