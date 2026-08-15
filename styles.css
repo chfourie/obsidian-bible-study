@@ -144,3 +144,17 @@ span.bible-study-passage {
 .bible-study-reference .callout {
   margin: 0.5em 0;
 }
+
+/* ---- Annotations (spec §5) --------------------------------------------- */
+
+.bible-study-ref-input {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.bible-study-ref-error {
+  min-height: 1.4em;
+  margin-bottom: 8px;
+  color: var(--text-error);
+  font-size: var(--font-ui-small);
+}
