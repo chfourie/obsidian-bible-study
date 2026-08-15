@@ -83,6 +83,36 @@ const ref = (text: string): Reference => {
   return parsed.reference
 }
 
+const group = (file: string, annotation: boolean): OccurrenceGroup => ({
+  file,
+  annotation,
+  occurrences: [],
+})
+
+describe('verse indicators', () => {
+  it('marks verses with annotation and intersecting-note counts', async () => {
+    const verse4 = makeVerseId(43, 15, 4)
+    const model = modelWith({
+      intersecting: (reference) =>
+        reference.ranges.some((range) => range.startId === verse4)
+          ? [
+              group('Annotations/John 15.4.md', true),
+              group('Sermons/Fruitfulness.md', false),
+              group('Topics/Union.md', false),
+            ]
+          : [],
+    })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    const rows = model.view.rows
+    expect(rows[3].annotations).toBe(1)
+    expect(rows[3].mentions).toBe(2)
+    expect(rows[0].annotations).toBe(0)
+    expect(rows[0].mentions).toBe(0)
+  })
+})
+
 describe('reader toggles', () => {
   it('seeds the three toggles from the configured defaults', () => {
     const model = modelWith({}, {

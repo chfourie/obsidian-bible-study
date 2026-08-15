@@ -35,7 +35,14 @@ export type VerseRowView = {
   label: string
   segments: VerseSegment[]
   highlighted: boolean
+  annotations: number
+  mentions: number
 }
+
+const singleVerseReference = (book: number, verseId: number): Reference => ({
+  book,
+  ranges: [{ startId: verseId, endId: verseId }],
+})
 
 export type TranslationPill = {
   id: string
@@ -149,14 +156,24 @@ export class ReaderPaneModel {
       this.#status = 'unavailable'
       return
     }
-    this.#rows = passage.verses.map((verse) => ({
-      verseId: verse.verseId,
-      label: `${decodeVerseId(verse.verseId).verse}`,
-      segments: verse.segments,
-      highlighted:
-        this.#entry !== null &&
-        this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),
-    }))
+    this.#rows = passage.verses.map((verse) => {
+      const groups = this.deps.intersecting(
+        singleVerseReference(this.#position.book, verse.verseId),
+      )
+      return {
+        verseId: verse.verseId,
+        label: `${decodeVerseId(verse.verseId).verse}`,
+        segments: verse.segments,
+        highlighted:
+          this.#entry !== null &&
+          this.#entry.ranges.some((range) =>
+            rangeContains(range, verse.verseId),
+          ),
+        annotations: groups.filter((occurrence) => occurrence.annotation)
+          .length,
+        mentions: groups.filter((occurrence) => !occurrence.annotation).length,
+      }
+    })
     this.#status = 'ok'
   }
 }
