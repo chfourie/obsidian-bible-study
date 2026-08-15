@@ -15,6 +15,10 @@ export const extractOccurrences = (
     if (open === -1) break
     const close = content.indexOf('}', open + 1)
     if (close === -1) break
+    if (content[open - 1] === '\\') {
+      cursor = open + 1
+      continue
+    }
     const parsed = parseReference(content.slice(open + 1, close))
     if (parsed) {
       occurrences.push({

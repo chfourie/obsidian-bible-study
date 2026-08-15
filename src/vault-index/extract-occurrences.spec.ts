@@ -35,6 +35,10 @@ describe('extractOccurrences', () => {
     ])
   })
 
+  it('ignores an escaped reference', () => {
+    expect(extractOccurrences('\\{John 15:4}', null)).toEqual([])
+  })
+
   it('recovers a reference nested inside stray braces', () => {
     const occurrences = extractOccurrences('{{John 15:4}}', null)
     expect(occurrences.map((o) => o.position)).toEqual([1])
