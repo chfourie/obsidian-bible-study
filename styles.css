@@ -106,6 +106,14 @@ span.bible-study-passage {
   margin-left: 0.3em;
 }
 
+/* Fallback substitution is never silent (spec §6.4). */
+.bible-study-fallback-notice {
+  margin-right: 0.4em;
+  color: var(--text-faint);
+  font-style: italic;
+  font-size: var(--font-smallest);
+}
+
 /* ---- Callout mode (spec §3.3) ------------------------------------------ */
 
 .callout[data-callout='bible'] {

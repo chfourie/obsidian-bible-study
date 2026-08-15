@@ -70,7 +70,16 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
   }
 }
 
+const renderFallbackNotice = (host: HTMLElement, view: PassageView): void => {
+  if (view.fallbackNotice === null) return
+  host.createSpan({
+    cls: 'bible-study-fallback-notice',
+    text: view.fallbackNotice,
+  })
+}
+
 const renderQuotedRun = (host: HTMLElement, view: PassageView): void => {
+  renderFallbackNotice(host, view)
   host.appendText('“')
   view.verses.forEach((block, index) => {
     if (index > 0) host.appendText(' ')
@@ -135,6 +144,7 @@ const calloutTitle = (model: ReferenceRenderModel): string =>
     : `${model.referenceText} · ${model.translationId.toUpperCase()}`
 
 const renderProse = (host: HTMLElement, view: PassageView): void => {
+  renderFallbackNotice(host, view)
   const prose = host.createEl('p', { cls: 'bible-study-prose' })
   view.verses.forEach((block, index) => {
     if (index > 0) prose.appendText(' ')

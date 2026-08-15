@@ -97,6 +97,27 @@ describe('buildPassageView', () => {
     ).toBeNull()
   })
 
+  it('names the translation actually served when a fallback substituted', () => {
+    const substituted = {
+      ...passage([verse(15, 4, 'Remain in me.')]),
+      fallback: { requested: 'nkjv', served: 'web' },
+    }
+
+    expect(
+      buildPassageView(model('John 15:4 nkjv inline'), substituted)
+        .fallbackNotice,
+    ).toBe('WEB (NKJV unavailable)')
+  })
+
+  it('carries no fallback notice when the requested translation was served', () => {
+    expect(
+      buildPassageView(
+        model('John 15:4 inline'),
+        passage([verse(15, 4, 'Remain in me.')]),
+      ).fallbackNotice,
+    ).toBeNull()
+  })
+
   it('keeps red-letter segments intact', () => {
     const view = buildPassageView(
       model('John 15:4 inline'),

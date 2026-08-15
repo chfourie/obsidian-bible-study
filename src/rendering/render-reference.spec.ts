@@ -234,6 +234,27 @@ describe('renderReference inline', () => {
     )
   })
 
+  it('names the substituted translation when the fallback served', async () => {
+    const { parent, deps } = setup({
+      ...passageOf('Remain in me.'),
+      fallback: { requested: 'nkjv', served: 'web' },
+    } as Passage)
+
+    await renderReference(parent, model('John 15:4 nkjv inline'), deps)
+
+    expect(
+      parent.querySelector('.bible-study-fallback-notice')?.textContent,
+    ).toBe('WEB (NKJV unavailable)')
+  })
+
+  it('shows no fallback notice when the requested translation served', async () => {
+    const { parent, deps } = setup(passageOf('Remain in me.'))
+
+    await renderReference(parent, model('John 15:4 inline'), deps)
+
+    expect(parent.querySelector('.bible-study-fallback-notice')).toBeNull()
+  })
+
   it('treats a fully absent passage as unavailable', async () => {
     const { parent, deps } = setup(passageOf())
 
@@ -324,6 +345,21 @@ describe('renderReference callout', () => {
     await renderReference(parent, model('John 15:4 callout'), deps)
 
     expect(parent.querySelector('.bible-study-attribution')).toBeNull()
+  })
+
+  it('names the substituted translation in the callout body', async () => {
+    const { parent, deps } = setup({
+      ...passageOf('Remain in me.'),
+      fallback: { requested: 'nkjv', served: 'web' },
+    } as Passage)
+
+    await renderReference(parent, model('John 15:4 nkjv callout'), deps)
+
+    expect(
+      parent.querySelector(
+        '.callout-content .bible-study-fallback-notice',
+      )?.textContent,
+    ).toBe('WEB (NKJV unavailable)')
   })
 
   it('degrades the callout body when the passage is unavailable', async () => {

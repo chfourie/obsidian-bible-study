@@ -10,6 +10,7 @@ export type VerseBlock = {
 export type PassageView = {
   verses: VerseBlock[]
   attribution: string | null
+  fallbackNotice: string | null
 }
 
 const spansMultipleChapters = (verses: PassageVerse[]): boolean => {
@@ -44,6 +45,10 @@ export const buildPassageView = (
       segments: verse.segments,
     })),
     attribution: model.display === 'callout' ? passage.attribution : null,
+    fallbackNotice:
+      passage.fallback === undefined
+        ? null
+        : `${passage.fallback.served.toUpperCase()} (${passage.fallback.requested.toUpperCase()} unavailable)`,
   }
 }
 
