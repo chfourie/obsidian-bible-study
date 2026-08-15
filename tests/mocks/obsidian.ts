@@ -93,6 +93,27 @@ export const editorLivePreviewField = StateField.define<boolean>({
   },
 })
 
+// Just enough of Modal for glue that prompts the user: open/close call the
+// lifecycle hooks synchronously; specs reach into `contentEl` to drive the UI.
+export class Modal {
+  contentEl: HTMLElement = document.createElement('div')
+  titleEl: HTMLElement = document.createElement('div')
+
+  constructor(public app: App) {}
+
+  open(): void {
+    this.onOpen()
+  }
+
+  close(): void {
+    this.onClose()
+  }
+
+  onOpen(): void {}
+
+  onClose(): void {}
+}
+
 // Just enough of MarkdownView for `instanceof` checks; specs assign the
 // members they need (e.g. `editor`) onto instances directly.
 export class MarkdownView {
