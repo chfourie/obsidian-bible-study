@@ -8,13 +8,16 @@ export type VaultIndexerOptions = {
 }
 
 const DEFAULT_CHUNK_SIZE = 50
+const DEFAULT_DEBOUNCE_MS = 500
 
 const yieldToEventLoop = (): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, 0))
 
 export class VaultIndexer {
   readonly #chunkSize: number
+  readonly #debounceMs: number
   readonly #yieldBetweenChunks: () => Promise<void>
+  readonly #pendingReindexes = new Map<string, ReturnType<typeof setTimeout>>()
 
   constructor(
     private readonly vault: NoteVault,
@@ -22,11 +25,31 @@ export class VaultIndexer {
     options: VaultIndexerOptions = {},
   ) {
     this.#chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE
+    this.#debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS
     this.#yieldBetweenChunks = options.yieldBetweenChunks ?? yieldToEventLoop
   }
 
   start(): void {
     this.vault.onLayoutReady(() => void this.scanVault())
+    this.vault.onNoteChanged((path) => this.#scheduleReindex(path))
+  }
+
+  #scheduleReindex(path: string): void {
+    this.#cancelPendingReindex(path)
+    this.#pendingReindexes.set(
+      path,
+      setTimeout(() => {
+        this.#pendingReindexes.delete(path)
+        void this.#indexNote(path)
+      }, this.#debounceMs),
+    )
+  }
+
+  #cancelPendingReindex(path: string): void {
+    const pending = this.#pendingReindexes.get(path)
+    if (pending === undefined) return
+    clearTimeout(pending)
+    this.#pendingReindexes.delete(path)
   }
 
   async scanVault(): Promise<void> {

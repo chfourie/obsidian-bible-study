@@ -145,3 +145,56 @@ describe('VaultIndexer full scan', () => {
     ).toEqual(['Annotations/John 15.4.md', 'mention.md'])
   })
 })
+
+describe('VaultIndexer incremental updates', () => {
+  it('re-indexes a changed note only after the debounce window', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    vault.setNote('note.md', '{John 15:4}')
+    await indexer.scanVault()
+    indexer.start()
+
+    vault.setNote('note.md', '{John 3:16}')
+    vault.fireChanged('note.md')
+    await vi.advanceTimersByTimeAsync(299)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toHaveLength(1)
+    expect(index.intersectingOccurrences(johnRef(3, 16))).toEqual([])
+
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+    expect(index.intersectingOccurrences(johnRef(3, 16))).toHaveLength(1)
+  })
+
+  it('collapses rapid changes into one re-index at the end of the window', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    indexer.start()
+
+    vault.setNote('note.md', '{John 15:4}')
+    vault.fireChanged('note.md')
+    await vi.advanceTimersByTimeAsync(200)
+    vault.setNote('note.md', '{John 3:16}')
+    vault.fireChanged('note.md')
+    await vi.advanceTimersByTimeAsync(200)
+
+    expect(index.intersectingOccurrences(johnRef(3, 16))).toEqual([])
+
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+    expect(index.intersectingOccurrences(johnRef(3, 16))).toHaveLength(1)
+  })
+
+  it('indexes a newly created note through the change event', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    indexer.start()
+
+    vault.setNote('fresh.md', '{John 15:4}')
+    vault.fireChanged('fresh.md')
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(
+      index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file),
+    ).toEqual(['fresh.md'])
+  })
+})
