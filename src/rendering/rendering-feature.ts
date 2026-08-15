@@ -70,15 +70,16 @@ export class RenderingFeature extends PluginFeature {
 
   override onSettingsChanged(): void {
     this.#repository.clear()
-    this.#refreshLivePreviewEditors()
+    this.#refreshMarkdownViews()
   }
 
-  #refreshLivePreviewEditors(): void {
+  #refreshMarkdownViews(): void {
     this.plugin.app.workspace.iterateAllLeaves((leaf) => {
       const view = leaf.view
       if (!(view instanceof MarkdownView)) return
       const editorView = (view.editor as Editor & { cm?: EditorView }).cm
       if (editorView) refreshRenderedReferences(editorView)
+      view.previewMode.rerender(true)
     })
   }
 }

@@ -7,7 +7,7 @@ test: TFile/TFolder/TAbstractFile (real classes so `instanceof` works),
 the plugin as features start touching more of the API.
 */
 
-import { StateField } from '@codemirror/state'
+import { StateEffect, StateField } from '@codemirror/state'
 
 export class Vault {}
 
@@ -78,16 +78,26 @@ export class App {
 }
 
 // Real Obsidian exposes the Live Preview flag as a CodeMirror state field;
-// tests default to Live Preview being active.
+// tests default to Live Preview being active. Real Obsidian flips the field
+// internally when the user switches editor modes; tests simulate that switch
+// by dispatching `setLivePreview` (a mock-only export).
+export const setLivePreview = StateEffect.define<boolean>()
+
 export const editorLivePreviewField = StateField.define<boolean>({
   create: () => true,
-  update: (value) => value,
+  update: (value, transaction) => {
+    for (const effect of transaction.effects) {
+      if (effect.is(setLivePreview)) return effect.value
+    }
+    return value
+  },
 })
 
 // Just enough of MarkdownView for `instanceof` checks; specs assign the
 // members they need (e.g. `editor`) onto instances directly.
 export class MarkdownView {
   editor: unknown = null
+  previewMode: { rerender: (full?: boolean) => void } = { rerender: () => {} }
 }
 
 export class Plugin {

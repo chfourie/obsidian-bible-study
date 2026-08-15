@@ -1,5 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
-import { ReferenceWidget } from './live-preview-extension'
+import { EditorState } from '@codemirror/state'
+import {
+  EditorView,
+  type DecorationSet,
+  type ViewPlugin,
+} from '@codemirror/view'
+import { editorLivePreviewField } from 'obsidian'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setLivePreview } from '../../tests/mocks/obsidian'
+import {
+  createLivePreviewExtension,
+  ReferenceWidget,
+} from './live-preview-extension'
 import {
   buildReferenceRenderModel,
   type RenderContext,
@@ -57,5 +68,36 @@ describe('ReferenceWidget equality', () => {
     expect(
       widget('John 15:4', webDefault).eq(widget('John 15:9', webDefault)),
     ).toBe(false)
+  })
+})
+
+describe('editor mode switching', () => {
+  let view: EditorView
+
+  afterEach(() => view.destroy())
+
+  const editorOver = (doc: string) => {
+    const extension = createLivePreviewExtension(
+      () => webDefault,
+      deps,
+    ) as ViewPlugin<{ decorations: DecorationSet }>
+    view = new EditorView({
+      state: EditorState.create({
+        doc,
+        extensions: [editorLivePreviewField, extension],
+      }),
+    })
+    return () => view.plugin(extension)?.decorations.size
+  }
+
+  it('removes widgets on switch to Source and restores them on return', () => {
+    const decorationCount = editorOver('before {John 15:4} after')
+    expect(decorationCount()).toBe(1)
+
+    view.dispatch({ effects: setLivePreview.of(false) })
+    expect(decorationCount()).toBe(0)
+
+    view.dispatch({ effects: setLivePreview.of(true) })
+    expect(decorationCount()).toBe(1)
   })
 })

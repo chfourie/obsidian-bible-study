@@ -50,6 +50,10 @@ const hasRenderContextChange = (update: ViewUpdate): boolean =>
     ),
   )
 
+const livePreviewToggled = (update: ViewUpdate): boolean =>
+  update.state.field(editorLivePreviewField) !==
+  update.startState.field(editorLivePreviewField)
+
 export const createLivePreviewExtension = (
   contextProvider: () => RenderContext,
   deps: ReferenceRenderDeps,
@@ -92,6 +96,7 @@ export const createLivePreviewExtension = (
           update.docChanged ||
           update.selectionSet ||
           update.viewportChanged ||
+          livePreviewToggled(update) ||
           hasRenderContextChange(update)
         ) {
           this.decorations = buildDecorations(update.view)

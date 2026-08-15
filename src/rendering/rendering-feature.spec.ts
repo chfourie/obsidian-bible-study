@@ -41,6 +41,18 @@ describe('RenderingFeature settings changes', () => {
     }
   })
 
+  it('rerenders reading views so stale passages redraw', () => {
+    const rerender = vi.fn()
+    const view = Object.assign(markdownView({}), {
+      previewMode: { rerender },
+    })
+    const feature = featureOverLeaves([{ view }])
+
+    feature.onSettingsChanged()
+
+    expect(rerender).toHaveBeenCalledWith(true)
+  })
+
   it('skips non-markdown leaves and editors without a CodeMirror view', () => {
     const feature = featureOverLeaves([
       { view: {} },
