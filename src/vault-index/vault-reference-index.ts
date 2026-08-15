@@ -19,6 +19,20 @@ export class VaultReferenceIndex {
     else this.#occurrencesByFile.delete(file)
   }
 
+  removeNote(file: string): void {
+    this.#occurrencesByFile.delete(file)
+  }
+
+  renameNote(oldPath: string, newPath: string): void {
+    const occurrences = this.#occurrencesByFile.get(oldPath)
+    if (!occurrences) return
+    this.#occurrencesByFile.delete(oldPath)
+    this.#occurrencesByFile.set(
+      newPath,
+      occurrences.map((occurrence) => ({ ...occurrence, file: newPath })),
+    )
+  }
+
   intersectingOccurrences(reference: Reference): OccurrenceGroup[] {
     const groups: OccurrenceGroup[] = []
     for (const occurrences of this.#occurrencesByFile.values()) {

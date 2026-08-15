@@ -41,6 +41,24 @@ describe('VaultReferenceIndex', () => {
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
   })
 
+  it('evicts a removed note', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', '{John 15:4}', null)
+    index.removeNote('note.md')
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+  })
+
+  it('moves occurrences to the new path on rename', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('old.md', '{John 15:4}', null)
+    index.renameNote('old.md', 'folder/new.md')
+
+    const groups = index.intersectingOccurrences(johnRef(15, 4))
+    expect(groups.map((group) => group.file)).toEqual(['folder/new.md'])
+    expect(groups[0].occurrences.map((o) => o.file)).toEqual(['folder/new.md'])
+  })
+
   it('returns an indexed occurrence intersecting the queried reference', () => {
     const index = new VaultReferenceIndex()
     index.indexNote('Sermons/Abiding.md', 'On {John 15:1-17} we see', null)
