@@ -58,6 +58,7 @@ declare global {
     removeClass(...classes: string[]): void
     toggleClass(classes: string | string[], value: boolean): void
     setText(text: string): void
+    appendText(text: string): void
   }
 }
 
@@ -71,6 +72,7 @@ if (typeof HTMLElement !== 'undefined') {
     removeClass?: unknown
     toggleClass?: unknown
     setText?: unknown
+    appendText?: unknown
   }
 
   const applyInfo = (el: HTMLElement, o?: DomElementInfo | string): void => {
@@ -128,5 +130,8 @@ if (typeof HTMLElement !== 'undefined') {
   }
   proto.setText ??= function (this: HTMLElement, text: string) {
     this.textContent = text
+  }
+  proto.appendText ??= function (this: HTMLElement, text: string) {
+    this.appendChild(this.ownerDocument.createTextNode(text))
   }
 }

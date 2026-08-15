@@ -93,3 +93,114 @@ describe('renderReference chip', () => {
     expect(parent.querySelector('.bible-study-passage')).toBeNull()
   })
 })
+
+describe('renderReference inline', () => {
+  it('renders the chip followed by a quoted passage run', async () => {
+    const { parent, deps } = setup(passageOf('Remain in me, and I in you.'))
+
+    await renderReference(parent, model('John 15:4 inline'), deps)
+
+    expect(parent.querySelector('.bible-study-chip')).not.toBeNull()
+    const passage = parent.querySelector('.bible-study-passage')
+    expect(passage?.textContent).toBe('“Remain in me, and I in you.”')
+  })
+
+  it('shows a loading placeholder until the passage arrives', async () => {
+    let resolvePassage: (passage: Passage) => void = () => {}
+    const { parent, deps } = setup()
+    deps.passages = {
+      passage: () =>
+        new Promise<Passage>((resolve) => {
+          resolvePassage = resolve
+        }),
+    }
+
+    const rendered = renderReference(parent, model('John 15:4 inline'), deps)
+
+    const placeholder = parent.querySelector('.bible-study-passage')
+    expect(placeholder?.classList.contains('bible-study-loading')).toBe(true)
+    expect(placeholder?.textContent).toBe('Loading John 15:4…')
+
+    resolvePassage(passageOf('Remain.'))
+    await rendered
+    expect(
+      parent.querySelector('.bible-study-passage')?.textContent,
+    ).toBe('“Remain.”')
+    expect(parent.querySelector('.bible-study-loading')).toBeNull()
+  })
+
+  it('adds superscript verse numbers only for multi-verse references', async () => {
+    const single = setup(passageOf('Remain.'))
+    const multi = setup(passageOf('Remain.', 'I am the vine.'))
+
+    await renderReference(single.parent, model('John 15:4 inline'), single.deps)
+    await renderReference(
+      multi.parent,
+      model('John 15:4-5 inline'),
+      multi.deps,
+    )
+
+    expect(single.parent.querySelectorAll('sup')).toHaveLength(0)
+    const sups = multi.parent.querySelectorAll('sup.bible-study-verse-number')
+    expect([...sups].map((sup) => sup.textContent)).toEqual(['4', '5'])
+  })
+
+  it('marks red-letter segments with the red-letter class', async () => {
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 43015004,
+          segments: [
+            { text: 'He said, ', redLetter: false },
+            { text: 'Remain in me.', redLetter: true },
+          ],
+        },
+      ],
+    })
+
+    await renderReference(parent, model('John 15:4 inline'), deps)
+
+    const red = parent.querySelector('.bible-study-red-letter')
+    expect(red?.textContent).toBe('Remain in me.')
+  })
+
+  it('degrades to a muted unavailable line with a retry icon', async () => {
+    const { parent, deps } = setup({ status: 'unavailable' })
+
+    await renderReference(parent, model('John 15:4 nkjv inline'), deps)
+
+    const unavailable = parent.querySelector('.bible-study-unavailable')
+    expect(unavailable?.textContent).toContain(
+      'John 15:4 (NKJV) unavailable offline',
+    )
+    expect(unavailable?.querySelector('.bible-study-retry')).not.toBeNull()
+  })
+
+  it('retries the passage when the retry icon is clicked', async () => {
+    let available = false
+    const { parent, deps } = setup(() =>
+      available ? passageOf('Remain.') : { status: 'unavailable' },
+    )
+
+    await renderReference(parent, model('John 15:4 inline'), deps)
+    available = true
+    parent
+      .querySelector('.bible-study-retry')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(parent.querySelector('.bible-study-passage')?.textContent).toBe(
+      '“Remain.”',
+    )
+  })
+
+  it('treats a fully absent passage as unavailable', async () => {
+    const { parent, deps } = setup(passageOf())
+
+    await renderReference(parent, model('John 15:4 inline'), deps)
+
+    expect(parent.querySelector('.bible-study-unavailable')).not.toBeNull()
+  })
+})
