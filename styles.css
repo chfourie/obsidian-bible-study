@@ -145,6 +145,64 @@ span.bible-study-passage {
   margin: 0.5em 0;
 }
 
+/* ---- In-note intersection surface (spec §5) ---------------------------- */
+
+.bible-study-intersections {
+  display: inline;
+  margin-left: 0.3em;
+}
+
+.bible-study-intersections-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  font-size: 0.7em;
+  vertical-align: super;
+  cursor: pointer;
+}
+
+.bible-study-intersections-annotation-count {
+  color: var(--color-yellow);
+}
+
+.bible-study-intersections-mention-count {
+  color: var(--color-blue);
+}
+
+.bible-study-intersections-panel {
+  display: block;
+  margin: 0.3em 0 0.5em;
+  padding: 0.4em 0.7em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  font-size: var(--font-ui-small);
+}
+
+.bible-study-intersections-group {
+  display: block;
+  margin-top: 0.3em;
+  color: var(--text-faint);
+  font-size: var(--font-smallest);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.bible-study-intersections-group:first-child {
+  margin-top: 0;
+}
+
+.bible-study-intersections-note {
+  display: block;
+  padding: 0.15em 0;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.bible-study-intersections-note:hover {
+  color: var(--text-accent);
+}
+
 /* ---- Annotations (spec §5) --------------------------------------------- */
 
 .bible-study-ref-input {

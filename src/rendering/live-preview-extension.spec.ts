@@ -22,10 +22,14 @@ const deps: ReferenceRenderDeps = {
   openReference: vi.fn(),
 }
 
-const widget = (inner: string, context: RenderContext): ReferenceWidget => {
+const widget = (
+  inner: string,
+  context: RenderContext,
+  sourcePath: string | null = null,
+): ReferenceWidget => {
   const model = buildReferenceRenderModel(inner, context)
   if (!model) throw new Error(`unparseable: ${inner}`)
-  return new ReferenceWidget(`{${inner}}`, model, deps)
+  return new ReferenceWidget(`{${inner}}`, model, deps, sourcePath)
 }
 
 const webDefault: RenderContext = {
@@ -67,6 +71,14 @@ describe('ReferenceWidget equality', () => {
   it('redraws when the source changes', () => {
     expect(
       widget('John 15:4', webDefault).eq(widget('John 15:9', webDefault)),
+    ).toBe(false)
+  })
+
+  it('redraws when the note path changes', () => {
+    expect(
+      widget('John 15:4', webDefault, 'a.md').eq(
+        widget('John 15:4', webDefault, 'b.md'),
+      ),
     ).toBe(false)
   })
 })

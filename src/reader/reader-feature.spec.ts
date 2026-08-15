@@ -72,7 +72,9 @@ const harness = (notes: Record<string, FakeNote> = {}) => {
     },
   } as unknown as Plugin
   const index = new VaultReferenceIndex()
-  const feature = new ReaderFeature(plugin, fakeStore(), index)
+  const feature = new ReaderFeature(plugin, fakeStore(), index, undefined, {
+    indexRefreshDebounceMs: 0,
+  })
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
   return { feature, index, leaves, commands, ribbons, revealLeaf }
 }
@@ -203,6 +205,76 @@ describe('ReaderFeature entry points', () => {
     await flushAsync()
 
     expect(view.model.view.rows[0].mentions).toBe(1)
+  })
+
+  it('coalesces a burst of index notifications into one refresh', async () => {
+    const { feature, index, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    const refresh = vi.spyOn(view.model, 'refreshOccurrences')
+
+    index.indexNote('Sermons/Vine.md', '{John 15:1}')
+    index.indexNote('Sermons/Branches.md', '{John 15:2}')
+    index.indexNote('Sermons/Fruit.md', '{John 15:5}')
+    await flushAsync()
+
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(view.model.view.rows[0].mentions).toBe(1)
+  })
+
+  it('stops refreshing after unload even with a pending notification', async () => {
+    const { feature, index, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    const refresh = vi.spyOn(view.model, 'refreshOccurrences')
+
+    index.indexNote('Sermons/Vine.md', '{John 15:1}')
+    feature.unload()
+    await flushAsync()
+
+    expect(refresh).not.toHaveBeenCalled()
+  })
+
+  it('applies a changed annotation ordering to already-open panes', async () => {
+    const notes: Record<string, FakeNote> = {
+      'Annotations/Zeal.md': {
+        content: '---\nref: John 15:1\n---\nolder\n',
+        ctime: 1,
+      },
+      'Annotations/Abide.md': {
+        content: '---\nref: John 15:1\n---\nnewer\n',
+        ctime: 2,
+      },
+    }
+    const { feature, index, leaves } = harness(notes)
+    await feature.load()
+    index.indexNote('Annotations/Zeal.md', notes['Annotations/Zeal.md'].content)
+    index.indexNote(
+      'Annotations/Abide.md',
+      notes['Annotations/Abide.md'].content,
+    )
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    await view.model.selectVerse(makeVerseId(43, 15, 1))
+
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      annotationOrdering: 'path-a-z',
+    })
+    feature.onSettingsChanged()
+    await flushAsync()
+
+    expect(
+      view.model.view.details[makeVerseId(43, 15, 1)].annotations.map(
+        (block) => block.file,
+      ),
+    ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
   it('passes the annotation ordering setting to new panes', async () => {

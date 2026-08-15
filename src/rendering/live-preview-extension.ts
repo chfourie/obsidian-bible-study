@@ -7,7 +7,7 @@ import {
   type DecorationSet,
   type ViewUpdate,
 } from '@codemirror/view'
-import { editorLivePreviewField } from 'obsidian'
+import { editorInfoField, editorLivePreviewField } from 'obsidian'
 import { liveDecorationSpecs } from './live-decoration-specs'
 import {
   sameRenderModel,
@@ -26,19 +26,22 @@ export class ReferenceWidget extends WidgetType {
     private readonly source: string,
     private readonly model: ReferenceRenderModel,
     private readonly deps: ReferenceRenderDeps,
+    private readonly sourcePath: string | null = null,
   ) {
     super()
   }
 
   override eq(other: ReferenceWidget): boolean {
     return (
-      other.source === this.source && sameRenderModel(other.model, this.model)
+      other.source === this.source &&
+      other.sourcePath === this.sourcePath &&
+      sameRenderModel(other.model, this.model)
     )
   }
 
   override toDOM(): HTMLElement {
     const holder = createSpan({ cls: 'bible-study-reference' })
-    void renderReference(holder, this.model, this.deps)
+    void renderReference(holder, this.model, this.deps, this.sourcePath)
     return holder
   }
 }
@@ -64,6 +67,8 @@ export const createLivePreviewExtension = (
       from: range.from,
       to: range.to,
     }))
+    const sourcePath =
+      view.state.field(editorInfoField, false)?.file?.path ?? null
     const specs = liveDecorationSpecs(
       view.state.doc.toString(),
       view.visibleRanges,
@@ -77,6 +82,7 @@ export const createLivePreviewExtension = (
             view.state.sliceDoc(spec.start, spec.end),
             spec.model,
             deps,
+            sourcePath,
           ),
         }).range(spec.start, spec.end),
       ),

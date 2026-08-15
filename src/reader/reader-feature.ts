@@ -20,9 +20,19 @@ export { READER_VIEW_TYPE } from './reader-view'
 
 const DEFAULT_POSITION: ReaderPosition = { book: 43, chapter: 1 }
 
+// Trailing debounce over index notifications: the startup vault scan and
+// multi-file edits collapse into a single refresh per open pane.
+const DEFAULT_INDEX_REFRESH_DEBOUNCE_MS = 100
+
+export type ReaderFeatureOptions = {
+  indexRefreshDebounceMs?: number
+}
+
 export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   readonly #repository: PassageRepository
   readonly #models = new Set<ReaderPaneModel>()
+  readonly #indexRefreshDebounceMs: number
+  #pendingRefresh: number | null = null
   #unsubscribeIndex: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
   #annotator: (reference: Reference) => void = () => {}
@@ -32,8 +42,11 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     private readonly store: ModuleStore,
     private readonly index: VaultReferenceIndex,
     onlineSource?: PassageSource,
+    options: ReaderFeatureOptions = {},
   ) {
     super(plugin)
+    this.#indexRefreshDebounceMs =
+      options.indexRefreshDebounceMs ?? DEFAULT_INDEX_REFRESH_DEBOUNCE_MS
     const moduleSource = new ModulePassageSource(store)
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.4), so tiers compose here without a FallbackPassageSource.
@@ -45,9 +58,9 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   }
 
   override async load(): Promise<void> {
-    this.#unsubscribeIndex = this.index.onChanged(() => {
-      this.#models.forEach((model) => void model.refreshOccurrences())
-    })
+    this.#unsubscribeIndex = this.index.onChanged(() =>
+      this.#scheduleOccurrenceRefresh(),
+    )
     this.plugin.registerView(
       READER_VIEW_TYPE,
       (leaf: WorkspaceLeaf) => new ReaderView(leaf, this),
@@ -67,10 +80,25 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   override unload(): void {
     this.#unsubscribeIndex?.()
     this.#unsubscribeIndex = null
+    if (this.#pendingRefresh !== null) {
+      window.clearTimeout(this.#pendingRefresh)
+      this.#pendingRefresh = null
+    }
   }
 
   override onSettingsChanged(): void {
     this.#repository.clear()
+    this.#models.forEach((model) =>
+      model.setAnnotationOrdering(this.settings.annotationOrdering),
+    )
+  }
+
+  #scheduleOccurrenceRefresh(): void {
+    if (this.#pendingRefresh !== null) window.clearTimeout(this.#pendingRefresh)
+    this.#pendingRefresh = window.setTimeout(() => {
+      this.#pendingRefresh = null
+      this.#models.forEach((model) => void model.refreshOccurrences())
+    }, this.#indexRefreshDebounceMs)
   }
 
   createModel(): ReaderPaneModel {

@@ -52,6 +52,7 @@ const processTextNode = (
   context: RenderContext,
   deps: ReferenceRenderDeps,
   escapes: SectionEscapes,
+  sourcePath: string | null,
 ): Promise<void>[] => {
   const text = node.textContent ?? ''
   const parts: (string | HTMLElement)[] = []
@@ -69,7 +70,7 @@ const processTextNode = (
     if (!model || escapedInSource) continue
     parts.push(text.slice(consumed, match.index))
     const holder = createSpan({ cls: 'bible-study-reference' })
-    renders.push(renderReference(holder, model, deps))
+    renders.push(renderReference(holder, model, deps, sourcePath))
     parts.push(holder)
     consumed = match.index + candidate.length
   }
@@ -85,10 +86,11 @@ export const processRenderedElement = async (
   context: RenderContext,
   deps: ReferenceRenderDeps,
   sectionSource = '',
+  sourcePath: string | null = null,
 ): Promise<void> => {
   const escapes = new SectionEscapes(sectionSource)
   const renders = textNodesUnder(root).flatMap((node) =>
-    processTextNode(node, context, deps, escapes),
+    processTextNode(node, context, deps, escapes, sourcePath),
   )
   await Promise.all(renders)
 }

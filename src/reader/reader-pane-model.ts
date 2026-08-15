@@ -85,6 +85,14 @@ const singleVerseReference = (book: number, verseId: number): Reference => ({
   ranges: [{ startId: verseId, endId: verseId }],
 })
 
+const withoutDetail = (
+  details: Record<number, VerseDetailsView>,
+  verseId: number,
+): Record<number, VerseDetailsView> =>
+  Object.fromEntries(
+    Object.entries(details).filter(([key]) => Number(key) !== verseId),
+  )
+
 export type TranslationPill = {
   id: string
   label: string
@@ -136,7 +144,7 @@ export class ReaderPaneModel {
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
 
-  readonly #annotationOrdering: AnnotationOrdering
+  #annotationOrdering: AnnotationOrdering
 
   constructor(
     private readonly deps: ReaderPaneDeps,
@@ -162,6 +170,12 @@ export class ReaderPaneModel {
   ): void {
     this.#toggles = { ...this.#toggles, [toggle]: value }
     this.#notify()
+  }
+
+  setAnnotationOrdering(ordering: AnnotationOrdering): void {
+    if (ordering === this.#annotationOrdering) return
+    this.#annotationOrdering = ordering
+    void this.refreshOccurrences()
   }
 
   get view(): ReaderPaneView {
@@ -243,6 +257,7 @@ export class ReaderPaneModel {
     if (this.#toggles.details === 'inline') {
       if (this.#expanded.has(verseId)) {
         this.#expanded.delete(verseId)
+        this.#details = withoutDetail(this.#details, verseId)
         this.#refreshRowExpansion()
         return
       }
@@ -283,15 +298,42 @@ export class ReaderPaneModel {
     }
   }
 
+  annotationReference(verseId: number): Reference {
+    const selection = this.selectionReference()
+    if (
+      selection !== null &&
+      selection.ranges.some((range) => rangeContains(range, verseId))
+    ) {
+      return selection
+    }
+    return singleVerseReference(this.#position.book, verseId)
+  }
+
+  #displayedDetailVerseIds(): number[] {
+    const liveVerseIds =
+      this.#toggles.details === 'inline'
+        ? [...this.#expanded]
+        : this.#selectedVerseId === null
+          ? []
+          : [this.#selectedVerseId]
+    return liveVerseIds.filter(
+      (verseId) => this.#details[verseId] !== undefined,
+    )
+  }
+
   async refreshOccurrences(): Promise<void> {
     this.#rows = this.#rows.map((row) => ({
       ...row,
       ...this.#occurrenceCounts(row.verseId),
     }))
-    for (const details of Object.values(this.#details)) {
-      await this.#loadDetails(details.verseId)
-    }
+    const displayed = this.#displayedDetailVerseIds()
+    this.#details = Object.fromEntries(
+      displayed.map((verseId) => [verseId, this.#details[verseId]]),
+    )
     this.#notify()
+    for (const verseId of displayed) {
+      await this.#loadDetails(verseId)
+    }
   }
 
   #occurrenceCounts(verseId: number): { annotations: number; mentions: number } {

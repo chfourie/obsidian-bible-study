@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MarkdownView, WorkspaceLeaf, type Plugin, type TFile } from 'obsidian'
+import { Notice } from '../../tests/mocks/obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
 import { parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
@@ -56,10 +57,23 @@ const harness = (seedNotes: Record<string, string> = {}) => {
   const index = new VaultReferenceIndex()
   const feature = new AnnotationsFeature(plugin, index)
   feature.useSettings({ ...DEFAULT_SETTINGS })
-  return { feature, index, notes, folders, commands, openedFiles, setCursor }
+  return {
+    feature,
+    index,
+    notes,
+    folders,
+    commands,
+    openedFiles,
+    setCursor,
+    plugin,
+  }
 }
 
 describe('AnnotationsFeature', () => {
+  beforeEach(() => {
+    Notice.shownMessages = []
+  })
+
   it('registers the new-annotation command on load', async () => {
     const { feature, commands } = harness()
 
@@ -144,5 +158,38 @@ describe('AnnotationsFeature', () => {
     const { feature } = harness()
 
     expect(feature.prefillRefText()).toBe('')
+  })
+
+  it('surfaces a notice when annotation creation fails', async () => {
+    const { feature, plugin } = harness()
+    const vault = plugin.app.vault as unknown as {
+      create: (path: string, content: string) => Promise<unknown>
+    }
+    vault.create = async () => {
+      throw new Error('folder is a file')
+    }
+
+    await feature.annotate(ref('John 15:4'))
+
+    expect(Notice.shownMessages).toEqual([
+      'Failed to create annotation: folder is a file',
+    ])
+  })
+
+  it('surfaces a notice when a submitted ref fails to create', async () => {
+    const { feature, plugin } = harness()
+    const vault = plugin.app.vault as unknown as {
+      createFolder: (path: string) => Promise<void>
+    }
+    vault.createFolder = async () => {
+      throw new Error('no permission')
+    }
+
+    expect(feature.submitRefText('John 15:4')).toBe(true)
+    await flushAsync()
+
+    expect(Notice.shownMessages).toEqual([
+      'Failed to create annotation: no permission',
+    ])
   })
 })

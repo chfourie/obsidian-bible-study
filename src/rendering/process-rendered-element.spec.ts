@@ -28,9 +28,27 @@ const process = (
   root: HTMLElement,
   deps: ReferenceRenderDeps,
   sectionSource = '',
-) => processRenderedElement(root, context, deps, sectionSource)
+  sourcePath: string | null = null,
+) => processRenderedElement(root, context, deps, sectionSource, sourcePath)
 
 describe('processRenderedElement', () => {
+  it('passes the note path so its own occurrences stay off the surface', async () => {
+    const { root, deps } = setup()
+    deps.intersections = {
+      intersecting: () => [
+        { file: 'Sermons/Abiding.md', annotation: false, occurrences: [] },
+        { file: 'Topics/Union.md', annotation: false, occurrences: [] },
+      ],
+      openNote: vi.fn(),
+    }
+    root.innerHTML = '<p>{John 15:4}</p>'
+
+    await process(root, deps, '', 'Sermons/Abiding.md')
+
+    const toggle = root.querySelector('.bible-study-intersections-toggle')
+    expect(toggle?.textContent).toBe('◆1')
+  })
+
   it('replaces a brace reference with a chip, keeping surrounding text', async () => {
     const { root, deps } = setup()
     root.innerHTML = '<p>Abide: {John 15:4} in him.</p>'

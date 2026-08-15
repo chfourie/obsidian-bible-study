@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MarkdownView, type Plugin } from 'obsidian'
+import { MarkdownView, type MarkdownPostProcessorContext, type Plugin } from 'obsidian'
+import { NOOP_REFERENCE_NAVIGATOR } from '../contracts'
 import type { ModuleStore } from '../modules'
+import { VaultReferenceIndex } from '../vault-index'
 import { renderContextChangedEffect } from './live-preview-extension'
 import { RenderingFeature } from './rendering-feature'
 
@@ -20,6 +22,44 @@ const featureOverLeaves = (leaves: { view: unknown }[]): RenderingFeature => {
   } as unknown as Plugin
   return new RenderingFeature(plugin, {} as ModuleStore)
 }
+
+describe('RenderingFeature in-note intersections', () => {
+  it('surfaces intersecting notes on rendered references, excluding the note itself', async () => {
+    type PostProcessor = (
+      element: HTMLElement,
+      context: MarkdownPostProcessorContext,
+    ) => Promise<void>
+    let postProcessor: PostProcessor | null = null
+    const plugin = {
+      registerMarkdownPostProcessor: (processor: PostProcessor) => {
+        postProcessor = processor
+      },
+      registerEditorExtension: () => {},
+    } as unknown as Plugin
+    const index = new VaultReferenceIndex()
+    index.indexNote('Sermons/Abiding.md', 'On {John 15:4} we see')
+    index.indexNote('Topics/Union.md', '{John 15:1-17}')
+    index.indexNote('Annotations/John 15.4.md', '---\nref: John 15:4\n---\n')
+    const feature = new RenderingFeature(
+      plugin,
+      {} as ModuleStore,
+      NOOP_REFERENCE_NAVIGATOR,
+      undefined,
+      index,
+    )
+    await feature.load()
+
+    const element = document.createElement('div')
+    element.innerHTML = '<p>{John 15:4}</p>'
+    await postProcessor!(element, {
+      sourcePath: 'Sermons/Abiding.md',
+      getSectionInfo: () => null,
+    } as unknown as MarkdownPostProcessorContext)
+
+    const toggle = element.querySelector('.bible-study-intersections-toggle')
+    expect(toggle?.textContent).toBe('●1◆1')
+  })
+})
 
 describe('RenderingFeature settings changes', () => {
   it('refreshes every markdown editor so stale widgets redraw', () => {

@@ -93,6 +93,20 @@ export const editorLivePreviewField = StateField.define<boolean>({
   },
 })
 
+// Real Obsidian exposes the editor's backing file as a CodeMirror state
+// field; tests seed it with `setEditorFile` when a spec needs a note path.
+export const setEditorFile = StateEffect.define<TFile | null>()
+
+export const editorInfoField = StateField.define<{ file: TFile | null }>({
+  create: () => ({ file: null }),
+  update: (value, transaction) => {
+    for (const effect of transaction.effects) {
+      if (effect.is(setEditorFile)) return { file: effect.value }
+    }
+    return value
+  },
+})
+
 // Markdown never actually renders in tests; view glue passes bodies through
 // this stub and specs assert on the model instead.
 export const MarkdownRenderer = {
@@ -103,6 +117,16 @@ export const MarkdownRenderer = {
     _sourcePath: string,
     _component: unknown,
   ): Promise<void> => {},
+}
+
+// Real Obsidian pops a toast; tests read back what was shown and reset the
+// record between cases.
+export class Notice {
+  static shownMessages: string[] = []
+
+  constructor(message: string) {
+    Notice.shownMessages.push(message)
+  }
 }
 
 // Just enough of Modal for glue that prompts the user: open/close call the

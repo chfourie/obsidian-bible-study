@@ -23,6 +23,7 @@ import {
   ModulePassageSource,
   type PassageSource,
 } from './module-passage-source'
+import type { VaultReferenceIndex } from '../vault-index'
 import { PassageRepository } from './passage-repository'
 import { TieredPassageSource } from './tiered-passage-source'
 import { processRenderedElement } from './process-rendered-element'
@@ -50,6 +51,7 @@ export class RenderingFeature extends PluginFeature {
     store: ModuleStore,
     readonly navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR,
     onlineSource?: PassageSource,
+    index?: VaultReferenceIndex,
   ) {
     super(plugin)
     const moduleSource = new ModulePassageSource(store)
@@ -65,6 +67,10 @@ export class RenderingFeature extends PluginFeature {
       passages: this.#repository,
       openReference: (model) =>
         navigator.openReference(model.reference, model.translationId),
+      intersections: index && {
+        intersecting: (reference) => index.intersectingOccurrences(reference),
+        openNote: (file) => navigator.openNote(file),
+      },
     }
   }
 
@@ -75,6 +81,7 @@ export class RenderingFeature extends PluginFeature {
         renderContextFromSettings(this.settings),
         this.#deps,
         sectionSource(element, context),
+        context.sourcePath,
       ),
     )
     this.plugin.registerEditorExtension(

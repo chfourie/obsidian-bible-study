@@ -101,9 +101,8 @@
     inSelectionSpan(verseId) ||
     (view.toggles.details === 'side-panel' && view.selectedVerseId === verseId)
 
-  const annotateSelection = (): void => {
-    const reference = model.selectionReference()
-    if (reference !== null) onAnnotate(reference)
+  const annotateVerseBlock = (verseId: number): void => {
+    onAnnotate(model.annotationReference(verseId))
   }
 
   type MarkdownBody = { text: string; path: string }
@@ -129,7 +128,7 @@
 {#snippet notesBlock(details: VerseDetailsView)}
   <div class="bsr-notes-head">
     <span class="bsr-group-label">Annotations</span>
-    <button type="button" class="bsr-annotate" onclick={annotateSelection}>Annotate</button>
+    <button type="button" class="bsr-annotate" onclick={() => annotateVerseBlock(details.verseId)}>Annotate</button>
   </div>
   {#if details.annotations.length === 0}
     <div class="bsr-details-empty">No annotations.</div>
@@ -137,7 +136,16 @@
     {#each details.annotations as block (block.file)}
       <details class="bsr-anno-block" open>
         <summary class="bsr-anno-summary">
-          <span class="bsr-anno-title">{block.title}</span>
+          <span class="bsr-anno-fold" aria-hidden="true">▾</span>
+          <button
+            type="button"
+            class="bsr-anno-title"
+            aria-label="Open annotation in editor"
+            onclick={(event) => {
+              event.preventDefault()
+              openNote(block.file)
+            }}
+          >{block.title}</button>
           <button
             type="button"
             class="bsr-anno-edit"
@@ -803,10 +811,30 @@
     list-style: none;
   }
 
+  .bsr-anno-fold {
+    color: var(--text-faint);
+    font-size: 0.8em;
+  }
+
+  .bsr-anno-block:not([open]) .bsr-anno-fold {
+    rotate: -90deg;
+  }
+
   .bsr-anno-title {
     flex: 1;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    text-align: left;
     color: var(--text-normal);
     font-weight: 600;
+    font-size: inherit;
+    cursor: pointer;
+  }
+
+  .bsr-anno-title:hover {
+    color: var(--text-accent);
   }
 
   .bsr-anno-edit {

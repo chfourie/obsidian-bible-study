@@ -156,4 +156,46 @@ describe('VaultReferenceIndex change events', () => {
 
     expect(notified).toBe(0)
   })
+
+  it('skips notifying when re-indexing leaves the occurrences unchanged', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', 'see {John 15:4} and {John 15:9}')
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.indexNote('note.md', 'see {John 15:4} and {John 15:9}')
+
+    expect(notified).toBe(0)
+  })
+
+  it('notifies when a re-index changes the occurrences', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', '{John 15:4}')
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.indexNote('note.md', '{John 15:9}')
+
+    expect(notified).toBe(1)
+  })
+
+  it('skips notifying when indexing a note without occurrences', () => {
+    const index = new VaultReferenceIndex()
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.indexNote('plain.md', 'no references here')
+
+    expect(notified).toBe(0)
+  })
+
+  it('skips notifying when removing a note that was never indexed', () => {
+    const index = new VaultReferenceIndex()
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.removeNote('unknown.md')
+
+    expect(notified).toBe(0)
+  })
 })

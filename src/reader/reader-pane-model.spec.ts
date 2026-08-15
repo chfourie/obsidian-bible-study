@@ -92,6 +92,10 @@ const group = (file: string, annotation: boolean): OccurrenceGroup => ({
   occurrences: [],
 })
 
+const flushAsync = async (): Promise<void> => {
+  await new Promise((resolve) => window.setTimeout(resolve, 0))
+}
+
 describe('opening without an entry reference', () => {
   it('opens at a plain position with no banner or highlight', async () => {
     const model = modelWith()
@@ -324,6 +328,16 @@ describe('verse details', () => {
     expect(model.view.rows[3].expanded).toBe(false)
   })
 
+  it('prunes the details of a collapsed verse', async () => {
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+    await model.selectVerse(verse4)
+
+    expect(model.view.details[verse4]).toBeUndefined()
+  })
+
   it('selects instead of expanding when details show in the side panel', async () => {
     const model = modelWith(twoTranslations(), {
       ...DEFAULT_TOGGLES,
@@ -384,6 +398,32 @@ describe('annotation ordering in details', () => {
     expect(
       model.view.details[verse4].annotations.map((block) => block.file),
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
+  })
+
+  it('re-sorts loaded details when the ordering setting changes', async () => {
+    const model = annotated()
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+
+    model.setAnnotationOrdering('path-a-z')
+    await flushAsync()
+
+    expect(
+      model.view.details[verse4].annotations.map((block) => block.file),
+    ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
+  })
+
+  it('leaves details untouched when the ordering setting is unchanged', async () => {
+    const model = annotated('path-a-z')
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+    let notified = 0
+    model.subscribe(() => notified++)
+
+    model.setAnnotationOrdering('path-a-z')
+    await flushAsync()
+
+    expect(notified).toBe(0)
   })
 })
 
@@ -452,6 +492,28 @@ describe('annotate selection', () => {
 
     expect(model.selectionReference()).toEqual(ref('John 15:2'))
   })
+
+  it('annotates the verse of the details block, not the latest selection', async () => {
+    const verse5 = makeVerseId(43, 15, 5)
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.selectVerse(verse2)
+    await model.selectVerse(verse5)
+
+    expect(model.annotationReference(verse2)).toEqual(ref('John 15:2'))
+    expect(model.annotationReference(verse5)).toEqual(ref('John 15:5'))
+  })
+
+  it('annotates the whole selection span from a block inside it', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.selectVerse(verse4)
+    model.extendSelectionTo(verse2)
+
+    expect(model.annotationReference(verse4)).toEqual(ref('John 15:2-4'))
+  })
 })
 
 describe('occurrence refresh', () => {
@@ -480,6 +542,49 @@ describe('occurrence refresh', () => {
         body: 'note body',
       },
     ])
+  })
+
+  it('reloads only the details still on display', async () => {
+    const verse4 = makeVerseId(43, 15, 4)
+    const verse5 = makeVerseId(43, 15, 5)
+    const detailLoads: string[] = []
+    const model = modelWith({
+      annotationDetails: async () => null,
+      passages: {
+        passage: async (reference, translationId) => {
+          if (reference.ranges[0].startId === reference.ranges[0].endId)
+            detailLoads.push(`${reference.ranges[0].startId}`)
+          return passageSourceOver(john15Texts()).passage(
+            reference,
+            translationId,
+          )
+        },
+      },
+    })
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+    await model.selectVerse(verse5)
+    await model.selectVerse(verse4)
+    detailLoads.length = 0
+
+    await model.refreshOccurrences()
+
+    expect(detailLoads).toEqual([`${verse5}`])
+    expect(model.view.details[verse4]).toBeUndefined()
+  })
+
+  it('prunes side-panel details for verses no longer selected on refresh', async () => {
+    const verse4 = makeVerseId(43, 15, 4)
+    const verse5 = makeVerseId(43, 15, 5)
+    const model = modelWith({}, { ...DEFAULT_TOGGLES, details: 'side-panel' })
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+    await model.selectVerse(verse5)
+
+    await model.refreshOccurrences()
+
+    expect(model.view.details[verse4]).toBeUndefined()
+    expect(model.view.details[verse5]).toBeDefined()
   })
 })
 

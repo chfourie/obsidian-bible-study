@@ -1,4 +1,6 @@
 import { setIcon } from 'obsidian'
+import type { Reference } from '../reference'
+import type { OccurrenceGroup } from '../vault-index'
 import type { Passage, PassageSource } from './module-passage-source'
 import {
   buildPassageView,
@@ -8,9 +10,15 @@ import {
 } from './passage-view'
 import type { ReferenceRenderModel } from './reference-render-model'
 
+export type NoteIntersectionSource = {
+  intersecting: (reference: Reference) => OccurrenceGroup[]
+  openNote: (file: string) => void
+}
+
 export type ReferenceRenderDeps = {
   passages: PassageSource
   openReference: (model: ReferenceRenderModel) => void
+  intersections?: NoteIntersectionSource
 }
 
 const activateAsButton = (element: HTMLElement, action: () => void): void => {
@@ -41,6 +49,96 @@ const renderChip = (
   const icon = chip.createSpan({ cls: 'bible-study-chip-icon' })
   setIcon(icon, 'book-open')
   activateAsButton(chip, () => deps.openReference(model))
+}
+
+const noteTitle = (file: string): string => {
+  const basename = file.split('/').pop() ?? file
+  return basename.replace(/\.md$/, '')
+}
+
+// The in-note intersection surface (spec §5): a count indicator beside the
+// rendered reference that expands to the intersecting notes, annotations
+// grouped first, then mentions. The list is re-queried on every expand so it
+// stays fresh without subscribing the static note DOM to index changes.
+const renderIntersections = (
+  parent: HTMLElement,
+  model: ReferenceRenderModel,
+  intersections: NoteIntersectionSource,
+  sourcePath: string | null,
+): void => {
+  const intersectingGroups = (): OccurrenceGroup[] =>
+    intersections
+      .intersecting(model.reference)
+      .filter((group) => group.file !== sourcePath)
+  const groups = intersectingGroups()
+  if (groups.length === 0) return
+
+  const holder = parent.createSpan({ cls: 'bible-study-intersections' })
+  const toggle = holder.createSpan({
+    cls: 'bible-study-intersections-toggle',
+    attr: {
+      role: 'button',
+      tabindex: 0,
+      'aria-label': 'Show intersecting notes',
+      'aria-expanded': 'false',
+    },
+  })
+  const annotationCount = groups.filter((group) => group.annotation).length
+  const mentionCount = groups.length - annotationCount
+  if (annotationCount > 0) {
+    toggle.createSpan({
+      cls: 'bible-study-intersections-annotation-count',
+      text: `●${annotationCount}`,
+    })
+  }
+  if (mentionCount > 0) {
+    toggle.createSpan({
+      cls: 'bible-study-intersections-mention-count',
+      text: `◆${mentionCount}`,
+    })
+  }
+
+  let panel: HTMLElement | null = null
+  const renderGroupList = (
+    into: HTMLElement,
+    label: string,
+    listed: OccurrenceGroup[],
+    entryText: (file: string) => string,
+  ): void => {
+    if (listed.length === 0) return
+    into.createSpan({ cls: 'bible-study-intersections-group', text: label })
+    for (const group of listed) {
+      const entry = into.createSpan({
+        cls: 'bible-study-intersections-note',
+        attr: { role: 'button', tabindex: 0 },
+        text: entryText(group.file),
+      })
+      activateAsButton(entry, () => intersections.openNote(group.file))
+    }
+  }
+  activateAsButton(toggle, () => {
+    if (panel !== null) {
+      panel.remove()
+      panel = null
+      toggle.setAttribute('aria-expanded', 'false')
+      return
+    }
+    panel = holder.createSpan({ cls: 'bible-study-intersections-panel' })
+    const fresh = intersectingGroups()
+    renderGroupList(
+      panel,
+      'Annotations',
+      fresh.filter((group) => group.annotation),
+      noteTitle,
+    )
+    renderGroupList(
+      panel,
+      'Mentions',
+      fresh.filter((group) => !group.annotation),
+      (file) => file,
+    )
+    toggle.setAttribute('aria-expanded', 'true')
+  })
 }
 
 const renderInvalidTokens = (
@@ -162,6 +260,7 @@ const renderCallout = (
   parent: HTMLElement,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
+  sourcePath: string | null,
 ): Promise<void> => {
   const callout = parent.createDiv({
     cls: 'callout bible-study-callout',
@@ -182,20 +281,28 @@ const renderCallout = (
   activateAsButton(nav, () => deps.openReference(model))
   const content = callout.createDiv({ cls: 'callout-content' })
   const host = content.createDiv({ cls: 'bible-study-passage' })
-  return mountPassage(host, model, deps, renderProse)
+  const mounted = mountPassage(host, model, deps, renderProse)
+  if (deps.intersections) {
+    renderIntersections(content, model, deps.intersections, sourcePath)
+  }
+  return mounted
 }
 
 export const renderReference = async (
   parent: HTMLElement,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
+  sourcePath: string | null = null,
 ): Promise<void> => {
   if (model.display === 'callout') {
-    await renderCallout(parent, model, deps)
+    await renderCallout(parent, model, deps, sourcePath)
     renderInvalidTokens(parent, model)
     return
   }
   renderChip(parent, model, deps)
+  if (deps.intersections) {
+    renderIntersections(parent, model, deps.intersections, sourcePath)
+  }
   renderInvalidTokens(parent, model)
   if (model.display === 'inline') await renderInline(parent, model, deps)
 }

@@ -8,6 +8,25 @@ export type OccurrenceGroup = {
   occurrences: Occurrence[]
 }
 
+const sameReference = (a: Reference, b: Reference): boolean =>
+  a.book === b.book &&
+  a.ranges.length === b.ranges.length &&
+  a.ranges.every(
+    (range, index) =>
+      range.startId === b.ranges[index].startId &&
+      range.endId === b.ranges[index].endId,
+  )
+
+const sameOccurrences = (a: Occurrence[], b: Occurrence[]): boolean =>
+  a.length === b.length &&
+  a.every(
+    (occurrence, index) =>
+      occurrence.file === b[index].file &&
+      occurrence.position === b[index].position &&
+      occurrence.source === b[index].source &&
+      sameReference(occurrence.reference, b[index].reference),
+  )
+
 export class VaultReferenceIndex {
   readonly #occurrencesByFile = new Map<string, Occurrence[]>()
   readonly #changeListeners = new Set<() => void>()
@@ -26,13 +45,15 @@ export class VaultReferenceIndex {
       ...occurrence,
       file,
     }))
+    const previous = this.#occurrencesByFile.get(file) ?? []
+    if (sameOccurrences(previous, occurrences)) return
     if (occurrences.length > 0) this.#occurrencesByFile.set(file, occurrences)
     else this.#occurrencesByFile.delete(file)
     this.#notifyChanged()
   }
 
   removeNote(file: string): void {
-    this.#occurrencesByFile.delete(file)
+    if (!this.#occurrencesByFile.delete(file)) return
     this.#notifyChanged()
   }
 

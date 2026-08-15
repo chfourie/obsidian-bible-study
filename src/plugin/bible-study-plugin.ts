@@ -30,6 +30,7 @@ export default class BibleStudyPlugin extends Plugin {
     this.modules.store,
     this.reader,
     this.#onlineSource,
+    this.vaultIndex.index,
   )
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
 

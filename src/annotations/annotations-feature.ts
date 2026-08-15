@@ -1,4 +1,4 @@
-import { MarkdownView, type Plugin } from 'obsidian'
+import { MarkdownView, Notice, type Plugin } from 'obsidian'
 import { PluginFeature } from '../data-access'
 import { formatReference, parseReference, type Reference } from '../reference'
 import type { VaultReferenceIndex } from '../vault-index'
@@ -44,16 +44,22 @@ export class AnnotationsFeature extends PluginFeature {
   }
 
   async annotate(reference: Reference): Promise<void> {
-    const created = await createAnnotation(
-      new ObsidianAnnotationVault(this.plugin),
-      reference,
-      {
-        folder: this.settings.annotationsFolder,
-        templatePath: this.settings.annotationTemplatePath,
-      },
-    )
-    this.index.indexNote(created.path, created.content)
-    await this.#openInSplit(created.path, created.cursorLine)
+    try {
+      const created = await createAnnotation(
+        new ObsidianAnnotationVault(this.plugin),
+        reference,
+        {
+          folder: this.settings.annotationsFolder,
+          templatePath: this.settings.annotationTemplatePath,
+        },
+      )
+      this.index.indexNote(created.path, created.content)
+      await this.#openInSplit(created.path, created.cursorLine)
+    } catch (error) {
+      new Notice(
+        `Failed to create annotation: ${error instanceof Error ? error.message : String(error)}`,
+      )
+    }
   }
 
   async #openInSplit(path: string, cursorLine: number): Promise<void> {
