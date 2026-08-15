@@ -59,6 +59,68 @@ describe('VaultReferenceIndex', () => {
     expect(groups[0].occurrences.map((o) => o.file)).toEqual(['folder/new.md'])
   })
 
+  it('flags a group as annotation when its frontmatter ref intersects', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote(
+      'Annotations/John 15.4.md',
+      '---\nref: John 15:4\n---\nnotes',
+      'John 15:4',
+    )
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([
+      {
+        file: 'Annotations/John 15.4.md',
+        annotation: true,
+        occurrences: [
+          {
+            file: 'Annotations/John 15.4.md',
+            position: 0,
+            reference: johnRef(15, 4),
+            source: 'annotation-frontmatter',
+          },
+        ],
+      },
+    ])
+  })
+
+  it('keeps a body-only mention inside an annotation note out of the annotation class', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote(
+      'Annotations/John 15.4.md',
+      '---\nref: John 15:4\n---\ncompare {Luke 15:4}',
+      'John 15:4',
+    )
+
+    const groups = index.intersectingOccurrences({
+      book: 42,
+      ranges: [{ startId: makeVerseId(42, 15, 4), endId: makeVerseId(42, 15, 4) }],
+    })
+    expect(groups.map((group) => group.annotation)).toEqual([false])
+  })
+
+  it('orders groups annotations first, then file path A-Z', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('b-mention.md', '{John 15:4}', null)
+    index.indexNote('a-mention.md', '{John 15:1-17}', null)
+    index.indexNote(
+      'z-annotation.md',
+      '---\nref: John 15:4\n---\n',
+      'John 15:4',
+    )
+
+    expect(
+      index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file),
+    ).toEqual(['z-annotation.md', 'a-mention.md', 'b-mention.md'])
+  })
+
+  it('orders occurrences within a group by position', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', '{John 15:9} then {John 15:4}', null)
+
+    const groups = index.intersectingOccurrences(johnRef(15, 1, 15, 17))
+    expect(groups[0].occurrences.map((o) => o.position)).toEqual([0, 17])
+  })
+
   it('returns an indexed occurrence intersecting the queried reference', () => {
     const index = new VaultReferenceIndex()
     index.indexNote('Sermons/Abiding.md', 'On {John 15:1-17} we see', null)

@@ -48,6 +48,10 @@ export class VaultReferenceIndex {
         occurrences: intersecting,
       })
     }
-    return groups
+    return groups.sort(
+      (a, b) =>
+        Number(b.annotation) - Number(a.annotation) ||
+        a.file.localeCompare(b.file),
+    )
   }
 }
