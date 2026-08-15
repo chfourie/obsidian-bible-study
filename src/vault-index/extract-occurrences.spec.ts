@@ -52,6 +52,26 @@ describe('extractOccurrences', () => {
     expect(extractOccurrences('`` `{John 15:4}` `` text', null)).toEqual([])
   })
 
+  it('never parses inside fenced code blocks', () => {
+    const content = 'before\n```\n{John 15:4}\n```\nafter {John 15:9}'
+    const occurrences = extractOccurrences(content, null)
+    expect(occurrences.map((o) => o.position)).toEqual([
+      content.indexOf('{John 15:9}'),
+    ])
+  })
+
+  it('closes a fence only with a marker at least as long', () => {
+    const content = '````\n```\n{John 15:4}\n````\n{John 15:9}'
+    const occurrences = extractOccurrences(content, null)
+    expect(occurrences.map((o) => o.position)).toEqual([
+      content.indexOf('{John 15:9}'),
+    ])
+  })
+
+  it('treats tilde fences as code blocks too', () => {
+    expect(extractOccurrences('~~~\n{John 15:4}\n~~~\n', null)).toEqual([])
+  })
+
   it('recovers a reference nested inside stray braces', () => {
     const occurrences = extractOccurrences('{{John 15:4}}', null)
     expect(occurrences.map((o) => o.position)).toEqual([1])

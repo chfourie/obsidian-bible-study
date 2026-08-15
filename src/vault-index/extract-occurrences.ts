@@ -61,6 +61,22 @@ const scanLine = (
   }
 }
 
+type Fence = { marker: string; length: number }
+
+const FENCE_PATTERN = /^ {0,3}(`{3,}|~{3,})/
+
+const fenceAt = (line: string): Fence | null => {
+  const match = FENCE_PATTERN.exec(line)
+  return match ? { marker: match[1][0], length: match[1].length } : null
+}
+
+const closesFence = (line: string, open: Fence): boolean => {
+  const fence = fenceAt(line)
+  return (
+    fence !== null && fence.marker === open.marker && fence.length >= open.length
+  )
+}
+
 export const extractOccurrences = (
   content: string,
   frontmatterRef: string | null,
@@ -69,8 +85,15 @@ export const extractOccurrences = (
   const occurrences: ExtractedOccurrence[] = []
   if (!content.includes('{')) return occurrences
   let lineStart = 0
+  let openFence: Fence | null = null
   for (const line of content.split('\n')) {
-    scanLine(line, lineStart, occurrences)
+    if (openFence) {
+      if (closesFence(line, openFence)) openFence = null
+    } else {
+      const fence = fenceAt(line)
+      if (fence) openFence = fence
+      else scanLine(line, lineStart, occurrences)
+    }
     lineStart += line.length + 1
   }
   return occurrences
