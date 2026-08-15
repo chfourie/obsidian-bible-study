@@ -1,0 +1,10 @@
+{
+	"id": "bible-study",
+	"name": "Bible Study",
+	"version": "0.1.0",
+	"minAppVersion": "1.13.0",
+	"description": "Turns your vault into a full bible reading and study tool.",
+	"author": "Charl Fourie",
+	"authorUrl": "https://github.com/chfourie",
+	"isDesktopOnly": false
+}

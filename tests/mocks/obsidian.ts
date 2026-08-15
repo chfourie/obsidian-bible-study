@@ -1,0 +1,73 @@
+/*
+Test-only mock of the `obsidian` module.
+
+Surfaces just enough of the real package to exercise the plugin code under
+test: TFile/TFolder/TAbstractFile (real classes so `instanceof` works),
+`normalizePath`, and a Plugin shell with App/Vault stubs. Grows alongside
+the plugin as features start touching more of the API.
+*/
+
+export class Vault {}
+
+export class TAbstractFile {
+  vault: Vault = new Vault()
+  path = ''
+  name = ''
+  parent: TFolder | null = null
+}
+
+export class TFile extends TAbstractFile {
+  basename = ''
+  extension = 'md'
+  stat: { ctime: number; mtime: number; size: number } = {
+    ctime: 0,
+    mtime: 0,
+    size: 0,
+  }
+}
+
+export class TFolder extends TAbstractFile {
+  children: TAbstractFile[] = []
+  isRoot(): boolean {
+    return this.path === '' || this.path === '/'
+  }
+}
+
+// Real Obsidian exposes a Platform constant with `isMobile`/`isPhone`/etc.
+// Tests assume desktop unless they explicitly toggle this.
+export const Platform = {
+  isDesktop: true,
+  isMobile: false,
+  isPhone: false,
+  isTablet: false,
+}
+
+export function normalizePath(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/\/$/, '') || '/'
+}
+
+export type PluginManifest = {
+  id: string
+  name: string
+  version: string
+  minAppVersion: string
+  description: string
+  author: string
+}
+
+export class App {
+  vault: Vault = new Vault()
+}
+
+export class Plugin {
+  constructor(
+    public app: App,
+    public manifest: PluginManifest
+  ) {}
+
+  async loadData(): Promise<unknown> {
+    return null
+  }
+
+  async saveData(_data: unknown): Promise<void> {}
+}

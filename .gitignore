@@ -1,0 +1,32 @@
+# vscode
+.vscode
+
+# Intellij
+*.iml
+.idea
+
+# npm
+node_modules
+
+# Don't include the compiled main.js file in the repo.
+# They should be uploaded to GitHub releases instead.
+main.js
+
+# Exclude sourcemaps
+*.map
+
+# obsidian
+data.json
+
+# Hot-Reload marker — local dev artifact.
+.hotreload
+
+# Local deploy targets for `npm run deploy` / `npm run push`. Machine-specific
+# vault paths — keep the committed deploy-targets.example.json as the template.
+deploy-targets.json
+
+# Exclude macOS Finder (System Explorer) View States
+.DS_Store
+
+# Repo root accidentally opened as an Obsidian vault.
+/.obsidian/

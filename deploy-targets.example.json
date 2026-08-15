@@ -1,0 +1,6 @@
+[
+  "//  Copy this file to deploy-targets.json (git-ignored) and list the",
+  "//  absolute path to each vault's bible-study plugin folder below.",
+  "//  Lines starting with // are ignored.",
+  "{vault}/.obsidian/plugins/bible-study"
+]
