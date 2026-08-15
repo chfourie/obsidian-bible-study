@@ -54,6 +54,21 @@ describe('parseBsbTables verse text edge cases', () => {
     )
   })
 
+  it('unwraps curly-brace supplied words', () => {
+    expect(verse(43, 15, 4).text).toBe(
+      'Remain in Me, and I will remain in you. Just as no branch can bear ' +
+        'fruit by itself unless it remains in the vine, neither can you bear ' +
+        'fruit unless you remain in Me.',
+    )
+  })
+
+  it('keeps parentheses attached when their word is an untranslated placeholder', () => {
+    expect(verse(42, 9, 14).text).toBe(
+      '(There were about five thousand men.) He told His disciples, ' +
+        '“Have them sit down in groups of about fifty each.',
+    )
+  })
+
   it('assembles a red-letter Greek verse without vvv placeholders', () => {
     expect(verse(43, 3, 16).text).toBe(
       'For God so loved the world that He gave His one and only Son, that ' +
@@ -94,6 +109,8 @@ describe('parseBsbTables tag spans', () => {
 
 describe('parseBsbTables book handling', () => {
   it('groups verses under their book numbers across testaments', () => {
-    expect([...verses.keys()].sort((a, b) => a - b)).toEqual([1, 19, 39, 40, 43])
+    expect([...verses.keys()].sort((a, b) => a - b)).toEqual([
+      1, 19, 39, 40, 42, 43,
+    ])
   })
 })

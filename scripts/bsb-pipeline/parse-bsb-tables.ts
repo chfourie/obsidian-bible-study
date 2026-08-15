@@ -13,7 +13,7 @@ const COLUMN = {
   endQ: 20,
 } as const
 
-const UNTRANSLATED_PLACEHOLDERS = new Set(['-', 'vvv', '. . .'])
+const UNTRANSLATED_PLACEHOLDERS = new Set(['-', 'vvv', '...'])
 
 const stripHtml = (value: string): string =>
   value
@@ -23,7 +23,19 @@ const stripHtml = (value: string): string =>
 const cleanColumn = (value: string): string => stripHtml(value).trim()
 
 const cleanWord = (value: string): string =>
-  cleanColumn(value).replace(/[[\]]/g, '')
+  cleanColumn(value).replace(/[[\]{}]/g, '')
+
+const translatedWord = (
+  word: string,
+): { text: string; translated: boolean } | null => {
+  const bare = word.replace(/[()\s]/g, '')
+  if (bare !== '' && !UNTRANSLATED_PLACEHOLDERS.has(bare))
+    return { text: word, translated: true }
+  const punctuationOnly = word.replace(/-|vvv|\.|\s/g, '')
+  return punctuationOnly === ''
+    ? null
+    : { text: punctuationOnly, translated: false }
+}
 
 const strongsNumber = (row: string[]): string | null => {
   const hebrew = row[COLUMN.strHeb]?.trim() ?? ''
@@ -50,17 +62,18 @@ const assembleVerse = (rows: string[][]): TaggedVerse => {
   let text = ''
   const tags: TaggedVerse['tags'] = []
   for (const row of ordered) {
-    const word = cleanWord(row[COLUMN.bsbText] ?? '')
-    if (word === '' || UNTRANSLATED_PLACEHOLDERS.has(word)) continue
+    const word = translatedWord(cleanWord(row[COLUMN.bsbText] ?? ''))
+    if (word === null) continue
     const prefix = cleanColumn(row[COLUMN.begQ] ?? '')
     const suffix =
       cleanColumn(row[COLUMN.pnc] ?? '') + cleanColumn(row[COLUMN.endQ] ?? '')
-    if (text !== '') text += ' '
+    if (text !== '' && !text.endsWith('(')) text += ' '
     text += prefix
     const start = text.length
-    text += word
+    text += word.text
     const strongs = strongsNumber(row)
-    if (strongs !== null) tags.push({ start, end: text.length, strongs: [strongs] })
+    if (word.translated && strongs !== null)
+      tags.push({ start, end: text.length, strongs: [strongs] })
     text += suffix
   }
   return { text, tags }
