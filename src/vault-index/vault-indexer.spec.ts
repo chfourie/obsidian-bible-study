@@ -16,6 +16,7 @@ const johnRef = (chapter: number, verse: number): Reference => ({
 
 class FakeNoteVault implements NoteVault {
   readonly #notes = new Map<string, string>()
+  readonly #unreadablePaths = new Set<string>()
   readonly #layoutReadyListeners: Array<() => void> = []
   readonly #changedListeners: Array<(path: string) => void> = []
   readonly #renamedListeners: Array<(path: string, oldPath: string) => void> = []
@@ -29,11 +30,16 @@ class FakeNoteVault implements NoteVault {
     this.#notes.delete(path)
   }
 
+  makeUnreadable(path: string) {
+    this.#unreadablePaths.add(path)
+  }
+
   markdownFilePaths(): string[] {
     return [...this.#notes.keys()]
   }
 
   async readNote(path: string): Promise<string> {
+    if (this.#unreadablePaths.has(path)) throw new Error(`cannot read ${path}`)
     const content = this.#notes.get(path)
     if (content === undefined) throw new Error(`no note at ${path}`)
     return content
@@ -139,6 +145,38 @@ describe('VaultIndexer full scan', () => {
     ).toEqual(['Annotations/John 15.4.md', 'mention.md'])
   })
 
+  it('abandons an in-flight scan once stopped', async () => {
+    const vault = new FakeNoteVault()
+    const index = new VaultReferenceIndex()
+    let resumeScan = () => {}
+    const indexer = new VaultIndexer(vault, index, {
+      chunkSize: 1,
+      yieldBetweenChunks: () => new Promise((resolve) => (resumeScan = resolve)),
+    })
+    vault.setNote('first.md', '{John 15:4}')
+    vault.setNote('second.md', '{John 3:16}')
+
+    const scan = indexer.scanVault()
+    await flushMicrotasks()
+    indexer.stop()
+    resumeScan()
+    await scan
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toHaveLength(1)
+    expect(index.intersectingOccurrences(johnRef(3, 16))).toEqual([])
+  })
+
+  it('keeps scanning past a note that fails to read', async () => {
+    const { vault, index, indexer } = setup()
+    vault.setNote('bad.md', '{John 3:16}')
+    vault.setNote('good.md', '{John 15:4}')
+    vault.makeUnreadable('bad.md')
+
+    await indexer.scanVault()
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toHaveLength(1)
+  })
+
   it('indexes annotation refs from note content alone on the initial scan', async () => {
     const { vault, index, indexer } = setup()
     vault.setNote('Annotations/John 15.4.md', '---\nref: John 15:4\n---\nthoughts')
@@ -236,6 +274,32 @@ describe('VaultIndexer incremental updates', () => {
       index.intersectingOccurrences(johnRef(3, 16)).map((group) => group.file),
     ).toEqual(['new.md'])
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+  })
+
+  it('re-indexes the new path when a note is renamed before its first index', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    vault.setNote('new.md', '{John 15:4}')
+    indexer.start()
+
+    vault.fireRenamed('new.md', 'old.md')
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(
+      index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file),
+    ).toEqual(['new.md'])
+  })
+
+  it('keeps the indexed occurrences when a debounced re-read fails', async () => {
+    const { vault, index, indexer } = setup({ debounceMs: 300 })
+    vault.setNote('note.md', '{John 15:4}')
+    await indexer.scanVault()
+    indexer.start()
+
+    vault.makeUnreadable('note.md')
+    vault.fireChanged('note.md')
+    await vi.advanceTimersByTimeAsync(300)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toHaveLength(1)
   })
 
   it('evicts a deleted note and abandons its pending re-index', async () => {

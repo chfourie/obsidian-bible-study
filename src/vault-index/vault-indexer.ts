@@ -18,6 +18,7 @@ export class VaultIndexer {
   readonly #debounceMs: number
   readonly #yieldBetweenChunks: () => Promise<void>
   readonly #pendingReindexes = new Map<string, number>()
+  #stopped = false
 
   constructor(
     private readonly vault: NoteVault,
@@ -33,10 +34,9 @@ export class VaultIndexer {
     this.vault.onLayoutReady(() => void this.scanVault())
     this.vault.onNoteChanged((path) => this.#scheduleReindex(path))
     this.vault.onNoteRenamed((path, oldPath) => {
-      const changePending = this.#pendingReindexes.has(oldPath)
       this.#cancelPendingReindex(oldPath)
       this.index.renameNote(oldPath, path)
-      if (changePending) this.#scheduleReindex(path)
+      this.#scheduleReindex(path)
     })
     this.vault.onNoteDeleted((path) => {
       this.#cancelPendingReindex(path)
@@ -45,6 +45,7 @@ export class VaultIndexer {
   }
 
   stop(): void {
+    this.#stopped = true
     for (const pending of this.#pendingReindexes.values()) window.clearTimeout(pending)
     this.#pendingReindexes.clear()
   }
@@ -55,6 +56,7 @@ export class VaultIndexer {
       path,
       window.setTimeout(() => {
         this.#pendingReindexes.delete(path)
+        if (this.#stopped) return
         void this.#indexNote(path)
       }, this.#debounceMs),
     )
@@ -72,12 +74,20 @@ export class VaultIndexer {
     for (let start = 0; start < paths.length; start += this.#chunkSize) {
       if (start > 0) await this.#yieldBetweenChunks()
       for (const path of paths.slice(start, start + this.#chunkSize)) {
+        if (this.#stopped) return
         await this.#indexNote(path)
       }
     }
   }
 
   async #indexNote(path: string): Promise<void> {
-    this.index.indexNote(path, await this.vault.readNote(path))
+    let content: string
+    try {
+      content = await this.vault.readNote(path)
+    } catch {
+      return
+    }
+    if (this.#stopped) return
+    this.index.indexNote(path, content)
   }
 }
