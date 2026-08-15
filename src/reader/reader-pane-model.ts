@@ -261,6 +261,10 @@ export class ReaderPaneModel {
     this.#details = {}
   }
 
+  currentChapterReference(): Reference {
+    return chapterReference(this.#position)
+  }
+
   extendSelectionTo(verseId: number): void {
     if (this.#selectedVerseId === null) return
     this.#selectionEnd = verseId

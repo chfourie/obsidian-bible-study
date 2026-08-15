@@ -237,6 +237,35 @@ describe('ReaderFeature entry points', () => {
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
+  it('prefills annotation refs from the reader verse selection', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+
+    await view.model.selectVerse(makeVerseId(43, 15, 4))
+
+    expect(feature.prefillReference()).toEqual(ref('John 15:4'))
+  })
+
+  it('prefills the current chapter when no verse is selected', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    expect(leaves).toHaveLength(1)
+
+    expect(feature.prefillReference()).toEqual(ref('John 15'))
+  })
+
+  it('prefills nothing when no reader pane is open', async () => {
+    const { feature } = harness()
+    await feature.load()
+
+    expect(feature.prefillReference()).toBe(null)
+  })
+
   it('seeds new panes with the reader toggle defaults from settings', async () => {
     const { feature, leaves } = harness()
     feature.useSettings({

@@ -115,6 +115,13 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     }
   }
 
+  prefillReference(): Reference | null {
+    const leaf = this.plugin.app.workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
+    if (!leaf || !(leaf.view instanceof ReaderView)) return null
+    const model = leaf.view.model
+    return model.selectionReference() ?? model.currentChapterReference()
+  }
+
   openNote(file: string): void {
     void this.plugin.app.workspace.openLinkText(file, '', true)
   }
