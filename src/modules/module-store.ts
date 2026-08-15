@@ -20,6 +20,7 @@ export class ModuleStore {
   constructor(private readonly dataDir: ModuleDataDir) {}
 
   async saveModule(module: NormalizedModule): Promise<void> {
+    await this.dataDir.removeDir(moduleDir(module.manifest.id))
     await this.dataDir.writeTextFile(
       manifestPath(module.manifest.id),
       JSON.stringify(module.manifest, null, 2),
@@ -42,6 +43,10 @@ export class ModuleStore {
   async manifest(moduleId: string): Promise<ModuleManifest | null> {
     const content = await this.dataDir.readTextFile(manifestPath(moduleId))
     return content === null ? null : (JSON.parse(content) as ModuleManifest)
+  }
+
+  async deleteModule(moduleId: string): Promise<void> {
+    await this.dataDir.removeDir(moduleDir(moduleId))
   }
 
   async installedManifests(): Promise<ModuleManifest[]> {

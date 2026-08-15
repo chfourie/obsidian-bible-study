@@ -128,4 +128,29 @@ describe('ModuleStore', () => {
 
     expect(await store.installedManifests()).toEqual([])
   })
+
+  it('removes a deleted module entirely', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+
+    await store.deleteModule('web')
+
+    expect(await store.manifest('web')).toBeNull()
+    expect(await store.installedManifests()).toEqual([])
+    expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBeNull()
+  })
+
+  it('drops content of a previous install when a module is saved again', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+    const updated = webModule()
+    updated.books.delete(64)
+
+    await store.saveModule(updated)
+
+    expect(await store.verseText('web', makeVerseId(64, 1, 1))).toBeNull()
+    expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBe(
+      'Remain in me, and I in you.',
+    )
+  })
 })
