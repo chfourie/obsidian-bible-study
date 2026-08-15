@@ -25,6 +25,43 @@ describe('parseBsbTables verse text', () => {
   })
 })
 
+describe('parseBsbTables verse text edge cases', () => {
+  it('keeps multiple sentences of one verse together', () => {
+    expect(verse(1, 1, 2).text).toBe(
+      'Now the earth was formless and void, and darkness was over the surface ' +
+        'of the deep. And the Spirit of God was hovering over the surface of the waters.',
+    )
+  })
+
+  it('drops footnote markers hidden in quote columns', () => {
+    expect(verse(19, 23, 1).text).toBe(
+      'A Psalm of David. The LORD is my shepherd; I shall not want.',
+    )
+  })
+
+  it('unwraps bracketed supplied words', () => {
+    expect(verse(40, 1, 1).text).toBe(
+      'This is the record of the genealogy of Jesus Christ, the son of David, ' +
+        'the son of Abraham:',
+    )
+  })
+
+  it('skips untranslated placeholder words and keeps closing quotes', () => {
+    expect(verse(39, 4, 6).text).toBe(
+      'And he will turn the hearts of the fathers to their children, and the ' +
+        'hearts of the children to their fathers. Otherwise, I will come and ' +
+        'strike the land with a curse.”',
+    )
+  })
+
+  it('assembles a red-letter Greek verse without vvv placeholders', () => {
+    expect(verse(43, 3, 16).text).toBe(
+      'For God so loved the world that He gave His one and only Son, that ' +
+        'everyone who believes in Him shall not perish but have eternal life.',
+    )
+  })
+})
+
 describe('parseBsbTables tag spans', () => {
   it('maps each translated word to its Strong Hebrew number', () => {
     const genesis11 = verse(1, 1, 1)
@@ -35,5 +72,28 @@ describe('parseBsbTables tag spans', () => {
     expect(genesis11.tags[1].strongs).toEqual(['H0430'])
     expect(tagged(genesis11, 5)).toBe('the earth')
     expect(genesis11.tags[5].strongs).toEqual(['H0776'])
+  })
+
+  it('maps Greek words to padded G-numbers excluding punctuation', () => {
+    const matthew11 = verse(40, 1, 1)
+    expect(tagged(matthew11, 0)).toBe('This is the record')
+    expect(matthew11.tags[0].strongs).toEqual(['G0976'])
+    expect(tagged(matthew11, 3)).toBe('Christ')
+    expect(matthew11.tags[3].strongs).toEqual(['G5547'])
+  })
+
+  it('excludes untranslated placeholder rows from the tag list', () => {
+    const john316 = verse(43, 3, 16)
+    const spans = john316.tags.map((_, index) => tagged(john316, index))
+    expect(spans).not.toContain('-')
+    expect(spans).not.toContain('vvv')
+    expect(spans[0]).toBe('For')
+    expect(john316.tags[0].strongs).toEqual(['G1063'])
+  })
+})
+
+describe('parseBsbTables book handling', () => {
+  it('groups verses under their book numbers across testaments', () => {
+    expect([...verses.keys()].sort((a, b) => a - b)).toEqual([1, 19, 39, 40, 43])
   })
 })
