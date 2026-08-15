@@ -90,6 +90,29 @@ const group = (file: string, annotation: boolean): OccurrenceGroup => ({
   occurrences: [],
 })
 
+describe('translation switching', () => {
+  it('reloads the chapter in the newly selected translation', async () => {
+    const model = modelWith({
+      passages: passageSourceOver({
+        ...john15Texts(),
+        kjv: { [makeVerseId(43, 15, 1)]: 'I am the true vine (KJV).' },
+      }),
+      installedTranslations: async () => [manifest('web'), manifest('kjv')],
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.setTranslation('kjv')
+
+    const view = model.view
+    expect(view.rows).toHaveLength(1)
+    expect(view.rows[0].segments[0].text).toBe('I am the true vine (KJV).')
+    expect(view.translations).toEqual([
+      { id: 'web', label: 'WEB', active: false },
+      { id: 'kjv', label: 'KJV', active: true },
+    ])
+  })
+})
+
 describe('verse details', () => {
   const verse4 = makeVerseId(43, 15, 4)
   const twoTranslations = (): Partial<ReaderPaneDeps> => ({

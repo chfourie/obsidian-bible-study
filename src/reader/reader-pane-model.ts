@@ -166,6 +166,12 @@ export class ReaderPaneModel {
     await this.#loadChapter()
   }
 
+  async setTranslation(translationId: string): Promise<void> {
+    this.#translationId = translationId
+    this.#resetSelection()
+    await this.#loadChapter()
+  }
+
   async selectVerse(verseId: number): Promise<void> {
     this.#selectedVerseId = verseId
     if (this.#toggles.details === 'inline') {
