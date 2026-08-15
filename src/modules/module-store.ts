@@ -43,4 +43,12 @@ export class ModuleStore {
     const content = await this.dataDir.readTextFile(manifestPath(moduleId))
     return content === null ? null : (JSON.parse(content) as ModuleManifest)
   }
+
+  async installedManifests(): Promise<ModuleManifest[]> {
+    const moduleIds = await this.dataDir.listDirs(MODULES_ROOT)
+    const manifests = await Promise.all(
+      moduleIds.map((moduleId) => this.manifest(moduleId)),
+    )
+    return manifests.filter((manifest) => manifest !== null)
+  }
 }

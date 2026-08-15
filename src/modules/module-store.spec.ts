@@ -94,4 +94,38 @@ describe('ModuleStore', () => {
     expect(await store.verseText('web', makeVerseId(1, 1, 1))).toBeNull()
     expect(await store.verseText('kjv', makeVerseId(43, 15, 4))).toBeNull()
   })
+
+  it('lays a module out as modules/<id>/manifest.json plus zero-padded book files', async () => {
+    const { dataDir, store } = setup()
+
+    await store.saveModule(webModule())
+
+    expect([...dataDir.files.keys()].sort()).toEqual([
+      'modules/web/043.json',
+      'modules/web/064.json',
+      'modules/web/manifest.json',
+    ])
+  })
+
+  it('lists the manifests of all installed modules', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+    const kjv = webModule()
+    kjv.manifest.id = 'kjv'
+    kjv.manifest.name = 'King James Version'
+    await store.saveModule(kjv)
+
+    const manifests = await store.installedManifests()
+
+    expect(manifests.map((manifest) => manifest.id).sort()).toEqual([
+      'kjv',
+      'web',
+    ])
+  })
+
+  it('lists no modules when none are installed', async () => {
+    const { store } = setup()
+
+    expect(await store.installedManifests()).toEqual([])
+  })
 })
