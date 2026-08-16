@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { makeVerseId } from '../reference'
 import { BollsClient } from './bolls-client'
 
 const LANGUAGES_URL = 'https://bolls.life/static/bolls/app/views/languages.json'
@@ -40,20 +41,20 @@ const fakeTransport =
   }
 
 describe('BollsClient catalogue', () => {
-  it('flattens the live languages catalogue into translation rows', async () => {
+  it('flattens the live languages catalogue into module rows with lowercase ids', async () => {
     const client = new BollsClient(
       fakeTransport({ [LANGUAGES_URL]: LANGUAGES_JSON }),
     )
 
     expect(await client.fetchCatalog()).toEqual([
       {
-        id: 'KJV',
+        id: 'kjv',
         name: "King James Version 1769 with Apocrypha and Strong's Numbers",
         language: 'English',
       },
-      { id: 'WEB', name: 'World English Bible', language: 'English' },
+      { id: 'web', name: 'World English Bible', language: 'English' },
       {
-        id: 'AOV',
+        id: 'aov',
         name: 'Afrikaanse Ou Vertaling 1933/1953',
         language: 'Afrikaans',
       },
@@ -67,7 +68,7 @@ describe('BollsClient catalogue', () => {
 
     expect(catalog.length).toBeGreaterThan(100)
     expect(catalog).toContainEqual({
-      id: 'KJV',
+      id: 'kjv',
       name: "King James Version 1769 with Apocrypha and Strong's Numbers",
       language: 'English',
     })
@@ -100,6 +101,62 @@ describe('BollsClient translation dump', () => {
     // Independently computed: echo -n '<dump>' | shasum -a 256
     expect(download.checksum).toBe(
       '78a9d28be39ea05047342ba8ce178b4fbaa752598d3958e6c6467dbc6e3d63ea',
+    )
+  })
+})
+
+describe('BollsClient as module source', () => {
+  const KJV_DUMP =
+    '[{"pk":1,"translation":"KJV","book":43,"chapter":15,"verse":4,"text":"Abide<S>3306</S> in me, and I in you."}]'
+
+  const responses = {
+    [LANGUAGES_URL]: LANGUAGES_JSON,
+    'https://bolls.life/static/translations/KJV.json': KJV_DUMP,
+  }
+
+  it('downloads a module by lowercase id, resolving the dump via catalogue casing', async () => {
+    const client = new BollsClient(fakeTransport(responses))
+
+    const module = await client.fetchModule('kjv')
+
+    expect(module.manifest).toEqual({
+      id: 'kjv',
+      name: "King James Version 1769 with Apocrypha and Strong's Numbers",
+      language: 'English',
+      license: '',
+      source: 'https://bolls.life/static/translations/KJV.json',
+      // Independently computed: echo -n '<dump>' | shasum -a 256
+      sourceChecksum:
+        '3e2ba7aeb0e9b8f771ffaf11d89748871d4e8fe60cdc9837c84975926b77e058',
+      formatVersion: 1,
+      capabilities: { strongsTagged: true },
+    })
+    expect(module.books.get(43)).toEqual({
+      [makeVerseId(43, 15, 4)]: {
+        text: 'Abide in me, and I in you.',
+        tags: [{ start: 0, end: 5, strongs: ['G3306'] }],
+      },
+    })
+  })
+
+  it('resolves catalogue entries from the snapshot when the live catalogue is unavailable', async () => {
+    const client = new BollsClient(
+      fakeTransport({
+        'https://bolls.life/static/translations/KJV.json': KJV_DUMP,
+      }),
+    )
+
+    const module = await client.fetchModule('kjv')
+
+    expect(module.manifest.id).toBe('kjv')
+    expect(module.manifest.language).toBe('English')
+  })
+
+  it('rejects a module id missing from the catalogue', async () => {
+    const client = new BollsClient(fakeTransport(responses))
+
+    await expect(client.fetchModule('nope')).rejects.toThrow(
+      /nope.*not in the bolls catalogue/i,
     )
   })
 })
