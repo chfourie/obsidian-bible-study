@@ -20,6 +20,7 @@ import {
   refreshRenderedReferences,
 } from './live-preview-extension'
 import { ModulePassageSource } from './module-passage-source'
+import { ReferenceEditorSuggest } from './reference-editor-suggest'
 import type { VaultReferenceIndex } from '../vault-index'
 import { PassageRepository } from './passage-repository'
 import { processRenderedElement } from './process-rendered-element'
@@ -84,6 +85,11 @@ export class RenderingFeature extends PluginFeature {
       createLivePreviewExtension(
         () => renderContextFromSettings(this.settings),
         this.#deps,
+      ),
+    )
+    this.plugin.registerEditorSuggest(
+      new ReferenceEditorSuggest(this.plugin.app, () =>
+        renderContextFromSettings(this.settings),
       ),
     )
   }

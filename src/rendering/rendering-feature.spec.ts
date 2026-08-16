@@ -35,6 +35,7 @@ describe('RenderingFeature in-note intersections', () => {
         postProcessor = processor
       },
       registerEditorExtension: () => {},
+      registerEditorSuggest: () => {},
     } as unknown as Plugin
     const index = new VaultReferenceIndex()
     index.indexNote('Sermons/Abiding.md', 'On {John 15:4} we see')

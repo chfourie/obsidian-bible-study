@@ -284,6 +284,14 @@ const calloutTitle = (model: ReferenceRenderModel): string =>
     ? model.referenceText
     : `${model.referenceText} · ${model.translationId.toUpperCase()}`
 
+const renderAttribution = (host: HTMLElement, view: PassageView): void => {
+  if (view.attribution === null) return
+  host.createDiv({
+    cls: 'scripture-study-attribution',
+    text: view.attribution,
+  })
+}
+
 const renderProse = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
   const prose = host.createEl('p', { cls: 'scripture-study-prose' })
@@ -291,12 +299,15 @@ const renderProse = (host: HTMLElement, view: PassageView): void => {
     if (index > 0) prose.appendText(' ')
     renderSegments(prose, block)
   })
-  if (view.attribution !== null) {
-    host.createDiv({
-      cls: 'scripture-study-attribution',
-      text: view.attribution,
-    })
+  renderAttribution(host, view)
+}
+
+const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
+  renderFallbackNotice(host, view)
+  for (const block of view.verses) {
+    renderSegments(host.createDiv({ cls: 'scripture-study-verse-line' }), block)
   }
+  renderAttribution(host, view)
 }
 
 const renderCallout = (
@@ -324,7 +335,12 @@ const renderCallout = (
   activateAsButton(nav, () => deps.openReference(model))
   const content = callout.createDiv({ cls: 'callout-content' })
   const host = content.createDiv({ cls: 'scripture-study-passage' })
-  const mounted = mountPassage(host, model, deps, renderProse)
+  const mounted = mountPassage(
+    host,
+    model,
+    deps,
+    model.flow ? renderProse : renderVerseLines,
+  )
   if (deps.intersections) {
     renderIntersections(content, model, deps.intersections, sourcePath)
   }

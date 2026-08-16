@@ -50,6 +50,15 @@ describe('buildReferenceRenderModel', () => {
     ).toBe('callout')
   })
 
+  it('carries the flow keyword', () => {
+    expect(buildReferenceRenderModel('John 15:4 callout', context)?.flow).toBe(
+      false,
+    )
+    expect(
+      buildReferenceRenderModel('John 15:4 callout flow', context)?.flow,
+    ).toBe(true)
+  })
+
   it('collects invalid tokens while rendering the reference normally', () => {
     const model = buildReferenceRenderModel('John 15:4 bogus inline xyz', context)
 
@@ -112,6 +121,15 @@ describe('sameRenderModel', () => {
     expect(sameRenderModel(build('John 15:4'), build('John 15:9'))).toBe(false)
     expect(
       sameRenderModel(build('John 15:4'), build('John 15:4 callout')),
+    ).toBe(false)
+  })
+
+  it('differs when flow changes', () => {
+    expect(
+      sameRenderModel(
+        build('John 15:4 callout'),
+        build('John 15:4 callout flow'),
+      ),
     ).toBe(false)
   })
 })

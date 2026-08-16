@@ -549,6 +549,31 @@ describe('renderReference callout', () => {
     expect(content?.textContent).toContain('Remain in me, and I in you.')
   })
 
+  it('renders one verse per line by default', async () => {
+    const { parent, deps } = setup(passageOf('Remain in me.', 'I am the vine.'))
+
+    await renderReference(parent, model('John 15:4-5 callout'), deps)
+
+    const lines = parent.querySelectorAll(
+      '.callout-content .scripture-study-verse-line',
+    )
+    expect([...lines].map((line) => line.textContent)).toEqual([
+      '4Remain in me.',
+      '5I am the vine.',
+    ])
+    expect(parent.querySelector('.scripture-study-prose')).toBeNull()
+  })
+
+  it('renders flowing prose with the flow keyword', async () => {
+    const { parent, deps } = setup(passageOf('Remain in me.', 'I am the vine.'))
+
+    await renderReference(parent, model('John 15:4-5 callout flow'), deps)
+
+    const prose = parent.querySelector('.callout-content .scripture-study-prose')
+    expect(prose?.textContent).toBe('4Remain in me. 5I am the vine.')
+    expect(parent.querySelector('.scripture-study-verse-line')).toBeNull()
+  })
+
   it('shows a muted attribution line when the translation carries one', async () => {
     const attributed: Passage = {
       ...passageOf('Remain.'),

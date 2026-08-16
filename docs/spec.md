@@ -30,10 +30,11 @@ Curly braces with bare space-separated tokens: `{John 15:1-17}`, `{John 15:4 nkj
 
 - **Canon & book names:** 66-book Protestant canon, English-only v1. Case-insensitive matching against English full names + OSIS abbreviations + three-letter abbreviations; optional trailing period; `1Jn` / `1 Jn` both accepted. Lookup table is many-names → book-id, so localized tables can slot in later. Deuterocanon out of v1.
 - **Verse forms:** single verse (`John 15:4`), intra-chapter range (`John 15:1-17`), whole chapter (`John 15`), cross-chapter range (`John 15:26-16:4`), comma lists (`John 15:4,7`, `John 15:4-6,9`). Whole-book references rejected.
-- **Option tokens:** translation id and display keyword (`inline` | `callout`) in any order after the reference — disjoint closed vocabularies. Bare (no keyword) = chip only.
+- **Option tokens:** translation id, display keyword (`inline` | `callout`), and layout keyword (`flow`, valid only alongside `callout` — flagged invalid otherwise) in any order after the reference — disjoint closed vocabularies. Bare (no keyword) = chip only.
 - **Errors:** invalid reference part (unknown book, bad structure, out-of-range chapter/verse per versification data) → the whole `{...}` renders as plain text, unstyled (interop safety valve for Templater/JSON braces). Valid reference with unknown/duplicate/conflicting trailing tokens → invalid tokens highlighted and ignored (first valid token wins), reference renders normally.
 - **Escaping:** inline code spans and fenced code blocks never parsed; `\{John 15:4}` escapes to literal text. No per-note disable flag in v1.
 - **Editor modes:** Reading mode renders fully. Live Preview renders identically via CodeMirror 6 decorations, collapsing to raw source when the cursor enters the range (standard Obsidian convention; no partial editing UI). Source mode shows raw text.
+- **Autocompletion:** typing inside an unclosed `{` pops an editor suggest: book names while the book part is typed (canonical name inserted, matched against all aliases), then option keywords and known translation ids once the verse spec is present; option kinds already used are omitted, and `flow` is offered only once `callout` is present.
 
 ## 3. Rendering in notes
 
@@ -47,7 +48,7 @@ Chip first, then verse text as a quoted, subtly muted/italic run in the paragrap
 
 ### 3.3 `callout` mode
 
-Custom Obsidian callout type `[!bible]` (plugin-styled: book icon, accent color). Title = normalized reference + translation label; title nav icon opens the reader. Body = continuous prose honoring pericope/paragraph data when available, superscript verse numbers always. Rendered expanded; no fold token in v1. Muted attribution line at the bottom (see §3.6).
+Custom Obsidian callout type `[!bible]` (plugin-styled: book icon, accent color). Title = normalized reference + translation label; title nav icon opens the reader. Body = one verse per line by default, superscript verse numbers always; the `flow` keyword switches the body to continuous prose. Rendered expanded; no fold token in v1. Muted attribution line at the bottom (see §3.6).
 
 ### 3.4 Red-letter
 

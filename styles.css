@@ -80,6 +80,10 @@ span.scripture-study-passage {
   color: var(--scripture-study-red-letter-color);
 }
 
+.scripture-study-verse-line + .scripture-study-verse-line {
+  margin-top: 0.25em;
+}
+
 /* ---- Async states (spec §3.5) ------------------------------------------ */
 
 .scripture-study-loading {

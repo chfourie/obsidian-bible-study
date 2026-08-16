@@ -13,6 +13,7 @@ describe('parseReference — single verse', () => {
       },
       translation: null,
       display: null,
+      flow: false,
       invalidTokens: [],
     })
   })
@@ -231,6 +232,42 @@ describe('parseReference — option tokens', () => {
     expect(conflicting?.invalidTokens).toEqual([
       { text: 'inline', start: 18, end: 24 },
     ])
+  })
+
+  it('parses the flow keyword', () => {
+    const parsed = parseReference('John 15:4 callout flow nkjv', options)
+    expect(parsed?.display).toBe('callout')
+    expect(parsed?.flow).toBe(true)
+    expect(parsed?.translation).toBe('nkjv')
+    expect(parsed?.invalidTokens).toEqual([])
+  })
+
+  it('defaults flow to false and flags duplicate flow tokens', () => {
+    expect(parseReference('John 15:4 callout', options)?.flow).toBe(false)
+
+    const duplicated = parseReference('John 15:4 callout flow flow', options)
+    expect(duplicated?.flow).toBe(true)
+    expect(duplicated?.invalidTokens).toEqual([
+      { text: 'flow', start: 23, end: 27 },
+    ])
+  })
+
+  it('flags flow as invalid without the callout display', () => {
+    const bare = parseReference('John 15:4 flow', options)
+    expect(bare?.flow).toBe(false)
+    expect(bare?.invalidTokens).toEqual([{ text: 'flow', start: 10, end: 14 }])
+
+    const inline = parseReference('John 15:4 flow inline', options)
+    expect(inline?.flow).toBe(false)
+    expect(inline?.invalidTokens).toEqual([
+      { text: 'flow', start: 10, end: 14 },
+    ])
+  })
+
+  it('accepts flow before the callout keyword', () => {
+    const parsed = parseReference('John 15:4 flow callout', options)
+    expect(parsed?.flow).toBe(true)
+    expect(parsed?.invalidTokens).toEqual([])
   })
 
   it('treats every non-keyword token as invalid when no translations are known', () => {

@@ -18,6 +18,7 @@ export type ReferenceRenderModel = {
   translationId: string | null
   chipLabel: string | null
   display: RenderDisplay
+  flow: boolean
   invalidTokens: string[]
 }
 
@@ -30,6 +31,7 @@ export const modelFromParsed = (
   translationId: parsed.translation ?? context.defaultTranslationId,
   chipLabel: parsed.translation?.toUpperCase() ?? null,
   display: parsed.display ?? 'chip',
+  flow: parsed.flow,
   invalidTokens: parsed.invalidTokens.map((token) => token.text),
 })
 
@@ -41,6 +43,7 @@ export const sameRenderModel = (
   a.translationId === b.translationId &&
   a.chipLabel === b.chipLabel &&
   a.display === b.display &&
+  a.flow === b.flow &&
   a.invalidTokens.length === b.invalidTokens.length &&
   a.invalidTokens.every((token, index) => token === b.invalidTokens[index])
 

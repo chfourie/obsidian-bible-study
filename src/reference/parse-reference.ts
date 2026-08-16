@@ -15,10 +15,11 @@ export type ParsedReference = {
   reference: Reference
   translation: string | null
   display: DisplayMode | null
+  flow: boolean
   invalidTokens: ReferenceToken[]
 }
 
-const matchBook = (
+export const matchBook = (
   words: string[],
 ): { bookId: number; wordsUsed: number } | null => {
   const maxWords = Math.min(words.length, 3)
@@ -103,14 +104,20 @@ const tokenize = (text: string): ReferenceToken[] =>
     end: match.index + match[0].length,
   }))
 
-const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'callout']
+export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'callout']
+
+export const FLOW_KEYWORD = 'flow'
 
 const classifyOptionTokens = (
   tokens: ReferenceToken[],
   translationIds: readonly string[],
-): Pick<ParsedReference, 'translation' | 'display' | 'invalidTokens'> => {
+): Pick<
+  ParsedReference,
+  'translation' | 'display' | 'flow' | 'invalidTokens'
+> => {
   let translation: string | null = null
   let display: DisplayMode | null = null
+  let flowToken: ReferenceToken | null = null
   const invalidTokens: ReferenceToken[] = []
   for (const token of tokens) {
     const lowered = token.text.toLowerCase()
@@ -120,13 +127,18 @@ const classifyOptionTokens = (
     )
     if (displayMode && display === null) {
       display = displayMode
+    } else if (lowered === FLOW_KEYWORD && flowToken === null) {
+      flowToken = token
     } else if (translationId !== undefined && translation === null) {
       translation = translationId
     } else {
       invalidTokens.push(token)
     }
   }
-  return { translation, display, invalidTokens }
+  const flow = flowToken !== null && display === 'callout'
+  if (flowToken !== null && !flow) invalidTokens.push(flowToken)
+  invalidTokens.sort((a, b) => a.start - b.start)
+  return { translation, display, flow, invalidTokens }
 }
 
 export const parseReference = (

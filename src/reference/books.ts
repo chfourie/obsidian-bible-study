@@ -104,4 +104,13 @@ const BOOK_ID_BY_NORMALIZED_NAME = new Map<string, number>(
 export const bookIdForName = (name: string): number | null =>
   BOOK_ID_BY_NORMALIZED_NAME.get(normalizeName(name)) ?? null
 
+export const booksMatchingPrefix = (prefix: string): readonly Book[] => {
+  const normalized = normalizeName(prefix)
+  return BOOKS.filter((book) =>
+    [book.name, book.osis, book.abbrev, ...book.aliases].some((alias) =>
+      normalizeName(alias).startsWith(normalized),
+    ),
+  )
+}
+
 export const bookName = (bookId: number): string => BOOKS[bookId - 1].name

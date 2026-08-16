@@ -448,6 +448,29 @@ export abstract class AbstractInputSuggest<T> {
   close(): void {}
 }
 
+// Just enough of EditorSuggest for the reference autocomplete to subclass.
+// Specs instantiate the subclass, seed `context`, and call the abstract
+// methods directly — the popup itself never renders in tests.
+export type EditorPosition = { line: number; ch: number }
+
+export type EditorSuggestTriggerInfo = {
+  start: EditorPosition
+  end: EditorPosition
+  query: string
+}
+
+export abstract class EditorSuggest<T> {
+  context:
+    | (EditorSuggestTriggerInfo & { editor: unknown; file: unknown })
+    | null = null
+
+  constructor(public app: App) {}
+
+  abstract renderSuggestion(value: T, el: HTMLElement): void
+
+  close(): void {}
+}
+
 // Declarative settings API (Obsidian ≥1.13): just enough of the
 // setting-definition shapes for a tab to describe itself through
 // `getSettingDefinitions()` — only the fields and control types the plugin
