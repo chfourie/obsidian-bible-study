@@ -76,7 +76,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       ),
       this.#translationsGroup(view),
       this.#downloadableGroup(view),
-      ...this.#onlineGroups(view),
       this.#strongsGroup(view),
       this.#readerGroup(),
       this.#annotationsGroup(),
@@ -268,14 +267,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       heading: 'Translations',
       items: [
         {
-          name: 'API.Bible key',
-          desc:
-            'Unlocks the online tier (licensed translations, fetched per passage). ' +
-            "Stored as plain text in this plugin's data.json — remove the key " +
-            'before publishing or sharing your vault.',
-          render: (setting) => this.#renderApiKeyInput(setting, view),
-        },
-        {
           name: 'Language',
           desc: 'Filters the downloadable list.',
           control: {
@@ -290,50 +281,17 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     }
   }
 
-  // The declarative text control has no masked variant, so the key input
-  // stays imperative inside a render definition.
-  #renderApiKeyInput(setting: Setting, view: SettingsTabView): void {
-    setting.addText((text) => {
-      text.inputEl.type = 'password'
-      text.setPlaceholder('API key').setValue(view.settings.apiBibleKey ?? '')
-      text.inputEl.addEventListener('change', () => {
-        void this.model.setApiBibleKey(text.inputEl.value)
-      })
-    })
-  }
-
   #downloadableGroup(
     view: SettingsTabView,
   ): SettingDefinitionGroup<SettingsControlKey> {
     return {
       type: 'group',
-      heading: 'Downloadable — free',
-      items: view.rows
-        .filter((row) => row.tier === 'downloadable')
-        .map((row) => ({
-          name: row.name,
-          render: (setting: Setting) =>
-            this.#renderDownloadableRow(setting, row),
-        })),
+      heading: 'Downloadable',
+      items: view.rows.map((row) => ({
+        name: row.name,
+        render: (setting: Setting) => this.#renderDownloadableRow(setting, row),
+      })),
     }
-  }
-
-  #onlineGroups(
-    view: SettingsTabView,
-  ): SettingDefinitionGroup<SettingsControlKey>[] {
-    const online = view.rows.filter((row) => row.tier === 'online')
-    if (online.length === 0) return []
-    return [
-      {
-        type: 'group',
-        heading: 'Online — requires key',
-        items: online.map((row) => ({
-          name: row.name,
-          desc: 'Fetched per passage with your key; cached passages expire after 14 days.',
-          render: (setting: Setting) => this.#renderOnlineRow(setting, row),
-        })),
-      },
-    ]
   }
 
   #decorateRow(setting: Setting, row: TranslationRowView): void {
@@ -385,21 +343,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         .setButtonText('Delete')
         .setDestructive()
         .onClick(() => void this.model.remove(row.id)),
-    )
-  }
-
-  #renderOnlineRow(setting: Setting, row: TranslationRowView): void {
-    this.#decorateRow(setting, row)
-    setting.addExtraButton((button) =>
-      button
-        .setIcon('eraser')
-        .setTooltip('Clear cached passages')
-        .onClick(() => void this.model.clearCache(row.id)),
-    )
-    setting.addToggle((toggle) =>
-      toggle
-        .setValue(row.enabled)
-        .onChange((enabled) => void this.model.setOnlineEnabled(row.id, enabled)),
     )
   }
 
