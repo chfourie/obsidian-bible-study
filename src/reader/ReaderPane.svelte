@@ -6,6 +6,7 @@
     VerseDetailsView,
     VerseRowView,
   } from './reader-pane-model'
+  import TranslationMenu from './TranslationMenu.svelte'
 
   let {
     model,
@@ -94,9 +95,6 @@
   let pillSlotEl: HTMLElement | null = $state(null)
   let pillMeasureEl: HTMLElement | null = $state(null)
   let pillsCollapsed = $state(false)
-  const activeTranslationId = $derived(
-    view.translations.find((pill) => pill.active)?.id ?? '',
-  )
 
   const remeasurePills = (): void => {
     if (pillSlotEl === null || pillMeasureEl === null) return
@@ -114,10 +112,6 @@
     observer.observe(pillSlotEl)
     return () => observer.disconnect()
   })
-
-  const onTranslationPicked = (event: Event): void => {
-    void model.setTranslation((event.currentTarget as HTMLSelectElement).value)
-  }
 
   const verseMarks = (row: VerseRowView): { anno: boolean; mentions: number } => ({
     anno: row.annotations > 0,
@@ -331,15 +325,10 @@
         {/each}
       </span>
       {#if pillsCollapsed}
-        <select
-          class="dropdown"
-          value={activeTranslationId}
-          onchange={onTranslationPicked}
-        >
-          {#each view.translations as pill (pill.id)}
-            <option value={pill.id}>{pill.label}</option>
-          {/each}
-        </select>
+        <TranslationMenu
+          options={view.translations}
+          onPick={(id) => void model.setTranslation(id)}
+        />
       {:else}
         {#each view.translations as pill (pill.id)}
           <button
@@ -648,10 +637,6 @@
     display: flex;
     gap: 10px;
     white-space: nowrap;
-  }
-
-  .bsr-trans select.dropdown {
-    max-width: 100%;
   }
 
   .bsr-crumb {
