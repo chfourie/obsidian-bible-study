@@ -1,4 +1,4 @@
-import type { NormalizedModule } from './normalize-getbible-translation'
+import type { NormalizedModule } from './normalized-module'
 
 export type PrebuiltModuleDownload = {
   module: NormalizedModule

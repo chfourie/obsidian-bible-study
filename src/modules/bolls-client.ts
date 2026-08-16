@@ -5,7 +5,7 @@ import {
   normalizeBollsTranslation,
   type BollsVerse,
 } from './normalize-bolls-translation'
-import type { NormalizedModule } from './normalize-getbible-translation'
+import type { NormalizedModule } from './normalized-module'
 
 const CATALOG_URL = 'https://bolls.life/static/bolls/app/views/languages.json'
 const DUMP_BASE_URL = 'https://bolls.life/static/translations'

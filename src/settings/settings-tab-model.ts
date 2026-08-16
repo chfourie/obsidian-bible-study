@@ -4,13 +4,12 @@ import {
   type ScriptureStudySettings,
   type SettingsStore,
 } from '../data-access'
-import {
-  isTranslationManifest,
-  type DownloadableTranslation,
-  type ModuleManifest,
-} from '../modules'
+import { isTranslationManifest, type ModuleManifest } from '../modules'
 
-export type SettingsCatalogEntry = DownloadableTranslation & {
+export type SettingsCatalogEntry = {
+  id: string
+  name: string
+  language: string
   strongsTagged?: boolean
 }
 

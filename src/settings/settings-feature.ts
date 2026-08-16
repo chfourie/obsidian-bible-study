@@ -20,7 +20,7 @@ export class SettingsFeature extends PluginFeature {
       settingsStore,
       installedManifests: () => modules.store.installedManifests(),
       availableTranslations: settingsCatalog(() =>
-        modules.getBibleClient.fetchAvailableTranslations(),
+        modules.bollsClient.fetchCatalog(),
       ),
       downloadModule: (translationId) =>
         modules.manager.downloadModule(translationId),

@@ -4,7 +4,7 @@ import type {
   BookContent,
   NormalizedModule,
   SourceInfo,
-} from './normalize-getbible-translation'
+} from './normalized-module'
 import type { TaggedVerse } from './verse-content'
 
 export type BollsVerse = {

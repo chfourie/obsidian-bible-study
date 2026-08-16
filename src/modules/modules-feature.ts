@@ -1,7 +1,7 @@
 import type { Plugin } from 'obsidian'
 import { PluginFeature, type SettingsStore } from '../data-access'
+import { BollsClient } from './bolls-client'
 import { BSB_MODULE_ID, BsbReleaseClient } from './bsb-release-client'
-import { GetBibleClient } from './getbible-client'
 import { removeLegacyOnlineTierArtifacts } from './legacy-online-tier-cleanup'
 import { ModuleManager } from './module-manager'
 import { ModuleStore } from './module-store'
@@ -10,7 +10,7 @@ import { ObsidianModuleDataDir } from './obsidian-module-data-dir'
 export class ModulesFeature extends PluginFeature {
   readonly store: ModuleStore
   readonly manager: ModuleManager
-  readonly getBibleClient: GetBibleClient
+  readonly bollsClient: BollsClient
   readonly #dataDir: ObsidianModuleDataDir
 
   constructor(
@@ -21,9 +21,9 @@ export class ModulesFeature extends PluginFeature {
     const dataDir = new ObsidianModuleDataDir(plugin)
     this.#dataDir = dataDir
     this.store = new ModuleStore(dataDir)
-    this.getBibleClient = new GetBibleClient()
+    this.bollsClient = new BollsClient()
     this.manager = new ModuleManager(
-      this.getBibleClient,
+      this.bollsClient,
       this.store,
       settingsStore,
       { [BSB_MODULE_ID]: new BsbReleaseClient() },

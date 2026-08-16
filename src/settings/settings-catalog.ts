@@ -1,4 +1,4 @@
-import { BSB_MODULE_ID, type DownloadableTranslation } from '../modules'
+import { BSB_MODULE_ID, type BollsCatalogTranslation } from '../modules'
 import type { SettingsCatalogEntry } from './settings-tab-model'
 
 const BSB_CATALOG_ENTRY: SettingsCatalogEntry = {
@@ -8,16 +8,24 @@ const BSB_CATALOG_ENTRY: SettingsCatalogEntry = {
   strongsTagged: true,
 }
 
+const TAGGED_BOLLS_IDS = new Set(['kjv'])
+
 export const settingsCatalog =
   (
-    fetchGetBibleCatalog: () => Promise<DownloadableTranslation[]>,
+    fetchBollsCatalog: () => Promise<BollsCatalogTranslation[]>,
   ): (() => Promise<SettingsCatalogEntry[]>) =>
   async () => {
-    const getBibleEntries = await fetchGetBibleCatalog().catch(
-      (): DownloadableTranslation[] => [],
+    const bollsEntries = await fetchBollsCatalog().catch(
+      (): BollsCatalogTranslation[] => [],
     )
     return [
-      ...getBibleEntries.filter((entry) => entry.id !== BSB_MODULE_ID),
+      ...bollsEntries
+        .filter((entry) => entry.id !== BSB_MODULE_ID)
+        .map((entry) =>
+          TAGGED_BOLLS_IDS.has(entry.id)
+            ? { ...entry, strongsTagged: true }
+            : entry,
+        ),
       BSB_CATALOG_ENTRY,
     ]
   }
