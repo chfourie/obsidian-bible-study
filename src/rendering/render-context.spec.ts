@@ -39,4 +39,23 @@ describe('renderContextFromSettings', () => {
   it('has no default translation when nothing is installed', () => {
     expect(renderContextFromSettings(DEFAULT_SETTINGS).defaultTranslationId).toBeNull()
   })
+
+  it('has no default translation when only non-translation modules are installed', () => {
+    const context = renderContextFromSettings({
+      ...DEFAULT_SETTINGS,
+      installedModuleIds: ['strongs-dictionaries'],
+    })
+
+    expect(context.defaultTranslationId).toBeNull()
+  })
+
+  it('skips non-translation modules when falling back to the first installed', () => {
+    const context = renderContextFromSettings({
+      ...DEFAULT_SETTINGS,
+      installedModuleIds: ['strongs-dictionaries', 'web'],
+    })
+
+    expect(context.defaultTranslationId).toBe('web')
+    expect(context.knownTranslationIds).not.toContain('strongs-dictionaries')
+  })
 })

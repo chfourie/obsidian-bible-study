@@ -1,4 +1,7 @@
-import type { BibleStudySettings } from '../data-access'
+import {
+  installedTranslationModuleIds,
+  type BibleStudySettings,
+} from '../data-access'
 import type { RenderContext } from './reference-render-model'
 
 // Translation ids the grammar recognizes even before they are installed:
@@ -16,10 +19,13 @@ const WELL_KNOWN_TRANSLATION_IDS = [
 
 export const renderContextFromSettings = (
   settings: BibleStudySettings,
-): RenderContext => ({
-  knownTranslationIds: [
-    ...new Set([...settings.installedModuleIds, ...WELL_KNOWN_TRANSLATION_IDS]),
-  ],
-  defaultTranslationId:
-    settings.defaultTranslationId ?? settings.installedModuleIds[0] ?? null,
-})
+): RenderContext => {
+  const installedTranslationIds = installedTranslationModuleIds(settings)
+  return {
+    knownTranslationIds: [
+      ...new Set([...installedTranslationIds, ...WELL_KNOWN_TRANSLATION_IDS]),
+    ],
+    defaultTranslationId:
+      settings.defaultTranslationId ?? installedTranslationIds[0] ?? null,
+  }
+}

@@ -9,7 +9,15 @@ the plugin as features start touching more of the API.
 
 import { StateEffect, StateField } from '@codemirror/state'
 
-export class Vault {}
+export class Vault {
+  getAllFolders(): TFolder[] {
+    return []
+  }
+
+  getMarkdownFiles(): TFile[] {
+    return []
+  }
+}
 
 export class TAbstractFile {
   vault: Vault = new Vault()
@@ -407,21 +415,35 @@ export class Setting {
 }
 
 // Just enough of AbstractInputSuggest for the folder/file suggest glue to
-// subclass; suggestions never pop up in tests.
+// subclass. Suggestions never pop up in tests; specs find their instance in
+// `created` (reset it between cases) and drive picks through
+// `selectSuggestion`, mirroring the real PopoverSuggest API.
 export abstract class AbstractInputSuggest<T> {
+  static created: AbstractInputSuggest<unknown>[] = []
+
+  #selectCallbacks: ((value: T, evt: MouseEvent | KeyboardEvent) => unknown)[] =
+    []
+
   constructor(
     public app: App,
     protected textInputEl: HTMLInputElement
-  ) {}
+  ) {
+    AbstractInputSuggest.created.push(this as AbstractInputSuggest<unknown>)
+  }
 
   protected abstract getSuggestions(query: string): T[] | Promise<T[]>
 
   abstract renderSuggestion(value: T, el: HTMLElement): void
 
   onSelect(
-    _callback: (value: T, evt: MouseEvent | KeyboardEvent) => unknown
+    callback: (value: T, evt: MouseEvent | KeyboardEvent) => unknown
   ): this {
+    this.#selectCallbacks.push(callback)
     return this
+  }
+
+  selectSuggestion(value: T, evt: MouseEvent | KeyboardEvent): void {
+    this.#selectCallbacks.forEach((callback) => callback(value, evt))
   }
 
   setValue(value: string): void {

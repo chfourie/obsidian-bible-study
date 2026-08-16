@@ -72,6 +72,7 @@ class FileSuggest extends AbstractInputSuggest<TFile> {
 
 export class BibleStudySettingTab extends PluginSettingTab {
   #unsubscribe: (() => void) | null = null
+  #renderQueuedBehindFocusedInput = false
 
   constructor(
     plugin: Plugin,
@@ -95,7 +96,16 @@ export class BibleStudySettingTab extends PluginSettingTab {
     void this.model.updateSettings(update)
   }
 
+  // Rebuilding the tab while the user is typing would wipe their unsaved
+  // text (values persist only on change/blur), so a render arriving while a
+  // text input has focus waits for the blur.
   #render(): void {
+    const focusedInput = this.#focusedTextInput()
+    if (focusedInput !== null) {
+      this.#queueRenderAfterBlur(focusedInput)
+      return
+    }
+    this.#renderQueuedBehindFocusedInput = false
     const view = this.model.view
     this.containerEl.empty()
     this.#renderGeneral(view)
@@ -103,6 +113,20 @@ export class BibleStudySettingTab extends PluginSettingTab {
     this.#renderStrongs(view)
     this.#renderReader(view)
     this.#renderAnnotations(view)
+  }
+
+  #focusedTextInput(): HTMLInputElement | null {
+    const active = this.containerEl.ownerDocument.activeElement
+    const isTextInput =
+      active instanceof HTMLInputElement &&
+      (active.type === 'text' || active.type === 'password')
+    return isTextInput && this.containerEl.contains(active) ? active : null
+  }
+
+  #queueRenderAfterBlur(input: HTMLInputElement): void {
+    if (this.#renderQueuedBehindFocusedInput) return
+    this.#renderQueuedBehindFocusedInput = true
+    input.addEventListener('blur', () => this.#render(), { once: true })
   }
 
   #renderGeneral(view: SettingsTabView): void {
