@@ -264,6 +264,58 @@ describe('SettingsTabModel translation management list', () => {
   })
 })
 
+describe('SettingsTabModel split refresh', () => {
+  it('refreshLocal loads settings, manifests, and Strongs state without touching the network', async () => {
+    const availableTranslations = vi.fn(async () => [])
+    const modulesWithUpdates = vi.fn(async () => [])
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['web'] },
+      installedManifests: async () => [manifest('web', 'World English Bible')],
+      availableTranslations,
+      modulesWithUpdates,
+      strongs: {
+        isInstalled: async () => true,
+        install: vi.fn(async () => {}),
+        remove: vi.fn(async () => {}),
+      },
+    })
+
+    await model.refreshLocal()
+
+    expect(model.view.defaultTranslationOptions).toEqual([
+      { id: 'web', label: 'World English Bible' },
+    ])
+    expect(model.view.strongsInstalled).toBe(true)
+    expect(availableTranslations).not.toHaveBeenCalled()
+    expect(modulesWithUpdates).not.toHaveBeenCalled()
+  })
+
+  it('refreshCatalog loads the catalogue and update markers and notifies', async () => {
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['bsb'] },
+      installedManifests: async () => [
+        manifest('bsb', 'Berean Standard Bible', true),
+      ],
+      availableTranslations: async () => [
+        { id: 'bsb', name: 'Berean Standard Bible', language: 'English' },
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+      modulesWithUpdates: async () => ['bsb'],
+    })
+    await model.refreshLocal()
+    let notified = 0
+    model.subscribe(() => (notified += 1))
+
+    await model.refreshCatalog()
+
+    expect(model.view.rows).toEqual([
+      expect.objectContaining({ id: 'bsb', installed: true, updateAvailable: true }),
+      expect.objectContaining({ id: 'web', installed: false }),
+    ])
+    expect(notified).toBe(1)
+  })
+})
+
 describe('SettingsTabModel settings mutations', () => {
   it('persists the language filter', async () => {
     const { model, settingsStore } = setup()

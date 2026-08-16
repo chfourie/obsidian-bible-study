@@ -42,9 +42,22 @@ type SetupOverrides = Partial<SettingsTabDeps> & {
 
 const flushAsync = () => new Promise((resolve) => window.setTimeout(resolve, 0))
 
+// Navigates the mock tab like a user: into a declarative sub-page and back.
+// Structural casts — the mock's page navigation mirrors the real runtime's
+// internal pageStack, which is absent from the public typings.
+const renderTab = (tab: unknown): void =>
+  (tab as { renderTab(): void }).renderTab()
+const openPage = (tab: unknown, name: string): void =>
+  (tab as { openPage(name: string): void }).openPage(name)
+const closePage = (tab: unknown): void =>
+  (tab as { closePage(): void }).closePage()
+
 const setup = async (
   overrides: SetupOverrides = {},
-  { opened = true }: { opened?: boolean } = {},
+  {
+    opened = true,
+    page = null,
+  }: { opened?: boolean; page?: string | null } = {},
 ) => {
   const { storedSettings, ...deps } = overrides
   let data: unknown = storedSettings ?? null
@@ -77,7 +90,11 @@ const setup = async (
   plugin.addSettingTab(tab)
   if (opened) {
     document.body.appendChild(tab.containerEl)
-    ;(tab as unknown as { renderTab(): void }).renderTab()
+    renderTab(tab)
+    if (page !== null) {
+      await flushAsync()
+      openPage(tab, page)
+    }
   }
   await flushAsync()
   return { tab, model, settingsStore, app, container: tab.containerEl }
@@ -192,13 +209,80 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
     // index-time update() already cached definitions — the tab must bootstrap
     // its model from the render itself (see the workaround note in
     // settings-tab.ts) or the Translations section stays permanently empty.
-    const { container } = await setup({
-      availableTranslations: async () => [
-        { id: 'web', name: 'World English Bible', language: 'English' },
-      ],
-    })
+    const { container } = await setup(
+      {
+        availableTranslations: async () => [
+          { id: 'web', name: 'World English Bible', language: 'English' },
+        ],
+      },
+      { page: 'Translations' },
+    )
 
     expect(hasSettingNamed(container, 'World English Bible')).toBe(true)
+  })
+})
+
+describe('ScriptureStudySettingTab deferred catalogue fetch', () => {
+  it('keeps the catalogue fetch off the main page', async () => {
+    const availableTranslations = vi.fn(async () => [])
+    const modulesWithUpdates = vi.fn(async () => [])
+    const { container } = await setup({
+      availableTranslations,
+      modulesWithUpdates,
+    })
+
+    expect(hasSettingNamed(container, 'Translations')).toBe(true)
+    expect(hasSettingNamed(container, 'Language')).toBe(false)
+    expect(availableTranslations).not.toHaveBeenCalled()
+    expect(modulesWithUpdates).not.toHaveBeenCalled()
+  })
+
+  it('fetches the catalogue once when the Translations page opens, despite re-renders', async () => {
+    const availableTranslations = vi.fn(async () => [
+      { id: 'web', name: 'World English Bible', language: 'English' },
+    ])
+    const { container } = await setup(
+      { availableTranslations },
+      { page: 'Translations' },
+    )
+
+    expect(hasSettingNamed(container, 'World English Bible')).toBe(true)
+    expect(availableTranslations).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not refetch when the page is reopened within one settings session', async () => {
+    const availableTranslations = vi.fn(async () => [
+      { id: 'web', name: 'World English Bible', language: 'English' },
+    ])
+    const { tab, container } = await setup(
+      { availableTranslations },
+      { page: 'Translations' },
+    )
+
+    closePage(tab)
+    openPage(tab, 'Translations')
+    await flushAsync()
+
+    expect(hasSettingNamed(container, 'World English Bible')).toBe(true)
+    expect(availableTranslations).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches again when settings are closed and reopened', async () => {
+    const availableTranslations = vi.fn(async () => [
+      { id: 'web', name: 'World English Bible', language: 'English' },
+    ])
+    const { tab } = await setup(
+      { availableTranslations },
+      { page: 'Translations' },
+    )
+
+    tab.hide()
+    renderTab(tab)
+    await flushAsync()
+    openPage(tab, 'Translations')
+    await flushAsync()
+
+    expect(availableTranslations).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -260,7 +344,7 @@ describe('ScriptureStudySettingTab translations section', () => {
         { id: 'web', name: 'World English Bible', language: 'English' },
         { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
       ],
-    })
+    }, { page: 'Translations' })
 
     const language = settingNamed(container, 'Language')
     expect([...dropdownOf(language).options].map((option) => option.value)).toEqual(
@@ -284,7 +368,7 @@ describe('ScriptureStudySettingTab translations section', () => {
         { id: 'web', name: 'World English Bible', language: 'English' },
       ],
       downloadModule,
-    })
+    }, { page: 'Translations' })
 
     const download = settingNamed(container, 'World English Bible').querySelector(
       'button',
@@ -318,7 +402,7 @@ describe('ScriptureStudySettingTab translations section', () => {
       downloadModule: vi.fn(async () => {
         throw new Error('network gone')
       }),
-    })
+    }, { page: 'Translations' })
 
     settingNamed(container, 'World English Bible').querySelector('button')?.click()
     await flushAsync()
@@ -342,7 +426,7 @@ describe('ScriptureStudySettingTab translations section', () => {
       ],
       modulesWithUpdates: async () => ['bsb'],
       deleteModule,
-    })
+    }, { page: 'Translations' })
 
     const row = settingNamed(container, 'Berean Standard Bible')
     expect(row.querySelector('.scripture-study-strongs-badge')?.textContent).toBe(
@@ -372,7 +456,7 @@ describe('ScriptureStudySettingTab translations section', () => {
         { id: 'kjv', name: 'King James Version', language: 'English' },
       ],
       downloadModule,
-    })
+    }, { page: 'Translations' })
 
     const row = settingNamed(container, 'King James Version')
     const buttons = [...row.querySelectorAll('button')]
@@ -393,7 +477,7 @@ describe('ScriptureStudySettingTab translations section', () => {
       storedSettings: { installedModuleIds: ['legacy'] },
       installedManifests: async () => [moduleManifest('legacy', 'Legacy Module')],
       availableTranslations: async () => [],
-    })
+    }, { page: 'Translations' })
 
     const row = settingNamed(container, 'Legacy Module')
     expect(
@@ -401,28 +485,21 @@ describe('ScriptureStudySettingTab translations section', () => {
     ).toEqual(['Delete'])
   })
 
-  it('lists catalogue rows in the Translations group, with no tier heading', async () => {
-    const { container } = await setup({
-      availableTranslations: async () => [
-        { id: 'web', name: 'World English Bible', language: 'English' },
-      ],
-    })
+  it('lists catalogue rows on the Translations sub-page, with no tier heading', async () => {
+    const { container } = await setup(
+      {
+        availableTranslations: async () => [
+          { id: 'web', name: 'World English Bible', language: 'English' },
+        ],
+      },
+      { page: 'Translations' },
+    )
 
     expect(hasSettingNamed(container, 'Downloadable')).toBe(false)
-    const headings = settingItems(container).filter((item) =>
-      item.classList.contains('setting-item-heading'),
-    )
-    const translationsHeading = headings.find(
-      (item) => settingName(item) === 'Translations',
-    )
-    expect(translationsHeading).toBeDefined()
-    const groupItems = []
-    let node = translationsHeading?.nextElementSibling ?? null
-    while (node && !node.classList.contains('setting-item-heading')) {
-      groupItems.push(settingName(node as HTMLElement))
-      node = node.nextElementSibling
-    }
-    expect(groupItems).toEqual(['Language', 'World English Bible'])
+    expect(settingItems(container).map(settingName)).toEqual([
+      'Language',
+      'World English Bible',
+    ])
   })
 
   it('renders no API key input or online rows, even with a legacy key stored', async () => {
@@ -613,12 +690,15 @@ describe('ScriptureStudySettingTab re-render stability', () => {
   })
 
   it('rebuilds when a change alters the structure', async () => {
-    const { container } = await setup({
-      availableTranslations: async () => [
-        { id: 'web', name: 'World English Bible', language: 'English' },
-        { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
-      ],
-    })
+    const { container } = await setup(
+      {
+        availableTranslations: async () => [
+          { id: 'web', name: 'World English Bible', language: 'English' },
+          { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
+        ],
+      },
+      { page: 'Translations' },
+    )
     expect(hasSettingNamed(container, 'Ou Vertaling')).toBe(false)
 
     changeDropdown(settingNamed(container, 'Language'), 'Afrikaans')

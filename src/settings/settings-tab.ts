@@ -5,6 +5,7 @@ import {
   type SettingDefinitionControl,
   type SettingDefinitionGroup,
   type SettingDefinitionItem,
+  type SettingDefinitionPage,
   type TFile,
 } from 'obsidian'
 import type { AnnotationOrdering, ScriptureStudySettings } from '../data-access'
@@ -39,6 +40,7 @@ type ReaderDefaultKey = Extract<SettingsControlKey, `reader${string}`>
 
 export class ScriptureStudySettingTab extends PluginSettingTab {
   #unsubscribe: (() => void) | null = null
+  #catalogLoadedThisOpen = false
   #updateQueuedBehindFocusedInput = false
   #renderedStructureSignature: string | null = null
 
@@ -80,7 +82,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         'fallbackTranslationId',
         view.fallbackTranslationOptions,
       ),
-      this.#translationsGroup(view),
+      this.#translationsPage(view),
       this.#strongsGroup(view),
       this.#readerGroup(),
       this.#annotationsGroup(),
@@ -90,17 +92,31 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
   override hide(): void {
     this.#unsubscribe?.()
     this.#unsubscribe = null
+    this.#catalogLoadedThisOpen = false
     this.#renderedStructureSignature = null
   }
 
   #bootstrapWhenOnScreen(): void {
     if (this.#unsubscribe !== null || !this.containerEl.isConnected) return
     this.#unsubscribe = this.model.subscribe(() => this.update())
-    void this.model.refresh()
+    void this.model.refreshLocal()
+  }
+
+  // The catalogue fetch is deferred to the Translations sub-page: the
+  // languageFilter control renders only there, so its value read doubles as
+  // the page-open hook (same render-time hook as #bootstrapWhenOnScreen).
+  // Once per settings-open cycle — re-entering the page reuses the loaded
+  // catalogue; hide() rearms it.
+  #loadCatalogOnTranslationsPageRender(): void {
+    if (this.#catalogLoadedThisOpen || !this.containerEl.isConnected) return
+    this.#catalogLoadedThisOpen = true
+    void this.model.refreshCatalog()
   }
 
   override getControlValue(key: string): unknown {
     this.#bootstrapWhenOnScreen()
+    if ((key as SettingsControlKey) === 'languageFilter')
+      this.#loadCatalogOnTranslationsPageRender()
     const view = this.model.view
     const settings = view.settings
     switch (key as SettingsControlKey) {
@@ -268,15 +284,16 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     }
   }
 
-  #translationsGroup(
+  #translationsPage(
     view: SettingsTabView,
-  ): SettingDefinitionGroup<SettingsControlKey> {
+  ): SettingDefinitionPage<SettingsControlKey> {
     const languages = [
       ...new Set([...view.languages, view.settings.languageFilter]),
     ].sort()
     return {
-      type: 'group',
-      heading: 'Translations',
+      type: 'page',
+      name: 'Translations',
+      desc: 'Download and manage translation modules.',
       items: [
         {
           name: 'Language',

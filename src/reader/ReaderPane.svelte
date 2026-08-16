@@ -88,6 +88,37 @@
     model.setToggle(key, value as ReaderToggles[typeof key])
   }
 
+  // The translation pills collapse to a dropdown when their natural width no
+  // longer fits the toolbar space left over by the toggle groups. The hidden
+  // measurer keeps rendering the pills so the row can expand back.
+  let pillSlotEl: HTMLElement | null = $state(null)
+  let pillMeasureEl: HTMLElement | null = $state(null)
+  let pillsCollapsed = $state(false)
+  const activeTranslationId = $derived(
+    view.translations.find((pill) => pill.active)?.id ?? '',
+  )
+
+  const remeasurePills = (): void => {
+    if (pillSlotEl === null || pillMeasureEl === null) return
+    pillsCollapsed = pillMeasureEl.scrollWidth > pillSlotEl.clientWidth
+  }
+
+  $effect(() => {
+    void view.translations
+    remeasurePills()
+  })
+
+  $effect(() => {
+    if (pillSlotEl === null) return
+    const observer = new ResizeObserver(remeasurePills)
+    observer.observe(pillSlotEl)
+    return () => observer.disconnect()
+  })
+
+  const onTranslationPicked = (event: Event): void => {
+    void model.setTranslation((event.currentTarget as HTMLSelectElement).value)
+  }
+
   const verseMarks = (row: VerseRowView): { anno: boolean; mentions: number } => ({
     anno: row.annotations > 0,
     mentions: row.mentions,
@@ -293,15 +324,33 @@
         </span>
       </span>
     {/each}
-    <span class="bsr-spacer"></span>
-    {#each view.translations as pill (pill.id)}
-      <button
-        type="button"
-        class="bsr-pill"
-        class:bsr-on={pill.active}
-        onclick={() => void model.setTranslation(pill.id)}
-      >{pill.label}</button>
-    {/each}
+    <span class="bsr-trans" bind:this={pillSlotEl}>
+      <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
+        {#each view.translations as pill (pill.id)}
+          <button type="button" class="bsr-pill" tabindex="-1">{pill.label}</button>
+        {/each}
+      </span>
+      {#if pillsCollapsed}
+        <select
+          class="dropdown"
+          value={activeTranslationId}
+          onchange={onTranslationPicked}
+        >
+          {#each view.translations as pill (pill.id)}
+            <option value={pill.id}>{pill.label}</option>
+          {/each}
+        </select>
+      {:else}
+        {#each view.translations as pill (pill.id)}
+          <button
+            type="button"
+            class="bsr-pill"
+            class:bsr-on={pill.active}
+            onclick={() => void model.setTranslation(pill.id)}
+          >{pill.label}</button>
+        {/each}
+      {/if}
+    </span>
   </div>
 
   {#if view.toggles.nav === 'breadcrumb'}
@@ -580,6 +629,29 @@
 
   .bsr-spacer {
     flex: 1;
+  }
+
+  .bsr-trans {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bsr-trans-measure {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    display: flex;
+    gap: 10px;
+    white-space: nowrap;
+  }
+
+  .bsr-trans select.dropdown {
+    max-width: 100%;
   }
 
   .bsr-crumb {

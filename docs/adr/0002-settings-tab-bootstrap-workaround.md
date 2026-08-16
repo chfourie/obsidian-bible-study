@@ -18,6 +18,8 @@ So for any tab whose index-time definitions are non-empty, `getSettingDefinition
 
 Bootstrap from `getControlValue()` as well as `getSettingDefinitions()`, guarded by the same "not yet subscribed and `containerEl.isConnected`" check (`#bootstrapWhenOnScreen()` in `src/settings/settings-tab.ts`). The 1.13.7 renderer calls `getControlValue()` for every `control`-type definition on each on-screen render — including renders from the cached `settingItems` — and the tab always contains controls, so it fires reliably on every open. The index-time `update()` does not render controls, so plugin load still triggers no refresh. Teardown stays in `hide()`.
 
+The same render-time hook also serves as page-open detection: the Translations list lives on a declarative sub-page (`type: 'page'`), whose catalogue fetch is deferred until the page first renders. The `languageFilter` control renders only on that page, so `getControlValue('languageFilter')` doubles as the page-open signal (`#loadCatalogOnTranslationsPageRender()`), once per settings-open cycle, rearmed in `hide()`. There is no public per-page-open callback either, so this rides on the same workaround.
+
 ## Consequences
 
 - Opening the settings tab reliably subscribes the tab to its model and refreshes the catalogue; closing it still tears both down.

@@ -80,12 +80,30 @@ export class SettingsTabModel {
   }
 
   async refresh(): Promise<void> {
+    await this.#loadLocal()
+    await this.#loadCatalog()
+    this.#notify()
+  }
+
+  async refreshLocal(): Promise<void> {
+    await this.#loadLocal()
+    this.#notify()
+  }
+
+  async refreshCatalog(): Promise<void> {
+    await this.#loadCatalog()
+    this.#notify()
+  }
+
+  async #loadLocal(): Promise<void> {
     this.#settings = await this.deps.settingsStore.loadSettings()
     this.#manifests = await this.deps.installedManifests()
+    this.#strongsInstalled = await this.deps.strongs.isInstalled()
+  }
+
+  async #loadCatalog(): Promise<void> {
     this.#catalog = await this.deps.availableTranslations()
     this.#updates = await this.deps.modulesWithUpdates()
-    this.#strongsInstalled = await this.deps.strongs.isInstalled()
-    this.#notify()
   }
 
   async updateSettings(
@@ -113,7 +131,7 @@ export class SettingsTabModel {
       this.#strongsError = errorMessage(error)
     }
     this.#strongsBusy = false
-    await this.refresh()
+    await this.refreshLocal()
   }
 
   async download(translationId: string): Promise<void> {

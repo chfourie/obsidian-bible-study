@@ -475,7 +475,17 @@ export type SettingDefinitionGroup = {
   items?: SettingDefinition[]
 }
 
-export type SettingDefinitionItem = SettingDefinition | SettingDefinitionGroup
+export type SettingDefinitionPage = {
+  type: 'page'
+  name: string
+  desc?: string | DocumentFragment
+  items?: SettingDefinitionItem[]
+}
+
+export type SettingDefinitionItem =
+  | SettingDefinition
+  | SettingDefinitionGroup
+  | SettingDefinitionPage
 
 const resolveDisabled = (flag: boolean | (() => boolean) | undefined): boolean =>
   typeof flag === 'function' ? flag() : (flag ?? false)
@@ -558,6 +568,7 @@ class FileControlSuggest extends AbstractInputSuggest<TFile> {
 export class PluginSettingTab {
   containerEl: HTMLElement = document.createElement('div')
   settingItems: SettingDefinitionItem[] = []
+  #openPageName: string | null = null
 
   constructor(
     public app: App,
@@ -579,8 +590,22 @@ export class PluginSettingTab {
   }
 
   renderTab(): void {
+    this.#openPageName = null
     if (this.settingItems.length > 0) this.#render()
     else this.display()
+  }
+
+  // Navigates into / out of a declarative sub-page, standing in for the real
+  // runtime's pageStack. The open page re-renders on update(), like
+  // refreshCurrentPage() re-displaying the stack's top page.
+  openPage(name: string): void {
+    this.#openPageName = name
+    this.#render()
+  }
+
+  closePage(): void {
+    this.#openPageName = null
+    this.#render()
   }
 
   update(): void {
@@ -590,13 +615,34 @@ export class PluginSettingTab {
 
   #render(): void {
     this.containerEl.empty()
-    for (const item of this.settingItems) {
+    for (const item of this.#currentPageItems()) {
       if ('type' in item && item.type === 'group') {
         this.#renderGroup(item)
+      } else if ('type' in item && item.type === 'page') {
+        this.#renderPageEntry(item)
       } else {
         this.#renderDefinition(item as SettingDefinition)
       }
     }
+  }
+
+  #currentPageItems(): SettingDefinitionItem[] {
+    if (this.#openPageName === null) return this.settingItems
+    const page = this.settingItems.find(
+      (item) =>
+        'type' in item &&
+        item.type === 'page' &&
+        item.name === this.#openPageName
+    )
+    if (page === undefined) throw new Error(`no page named ${this.#openPageName}`)
+    return (page as SettingDefinitionPage).items ?? []
+  }
+
+  #renderPageEntry(page: SettingDefinitionPage): void {
+    const setting = new Setting(this.containerEl).setName(page.name)
+    if (page.desc !== undefined) setting.setDesc(page.desc)
+    setting.settingEl.addClass('setting-item-navigate')
+    setting.settingEl.addEventListener('click', () => this.openPage(page.name))
   }
 
   hide(): void {}
