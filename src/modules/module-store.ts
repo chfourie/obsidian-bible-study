@@ -4,7 +4,7 @@ import type { ModuleManifest } from './module-manifest'
 import type {
   BookContent,
   NormalizedModule,
-} from './normalize-getbible-translation'
+} from './normalized-module'
 import { verseTextOf } from './verse-content'
 
 const MODULES_ROOT = 'modules'

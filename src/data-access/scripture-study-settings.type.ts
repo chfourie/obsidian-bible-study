@@ -6,8 +6,6 @@ export type ScriptureStudySettings = {
   installedModuleIds: string[]
   defaultTranslationId: string | null
   fallbackTranslationId: string | null
-  apiBibleKey: string | null
-  enabledOnlineTranslationIds: string[]
   languageFilter: string
   readerDetailsDefault: 'inline' | 'side-panel'
   readerNavDefault: 'tree' | 'breadcrumb'
@@ -22,8 +20,6 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   installedModuleIds: [],
   defaultTranslationId: null,
   fallbackTranslationId: null,
-  apiBibleKey: null,
-  enabledOnlineTranslationIds: [],
   languageFilter: 'English',
   readerDetailsDefault: 'inline',
   readerNavDefault: 'tree',

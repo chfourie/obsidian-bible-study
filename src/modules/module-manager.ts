@@ -1,7 +1,6 @@
 import type { SettingsStore } from '../data-access'
 import type { ModuleManifest } from './module-manifest'
 import type { ModuleStore } from './module-store'
-import { normalizeGetBibleTranslation } from './normalize-getbible-translation'
 import type { PrebuiltModuleSource } from './prebuilt-module-source'
 import type { TranslationSource } from './translation-source'
 
@@ -24,19 +23,7 @@ export class ModuleManager {
     const prebuilt = this.prebuiltSources[translationId]
     if (prebuilt !== undefined)
       return this.#downloadPrebuilt(translationId, prebuilt)
-    const [download, checksums] = await Promise.all([
-      this.source.fetchTranslation(translationId),
-      this.source.fetchChecksums(),
-    ])
-    const published = checksums[translationId]
-    if (published !== undefined && published !== download.checksum) {
-      throw new ChecksumMismatchError(translationId)
-    }
-    const module = normalizeGetBibleTranslation(
-      translationId,
-      download.document,
-      { source: download.url, sourceChecksum: download.checksum },
-    )
+    const module = await this.source.fetchModule(translationId)
     await this.store.saveModule(module)
     await this.#recordInstalled(translationId)
     return module.manifest
@@ -63,18 +50,16 @@ export class ModuleManager {
     await this.#recordDeleted(moduleId)
   }
 
+  // Catalogue modules never appear here: bolls publishes no checksums, so
+  // updating one is an ordinary re-download. Only prebuilt sources publish
+  // checksums to compare against.
   async modulesWithUpdates(): Promise<string[]> {
-    const [installed, checksums] = await Promise.all([
-      this.store.installedManifests(),
-      this.source.fetchChecksums(),
-    ])
+    const installed = await this.store.installedManifests()
     const updated = await Promise.all(
       installed.map(async (manifest) => {
         const prebuilt = this.prebuiltSources[manifest.id]
-        const published =
-          prebuilt !== undefined
-            ? await prebuilt.fetchChecksum()
-            : (checksums[manifest.id] ?? null)
+        if (prebuilt === undefined) return null
+        const published = await prebuilt.fetchChecksum()
         return published !== null && published !== manifest.sourceChecksum
           ? manifest.id
           : null

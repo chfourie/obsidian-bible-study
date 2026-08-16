@@ -2,13 +2,12 @@ import { App, Plugin, type PluginManifest } from 'obsidian'
 import { AnnotationsFeature } from '../annotations'
 import { DEFAULT_SETTINGS, SettingsStore } from '../data-access'
 import {
-  gatedApiBibleIdFor,
   ModulesFeature,
   ObsidianModuleDataDir,
   SUGGESTED_FIRST_TRANSLATION,
 } from '../modules'
 import { ReaderFeature } from '../reader'
-import { OnlinePassageSource, RenderingFeature } from '../rendering'
+import { RenderingFeature } from '../rendering'
 import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
@@ -26,13 +25,6 @@ export default class ScriptureStudyPlugin extends Plugin {
 
   readonly vaultIndex = new VaultIndexFeature(this)
   readonly modules = new ModulesFeature(this, this.settingsStore)
-  readonly #onlineSource = new OnlinePassageSource({
-    client: this.modules.apiBibleClient,
-    cache: this.modules.passageCache,
-    reportFums: (fumsToken) => void this.modules.fumsReporter.report(fumsToken),
-    apiBibleIdFor: (translationId) =>
-      gatedApiBibleIdFor(this.#settings)(translationId),
-  })
   readonly strongsDictionaries = new StrongsDictionaries(
     new ObsidianModuleDataDir(this),
     new StepBibleLexiconClient(),
@@ -51,7 +43,6 @@ export default class ScriptureStudyPlugin extends Plugin {
     this,
     this.modules.store,
     this.vaultIndex.index,
-    this.#onlineSource,
     {
       firstRun: this.#firstRun,
       strongs: {
@@ -69,7 +60,6 @@ export default class ScriptureStudyPlugin extends Plugin {
     this,
     this.modules.store,
     this.reader,
-    this.#onlineSource,
     this.vaultIndex.index,
     this.#firstRun,
   )

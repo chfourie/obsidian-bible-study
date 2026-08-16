@@ -3,7 +3,7 @@ import { makeVerseId } from '../reference'
 import type { ModuleDataDir } from './module-data-dir'
 import type { ModuleManifest } from './module-manifest'
 import { ModuleStore } from './module-store'
-import type { NormalizedModule } from './normalize-getbible-translation'
+import type { NormalizedModule } from './normalized-module'
 
 class FakeModuleDataDir implements ModuleDataDir {
   readonly files = new Map<string, string>()

@@ -4,14 +4,12 @@ import {
   type ScriptureStudySettings,
   type SettingsStore,
 } from '../data-access'
-import {
-  isTranslationManifest,
-  type DownloadableTranslation,
-  type ModuleManifest,
-  type OnlineTranslation,
-} from '../modules'
+import { isTranslationManifest, type ModuleManifest } from '../modules'
 
-export type SettingsCatalogEntry = DownloadableTranslation & {
+export type SettingsCatalogEntry = {
+  id: string
+  name: string
+  language: string
   strongsTagged?: boolean
 }
 
@@ -19,11 +17,9 @@ export type SettingsTabDeps = {
   settingsStore: Pick<SettingsStore, 'loadSettings' | 'updateSettings'>
   installedManifests: () => Promise<ModuleManifest[]>
   availableTranslations: () => Promise<SettingsCatalogEntry[]>
-  onlineTranslations: readonly OnlineTranslation[]
   downloadModule: (translationId: string) => Promise<unknown>
   deleteModule: (moduleId: string) => Promise<void>
   modulesWithUpdates: () => Promise<string[]>
-  clearPassageCache: (translationId: string) => Promise<void>
   strongs: {
     isInstalled: () => Promise<boolean>
     install: () => Promise<void>
@@ -36,12 +32,11 @@ export type TranslationOption = { id: string; label: string }
 export type TranslationRowView = {
   id: string
   name: string
-  tier: 'downloadable' | 'online'
   installed: boolean
-  enabled: boolean
   busy: 'downloading' | 'removing' | null
   error: string | null
   updateAvailable: boolean
+  redownloadable: boolean
   strongsTagged: boolean
 }
 
@@ -100,38 +95,11 @@ export class SettingsTabModel {
     this.#notify()
   }
 
-  async setApiBibleKey(key: string): Promise<void> {
-    const trimmed = key.trim()
-    await this.updateSettings((settings) => ({
-      ...settings,
-      apiBibleKey: trimmed === '' ? null : trimmed,
-    }))
-  }
-
   async setLanguageFilter(language: string): Promise<void> {
     await this.updateSettings((settings) => ({
       ...settings,
       languageFilter: language,
     }))
-  }
-
-  async setOnlineEnabled(
-    translationId: string,
-    enabled: boolean,
-  ): Promise<void> {
-    await this.updateSettings((settings) => ({
-      ...settings,
-      enabledOnlineTranslationIds: enabled
-        ? [...new Set([...settings.enabledOnlineTranslationIds, translationId])]
-        : settings.enabledOnlineTranslationIds.filter(
-            (id) => id !== translationId,
-          ),
-    }))
-  }
-
-  async clearCache(translationId: string): Promise<void> {
-    await this.deps.clearPassageCache(translationId)
-    this.#notify()
   }
 
   async setStrongsEnabled(enabled: boolean): Promise<void> {
@@ -178,16 +146,13 @@ export class SettingsTabModel {
   }
 
   get view(): SettingsTabView {
-    const defaultTranslationOptions = [
-      ...this.#installedTranslationOptions(),
-      ...this.#enabledOnlineOptions(),
-    ]
+    const defaultTranslationOptions = this.#installedTranslationOptions()
     return {
       settings: this.#settings,
       defaultTranslationOptions,
       fallbackTranslationOptions: this.#installedTranslationOptions(),
       noTranslationsAvailable: defaultTranslationOptions.length === 0,
-      rows: [...this.#downloadableRows(), ...this.#onlineRows()],
+      rows: this.#downloadableRows(),
       languages: [
         ...new Set(this.#catalog.map((entry) => entry.language)),
       ].sort(),
@@ -218,34 +183,19 @@ export class SettingsTabModel {
         name: installed.name,
         language: installed.language,
       }))
+    const catalogAllIds = this.#catalog.map((entry) => entry.id)
     return [...listed, ...installedOnly].map((entry) => ({
       id: entry.id,
       name: entry.name,
-      tier: 'downloadable',
       installed: installedIds.includes(entry.id),
-      enabled: false,
       busy: this.#busy.get(entry.id) ?? null,
       error: this.#errors.get(entry.id) ?? null,
       updateAvailable: this.#updates.includes(entry.id),
+      redownloadable: catalogAllIds.includes(entry.id),
       strongsTagged:
         this.#manifests.find((installed) => installed.id === entry.id)
           ?.capabilities.strongsTagged ??
         ('strongsTagged' in entry && entry.strongsTagged === true),
-    }))
-  }
-
-  #onlineRows(): TranslationRowView[] {
-    if (!hasApiKey(this.#settings)) return []
-    return this.deps.onlineTranslations.map((online) => ({
-      id: online.id,
-      name: online.name,
-      tier: 'online',
-      installed: false,
-      enabled: this.#settings.enabledOnlineTranslationIds.includes(online.id),
-      busy: null,
-      error: null,
-      updateAvailable: false,
-      strongsTagged: false,
     }))
   }
 
@@ -256,16 +206,4 @@ export class SettingsTabModel {
       .filter((installed) => installedIds.includes(installed.id))
       .map((installed) => ({ id: installed.id, label: installed.name }))
   }
-
-  #enabledOnlineOptions(): TranslationOption[] {
-    if (!hasApiKey(this.#settings)) return []
-    return this.deps.onlineTranslations
-      .filter((online) =>
-        this.#settings.enabledOnlineTranslationIds.includes(online.id),
-      )
-      .map((online) => ({ id: online.id, label: online.name }))
-  }
 }
-
-const hasApiKey = (settings: ScriptureStudySettings): boolean =>
-  settings.apiBibleKey !== null && settings.apiBibleKey.trim() !== ''

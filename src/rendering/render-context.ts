@@ -5,8 +5,7 @@ import {
 import type { RenderContext } from './reference-render-model'
 
 // Translation ids the grammar recognizes even before they are installed:
-// the downloadable tier (getBible + BSB) and the API.Bible starter-tier
-// licensed bibles (spec §6.1).
+// common ids from the bolls.life catalogue plus BSB (spec §6.1).
 const WELL_KNOWN_TRANSLATION_IDS = [
   'kjv',
   'web',

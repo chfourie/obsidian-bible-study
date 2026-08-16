@@ -37,7 +37,7 @@ const pluginManifest = {
 }
 
 type SetupOverrides = Partial<SettingsTabDeps> & {
-  storedSettings?: Partial<ScriptureStudySettings>
+  storedSettings?: Partial<ScriptureStudySettings> & Record<string, unknown>
 }
 
 const flushAsync = () => new Promise((resolve) => window.setTimeout(resolve, 0))
@@ -58,13 +58,9 @@ const setup = async (
     settingsStore,
     installedManifests: async () => [],
     availableTranslations: async () => [],
-    onlineTranslations: [
-      { id: 'nkjv', apiBibleId: 'nkjv-api-id', name: 'New King James Version' },
-    ],
     downloadModule: vi.fn(async () => {}),
     deleteModule: vi.fn(async () => {}),
     modulesWithUpdates: async () => [],
-    clearPassageCache: vi.fn(async () => {}),
     strongs: {
       isInstalled: async () => false,
       install: vi.fn(async () => {}),
@@ -165,7 +161,6 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
       expect.arrayContaining([
         'Default translation',
         'Offline fallback translation',
-        'API.Bible key',
         'Language',
         "Enable Strong's",
         'Details',
@@ -243,19 +238,6 @@ describe('ScriptureStudySettingTab general pickers', () => {
 })
 
 describe('ScriptureStudySettingTab translations section', () => {
-  it('masks the API key input and persists it on change', async () => {
-    const { container, settingsStore } = await setup()
-
-    const input = inputOf(settingNamed(container, 'API.Bible key'))
-    expect(input.type).toBe('password')
-
-    input.value = '  key-123  '
-    input.dispatchEvent(new Event('change'))
-    await flushAsync()
-
-    expect((await settingsStore.loadSettings()).apiBibleKey).toBe('key-123')
-  })
-
   it('offers catalog languages plus the persisted filter, and persists changes', async () => {
     const { container, settingsStore } = await setup({
       storedSettings: { languageFilter: 'Zulu' },
@@ -364,36 +346,78 @@ describe('ScriptureStudySettingTab translations section', () => {
     expect(deleteModule).toHaveBeenCalledWith('bsb')
   })
 
-  it('hides the online tier without an API key', async () => {
-    const { container } = await setup()
-
-    expect(hasSettingNamed(container, 'Online — requires key')).toBe(false)
-    expect(hasSettingNamed(container, 'New King James Version')).toBe(false)
-  })
-
-  it('wires cache-clear and the enable toggle on online rows', async () => {
-    const clearPassageCache = vi.fn(async () => {})
-    const { container, settingsStore } = await setup({
-      storedSettings: { apiBibleKey: 'key-123' },
-      clearPassageCache,
+  it('offers Re-download and Delete on an installed catalogue row — bolls publishes no checksums, so updating is re-downloading', async () => {
+    const downloadModule = vi.fn(async () => {})
+    const { container } = await setup({
+      storedSettings: { installedModuleIds: ['kjv'] },
+      installedManifests: async () => [
+        moduleManifest('kjv', 'King James Version', true),
+      ],
+      availableTranslations: async () => [
+        { id: 'kjv', name: 'King James Version', language: 'English' },
+      ],
+      downloadModule,
     })
 
-    expect(hasSettingNamed(container, 'Online — requires key')).toBe(true)
-    const row = settingNamed(container, 'New King James Version')
-    expect(
-      row.querySelector('.setting-item-description')?.textContent,
-    ).toContain('14 days')
+    const row = settingNamed(container, 'King James Version')
+    const buttons = [...row.querySelectorAll('button')]
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      'Re-download',
+      'Delete',
+    ])
+    expect(buttons[0].classList.contains('mod-cta')).toBe(false)
 
-    row.querySelector<HTMLButtonElement>('button[data-icon="eraser"]')?.click()
-    await flushAsync()
-    expect(clearPassageCache).toHaveBeenCalledWith('nkjv')
-
-    changeToggle(settingNamed(container, 'New King James Version'), true)
+    buttons[0].click()
     await flushAsync()
 
+    expect(downloadModule).toHaveBeenCalledWith('kjv')
+  })
+
+  it('offers only Delete on an installed module the catalogue no longer lists', async () => {
+    const { container } = await setup({
+      storedSettings: { installedModuleIds: ['legacy'] },
+      installedManifests: async () => [moduleManifest('legacy', 'Legacy Module')],
+      availableTranslations: async () => [],
+    })
+
+    const row = settingNamed(container, 'Legacy Module')
     expect(
-      (await settingsStore.loadSettings()).enabledOnlineTranslationIds,
-    ).toEqual(['nkjv'])
+      [...row.querySelectorAll('button')].map((button) => button.textContent),
+    ).toEqual(['Delete'])
+  })
+
+  it('lists catalogue rows in the Translations group, with no tier heading', async () => {
+    const { container } = await setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+    })
+
+    expect(hasSettingNamed(container, 'Downloadable')).toBe(false)
+    const headings = settingItems(container).filter((item) =>
+      item.classList.contains('setting-item-heading'),
+    )
+    const translationsHeading = headings.find(
+      (item) => settingName(item) === 'Translations',
+    )
+    expect(translationsHeading).toBeDefined()
+    const groupItems = []
+    let node = translationsHeading?.nextElementSibling ?? null
+    while (node && !node.classList.contains('setting-item-heading')) {
+      groupItems.push(settingName(node as HTMLElement))
+      node = node.nextElementSibling
+    }
+    expect(groupItems).toEqual(['Language', 'World English Bible'])
+  })
+
+  it('renders no API key input or online rows, even with a legacy key stored', async () => {
+    const { container } = await setup({
+      storedSettings: { apiBibleKey: 'key-123' },
+    })
+
+    expect(hasSettingNamed(container, 'API.Bible key')).toBe(false)
+    expect(hasSettingNamed(container, 'Online — requires key')).toBe(false)
+    expect(hasSettingNamed(container, 'New King James Version')).toBe(false)
   })
 })
 
@@ -574,12 +598,18 @@ describe('ScriptureStudySettingTab re-render stability', () => {
   })
 
   it('rebuilds when a change alters the structure', async () => {
-    const { container } = await setup()
+    const { container } = await setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+        { id: 'aov', name: 'Ou Vertaling', language: 'Afrikaans' },
+      ],
+    })
+    expect(hasSettingNamed(container, 'Ou Vertaling')).toBe(false)
 
-    changeInput(settingNamed(container, 'API.Bible key'), 'key-123')
+    changeDropdown(settingNamed(container, 'Language'), 'Afrikaans')
     await flushAsync()
 
-    expect(hasSettingNamed(container, 'Online — requires key')).toBe(true)
+    expect(hasSettingNamed(container, 'Ou Vertaling')).toBe(true)
   })
 })
 
@@ -587,7 +617,7 @@ describe('ScriptureStudySettingTab unsaved text input', () => {
   it('keeps a focused text input and its unsaved value across background refreshes', async () => {
     const { container, model } = await setup()
 
-    const input = inputOf(settingNamed(container, 'API.Bible key'))
+    const input = inputOf(settingNamed(container, 'Folder'))
     input.focus()
     input.value = 'partially-typed'
 

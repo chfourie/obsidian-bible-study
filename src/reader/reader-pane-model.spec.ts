@@ -974,8 +974,8 @@ describe("Strong's word lookup", () => {
   })
 })
 
-describe('online translations in the reader', () => {
-  it('shows an unavailable stacked row for an online translation without content', async () => {
+describe('translation availability in the reader', () => {
+  it('shows an unavailable stacked row for a translation without content', async () => {
     const model = modelWith({
       availableTranslations: async () => [
         translation('web'),

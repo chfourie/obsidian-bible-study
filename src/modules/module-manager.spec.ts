@@ -4,18 +4,12 @@ import { makeVerseId } from '../reference'
 import type { ModuleDataDir } from './module-data-dir'
 import { ChecksumMismatchError, ModuleManager } from './module-manager'
 import { ModuleStore } from './module-store'
-import type {
-  GetBibleTranslation,
-  NormalizedModule,
-} from './normalize-getbible-translation'
+import type { NormalizedModule } from './normalized-module'
 import type {
   PrebuiltModuleDownload,
   PrebuiltModuleSource,
 } from './prebuilt-module-source'
-import type {
-  TranslationDownload,
-  TranslationSource,
-} from './translation-source'
+import type { TranslationSource } from './translation-source'
 
 class InMemoryModuleDataDir implements ModuleDataDir {
   readonly files = new Map<string, string>()
@@ -46,52 +40,31 @@ class InMemoryModuleDataDir implements ModuleDataDir {
   }
 }
 
-const webDocument = (): GetBibleTranslation => ({
-  translation: 'World English Bible',
-  abbreviation: 'web',
-  lang: 'en',
-  language: 'English',
-  distribution_license: 'Public Domain',
-  books: [
-    {
-      nr: 43,
-      name: 'John',
-      chapters: [
-        {
-          chapter: 15,
-          name: 'John 15',
-          verses: [
-            {
-              chapter: 15,
-              verse: 4,
-              name: 'John 15:4',
-              text: 'Remain in me, and I in you.',
-            },
-          ],
-        },
-      ],
-    },
-  ],
+const webModule = (): NormalizedModule => ({
+  manifest: {
+    id: 'web',
+    name: 'World English Bible',
+    language: 'English',
+    license: '',
+    source: 'https://bolls.life/static/translations/WEB.json',
+    sourceChecksum: 'sha-web-1',
+    formatVersion: 1,
+    capabilities: { strongsTagged: false },
+  },
+  books: new Map([
+    [43, { [makeVerseId(43, 15, 4)]: 'Remain in me, and I in you.' }],
+  ]),
 })
 
 class FakeTranslationSource implements TranslationSource {
-  checksums: Record<string, string> = { web: 'sha-web-1' }
-  downloads: Record<string, TranslationDownload> = {
-    web: {
-      document: webDocument(),
-      checksum: 'sha-web-1',
-      url: 'https://api.getbible.net/v2/web.json',
-    },
-  }
+  modules: Record<string, NormalizedModule> = { web: webModule() }
+  requestedIds: string[] = []
 
-  async fetchTranslation(translationId: string): Promise<TranslationDownload> {
-    const download = this.downloads[translationId]
-    if (!download) throw new Error(`unknown translation ${translationId}`)
-    return download
-  }
-
-  async fetchChecksums(): Promise<Record<string, string>> {
-    return this.checksums
+  async fetchModule(moduleId: string): Promise<NormalizedModule> {
+    this.requestedIds.push(moduleId)
+    const module = this.modules[moduleId]
+    if (!module) throw new Error(`unknown translation ${moduleId}`)
+    return module
   }
 }
 
@@ -157,56 +130,27 @@ const setup = () => {
 }
 
 describe('ModuleManager download', () => {
-  it('installs a translation as a readable module with its source checksum', async () => {
-    const { store, manager } = setup()
+  it('installs the module the source serves for the requested id', async () => {
+    const { source, store, manager } = setup()
 
     const manifest = await manager.downloadModule('web')
 
-    expect(manifest).toEqual({
-      id: 'web',
-      name: 'World English Bible',
-      language: 'English',
-      license: 'Public Domain',
-      source: 'https://api.getbible.net/v2/web.json',
-      sourceChecksum: 'sha-web-1',
-      formatVersion: 1,
-      capabilities: { strongsTagged: false },
-    })
+    expect(source.requestedIds).toEqual(['web'])
+    expect(manifest).toEqual(webModule().manifest)
     expect(await store.manifest('web')).toEqual(manifest)
     expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBe(
       'Remain in me, and I in you.',
     )
   })
 
-  it('rejects a download whose bytes do not match the published checksum', async () => {
-    const { source, store, settingsStore, manager } = setup()
-    source.checksums.web = 'sha-web-2'
+  it('propagates a failed download without saving or recording anything', async () => {
+    const { store, settingsStore, manager } = setup()
 
-    await expect(manager.downloadModule('web')).rejects.toBeInstanceOf(
-      ChecksumMismatchError,
+    await expect(manager.downloadModule('nope')).rejects.toThrow(
+      'unknown translation nope',
     )
-    expect(await store.manifest('web')).toBeNull()
+    expect(await store.manifest('nope')).toBeNull()
     expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([])
-  })
-
-  it('stores the module under the requested translation id, whatever the download claims', async () => {
-    const { source, store, manager } = setup()
-    source.downloads.web.document.abbreviation = '../../evil'
-
-    const manifest = await manager.downloadModule('web')
-
-    expect(manifest.id).toBe('web')
-    expect(await store.manifest('web')).toEqual(manifest)
-    expect(await manager.modulesWithUpdates()).toEqual([])
-  })
-
-  it('installs with the downloaded checksum when no published checksum exists', async () => {
-    const { source, manager } = setup()
-    delete source.checksums.web
-
-    const manifest = await manager.downloadModule('web')
-
-    expect(manifest.sourceChecksum).toBe('sha-web-1')
   })
 })
 
@@ -242,22 +186,6 @@ describe('ModuleManager prebuilt modules', () => {
     const manifest = await manager.downloadModule('bsb')
 
     expect(manifest.id).toBe('bsb')
-  })
-
-  it('reports a prebuilt module update when its published checksum changes', async () => {
-    const { prebuilt, manager } = setup()
-    await manager.downloadModule('bsb')
-
-    prebuilt.published = 'sha-bsb-2'
-
-    expect(await manager.modulesWithUpdates()).toEqual(['bsb'])
-  })
-
-  it('reports no prebuilt update when checksums still match', async () => {
-    const { manager } = setup()
-    await manager.downloadModule('bsb')
-
-    expect(await manager.modulesWithUpdates()).toEqual([])
   })
 })
 
@@ -301,38 +229,25 @@ describe('ModuleManager installed-module ids in settings', () => {
 })
 
 describe('ModuleManager update detection', () => {
-  it('reports an installed module whose published checksum has changed', async () => {
-    const { source, manager } = setup()
-    await manager.downloadModule('web')
+  it('reports a prebuilt module update when its published checksum changes', async () => {
+    const { prebuilt, manager } = setup()
+    await manager.downloadModule('bsb')
 
-    source.checksums.web = 'sha-web-2'
-    source.downloads.web.checksum = 'sha-web-2'
+    prebuilt.published = 'sha-bsb-2'
 
-    expect(await manager.modulesWithUpdates()).toEqual(['web'])
+    expect(await manager.modulesWithUpdates()).toEqual(['bsb'])
   })
 
-  it('detects updates by translation id even when the download misreports its abbreviation', async () => {
-    const { source, manager } = setup()
-    source.downloads.web.document.abbreviation = 'not-web'
-    await manager.downloadModule('web')
-
-    source.checksums.web = 'sha-web-2'
-
-    expect(await manager.modulesWithUpdates()).toEqual(['web'])
-  })
-
-  it('reports nothing when installed modules match the published checksums', async () => {
+  it('reports no prebuilt update when checksums still match', async () => {
     const { manager } = setup()
-    await manager.downloadModule('web')
+    await manager.downloadModule('bsb')
 
     expect(await manager.modulesWithUpdates()).toEqual([])
   })
 
-  it('reports nothing for modules the source no longer publishes', async () => {
-    const { source, manager } = setup()
+  it('never reports catalogue modules — bolls publishes no checksums, update = re-download', async () => {
+    const { manager } = setup()
     await manager.downloadModule('web')
-
-    delete source.checksums.web
 
     expect(await manager.modulesWithUpdates()).toEqual([])
   })

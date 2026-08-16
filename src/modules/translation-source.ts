@@ -1,12 +1,7 @@
-import type { GetBibleTranslation } from './normalize-getbible-translation'
+import type { NormalizedModule } from './normalized-module'
 
-export type TranslationDownload = {
-  document: GetBibleTranslation
-  checksum: string
-  url: string
-}
+export type TextTransport = (url: string) => Promise<string>
 
 export interface TranslationSource {
-  fetchTranslation(translationId: string): Promise<TranslationDownload>
-  fetchChecksums(): Promise<Record<string, string>>
+  fetchModule(moduleId: string): Promise<NormalizedModule>
 }

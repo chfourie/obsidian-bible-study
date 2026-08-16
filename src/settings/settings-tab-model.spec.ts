@@ -15,7 +15,7 @@ const manifest = (id: string, name = id.toUpperCase(), tagged = false): ModuleMa
 })
 
 type SetupOverrides = Partial<SettingsTabDeps> & {
-  storedSettings?: Partial<ScriptureStudySettings>
+  storedSettings?: Partial<ScriptureStudySettings> & Record<string, unknown>
 }
 
 const setup = (overrides: SetupOverrides = {}) => {
@@ -31,13 +31,9 @@ const setup = (overrides: SetupOverrides = {}) => {
     settingsStore,
     installedManifests: async () => [],
     availableTranslations: async () => [],
-    onlineTranslations: [
-      { id: 'nkjv', apiBibleId: 'nkjv-api-id', name: 'New King James Version' },
-    ],
     downloadModule: vi.fn(async () => {}),
     deleteModule: vi.fn(async () => {}),
     modulesWithUpdates: async () => [],
-    clearPassageCache: vi.fn(async () => {}),
     strongs: {
       isInstalled: async () => false,
       install: vi.fn(async () => {}),
@@ -49,7 +45,7 @@ const setup = (overrides: SetupOverrides = {}) => {
 }
 
 describe('SettingsTabModel general section', () => {
-  it('offers installed modules plus enabled online translations as default options', async () => {
+  it('offers installed translation modules as default options, ignoring legacy online settings', async () => {
     const { model } = setup({
       storedSettings: {
         installedModuleIds: ['web', 'strongs-dictionaries'],
@@ -66,17 +62,12 @@ describe('SettingsTabModel general section', () => {
 
     expect(model.view.defaultTranslationOptions).toEqual([
       { id: 'web', label: 'World English Bible' },
-      { id: 'nkjv', label: 'New King James Version' },
     ])
   })
 
-  it('restricts fallback options to installed offline modules', async () => {
+  it('restricts fallback options to installed modules', async () => {
     const { model } = setup({
-      storedSettings: {
-        installedModuleIds: ['web'],
-        apiBibleKey: 'key-123',
-        enabledOnlineTranslationIds: ['nkjv'],
-      },
+      storedSettings: { installedModuleIds: ['web'] },
       installedManifests: async () => [manifest('web', 'World English Bible')],
     })
 
@@ -97,7 +88,7 @@ describe('SettingsTabModel general section', () => {
 })
 
 describe('SettingsTabModel translation management list', () => {
-  it('lists downloadable rows matching the language filter, then online rows when a key is set', async () => {
+  it('lists rows matching the language filter, with no online rows even when a legacy key is stored', async () => {
     const { model } = setup({
       storedSettings: { apiBibleKey: 'key-123' },
       availableTranslations: async () => [
@@ -110,27 +101,9 @@ describe('SettingsTabModel translation management list', () => {
     await model.refresh()
 
     expect(model.view.rows).toEqual([
-      expect.objectContaining({ id: 'web', tier: 'downloadable', installed: false }),
-      expect.objectContaining({ id: 'bsb', tier: 'downloadable', strongsTagged: true }),
-      expect.objectContaining({
-        id: 'nkjv',
-        name: 'New King James Version',
-        tier: 'online',
-        enabled: false,
-      }),
+      expect.objectContaining({ id: 'web', installed: false }),
+      expect.objectContaining({ id: 'bsb', strongsTagged: true }),
     ])
-  })
-
-  it('hides online rows without an API key', async () => {
-    const { model } = setup({
-      availableTranslations: async () => [
-        { id: 'web', name: 'World English Bible', language: 'English' },
-      ],
-    })
-
-    await model.refresh()
-
-    expect(model.view.rows.map((row) => row.tier)).toEqual(['downloadable'])
   })
 
   it('always lists installed modules even when the catalog omits or filters them', async () => {
@@ -292,27 +265,6 @@ describe('SettingsTabModel translation management list', () => {
 })
 
 describe('SettingsTabModel settings mutations', () => {
-  it('stores a trimmed API key and unmasks the online tier', async () => {
-    const { model, settingsStore } = setup()
-    await model.refresh()
-
-    await model.setApiBibleKey('  key-123  ')
-
-    expect((await settingsStore.loadSettings()).apiBibleKey).toBe('key-123')
-    expect(model.view.rows.some((row) => row.tier === 'online')).toBe(true)
-  })
-
-  it('clears the API key when the input is blanked', async () => {
-    const { model, settingsStore } = setup({
-      storedSettings: { apiBibleKey: 'key-123' },
-    })
-    await model.refresh()
-
-    await model.setApiBibleKey('   ')
-
-    expect((await settingsStore.loadSettings()).apiBibleKey).toBe(null)
-  })
-
   it('persists the language filter', async () => {
     const { model, settingsStore } = setup()
     await model.refresh()
@@ -320,45 +272,6 @@ describe('SettingsTabModel settings mutations', () => {
     await model.setLanguageFilter('Afrikaans')
 
     expect((await settingsStore.loadSettings()).languageFilter).toBe('Afrikaans')
-  })
-
-  it('enables an online translation, making it a default candidate', async () => {
-    const { model, settingsStore } = setup({
-      storedSettings: { apiBibleKey: 'key-123' },
-    })
-    await model.refresh()
-
-    await model.setOnlineEnabled('nkjv', true)
-
-    const settings = await settingsStore.loadSettings()
-    expect(settings.enabledOnlineTranslationIds).toEqual(['nkjv'])
-    expect(settings.defaultTranslationId).toBe('nkjv')
-  })
-
-  it('disables an online translation again', async () => {
-    const { model, settingsStore } = setup({
-      storedSettings: {
-        apiBibleKey: 'key-123',
-        enabledOnlineTranslationIds: ['nkjv'],
-      },
-    })
-    await model.refresh()
-
-    await model.setOnlineEnabled('nkjv', false)
-
-    expect(
-      (await settingsStore.loadSettings()).enabledOnlineTranslationIds,
-    ).toEqual([])
-  })
-
-  it('clears cached passages for an online translation', async () => {
-    const clearPassageCache = vi.fn(async () => {})
-    const { model } = setup({ clearPassageCache })
-    await model.refresh()
-
-    await model.clearCache('nkjv')
-
-    expect(clearPassageCache).toHaveBeenCalledWith('nkjv')
   })
 
   it('persists picker and preference choices through a shared updater', async () => {
