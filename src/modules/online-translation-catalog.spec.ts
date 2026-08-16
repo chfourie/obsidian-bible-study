@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_SETTINGS } from '../data-access'
 import {
   enabledOnlineTranslations,
+  gatedApiBibleIdFor,
   ONLINE_TRANSLATIONS,
 } from './online-translation-catalog'
 
@@ -45,5 +46,17 @@ describe('enabledOnlineTranslations', () => {
     expect(enabledOnlineTranslations(settings).map(({ id }) => id)).toEqual([
       'nkjv',
     ])
+  })
+})
+
+describe('gatedApiBibleIdFor', () => {
+  it('resolves the API.Bible id only while the translation is enabled', () => {
+    const enabled = settingsWith({
+      apiBibleKey: 'key',
+      enabledOnlineTranslationIds: ['nkjv'],
+    })
+    expect(gatedApiBibleIdFor(enabled)('nkjv')).toBe('63097d2a0a2f7db3-01')
+    expect(gatedApiBibleIdFor(settingsWith({}))('nkjv')).toBeNull()
+    expect(gatedApiBibleIdFor(enabled)('unknown')).toBeNull()
   })
 })

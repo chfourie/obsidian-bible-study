@@ -20,6 +20,15 @@ export const apiBibleIdFor = (translationId: string): string | null =>
   ONLINE_TRANSLATIONS.find((translation) => translation.id === translationId)
     ?.apiBibleId ?? null
 
+export const gatedApiBibleIdFor =
+  (settings: BibleStudySettings) =>
+  (translationId: string): string | null =>
+    enabledOnlineTranslations(settings).some(
+      ({ id }) => id === translationId,
+    )
+      ? apiBibleIdFor(translationId)
+      : null
+
 export const enabledOnlineTranslations = (
   settings: BibleStudySettings,
 ): OnlineTranslation[] =>

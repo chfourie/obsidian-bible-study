@@ -1,8 +1,8 @@
 import { App, Plugin, type PluginManifest } from 'obsidian'
 import { AnnotationsFeature } from '../annotations'
-import { SettingsStore } from '../data-access'
+import { DEFAULT_SETTINGS, SettingsStore } from '../data-access'
 import {
-  apiBibleIdFor,
+  gatedApiBibleIdFor,
   ModulesFeature,
   ObsidianModuleDataDir,
   SUGGESTED_FIRST_TRANSLATION,
@@ -22,6 +22,7 @@ import { PluginFeatureSet } from './plugin-feature-set'
 export default class BibleStudyPlugin extends Plugin {
   readonly #features: PluginFeatureSet = new PluginFeatureSet()
   readonly settingsStore = new SettingsStore(this)
+  #settings = DEFAULT_SETTINGS
 
   readonly vaultIndex = new VaultIndexFeature(this)
   readonly modules = new ModulesFeature(this, this.settingsStore)
@@ -29,7 +30,8 @@ export default class BibleStudyPlugin extends Plugin {
     client: this.modules.apiBibleClient,
     cache: this.modules.passageCache,
     reportFums: (fumsToken) => void this.modules.fumsReporter.report(fumsToken),
-    apiBibleIdFor,
+    apiBibleIdFor: (translationId) =>
+      gatedApiBibleIdFor(this.#settings)(translationId),
   })
   readonly strongsDictionaries = new StrongsDictionaries(
     new ObsidianModuleDataDir(this),
@@ -92,18 +94,21 @@ export default class BibleStudyPlugin extends Plugin {
     this.#features.addFeature(this.annotations)
     this.#features.addFeature(this.settingsTab)
     this.settingsStore.onSettingsChanged((settings) => {
+      this.#settings = settings
       this.#features.useSettings(settings)
       this.#features.onSettingsChanged()
     })
   }
 
   readonly onload = async (): Promise<void> => {
-    this.#features.useSettings(await this.settingsStore.loadSettings())
+    this.#settings = await this.settingsStore.loadSettings()
+    this.#features.useSettings(this.#settings)
     await this.#features.load()
   }
 
   readonly onExternalSettingsChange = async (): Promise<void> => {
-    this.#features.useSettings(await this.settingsStore.loadSettings())
+    this.#settings = await this.settingsStore.loadSettings()
+    this.#features.useSettings(this.#settings)
     this.#features.onSettingsChanged()
   }
 
