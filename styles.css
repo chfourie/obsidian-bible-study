@@ -123,6 +123,18 @@ span.bible-study-passage {
   background-color: var(--interactive-accent-hover);
 }
 
+.bible-study-install-cta[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.bible-study-install-error {
+  margin-left: 0.5em;
+  color: var(--text-error);
+  font-style: normal;
+  font-size: var(--font-smallest);
+}
+
 /* ---- Settings tab (spec §8) -------------------------------------------- */
 
 .bible-study-strongs-badge {

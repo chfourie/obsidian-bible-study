@@ -695,6 +695,7 @@ describe('opening the reader at a reference', () => {
     expect(model.view.installNudge).toEqual({
       translationName: 'World English Bible',
       busy: false,
+      error: null,
     })
   })
 
@@ -746,6 +747,62 @@ describe('opening the reader at a reference', () => {
     resolveInstall()
     await installing
     expect(model.view.installNudge?.busy).toBe(false)
+  })
+
+  it('keeps the nudge clickable and surfaces the error when the suggested install fails', async () => {
+    let notified = 0
+    const model = modelWith(
+      {
+        installedTranslations: async () => [],
+        firstRun: {
+          translationName: 'World English Bible',
+          install: async () => {
+            throw new Error('network gone')
+          },
+        },
+      },
+      DEFAULT_TOGGLES,
+      null,
+    )
+    await model.openAt(ref('John 15:4'), null)
+    model.subscribe(() => (notified += 1))
+
+    await model.installSuggestedTranslation()
+
+    expect(model.view.status).toBe('no-translation')
+    expect(model.view.installNudge).toEqual({
+      translationName: 'World English Bible',
+      busy: false,
+      error: 'network gone',
+    })
+    expect(notified).toBeGreaterThanOrEqual(2)
+  })
+
+  it('clears a previous install error when the nudge is retried', async () => {
+    let installed = false
+    let failNext = true
+    const model = modelWith(
+      {
+        installedTranslations: async () => (installed ? [manifest('web')] : []),
+        firstRun: {
+          translationName: 'World English Bible',
+          install: async () => {
+            if (failNext) throw new Error('network gone')
+            installed = true
+          },
+        },
+      },
+      DEFAULT_TOGGLES,
+      null,
+    )
+    await model.openAt(ref('John 15:4'), null)
+    await model.installSuggestedTranslation()
+    failNext = false
+
+    await model.installSuggestedTranslation()
+
+    expect(model.view.status).toBe('ok')
+    expect(model.view.installNudge).toBe(null)
   })
 
   it('falls back to the first installed translation when none is configured', async () => {

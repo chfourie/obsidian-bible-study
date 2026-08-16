@@ -423,4 +423,46 @@ describe('SettingsTabModel Strongs section', () => {
     expect(strongs.remove).toHaveBeenCalled()
     expect(model.view.strongsInstalled).toBe(false)
   })
+
+  it('surfaces a failed dictionaries install and clears the busy state', async () => {
+    const { model } = setup({
+      strongs: {
+        isInstalled: async () => false,
+        install: vi.fn(async () => {
+          throw new Error('network gone')
+        }),
+        remove: vi.fn(async () => {}),
+      },
+    })
+    await model.refresh()
+
+    await model.setStrongsEnabled(true)
+
+    expect(model.view.strongsBusy).toBe(false)
+    expect(model.view.strongsError).toBe('network gone')
+    expect(model.view.strongsInstalled).toBe(false)
+  })
+
+  it('clears a previous Strongs error when the toggle is retried', async () => {
+    let installed = false
+    let failNext = true
+    const { model } = setup({
+      strongs: {
+        isInstalled: async () => installed,
+        install: vi.fn(async () => {
+          if (failNext) throw new Error('network gone')
+          installed = true
+        }),
+        remove: vi.fn(async () => {}),
+      },
+    })
+    await model.refresh()
+    await model.setStrongsEnabled(true)
+    failNext = false
+
+    await model.setStrongsEnabled(true)
+
+    expect(model.view.strongsError).toBe(null)
+    expect(model.view.strongsInstalled).toBe(true)
+  })
 })

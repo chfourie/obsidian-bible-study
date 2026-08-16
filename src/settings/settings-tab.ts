@@ -288,6 +288,12 @@ export class BibleStudySettingTab extends PluginSettingTab {
           .setDisabled(view.strongsBusy)
           .onChange((enabled) => void this.model.setStrongsEnabled(enabled)),
       )
+    if (view.strongsError !== null) {
+      setting.descEl.createDiv({
+        cls: 'bible-study-settings-error',
+        text: view.strongsError,
+      })
+    }
     if (!view.taggedTranslationInstalled) {
       setting.descEl.createDiv({
         text: "Strong's mode needs a translation with the Strong's badge — install one under Translations (e.g. Berean Standard Bible).",

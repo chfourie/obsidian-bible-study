@@ -366,6 +366,11 @@
                   ? `Installing ${view.installNudge.translationName}…`
                   : `Install ${view.installNudge.translationName}`}
               </button>
+              {#if view.installNudge.error !== null}
+                <div class="bsr-install-error">
+                  Install failed: {view.installNudge.error}
+                </div>
+              {/if}
             {/if}
           {:else if view.status === 'unavailable'}
             <div class="bsr-nudge">{view.title} is unavailable in this translation.</div>
@@ -928,6 +933,12 @@
   .bsr-install-cta {
     margin: 4px 0 12px;
     cursor: pointer;
+  }
+
+  .bsr-install-error {
+    color: var(--text-error);
+    font-size: var(--font-smallest);
+    margin-bottom: 12px;
   }
 
   .bsr-strongs-word {

@@ -302,6 +302,50 @@ describe('renderReference first-run install nudge', () => {
     expect(install).toHaveBeenCalledTimes(1)
   })
 
+  it('disables the CTA while installing so rapid clicks start one install', async () => {
+    let resolveInstall: () => void = () => {}
+    const install = vi.fn(
+      () => new Promise<void>((resolve) => (resolveInstall = resolve)),
+    )
+    const { parent, deps } = setup({ status: 'unavailable' })
+    deps.firstRun = { translationName: 'World English Bible', install }
+
+    await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
+    const cta = parent.querySelector('.bible-study-install-cta')
+    cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(install).toHaveBeenCalledTimes(1)
+    expect(cta?.textContent).toBe('Installing World English Bible…')
+    expect(cta?.getAttribute('aria-disabled')).toBe('true')
+    resolveInstall()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+  })
+
+  it('re-enables the CTA and shows the failure when the install fails', async () => {
+    const install = vi.fn(async () => {
+      throw new Error('network gone')
+    })
+    const { parent, deps } = setup({ status: 'unavailable' })
+    deps.firstRun = { translationName: 'World English Bible', install }
+
+    await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
+    const cta = parent.querySelector('.bible-study-install-cta')
+    cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+    expect(
+      parent.querySelector('.bible-study-install-error')?.textContent,
+    ).toContain('network gone')
+    expect(cta?.textContent).toBe('Install World English Bible')
+    expect(cta?.getAttribute('aria-disabled')).toBeNull()
+
+    cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(install).toHaveBeenCalledTimes(2)
+    expect(parent.querySelectorAll('.bible-study-install-error')).toHaveLength(1)
+  })
+
   it('shows no CTA when a translation is merely unavailable offline', async () => {
     const { parent, deps } = setup({ status: 'unavailable' })
     deps.firstRun = {

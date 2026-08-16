@@ -192,6 +192,38 @@ const renderQuotedRun = (host: HTMLElement, view: PassageView): void => {
   host.appendText('”')
 }
 
+const renderInstallCta = (
+  host: HTMLElement,
+  firstRun: FirstRunInstallDeps,
+): void => {
+  const cta = host.createSpan({
+    cls: 'bible-study-install-cta',
+    attr: { role: 'button', tabindex: 0 },
+    text: `Install ${firstRun.translationName}`,
+  })
+  let errorLine: HTMLElement | null = null
+  let installing = false
+  activateAsButton(cta, () => {
+    if (installing) return
+    installing = true
+    cta.setText(`Installing ${firstRun.translationName}…`)
+    cta.setAttribute('aria-disabled', 'true')
+    errorLine?.remove()
+    errorLine = null
+    firstRun.install().catch((error: unknown) => {
+      installing = false
+      cta.setText(`Install ${firstRun.translationName}`)
+      cta.removeAttribute('aria-disabled')
+      errorLine = host.createSpan({
+        cls: 'bible-study-install-error',
+        text: `Install failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      })
+    })
+  })
+}
+
 const renderUnavailable = (
   host: HTMLElement,
   model: ReferenceRenderModel,
@@ -203,13 +235,7 @@ const renderUnavailable = (
     text: unavailableText(model),
   })
   if (model.translationId === null && deps.firstRun !== undefined) {
-    const firstRun = deps.firstRun
-    const cta = host.createSpan({
-      cls: 'bible-study-install-cta',
-      attr: { role: 'button', tabindex: 0 },
-      text: `Install ${firstRun.translationName}`,
-    })
-    activateAsButton(cta, () => void firstRun.install())
+    renderInstallCta(host, deps.firstRun)
     return
   }
   const retryIcon = line.createSpan({

@@ -137,7 +137,11 @@ export type ReaderPaneView = {
   banner: string | null
   strongsAvailable: boolean
   strongsMode: boolean
-  installNudge: { translationName: string; busy: boolean } | null
+  installNudge: {
+    translationName: string
+    busy: boolean
+    error: string | null
+  } | null
 }
 
 const chapterReference = (position: ReaderPosition): Reference => ({
@@ -170,6 +174,7 @@ export class ReaderPaneModel {
   #bannerDismissed = false
   #strongsAvailable = false
   #installingSuggested = false
+  #installError: string | null = null
   #wordStrongs: { verseId: number; numbers: string[] } | null = null
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -231,6 +236,7 @@ export class ReaderPaneModel {
           ? {
               translationName: this.deps.firstRun.translationName,
               busy: this.#installingSuggested,
+              error: this.#installError,
             }
           : null,
       banner:
@@ -264,12 +270,18 @@ export class ReaderPaneModel {
     const firstRun = this.deps.firstRun
     if (firstRun === undefined || this.#installingSuggested) return
     this.#installingSuggested = true
+    this.#installError = null
     this.#notify()
     try {
       await firstRun.install()
-    } finally {
+    } catch (error) {
       this.#installingSuggested = false
+      this.#installError =
+        error instanceof Error ? error.message : String(error)
+      this.#notify()
+      return
     }
+    this.#installingSuggested = false
     await this.#loadChapter()
   }
 

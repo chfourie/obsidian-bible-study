@@ -54,8 +54,12 @@ export type SettingsTabView = {
   languages: string[]
   strongsInstalled: boolean
   strongsBusy: boolean
+  strongsError: string | null
   taggedTranslationInstalled: boolean
 }
+
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error)
 
 export class SettingsTabModel {
   #settings: BibleStudySettings = DEFAULT_SETTINGS
@@ -67,6 +71,7 @@ export class SettingsTabModel {
   readonly #listeners = new Set<() => void>()
   #strongsInstalled = false
   #strongsBusy = false
+  #strongsError: string | null = null
 
   constructor(private readonly deps: SettingsTabDeps) {}
 
@@ -131,13 +136,15 @@ export class SettingsTabModel {
 
   async setStrongsEnabled(enabled: boolean): Promise<void> {
     this.#strongsBusy = true
+    this.#strongsError = null
     this.#notify()
     try {
       if (enabled) await this.deps.strongs.install()
       else await this.deps.strongs.remove()
-    } finally {
-      this.#strongsBusy = false
+    } catch (error) {
+      this.#strongsError = errorMessage(error)
     }
+    this.#strongsBusy = false
     await this.refresh()
   }
 
@@ -164,10 +171,7 @@ export class SettingsTabModel {
     try {
       await action()
     } catch (error) {
-      this.#errors.set(
-        moduleId,
-        error instanceof Error ? error.message : String(error),
-      )
+      this.#errors.set(moduleId, errorMessage(error))
     }
     this.#busy.delete(moduleId)
     await this.refresh()
@@ -189,6 +193,7 @@ export class SettingsTabModel {
       ].sort(),
       strongsInstalled: this.#strongsInstalled,
       strongsBusy: this.#strongsBusy,
+      strongsError: this.#strongsError,
       taggedTranslationInstalled: this.#manifests.some(
         (installed) => installed.capabilities.strongsTagged,
       ),
