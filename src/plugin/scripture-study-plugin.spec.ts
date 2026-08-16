@@ -92,8 +92,9 @@ describe('ScriptureStudyPlugin same-device settings changes', () => {
     expect(annotate).toHaveBeenCalledWith(reference)
   })
 
-  it('downloads the suggested BSB module for the first-run nudge', async () => {
+  it('downloads only the suggested BSB translation for the first-run nudge, not the Strong\'s dictionaries', async () => {
     const plugin = pluginWithStorage()
+    const installDictionaries = vi.spyOn(plugin.strongsDictionaries, 'install')
     const download = vi
       .spyOn(plugin.modules.manager, 'downloadModule')
       .mockResolvedValue({
@@ -110,6 +111,7 @@ describe('ScriptureStudyPlugin same-device settings changes', () => {
     await plugin.installSuggestedTranslation()
 
     expect(download).toHaveBeenCalledWith('bsb')
+    expect(installDictionaries).not.toHaveBeenCalled()
   })
 
   it('prefills new annotations from the open reader', () => {

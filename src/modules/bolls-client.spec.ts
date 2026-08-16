@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
 import { BollsClient } from './bolls-client'
+import { BOLLS_CATALOG_SNAPSHOT } from './bolls-catalog-snapshot'
 
 const LANGUAGES_URL = 'https://bolls.life/static/bolls/app/views/languages.json'
 
@@ -102,6 +103,48 @@ describe('BollsClient translation dump', () => {
     expect(download.checksum).toBe(
       '78a9d28be39ea05047342ba8ce178b4fbaa752598d3958e6c6467dbc6e3d63ea',
     )
+  })
+
+  const clientWithDump = (dump: string): BollsClient =>
+    new BollsClient(
+      fakeTransport({
+        'https://bolls.life/static/translations/WEB.json': dump,
+      }),
+    )
+
+  it('rejects an empty dump instead of installing a zero-book module', async () => {
+    await expect(clientWithDump('[]').fetchTranslation('WEB')).rejects.toThrow(
+      /WEB.*not a bolls verse dump/i,
+    )
+  })
+
+  it('rejects a dump that is not an array', async () => {
+    await expect(
+      clientWithDump('{"error":"gone"}').fetchTranslation('WEB'),
+    ).rejects.toThrow(/WEB.*not a bolls verse dump/i)
+  })
+
+  it('rejects a dump whose rows are not verses', async () => {
+    const wrongShape = '[{"code":"KJV","title":"King James"}]'
+    await expect(
+      clientWithDump(wrongShape).fetchTranslation('WEB'),
+    ).rejects.toThrow(/WEB.*not a bolls verse dump/i)
+  })
+
+  it('rejects a dump with non-numeric verse coordinates or non-string text', async () => {
+    const badRow = '[{"book":"43","chapter":15,"verse":4,"text":"Remain."}]'
+    await expect(
+      clientWithDump(badRow).fetchTranslation('WEB'),
+    ).rejects.toThrow(/WEB.*not a bolls verse dump/i)
+  })
+})
+
+describe('bundled catalogue snapshot', () => {
+  it('pins the spec §6.1 counts: 149 translations across 31 languages', () => {
+    expect(BOLLS_CATALOG_SNAPSHOT).toHaveLength(31)
+    expect(
+      BOLLS_CATALOG_SNAPSHOT.flatMap(({ translations }) => translations),
+    ).toHaveLength(149)
   })
 })
 

@@ -47,6 +47,21 @@ const sha256Hex = async (text: string): Promise<string> => {
     .join('')
 }
 
+const isBollsVerse = (row: unknown): row is BollsVerse =>
+  typeof row === 'object' &&
+  row !== null &&
+  typeof (row as BollsVerse).book === 'number' &&
+  typeof (row as BollsVerse).chapter === 'number' &&
+  typeof (row as BollsVerse).verse === 'number' &&
+  typeof (row as BollsVerse).text === 'string'
+
+const parseVerseDump = (bollsId: string, raw: string): BollsVerse[] => {
+  const parsed: unknown = JSON.parse(raw)
+  if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isBollsVerse))
+    throw new Error(`download for ${bollsId} is not a bolls verse dump`)
+  return parsed
+}
+
 type CatalogRow = BollsCatalogTranslation & { shortName: string }
 
 const flattenCatalog = (languages: BollsCatalogLanguage[]): CatalogRow[] =>
@@ -97,7 +112,7 @@ export class BollsClient {
     const url = `${DUMP_BASE_URL}/${bollsId}.json`
     const raw = await this.fetchText(url)
     return {
-      verses: JSON.parse(raw) as BollsVerse[],
+      verses: parseVerseDump(bollsId, raw),
       checksum: await sha256Hex(raw),
       url,
     }
