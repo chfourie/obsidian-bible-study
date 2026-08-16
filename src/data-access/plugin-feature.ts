@@ -17,7 +17,7 @@ export abstract class PluginFeature {
 
   unload(): void {}
 
-  onExternalSettingsChange(): void {}
+  onSettingsChanged(): void {}
 
   useSettings(settings: BibleStudySettings): void {
     this.#settings = settings

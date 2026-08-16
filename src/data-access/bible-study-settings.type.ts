@@ -1,5 +1,35 @@
 // Fields land with the features that need them; the settings ticket on the
 // wayfinder map enumerates the v1 surface.
-export type BibleStudySettings = Record<string, never>
+export type AnnotationOrdering = 'created-oldest-first' | 'path-a-z'
 
-export const DEFAULT_SETTINGS: BibleStudySettings = {}
+export type BibleStudySettings = {
+  installedModuleIds: string[]
+  defaultTranslationId: string | null
+  fallbackTranslationId: string | null
+  apiBibleKey: string | null
+  enabledOnlineTranslationIds: string[]
+  languageFilter: string
+  readerDetailsDefault: 'inline' | 'side-panel'
+  readerNavDefault: 'tree' | 'breadcrumb'
+  readerLayoutDefault: 'verse-per-line' | 'continuous'
+  readerStrongsDefault: 'off' | 'on'
+  annotationsFolder: string
+  annotationTemplatePath: string | null
+  annotationOrdering: AnnotationOrdering
+}
+
+export const DEFAULT_SETTINGS: BibleStudySettings = {
+  installedModuleIds: [],
+  defaultTranslationId: null,
+  fallbackTranslationId: null,
+  apiBibleKey: null,
+  enabledOnlineTranslationIds: [],
+  languageFilter: 'English',
+  readerDetailsDefault: 'inline',
+  readerNavDefault: 'tree',
+  readerLayoutDefault: 'verse-per-line',
+  readerStrongsDefault: 'off',
+  annotationsFolder: 'Annotations',
+  annotationTemplatePath: null,
+  annotationOrdering: 'created-oldest-first',
+}

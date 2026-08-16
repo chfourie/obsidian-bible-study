@@ -19,6 +19,7 @@ export default defineConfig([
       'tests/',
       'scripts/',
       '*.mjs',
+      'vitest.config.ts',
     ],
   },
   ...obsidianmd.configs.recommended,
@@ -69,6 +70,11 @@ export default defineConfig([
           ignoreRegex: [
             // The plugin's own name as it appears in manifest.json.
             '\\bBible Study\\b',
+            // Proper names on the settings surface.
+            '\\bAPI\\.Bible\\b',
+            "\\bStrong's\\b",
+            // Letter names in the annotation-ordering option.
+            '\\bA to Z\\b',
           ],
         },
       ],
@@ -80,6 +86,14 @@ export default defineConfig([
     // suggested replacements would throw. Plain DOM construction is correct
     // here; the rule still guards every shipped module.
     files: ['src/**/*.spec.ts'],
-    rules: { 'obsidianmd/prefer-create-el': 'off' },
+    rules: {
+      'obsidianmd/prefer-create-el': 'off',
+      // Specs build static DOM fixtures from literals; there is no
+      // untrusted input to sanitize.
+      '@microsoft/sdl/no-inner-html': 'off',
+      // Specs run under Vitest on Node — fixture files and hashes may use
+      // Node built-ins that shipped plugin code must avoid.
+      'obsidianmd/no-nodejs-modules': 'off',
+    },
   },
 ])

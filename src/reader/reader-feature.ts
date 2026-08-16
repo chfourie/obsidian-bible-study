@@ -1,0 +1,237 @@
+import { WorkspaceLeaf, type Plugin } from 'obsidian'
+import type { ReferenceNavigator } from '../contracts'
+import { PluginFeature } from '../data-access'
+import {
+  enabledOnlineTranslations,
+  isTranslationManifest,
+  type ModuleStore,
+} from '../modules'
+import { frontmatterLength, type Reference } from '../reference'
+import {
+  ModulePassageSource,
+  PassageRepository,
+  TieredPassageSource,
+  type PassageSource,
+} from '../rendering'
+import type { VaultReferenceIndex } from '../vault-index'
+import {
+  ReaderPaneModel,
+  type ReaderFirstRunDeps,
+  type ReaderPosition,
+  type ReaderStrongsDeps,
+  type ReaderTranslation,
+} from './reader-pane-model'
+import { READER_VIEW_TYPE, ReaderView } from './reader-view'
+
+export { READER_VIEW_TYPE } from './reader-view'
+
+const DEFAULT_POSITION: ReaderPosition = { book: 43, chapter: 1 }
+
+// Trailing debounce over index notifications: the startup vault scan and
+// multi-file edits collapse into a single refresh per open pane.
+const DEFAULT_INDEX_REFRESH_DEBOUNCE_MS = 100
+
+export type ReaderFeatureOptions = {
+  indexRefreshDebounceMs?: number
+  strongs?: ReaderStrongsDeps
+  firstRun?: ReaderFirstRunDeps
+}
+
+const INERT_STRONGS: ReaderStrongsDeps = {
+  dictionariesInstalled: async () => false,
+  entriesFor: async () => [],
+  attribution: '',
+}
+
+export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
+  readonly #repository: PassageRepository
+  readonly #models = new Set<ReaderPaneModel>()
+  readonly #indexRefreshDebounceMs: number
+  #pendingRefresh: number | null = null
+  #unsubscribeIndex: (() => void) | null = null
+  #lastPosition: ReaderPosition = DEFAULT_POSITION
+  #annotator: (reference: Reference) => void = () => {}
+  readonly #strongs: ReaderStrongsDeps
+  readonly #firstRun: ReaderFirstRunDeps | undefined
+
+  constructor(
+    plugin: Plugin,
+    private readonly store: ModuleStore,
+    private readonly index: VaultReferenceIndex,
+    onlineSource?: PassageSource,
+    options: ReaderFeatureOptions = {},
+  ) {
+    super(plugin)
+    this.#indexRefreshDebounceMs =
+      options.indexRefreshDebounceMs ?? DEFAULT_INDEX_REFRESH_DEBOUNCE_MS
+    this.#strongs = options.strongs ?? INERT_STRONGS
+    this.#firstRun = options.firstRun
+    const moduleSource = new ModulePassageSource(store)
+    // The reader's stacked view never substitutes the fallback translation
+    // (spec §6.4), so tiers compose here without a FallbackPassageSource.
+    this.#repository = new PassageRepository(
+      onlineSource
+        ? new TieredPassageSource(moduleSource, onlineSource)
+        : moduleSource,
+    )
+  }
+
+  override async load(): Promise<void> {
+    this.#unsubscribeIndex = this.index.onChanged(() =>
+      this.#scheduleOccurrenceRefresh(),
+    )
+    this.plugin.registerView(
+      READER_VIEW_TYPE,
+      (leaf: WorkspaceLeaf) => new ReaderView(leaf, this),
+    )
+    this.plugin.addCommand({
+      id: 'open-reader',
+      name: 'Open reader',
+      callback: () => void this.openReader(),
+    })
+    this.plugin.addRibbonIcon(
+      'book-open-text',
+      'Open Bible Study reader',
+      () => void this.openReader(),
+    )
+  }
+
+  override unload(): void {
+    this.#unsubscribeIndex?.()
+    this.#unsubscribeIndex = null
+    if (this.#pendingRefresh !== null) {
+      window.clearTimeout(this.#pendingRefresh)
+      this.#pendingRefresh = null
+    }
+  }
+
+  async #availableTranslations(): Promise<ReaderTranslation[]> {
+    const installed = (await this.store.installedManifests())
+      .filter(isTranslationManifest)
+      .map((manifest) => ({
+        id: manifest.id,
+        label: manifest.id.toUpperCase(),
+        strongsTagged: manifest.capabilities.strongsTagged === true,
+      }))
+    const online = enabledOnlineTranslations(this.settings)
+      .filter((online) => installed.every(({ id }) => id !== online.id))
+      .map(({ id }) => ({ id, label: id.toUpperCase(), strongsTagged: false }))
+    return [...installed, ...online]
+  }
+
+  override onSettingsChanged(): void {
+    this.#repository.clear()
+    this.#models.forEach((model) => {
+      model.setAnnotationOrdering(this.settings.annotationOrdering)
+      void model.refreshTranslations()
+      // Panes with nothing on screen (no translation yet, or the passage was
+      // unavailable) reload so a module installed from the settings tab
+      // appears without reopening the pane.
+      const status = model.view.status
+      if (status === 'no-translation' || status === 'unavailable')
+        void model.openPosition(model.view.position)
+    })
+  }
+
+  #scheduleOccurrenceRefresh(): void {
+    if (this.#pendingRefresh !== null) window.clearTimeout(this.#pendingRefresh)
+    this.#pendingRefresh = window.setTimeout(() => {
+      this.#pendingRefresh = null
+      this.#models.forEach((model) => void model.refreshOccurrences())
+    }, this.#indexRefreshDebounceMs)
+  }
+
+  createModel(): ReaderPaneModel {
+    const model = new ReaderPaneModel(
+      {
+        passages: this.#repository,
+        availableTranslations: async () => this.#availableTranslations(),
+        intersecting: (reference) =>
+          this.index.intersectingOccurrences(reference),
+        annotationDetails: (file) => this.#annotationDetails(file),
+        strongs: this.#strongs,
+        firstRun: this.#firstRun,
+      },
+      {
+        toggles: {
+          details: this.settings.readerDetailsDefault,
+          nav: this.settings.readerNavDefault,
+          layout: this.settings.readerLayoutDefault,
+          strongs: this.settings.readerStrongsDefault,
+        },
+        translationId: this.settings.defaultTranslationId,
+        annotationOrdering: this.settings.annotationOrdering,
+      },
+    )
+    model.subscribe(() => {
+      this.#lastPosition = model.view.position
+    })
+    this.#models.add(model)
+    return model
+  }
+
+  releaseModel(model: ReaderPaneModel): void {
+    this.#models.delete(model)
+  }
+
+  async #annotationDetails(
+    file: string,
+  ): Promise<{ body: string; created: number } | null> {
+    const vault = this.plugin.app.vault
+    const noteFile = vault.getFileByPath(file)
+    if (noteFile === null) return null
+    const content = await vault.cachedRead(noteFile)
+    return {
+      body: content.slice(frontmatterLength(content)),
+      created: noteFile.stat.ctime,
+    }
+  }
+
+  useAnnotator(annotator: (reference: Reference) => void): void {
+    this.#annotator = annotator
+  }
+
+  annotateReference(reference: Reference): void {
+    this.#annotator(reference)
+  }
+
+  prefillReference(): Reference | null {
+    const leaf = this.plugin.app.workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
+    if (!leaf || !(leaf.view instanceof ReaderView)) return null
+    const model = leaf.view.model
+    return model.selectionReference() ?? model.currentChapterReference()
+  }
+
+  openNote(file: string): void {
+    void this.plugin.app.workspace.openLinkText(file, '', 'split')
+  }
+
+  openReference(reference: Reference, translationId: string | null): void {
+    void this.#withReaderView((view) => view.model.openAt(reference, translationId))
+  }
+
+  async openReader(): Promise<void> {
+    const workspace = this.plugin.app.workspace
+    const existing = workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
+    if (existing) {
+      await workspace.revealLeaf(existing)
+      return
+    }
+    const lastPosition = this.#lastPosition
+    await this.#withReaderView((view) => view.model.openPosition(lastPosition))
+  }
+
+  async #withReaderView(
+    action: (view: ReaderView) => Promise<void>,
+  ): Promise<void> {
+    const workspace = this.plugin.app.workspace
+    let leaf = workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
+    if (!leaf) {
+      leaf = workspace.getLeaf('tab')
+      await leaf.setViewState({ type: READER_VIEW_TYPE, active: true })
+    }
+    await workspace.revealLeaf(leaf)
+    await leaf.loadIfDeferred()
+    if (leaf.view instanceof ReaderView) await action(leaf.view)
+  }
+}

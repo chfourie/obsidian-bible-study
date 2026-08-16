@@ -1,0 +1,339 @@
+import { describe, expect, it } from 'vitest'
+import { SettingsStore } from '../data-access'
+import { makeVerseId } from '../reference'
+import type { ModuleDataDir } from './module-data-dir'
+import { ChecksumMismatchError, ModuleManager } from './module-manager'
+import { ModuleStore } from './module-store'
+import type {
+  GetBibleTranslation,
+  NormalizedModule,
+} from './normalize-getbible-translation'
+import type {
+  PrebuiltModuleDownload,
+  PrebuiltModuleSource,
+} from './prebuilt-module-source'
+import type {
+  TranslationDownload,
+  TranslationSource,
+} from './translation-source'
+
+class InMemoryModuleDataDir implements ModuleDataDir {
+  readonly files = new Map<string, string>()
+
+  async readTextFile(path: string): Promise<string | null> {
+    return this.files.get(path) ?? null
+  }
+
+  async writeTextFile(path: string, content: string): Promise<void> {
+    this.files.set(path, content)
+  }
+
+  async removeDir(path: string): Promise<void> {
+    for (const file of [...this.files.keys()]) {
+      if (file.startsWith(`${path}/`)) this.files.delete(file)
+    }
+  }
+
+  async listDirs(path: string): Promise<string[]> {
+    const dirs = new Set<string>()
+    for (const file of this.files.keys()) {
+      if (!file.startsWith(`${path}/`)) continue
+      const rest = file.slice(path.length + 1)
+      const slash = rest.indexOf('/')
+      if (slash > 0) dirs.add(rest.slice(0, slash))
+    }
+    return [...dirs]
+  }
+}
+
+const webDocument = (): GetBibleTranslation => ({
+  translation: 'World English Bible',
+  abbreviation: 'web',
+  lang: 'en',
+  language: 'English',
+  distribution_license: 'Public Domain',
+  books: [
+    {
+      nr: 43,
+      name: 'John',
+      chapters: [
+        {
+          chapter: 15,
+          name: 'John 15',
+          verses: [
+            {
+              chapter: 15,
+              verse: 4,
+              name: 'John 15:4',
+              text: 'Remain in me, and I in you.',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+})
+
+class FakeTranslationSource implements TranslationSource {
+  checksums: Record<string, string> = { web: 'sha-web-1' }
+  downloads: Record<string, TranslationDownload> = {
+    web: {
+      document: webDocument(),
+      checksum: 'sha-web-1',
+      url: 'https://api.getbible.net/v2/web.json',
+    },
+  }
+
+  async fetchTranslation(translationId: string): Promise<TranslationDownload> {
+    const download = this.downloads[translationId]
+    if (!download) throw new Error(`unknown translation ${translationId}`)
+    return download
+  }
+
+  async fetchChecksums(): Promise<Record<string, string>> {
+    return this.checksums
+  }
+}
+
+const bsbModule = (): NormalizedModule => ({
+  manifest: {
+    id: 'bsb',
+    name: 'Berean Standard Bible',
+    language: 'English',
+    license: 'Public Domain',
+    source: 'https://example.com/bsb-module.json',
+    sourceChecksum: 'sha-bsb-1',
+    formatVersion: 1,
+    capabilities: { strongsTagged: true },
+  },
+  books: new Map([
+    [
+      43,
+      {
+        [makeVerseId(43, 15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          tags: [{ start: 0, end: 6, strongs: ['G3306'] }],
+        },
+      },
+    ],
+  ]),
+})
+
+class FakePrebuiltSource implements PrebuiltModuleSource {
+  download: PrebuiltModuleDownload = {
+    module: bsbModule(),
+    checksum: 'sha-bsb-1',
+  }
+  published: string | null = 'sha-bsb-1'
+
+  async fetchModule(): Promise<PrebuiltModuleDownload> {
+    return this.download
+  }
+
+  async fetchChecksum(): Promise<string | null> {
+    return this.published
+  }
+}
+
+const inMemorySettingsStore = () => {
+  let data: unknown = null
+  return new SettingsStore({
+    loadData: async () => data,
+    saveData: async (value) => {
+      data = value
+    },
+  })
+}
+
+const setup = () => {
+  const source = new FakeTranslationSource()
+  const store = new ModuleStore(new InMemoryModuleDataDir())
+  const settingsStore = inMemorySettingsStore()
+  const prebuilt = new FakePrebuiltSource()
+  const manager = new ModuleManager(source, store, settingsStore, {
+    bsb: prebuilt,
+  })
+  return { source, store, settingsStore, prebuilt, manager }
+}
+
+describe('ModuleManager download', () => {
+  it('installs a translation as a readable module with its source checksum', async () => {
+    const { store, manager } = setup()
+
+    const manifest = await manager.downloadModule('web')
+
+    expect(manifest).toEqual({
+      id: 'web',
+      name: 'World English Bible',
+      language: 'English',
+      license: 'Public Domain',
+      source: 'https://api.getbible.net/v2/web.json',
+      sourceChecksum: 'sha-web-1',
+      formatVersion: 1,
+      capabilities: { strongsTagged: false },
+    })
+    expect(await store.manifest('web')).toEqual(manifest)
+    expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBe(
+      'Remain in me, and I in you.',
+    )
+  })
+
+  it('rejects a download whose bytes do not match the published checksum', async () => {
+    const { source, store, settingsStore, manager } = setup()
+    source.checksums.web = 'sha-web-2'
+
+    await expect(manager.downloadModule('web')).rejects.toBeInstanceOf(
+      ChecksumMismatchError,
+    )
+    expect(await store.manifest('web')).toBeNull()
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([])
+  })
+
+  it('stores the module under the requested translation id, whatever the download claims', async () => {
+    const { source, store, manager } = setup()
+    source.downloads.web.document.abbreviation = '../../evil'
+
+    const manifest = await manager.downloadModule('web')
+
+    expect(manifest.id).toBe('web')
+    expect(await store.manifest('web')).toEqual(manifest)
+    expect(await manager.modulesWithUpdates()).toEqual([])
+  })
+
+  it('installs with the downloaded checksum when no published checksum exists', async () => {
+    const { source, manager } = setup()
+    delete source.checksums.web
+
+    const manifest = await manager.downloadModule('web')
+
+    expect(manifest.sourceChecksum).toBe('sha-web-1')
+  })
+})
+
+describe('ModuleManager prebuilt modules', () => {
+  it('installs a prebuilt tagged module and records its id', async () => {
+    const { store, settingsStore, manager } = setup()
+
+    const manifest = await manager.downloadModule('bsb')
+
+    expect(manifest.capabilities.strongsTagged).toBe(true)
+    expect(await store.verseText('bsb', makeVerseId(43, 15, 4))).toBe(
+      'Remain in Me, and I in you.',
+    )
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'bsb',
+    ])
+  })
+
+  it('rejects a prebuilt download whose bytes do not match the published checksum', async () => {
+    const { store, prebuilt, manager } = setup()
+    prebuilt.published = 'sha-bsb-2'
+
+    await expect(manager.downloadModule('bsb')).rejects.toBeInstanceOf(
+      ChecksumMismatchError,
+    )
+    expect(await store.manifest('bsb')).toBeNull()
+  })
+
+  it('installs a prebuilt module when no published checksum exists', async () => {
+    const { prebuilt, manager } = setup()
+    prebuilt.published = null
+
+    const manifest = await manager.downloadModule('bsb')
+
+    expect(manifest.id).toBe('bsb')
+  })
+
+  it('reports a prebuilt module update when its published checksum changes', async () => {
+    const { prebuilt, manager } = setup()
+    await manager.downloadModule('bsb')
+
+    prebuilt.published = 'sha-bsb-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['bsb'])
+  })
+
+  it('reports no prebuilt update when checksums still match', async () => {
+    const { manager } = setup()
+    await manager.downloadModule('bsb')
+
+    expect(await manager.modulesWithUpdates()).toEqual([])
+  })
+})
+
+describe('ModuleManager installed-module ids in settings', () => {
+  it('records the module id on install', async () => {
+    const { settingsStore, manager } = setup()
+
+    await manager.downloadModule('web')
+
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'web',
+    ])
+  })
+
+  it('does not duplicate the id when re-downloading an installed module', async () => {
+    const { settingsStore, manager } = setup()
+    await manager.downloadModule('web')
+
+    await manager.downloadModule('web')
+
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'web',
+    ])
+  })
+
+  it('removes the module and its id on delete, keeping other ids', async () => {
+    const { store, settingsStore, manager } = setup()
+    await settingsStore.updateSettings((settings) => ({
+      ...settings,
+      installedModuleIds: ['bsb'],
+    }))
+    await manager.downloadModule('web')
+
+    await manager.deleteModule('web')
+
+    expect(await store.manifest('web')).toBeNull()
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'bsb',
+    ])
+  })
+})
+
+describe('ModuleManager update detection', () => {
+  it('reports an installed module whose published checksum has changed', async () => {
+    const { source, manager } = setup()
+    await manager.downloadModule('web')
+
+    source.checksums.web = 'sha-web-2'
+    source.downloads.web.checksum = 'sha-web-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['web'])
+  })
+
+  it('detects updates by translation id even when the download misreports its abbreviation', async () => {
+    const { source, manager } = setup()
+    source.downloads.web.document.abbreviation = 'not-web'
+    await manager.downloadModule('web')
+
+    source.checksums.web = 'sha-web-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['web'])
+  })
+
+  it('reports nothing when installed modules match the published checksums', async () => {
+    const { manager } = setup()
+    await manager.downloadModule('web')
+
+    expect(await manager.modulesWithUpdates()).toEqual([])
+  })
+
+  it('reports nothing for modules the source no longer publishes', async () => {
+    const { source, manager } = setup()
+    await manager.downloadModule('web')
+
+    delete source.checksums.web
+
+    expect(await manager.modulesWithUpdates()).toEqual([])
+  })
+})

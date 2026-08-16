@@ -15,34 +15,84 @@ if (typeof g.activeWindow === 'undefined' && typeof window !== 'undefined') {
   g.activeWindow = window
 }
 
+// Only the option fields the plugin actually uses are supported
+// (cls, text, attr).
+type DomElementInfo = {
+  cls?: string | string[]
+  text?: string
+  attr?: Record<string, string | number | boolean | null>
+}
+
+const applyDomElementInfo = (
+  el: HTMLElement,
+  o?: DomElementInfo | string
+): void => {
+  if (typeof o === 'string') {
+    el.className = o
+    return
+  }
+  if (!o) return
+  if (o.cls) {
+    const classes = Array.isArray(o.cls) ? o.cls : o.cls.split(/\s+/)
+    el.classList.add(...classes.filter(Boolean))
+  }
+  if (o.text !== undefined) el.textContent = o.text
+  if (o.attr) {
+    for (const [key, value] of Object.entries(o.attr)) {
+      if (value === null) continue
+      el.setAttribute(key, String(value))
+    }
+  }
+}
+
 // Obsidian hangs `createEl` / `createDiv` / `createSpan` / `createFragment`
-// off every window; jsdom has none of them. Cover the no-argument form: a
-// detached node in this window's document.
+// off every window, creating detached nodes in that window's document; jsdom
+// has none of them.
 type ObsidianDomHelpers = {
   createEl?: <K extends keyof HTMLElementTagNameMap>(
-    tag: K
+    tag: K,
+    o?: DomElementInfo | string
   ) => HTMLElementTagNameMap[K]
-  createDiv?: () => HTMLDivElement
-  createSpan?: () => HTMLSpanElement
+  createDiv?: (o?: DomElementInfo | string) => HTMLDivElement
+  createSpan?: (o?: DomElementInfo | string) => HTMLSpanElement
   createFragment?: () => DocumentFragment
 }
 
 if (typeof window !== 'undefined') {
   const w = window as Window & ObsidianDomHelpers
-  w.createEl ??= <K extends keyof HTMLElementTagNameMap>(tag: K) =>
-    w.document.createElement(tag)
-  w.createDiv ??= () => w.document.createElement('div')
-  w.createSpan ??= () => w.document.createElement('span')
+  w.createEl ??= <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    o?: DomElementInfo | string
+  ) => {
+    const el = w.document.createElement(tag)
+    applyDomElementInfo(el, o)
+    return el
+  }
+  w.createDiv ??= (o?: DomElementInfo | string) => {
+    const el = w.document.createElement('div')
+    applyDomElementInfo(el, o)
+    return el
+  }
+  w.createSpan ??= (o?: DomElementInfo | string) => {
+    const el = w.document.createElement('span')
+    applyDomElementInfo(el, o)
+    return el
+  }
   w.createFragment ??= () => w.document.createDocumentFragment()
 }
 
-// Obsidian also extends Node/HTMLElement prototypes with DOM helpers
-// (`createEl`, `createDiv`, `empty`, `addClass`, …). Only the option fields
-// the plugin actually uses are supported (cls, text, attr).
-type DomElementInfo = {
-  cls?: string | string[]
-  text?: string
-  attr?: Record<string, string | number | boolean | null>
+// Obsidian exposes `doc.win` — the window a document belongs to — for popout
+// compatibility. jsdom calls it `defaultView`.
+if (
+  typeof Document !== 'undefined' &&
+  !Object.getOwnPropertyDescriptor(Document.prototype, 'win')
+) {
+  Object.defineProperty(Document.prototype, 'win', {
+    get(this: Document) {
+      return this.defaultView
+    },
+    configurable: true,
+  })
 }
 
 declare global {
@@ -58,6 +108,7 @@ declare global {
     removeClass(...classes: string[]): void
     toggleClass(classes: string | string[], value: boolean): void
     setText(text: string): void
+    appendText(text: string): void
   }
 }
 
@@ -71,25 +122,7 @@ if (typeof HTMLElement !== 'undefined') {
     removeClass?: unknown
     toggleClass?: unknown
     setText?: unknown
-  }
-
-  const applyInfo = (el: HTMLElement, o?: DomElementInfo | string): void => {
-    if (typeof o === 'string') {
-      el.className = o
-      return
-    }
-    if (!o) return
-    if (o.cls) {
-      const classes = Array.isArray(o.cls) ? o.cls : o.cls.split(/\s+/)
-      el.classList.add(...classes.filter(Boolean))
-    }
-    if (o.text !== undefined) el.textContent = o.text
-    if (o.attr) {
-      for (const [key, value] of Object.entries(o.attr)) {
-        if (value === null) continue
-        el.setAttribute(key, String(value))
-      }
-    }
+    appendText?: unknown
   }
 
   proto.createEl ??= function (
@@ -98,7 +131,7 @@ if (typeof HTMLElement !== 'undefined') {
     o?: DomElementInfo | string
   ) {
     const el = this.ownerDocument.createElement(tag)
-    applyInfo(el, o)
+    applyDomElementInfo(el, o)
     this.appendChild(el)
     return el
   }
@@ -128,5 +161,8 @@ if (typeof HTMLElement !== 'undefined') {
   }
   proto.setText ??= function (this: HTMLElement, text: string) {
     this.textContent = text
+  }
+  proto.appendText ??= function (this: HTMLElement, text: string) {
+    this.appendChild(this.ownerDocument.createTextNode(text))
   }
 }
