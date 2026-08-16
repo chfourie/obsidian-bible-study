@@ -10,6 +10,12 @@ export default defineConfig({
         find: /^.+\.svelte$/,
         replacement: path.resolve(__dirname, 'tests/mocks/svelte-component.ts'),
       },
+      // Mounting is equally untestable glue — the runtime entry becomes a
+      // no-op so features can mount panels during load() in specs.
+      {
+        find: /^svelte$/,
+        replacement: path.resolve(__dirname, 'tests/mocks/svelte.ts'),
+      },
       { find: 'obsidian', replacement: path.resolve(__dirname, 'tests/mocks/obsidian.ts') },
       { find: 'src', replacement: path.resolve(__dirname, 'src') },
     ],

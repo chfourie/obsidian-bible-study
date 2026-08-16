@@ -98,13 +98,13 @@ const flushAsync = async (): Promise<void> => {
 }
 
 describe('ReaderFeature entry points', () => {
-  it('registers the reader view, a command, and a ribbon icon on load', async () => {
+  it('registers the reader view and a command but no ribbon icon on load', async () => {
     const { feature, commands, ribbons } = harness()
 
     await feature.load()
 
     expect(commands.map((command) => command.id)).toEqual(['open-reader'])
-    expect(ribbons).toHaveLength(1)
+    expect(ribbons).toHaveLength(0)
   })
 
   it('opens a reader leaf at the navigated reference', async () => {

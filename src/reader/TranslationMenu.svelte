@@ -6,7 +6,7 @@ toolbar's overflow clipping and matches the plugin's look on all platforms.
 -->
 <script lang="ts">
   import type { TranslationPill } from './reader-pane-model'
-  import { computeMenuPanelPosition } from './menu-panel-position'
+  import { activate, computeMenuPanelPosition } from '../ui'
 
   let {
     options,
@@ -71,15 +71,6 @@ toolbar's overflow clipping and matches the plugin's look on all platforms.
   function pick(id: string) {
     open = false
     onPick(id)
-  }
-
-  function activate(handler: () => void) {
-    return (event: KeyboardEvent) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault()
-        handler()
-      }
-    }
   }
 
   function handleDocumentClick(event: MouseEvent) {

@@ -7,7 +7,9 @@ import {
   SUGGESTED_FIRST_TRANSLATION,
 } from '../modules'
 import { ReaderFeature } from '../reader'
+import { ReferencesFeature } from '../references-panel'
 import { RenderingFeature } from '../rendering'
+import { RibbonMenuFeature } from '../ribbon-menu'
 import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
@@ -63,6 +65,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     this.#firstRun,
   )
+  readonly referencesPanel = new ReferencesFeature(this, this.modules.store)
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(
     this,
@@ -70,6 +73,10 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.modules,
     this.strongsDictionaries,
   )
+  readonly ribbonMenu = new RibbonMenuFeature(this, {
+    openReader: () => this.reader.openReader(),
+    openReferencesPanel: () => this.referencesPanel.openPanel(),
+  })
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
@@ -77,12 +84,15 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.reader.useAnnotator(
       (reference) => void this.annotations.annotate(reference),
     )
+    this.referencesPanel.useNavigator(this.reader)
     this.#features.addFeature(this.vaultIndex)
     this.#features.addFeature(this.modules)
     this.#features.addFeature(this.reader)
+    this.#features.addFeature(this.referencesPanel)
     this.#features.addFeature(this.rendering)
     this.#features.addFeature(this.annotations)
     this.#features.addFeature(this.settingsTab)
+    this.#features.addFeature(this.ribbonMenu)
     this.settingsStore.onSettingsChanged((settings) => {
       this.#settings = settings
       this.#features.useSettings(settings)
