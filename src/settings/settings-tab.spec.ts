@@ -42,7 +42,10 @@ type SetupOverrides = Partial<SettingsTabDeps> & {
 
 const flushAsync = () => new Promise((resolve) => window.setTimeout(resolve, 0))
 
-const setup = async (overrides: SetupOverrides = {}) => {
+const setup = async (
+  overrides: SetupOverrides = {},
+  { opened = true }: { opened?: boolean } = {},
+) => {
   const { storedSettings, ...deps } = overrides
   let data: unknown = storedSettings ?? null
   const settingsStore = new SettingsStore({
@@ -72,11 +75,13 @@ const setup = async (overrides: SetupOverrides = {}) => {
   const app = new App()
   const plugin = new Plugin(app, pluginManifest) as unknown as ObsidianPlugin
   const tab = new BibleStudySettingTab(plugin, model)
-  document.body.appendChild(tab.containerEl)
-  // Structural cast: the base class deprecates display() in favor of the
-  // declarative settings API, but Obsidian still opens imperative tabs
-  // through it.
-  ;(tab as { display(): void }).display()
+  if (opened) {
+    document.body.appendChild(tab.containerEl)
+    // Structural cast: the base class deprecates display() in favor of the
+    // declarative settings API; the mock's display() renders declaratively
+    // the way real Obsidian does when the tab is opened.
+    ;(tab as { display(): void }).display()
+  }
   await flushAsync()
   return { tab, model, settingsStore, app, container: tab.containerEl }
 }
@@ -140,6 +145,51 @@ const changeToggle = (setting: HTMLElement, checked: boolean): void => {
 beforeEach(() => {
   document.body.replaceChildren()
   AbstractInputSuggest.created.length = 0
+})
+
+describe('BibleStudySettingTab declarative definitions', () => {
+  it('exposes named setting definitions for the settings search index', async () => {
+    const { tab } = await setup()
+
+    const definitions = tab.getSettingDefinitions()
+    expect(definitions.length).toBeGreaterThan(0)
+
+    const names = definitions.flatMap((item) =>
+      'items' in item
+        ? (item.items ?? []).map((child) => ('name' in child ? child.name : ''))
+        : 'name' in item
+          ? [item.name]
+          : [],
+    )
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'Default translation',
+        'Offline fallback translation',
+        'API.Bible key',
+        'Language',
+        "Enable Strong's",
+        'Details',
+        'Navigation',
+        'Layout',
+        "Strong's mode",
+        'Folder',
+        'Template file',
+        'Display ordering',
+      ]),
+    )
+  })
+
+  it('does not refresh the model from the index-time call while the tab is closed', async () => {
+    const availableTranslations = vi.fn(async () => [])
+    const { tab } = await setup({ availableTranslations }, { opened: false })
+
+    // Obsidian calls getSettingDefinitions once at addSettingTab() to index
+    // the tab for settings search, long before the user opens it.
+    expect(tab.getSettingDefinitions().length).toBeGreaterThan(0)
+    await flushAsync()
+
+    expect(availableTranslations).not.toHaveBeenCalled()
+  })
 })
 
 describe('BibleStudySettingTab general pickers', () => {
@@ -462,8 +512,6 @@ describe('BibleStudySettingTab annotations section', () => {
   })
 
   type SuggestUnderTest = {
-    getSuggestions(query: string): (TFile | TFolder)[]
-    renderSuggestion(value: TFile | TFolder, el: HTMLElement): void
     selectSuggestion(
       value: TFile | TFolder,
       evt: MouseEvent | KeyboardEvent,
@@ -477,22 +525,15 @@ describe('BibleStudySettingTab annotations section', () => {
           .textInputEl === input,
     )
     if (!suggest) throw new Error('no suggest wired to the input')
-    return suggest as unknown as SuggestUnderTest
+    return suggest
   }
 
-  it('suggests matching vault folders and persists a pick', async () => {
+  it('persists a folder-suggester pick', async () => {
     const { container, settingsStore, app } = await setup()
     const folder = Object.assign(new TFolder(), { path: 'Study/Annotations' })
-    const other = Object.assign(new TFolder(), { path: 'Daily' })
-    app.vault.getAllFolders = () => [folder, other]
+    app.vault.getAllFolders = () => [folder]
 
     const suggest = suggestFor(inputOf(settingNamed(container, 'Folder')))
-    expect(suggest.getSuggestions('study')).toEqual([folder])
-
-    const rendered = document.createElement('div')
-    suggest.renderSuggestion(folder, rendered)
-    expect(rendered.textContent).toBe('Study/Annotations')
-
     suggest.selectSuggestion(folder, new MouseEvent('click'))
     await flushAsync()
 
@@ -501,23 +542,44 @@ describe('BibleStudySettingTab annotations section', () => {
     )
   })
 
-  it('suggests matching markdown files and persists a template pick', async () => {
+  it('persists a file-suggester template pick', async () => {
     const { container, settingsStore, app } = await setup()
     const template = Object.assign(new TFile(), {
       path: 'Templates/annotation.md',
     })
-    const other = Object.assign(new TFile(), { path: 'Daily/today.md' })
-    app.vault.getMarkdownFiles = () => [template, other]
+    app.vault.getMarkdownFiles = () => [template]
 
     const suggest = suggestFor(inputOf(settingNamed(container, 'Template file')))
-    expect(suggest.getSuggestions('templates')).toEqual([template])
-
     suggest.selectSuggestion(template, new MouseEvent('click'))
     await flushAsync()
 
     expect((await settingsStore.loadSettings()).annotationTemplatePath).toBe(
       'Templates/annotation.md',
     )
+  })
+})
+
+describe('BibleStudySettingTab re-render stability', () => {
+  it('keeps the rendered DOM when a change leaves the structure unchanged', async () => {
+    const { container, settingsStore } = await setup()
+
+    const ordering = settingNamed(container, 'Display ordering')
+    changeDropdown(ordering, 'path-a-z')
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).annotationOrdering).toBe(
+      'path-a-z',
+    )
+    expect(container.contains(ordering)).toBe(true)
+  })
+
+  it('rebuilds when a change alters the structure', async () => {
+    const { container } = await setup()
+
+    changeInput(settingNamed(container, 'API.Bible key'), 'key-123')
+    await flushAsync()
+
+    expect(hasSettingNamed(container, 'Online — requires key')).toBe(true)
   })
 })
 
@@ -536,10 +598,14 @@ describe('BibleStudySettingTab unsaved text input', () => {
   })
 
   it('applies the deferred re-render once the input blurs', async () => {
-    const { container, model } = await setup()
+    let manifests: ModuleManifest[] = []
+    const { container, model } = await setup({
+      installedManifests: async () => manifests,
+    })
 
     const input = inputOf(settingNamed(container, 'Folder'))
     input.focus()
+    manifests = [moduleManifest('web', 'World English Bible')]
     await model.refresh()
     expect(container.contains(input)).toBe(true)
 
@@ -550,10 +616,14 @@ describe('BibleStudySettingTab unsaved text input', () => {
   })
 
   it('still re-renders immediately while a toggle has focus', async () => {
-    const { container, model } = await setup()
+    let manifests: ModuleManifest[] = []
+    const { container, model } = await setup({
+      installedManifests: async () => manifests,
+    })
 
     const toggle = toggleOf(settingNamed(container, "Enable Strong's"))
     toggle.focus()
+    manifests = [moduleManifest('web', 'World English Bible')]
     await model.refresh()
 
     expect(container.contains(toggle)).toBe(false)

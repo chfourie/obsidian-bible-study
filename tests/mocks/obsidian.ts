@@ -200,21 +200,6 @@ export class Plugin {
   addSettingTab(_tab: PluginSettingTab): void {}
 }
 
-// Just enough of PluginSettingTab for glue registration; specs drive
-// `display`/`hide` directly when they need the rendered DOM.
-export class PluginSettingTab {
-  containerEl: HTMLElement = document.createElement('div')
-
-  constructor(
-    public app: App,
-    public plugin: Plugin
-  ) {}
-
-  display(): void {}
-
-  hide(): void {}
-}
-
 // Fluent Setting mock: builds real DOM controls so glue-level specs can read
 // back names, inputs, and interact with the handlers they registered.
 class SettingTextComponent {
@@ -373,8 +358,12 @@ export class Setting {
     return this
   }
 
-  setDesc(desc: string): this {
-    this.descEl.setText(desc)
+  setDesc(desc: string | DocumentFragment): this {
+    if (typeof desc === 'string') {
+      this.descEl.setText(desc)
+    } else {
+      this.descEl.replaceChildren(desc)
+    }
     return this
   }
 
@@ -455,4 +444,204 @@ export abstract class AbstractInputSuggest<T> {
   }
 
   close(): void {}
+}
+
+// Declarative settings API (Obsidian ≥1.13): just enough of the
+// setting-definition shapes for a tab to describe itself through
+// `getSettingDefinitions()` — only the fields and control types the plugin
+// uses. Rendering lives in PluginSettingTab below.
+export type SettingControl = {
+  key: string
+  disabled?: boolean | (() => boolean)
+} & (
+  | { type: 'dropdown'; options: Record<string, string> }
+  | { type: 'toggle' }
+  | { type: 'folder'; placeholder?: string; filter?: (folder: TFolder) => boolean }
+  | { type: 'file'; placeholder?: string; filter?: (file: TFile) => boolean }
+)
+
+export type SettingDefinition = {
+  name: string
+  desc?: string | DocumentFragment
+  control?: SettingControl
+  render?: (setting: Setting, group: unknown) => void
+}
+
+export type SettingDefinitionGroup = {
+  type: 'group'
+  heading?: string
+  items?: SettingDefinition[]
+}
+
+export type SettingDefinitionItem = SettingDefinition | SettingDefinitionGroup
+
+const resolveDisabled = (flag: boolean | (() => boolean) | undefined): boolean =>
+  typeof flag === 'function' ? flag() : (flag ?? false)
+
+// The folder/file controls' built-in suggesters. Real Obsidian owns these;
+// the mock registers them in `AbstractInputSuggest.created` so specs can
+// drive picks the same way they drive hand-rolled suggests.
+class FolderControlSuggest extends AbstractInputSuggest<TFolder> {
+  constructor(
+    app: App,
+    inputEl: HTMLInputElement,
+    private readonly filter: ((folder: TFolder) => boolean) | undefined,
+    commit: (path: string) => void
+  ) {
+    super(app, inputEl)
+    this.onSelect((folder) => {
+      this.setValue(folder.path)
+      commit(folder.path)
+      this.close()
+    })
+  }
+
+  protected getSuggestions(query: string): TFolder[] {
+    return this.app.vault
+      .getAllFolders()
+      .filter(
+        (folder) =>
+          (this.filter?.(folder) ?? true) &&
+          folder.path.toLowerCase().includes(query.toLowerCase())
+      )
+  }
+
+  renderSuggestion(folder: TFolder, el: HTMLElement): void {
+    el.setText(folder.path)
+  }
+}
+
+class FileControlSuggest extends AbstractInputSuggest<TFile> {
+  constructor(
+    app: App,
+    inputEl: HTMLInputElement,
+    private readonly filter: ((file: TFile) => boolean) | undefined,
+    commit: (path: string) => void
+  ) {
+    super(app, inputEl)
+    this.onSelect((file) => {
+      this.setValue(file.path)
+      commit(file.path)
+      this.close()
+    })
+  }
+
+  // The mock vault only lists markdown files, so they double as the
+  // suggestion universe; `filter` narrows further like the real control.
+  protected getSuggestions(query: string): TFile[] {
+    return this.app.vault
+      .getMarkdownFiles()
+      .filter(
+        (file) =>
+          (this.filter?.(file) ?? true) &&
+          file.path.toLowerCase().includes(query.toLowerCase())
+      )
+  }
+
+  renderSuggestion(file: TFile, el: HTMLElement): void {
+    el.setText(file.path)
+  }
+}
+
+// PluginSettingTab with the ≥1.13 declarative pipeline: `display()`/`update()`
+// render `getSettingDefinitions()` into real DOM, reading values through
+// `getControlValue` and persisting changes through `setControlValue`, so specs
+// can assert on the same markup the imperative Setting mock produces.
+export class PluginSettingTab {
+  containerEl: HTMLElement = document.createElement('div')
+  settingItems: SettingDefinitionItem[] = []
+
+  constructor(
+    public app: App,
+    public plugin: Plugin
+  ) {}
+
+  getSettingDefinitions(): SettingDefinitionItem[] {
+    return []
+  }
+
+  getControlValue(_key: string): unknown {
+    return undefined
+  }
+
+  setControlValue(_key: string, _value: unknown): void | Promise<void> {}
+
+  display(): void {
+    this.update()
+  }
+
+  update(): void {
+    this.settingItems = this.getSettingDefinitions()
+    this.containerEl.empty()
+    for (const item of this.settingItems) {
+      if ('type' in item && item.type === 'group') {
+        this.#renderGroup(item)
+      } else {
+        this.#renderDefinition(item as SettingDefinition)
+      }
+    }
+  }
+
+  hide(): void {}
+
+  #renderGroup(group: SettingDefinitionGroup): void {
+    if (group.heading !== undefined) {
+      new Setting(this.containerEl).setName(group.heading).setHeading()
+    }
+    group.items?.forEach((item) => this.#renderDefinition(item))
+  }
+
+  #renderDefinition(def: SettingDefinition): void {
+    const setting = new Setting(this.containerEl).setName(def.name)
+    if (def.desc !== undefined) setting.setDesc(def.desc)
+    if (def.render) {
+      def.render(setting, {})
+      return
+    }
+    if (def.control) this.#renderControl(setting, def.control)
+  }
+
+  #renderControl(setting: Setting, control: SettingControl): void {
+    const value = this.getControlValue(control.key)
+    const disabled = resolveDisabled(control.disabled)
+    const commit = (next: unknown) => void this.setControlValue(control.key, next)
+    switch (control.type) {
+      case 'dropdown':
+        setting.addDropdown((dropdown) =>
+          dropdown
+            .addOptions(control.options)
+            .setValue(String(value ?? ''))
+            .setDisabled(disabled)
+            .onChange(commit)
+        )
+        return
+      case 'toggle':
+        setting.addToggle((toggle) =>
+          toggle
+            .setValue(value === true)
+            .setDisabled(disabled)
+            .onChange(commit)
+        )
+        return
+      case 'folder':
+      case 'file':
+        setting.addText((text) => {
+          if (control.placeholder !== undefined) {
+            text.setPlaceholder(control.placeholder)
+          }
+          text.setValue(String(value ?? ''))
+          text.inputEl.disabled = disabled
+          text.inputEl.addEventListener('change', () =>
+            commit(text.inputEl.value)
+          )
+          if (control.type === 'folder') {
+            new FolderControlSuggest(this.app, text.inputEl, control.filter, commit)
+          }
+          if (control.type === 'file') {
+            new FileControlSuggest(this.app, text.inputEl, control.filter, commit)
+          }
+        })
+        return
+    }
+  }
 }
