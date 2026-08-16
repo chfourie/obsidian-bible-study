@@ -43,12 +43,18 @@ export type AnnotationDetails = {
   created: number
 }
 
+export type ReaderFirstRunDeps = {
+  translationName: string
+  install: () => Promise<void>
+}
+
 export type ReaderPaneDeps = {
   passages: PassageSource
   installedTranslations: () => Promise<ModuleManifest[]>
   intersecting: (reference: Reference) => OccurrenceGroup[]
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
+  firstRun?: ReaderFirstRunDeps
 }
 
 export type ReaderPaneConfig = {
@@ -131,6 +137,7 @@ export type ReaderPaneView = {
   banner: string | null
   strongsAvailable: boolean
   strongsMode: boolean
+  installNudge: { translationName: string; busy: boolean } | null
 }
 
 const chapterReference = (position: ReaderPosition): Reference => ({
@@ -162,6 +169,7 @@ export class ReaderPaneModel {
   #attribution: string | null = null
   #bannerDismissed = false
   #strongsAvailable = false
+  #installingSuggested = false
   #wordStrongs: { verseId: number; numbers: string[] } | null = null
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -218,6 +226,13 @@ export class ReaderPaneModel {
       attribution: this.#attribution,
       strongsAvailable: this.#strongsAvailable,
       strongsMode: this.#strongsAvailable && this.#toggles.strongs === 'on',
+      installNudge:
+        this.#status === 'no-translation' && this.deps.firstRun !== undefined
+          ? {
+              translationName: this.deps.firstRun.translationName,
+              busy: this.#installingSuggested,
+            }
+          : null,
       banner:
         this.#entry === null || this.#bannerDismissed
           ? null
@@ -242,6 +257,19 @@ export class ReaderPaneModel {
     this.#position = { ...position }
     this.#entry = null
     this.#resetSelection()
+    await this.#loadChapter()
+  }
+
+  async installSuggestedTranslation(): Promise<void> {
+    const firstRun = this.deps.firstRun
+    if (firstRun === undefined || this.#installingSuggested) return
+    this.#installingSuggested = true
+    this.#notify()
+    try {
+      await firstRun.install()
+    } finally {
+      this.#installingSuggested = false
+    }
     await this.#loadChapter()
   }
 

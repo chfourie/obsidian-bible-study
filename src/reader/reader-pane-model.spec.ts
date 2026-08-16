@@ -677,6 +677,77 @@ describe('opening the reader at a reference', () => {
     expect(model.view.status).toBe('no-translation')
   })
 
+  it('offers the suggested one-click install in the no-translation state', async () => {
+    const model = modelWith(
+      {
+        installedTranslations: async () => [],
+        firstRun: {
+          translationName: 'World English Bible',
+          install: async () => {},
+        },
+      },
+      DEFAULT_TOGGLES,
+      null,
+    )
+
+    await model.openAt(ref('John 15:4'), null)
+
+    expect(model.view.installNudge).toEqual({
+      translationName: 'World English Bible',
+      busy: false,
+    })
+  })
+
+  it('installs the suggested translation and starts reading it', async () => {
+    let installed = false
+    const model = modelWith(
+      {
+        installedTranslations: async () => (installed ? [manifest('web')] : []),
+        firstRun: {
+          translationName: 'World English Bible',
+          install: async () => {
+            installed = true
+          },
+        },
+      },
+      DEFAULT_TOGGLES,
+      null,
+    )
+    await model.openAt(ref('John 15:4'), null)
+
+    await model.installSuggestedTranslation()
+
+    expect(model.view.status).toBe('ok')
+    expect(model.view.installNudge).toBe(null)
+    expect(model.view.translations).toEqual([
+      { id: 'web', label: 'WEB', active: true },
+    ])
+  })
+
+  it('marks the nudge busy while the suggested install runs', async () => {
+    let resolveInstall: () => void = () => {}
+    const model = modelWith(
+      {
+        installedTranslations: async () => [],
+        firstRun: {
+          translationName: 'World English Bible',
+          install: () =>
+            new Promise<void>((resolve) => (resolveInstall = resolve)),
+        },
+      },
+      DEFAULT_TOGGLES,
+      null,
+    )
+    await model.openAt(ref('John 15:4'), null)
+
+    const installing = model.installSuggestedTranslation()
+    expect(model.view.installNudge?.busy).toBe(true)
+
+    resolveInstall()
+    await installing
+    expect(model.view.installNudge?.busy).toBe(false)
+  })
+
   it('falls back to the first installed translation when none is configured', async () => {
     const model = modelWith({}, DEFAULT_TOGGLES, null)
 
