@@ -81,7 +81,6 @@ const harness = (
     plugin,
     options.store ?? fakeStore(),
     index,
-    undefined,
     { indexRefreshDebounceMs: 0 },
   )
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
@@ -434,15 +433,15 @@ describe('ReaderFeature translation listing', () => {
   })
 })
 
-describe('ReaderFeature online translations', () => {
-  it('lists enabled online translations as pills after installed modules', async () => {
+describe('ReaderFeature available translations', () => {
+  it('lists only installed modules, ignoring legacy online-tier settings', async () => {
     const { feature, leaves } = harness()
-    feature.useSettings({
-      ...DEFAULT_SETTINGS,
-      defaultTranslationId: 'web',
-      apiBibleKey: 'key',
-      enabledOnlineTranslationIds: ['nkjv'],
-    })
+    feature.useSettings(
+      Object.assign({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' }, {
+        apiBibleKey: 'key',
+        enabledOnlineTranslationIds: ['nkjv'],
+      }),
+    )
     await feature.load()
 
     feature.openReference(ref('John 15:1'), 'web')
@@ -451,32 +450,6 @@ describe('ReaderFeature online translations', () => {
     const view = leaves[0].view as ReaderView
     expect(view.model.view.translations.map((pill) => pill.id)).toEqual([
       'web',
-      'nkjv',
-    ])
-  })
-
-  it('adds the pill to open panes when an online translation is enabled', async () => {
-    const { feature, leaves } = harness()
-    await feature.load()
-    feature.openReference(ref('John 15:1'), 'web')
-    await flushAsync()
-    const view = leaves[0].view as ReaderView
-    expect(view.model.view.translations.map((pill) => pill.id)).toEqual([
-      'web',
-    ])
-
-    feature.useSettings({
-      ...DEFAULT_SETTINGS,
-      defaultTranslationId: 'web',
-      apiBibleKey: 'key',
-      enabledOnlineTranslationIds: ['nkjv'],
-    })
-    feature.onSettingsChanged()
-    await flushAsync()
-
-    expect(view.model.view.translations.map((pill) => pill.id)).toEqual([
-      'web',
-      'nkjv',
     ])
   })
 })

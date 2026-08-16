@@ -1,18 +1,9 @@
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import type { ReferenceNavigator } from '../contracts'
 import { PluginFeature } from '../data-access'
-import {
-  enabledOnlineTranslations,
-  isTranslationManifest,
-  type ModuleStore,
-} from '../modules'
+import { isTranslationManifest, type ModuleStore } from '../modules'
 import { frontmatterLength, type Reference } from '../reference'
-import {
-  ModulePassageSource,
-  PassageRepository,
-  TieredPassageSource,
-  type PassageSource,
-} from '../rendering'
+import { ModulePassageSource, PassageRepository } from '../rendering'
 import type { VaultReferenceIndex } from '../vault-index'
 import {
   ReaderPaneModel,
@@ -58,7 +49,6 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     plugin: Plugin,
     private readonly store: ModuleStore,
     private readonly index: VaultReferenceIndex,
-    onlineSource?: PassageSource,
     options: ReaderFeatureOptions = {},
   ) {
     super(plugin)
@@ -66,14 +56,9 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       options.indexRefreshDebounceMs ?? DEFAULT_INDEX_REFRESH_DEBOUNCE_MS
     this.#strongs = options.strongs ?? INERT_STRONGS
     this.#firstRun = options.firstRun
-    const moduleSource = new ModulePassageSource(store)
     // The reader's stacked view never substitutes the fallback translation
-    // (spec §6.4), so tiers compose here without a FallbackPassageSource.
-    this.#repository = new PassageRepository(
-      onlineSource
-        ? new TieredPassageSource(moduleSource, onlineSource)
-        : moduleSource,
-    )
+    // (spec §6.3): unavailable translations show an unavailable row.
+    this.#repository = new PassageRepository(new ModulePassageSource(store))
   }
 
   override async load(): Promise<void> {
@@ -106,17 +91,13 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   }
 
   async #availableTranslations(): Promise<ReaderTranslation[]> {
-    const installed = (await this.store.installedManifests())
+    return (await this.store.installedManifests())
       .filter(isTranslationManifest)
       .map((manifest) => ({
         id: manifest.id,
         label: manifest.id.toUpperCase(),
         strongsTagged: manifest.capabilities.strongsTagged === true,
       }))
-    const online = enabledOnlineTranslations(this.settings)
-      .filter((online) => installed.every(({ id }) => id !== online.id))
-      .map(({ id }) => ({ id, label: id.toUpperCase(), strongsTagged: false }))
-    return [...installed, ...online]
   }
 
   override onSettingsChanged(): void {

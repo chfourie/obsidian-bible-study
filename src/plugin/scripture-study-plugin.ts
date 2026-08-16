@@ -51,7 +51,6 @@ export default class ScriptureStudyPlugin extends Plugin {
     this,
     this.modules.store,
     this.vaultIndex.index,
-    this.#onlineSource,
     {
       firstRun: this.#firstRun,
       strongs: {
