@@ -1,7 +1,7 @@
 import {
   DEFAULT_SETTINGS,
   installedTranslationModuleIds,
-  type BibleStudySettings,
+  type ScriptureStudySettings,
   type SettingsStore,
 } from '../data-access'
 import {
@@ -46,7 +46,7 @@ export type TranslationRowView = {
 }
 
 export type SettingsTabView = {
-  settings: BibleStudySettings
+  settings: ScriptureStudySettings
   defaultTranslationOptions: TranslationOption[]
   fallbackTranslationOptions: TranslationOption[]
   noTranslationsAvailable: boolean
@@ -62,7 +62,7 @@ const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
 export class SettingsTabModel {
-  #settings: BibleStudySettings = DEFAULT_SETTINGS
+  #settings: ScriptureStudySettings = DEFAULT_SETTINGS
   #manifests: ModuleManifest[] = []
   #catalog: SettingsCatalogEntry[] = []
   #updates: string[] = []
@@ -94,7 +94,7 @@ export class SettingsTabModel {
   }
 
   async updateSettings(
-    update: (settings: BibleStudySettings) => BibleStudySettings,
+    update: (settings: ScriptureStudySettings) => ScriptureStudySettings,
   ): Promise<void> {
     this.#settings = await this.deps.settingsStore.updateSettings(update)
     this.#notify()
@@ -267,5 +267,5 @@ export class SettingsTabModel {
   }
 }
 
-const hasApiKey = (settings: BibleStudySettings): boolean =>
+const hasApiKey = (settings: ScriptureStudySettings): boolean =>
   settings.apiBibleKey !== null && settings.apiBibleKey.trim() !== ''

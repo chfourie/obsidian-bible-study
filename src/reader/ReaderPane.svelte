@@ -248,11 +248,11 @@
       <button
         type="button"
         class="bsr-strongs-word"
-        class:bible-study-red-letter={segment.redLetter}
+        class:scripture-study-red-letter={segment.redLetter}
         onclick={(event) => onWordClick(event, row.verseId, segment.strongs ?? [])}
       >{segment.text}</button>
     {:else if segment.redLetter}
-      <span class="bible-study-red-letter">{segment.text}</span>
+      <span class="scripture-study-red-letter">{segment.text}</span>
     {:else}
       {segment.text}
     {/if}
@@ -350,10 +350,10 @@
           <h1 class="bsr-title">{view.title}</h1>
 
           {#if view.status === 'loading'}
-            <div class="bible-study-loading">Loading {view.title}…</div>
+            <div class="scripture-study-loading">Loading {view.title}…</div>
           {:else if view.status === 'no-translation'}
             <div class="bsr-nudge">
-              No translation installed — install one in the Bible Study settings to start reading.
+              No translation installed — install one in the Scripture Study settings to start reading.
             </div>
             {#if view.installNudge}
               <button
@@ -425,7 +425,7 @@
           {/if}
 
           {#if view.attribution !== null}
-            <div class="bible-study-attribution">{view.attribution}</div>
+            <div class="scripture-study-attribution">{view.attribution}</div>
           {/if}
         </div>
       </div>

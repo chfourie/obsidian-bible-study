@@ -1,18 +1,18 @@
 import { describe, expect, it, vi } from 'vitest'
 import { App, type PluginManifest } from 'obsidian'
-import BibleStudyPlugin from './bible-study-plugin'
+import ScriptureStudyPlugin from './scripture-study-plugin'
 
 const manifest: PluginManifest = {
-  id: 'bible-study',
-  name: 'Bible Study',
+  id: 'scripture-study',
+  name: 'Scripture Study',
   version: '0.0.1',
   minAppVersion: '1.0.0',
   description: '',
   author: '',
 }
 
-const pluginWithStorage = (): BibleStudyPlugin => {
-  const plugin = new BibleStudyPlugin(new App(), manifest)
+const pluginWithStorage = (): ScriptureStudyPlugin => {
+  const plugin = new ScriptureStudyPlugin(new App(), manifest)
   let data: unknown = null
   plugin.loadData = async () => data
   plugin.saveData = async (value: unknown) => {
@@ -21,7 +21,7 @@ const pluginWithStorage = (): BibleStudyPlugin => {
   return plugin
 }
 
-describe('BibleStudyPlugin same-device settings changes', () => {
+describe('ScriptureStudyPlugin same-device settings changes', () => {
   it('propagates settings written in-session to every feature', async () => {
     const plugin = pluginWithStorage()
     const useSettings = vi.spyOn(plugin.rendering, 'useSettings')

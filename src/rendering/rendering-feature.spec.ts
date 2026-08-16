@@ -56,7 +56,7 @@ describe('RenderingFeature in-note intersections', () => {
       getSectionInfo: () => null,
     } as unknown as MarkdownPostProcessorContext)
 
-    const toggle = element.querySelector('.bible-study-intersections-toggle')
+    const toggle = element.querySelector('.scripture-study-intersections-toggle')
     expect(toggle?.textContent).toBe('●1◆1')
   })
 })

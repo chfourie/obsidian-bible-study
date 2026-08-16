@@ -19,7 +19,7 @@ import {
 import { VaultIndexFeature } from '../vault-index'
 import { PluginFeatureSet } from './plugin-feature-set'
 
-export default class BibleStudyPlugin extends Plugin {
+export default class ScriptureStudyPlugin extends Plugin {
   readonly #features: PluginFeatureSet = new PluginFeatureSet()
   readonly settingsStore = new SettingsStore(this)
   #settings = DEFAULT_SETTINGS

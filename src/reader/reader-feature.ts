@@ -91,7 +91,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     })
     this.plugin.addRibbonIcon(
       'book-open-text',
-      'Open Bible Study reader',
+      'Open Scripture Study reader',
       () => void this.openReader(),
     )
   }

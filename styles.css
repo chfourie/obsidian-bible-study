@@ -1,14 +1,14 @@
-/* Bible Study — plugin styles. Svelte component styles are injected by the
+/* Scripture Study — plugin styles. Svelte component styles are injected by the
    build; this file holds vault-level styles and is shipped alongside main.js. */
 
 body {
   /* Words of Christ — theme-adjustable (spec §3.4). */
-  --bible-study-red-letter-color: var(--color-red);
+  --scripture-study-red-letter-color: var(--color-red);
 }
 
 /* ---- Reference chip (spec §3.1) ---------------------------------------- */
 
-.bible-study-chip {
+.scripture-study-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.3em;
@@ -22,36 +22,36 @@ body {
   white-space: nowrap;
 }
 
-.bible-study-chip:hover {
+.scripture-study-chip:hover {
   background-color: hsla(var(--interactive-accent-hsl), 0.22);
 }
 
-.bible-study-chip-translation {
+.scripture-study-chip-translation {
   color: var(--text-muted);
   font-size: 0.85em;
 }
 
-.bible-study-chip-translation::before {
+.scripture-study-chip-translation::before {
   content: '· ';
 }
 
-.bible-study-chip-icon,
-.bible-study-callout-nav,
-.bible-study-retry {
+.scripture-study-chip-icon,
+.scripture-study-callout-nav,
+.scripture-study-retry {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
 }
 
-.bible-study-chip-icon svg,
-.bible-study-callout-nav svg,
-.bible-study-retry svg {
+.scripture-study-chip-icon svg,
+.scripture-study-callout-nav svg,
+.scripture-study-retry svg {
   width: 0.85em;
   height: 0.85em;
 }
 
 /* Invalid trailing option tokens: highlighted and ignored (spec §2). */
-.bible-study-invalid-token {
+.scripture-study-invalid-token {
   margin-left: 0.3em;
   padding: 0 0.25em;
   border-radius: var(--radius-s);
@@ -63,31 +63,31 @@ body {
 
 /* ---- Inline mode (spec §3.2) ------------------------------------------- */
 
-span.bible-study-passage {
+span.scripture-study-passage {
   margin-left: 0.35em;
   color: var(--text-muted);
   font-style: italic;
 }
 
-.bible-study-verse-number {
+.scripture-study-verse-number {
   margin-right: 0.15em;
   color: var(--text-faint);
   font-size: 0.7em;
   font-style: normal;
 }
 
-.bible-study-red-letter {
-  color: var(--bible-study-red-letter-color);
+.scripture-study-red-letter {
+  color: var(--scripture-study-red-letter-color);
 }
 
 /* ---- Async states (spec §3.5) ------------------------------------------ */
 
-.bible-study-loading {
+.scripture-study-loading {
   color: var(--text-faint);
-  animation: bible-study-shimmer 1.2s ease-in-out infinite;
+  animation: scripture-study-shimmer 1.2s ease-in-out infinite;
 }
 
-@keyframes bible-study-shimmer {
+@keyframes scripture-study-shimmer {
   0%,
   100% {
     opacity: 0.45;
@@ -97,18 +97,18 @@ span.bible-study-passage {
   }
 }
 
-.bible-study-unavailable {
+.scripture-study-unavailable {
   color: var(--text-faint);
   font-style: italic;
 }
 
-.bible-study-retry {
+.scripture-study-retry {
   margin-left: 0.3em;
 }
 
 /* First-run nudge: one-click WEB install on the no-translation state
    (spec §6.5). */
-.bible-study-install-cta {
+.scripture-study-install-cta {
   margin-left: 0.5em;
   padding: 0.1em 0.6em;
   border-radius: var(--radius-s);
@@ -119,16 +119,16 @@ span.bible-study-passage {
   cursor: pointer;
 }
 
-.bible-study-install-cta:hover {
+.scripture-study-install-cta:hover {
   background-color: var(--interactive-accent-hover);
 }
 
-.bible-study-install-cta[aria-disabled='true'] {
+.scripture-study-install-cta[aria-disabled='true'] {
   opacity: 0.6;
   cursor: default;
 }
 
-.bible-study-install-error {
+.scripture-study-install-error {
   margin-left: 0.5em;
   color: var(--text-error);
   font-style: normal;
@@ -137,7 +137,7 @@ span.bible-study-passage {
 
 /* ---- Settings tab (spec §8) -------------------------------------------- */
 
-.bible-study-strongs-badge {
+.scripture-study-strongs-badge {
   margin-left: 0.5em;
   padding: 0.05em 0.45em;
   border-radius: var(--radius-s);
@@ -146,13 +146,13 @@ span.bible-study-passage {
   font-size: var(--font-smallest);
 }
 
-.bible-study-settings-error {
+.scripture-study-settings-error {
   color: var(--text-error);
   font-size: var(--font-smallest);
 }
 
 /* Fallback substitution is never silent (spec §6.4). */
-.bible-study-fallback-notice {
+.scripture-study-fallback-notice {
   margin-right: 0.4em;
   color: var(--text-faint);
   font-style: italic;
@@ -166,38 +166,38 @@ span.bible-study-passage {
   --callout-icon: lucide-book-open;
 }
 
-.bible-study-callout .callout-title {
+.scripture-study-callout .callout-title {
   align-items: center;
 }
 
-.bible-study-callout .bible-study-callout-nav {
+.scripture-study-callout .scripture-study-callout-nav {
   margin-left: auto;
   color: var(--text-muted);
 }
 
-.bible-study-callout .bible-study-callout-nav:hover {
+.scripture-study-callout .scripture-study-callout-nav:hover {
   color: var(--text-normal);
 }
 
-.bible-study-attribution {
+.scripture-study-attribution {
   margin-top: 0.5em;
   color: var(--text-faint);
   font-size: var(--font-smallest);
 }
 
 /* Reading mode wraps each rendered reference in this holder. */
-.bible-study-reference .callout {
+.scripture-study-reference .callout {
   margin: 0.5em 0;
 }
 
 /* ---- In-note intersection surface (spec §5) ---------------------------- */
 
-.bible-study-intersections {
+.scripture-study-intersections {
   display: inline;
   margin-left: 0.3em;
 }
 
-.bible-study-intersections-toggle {
+.scripture-study-intersections-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.25em;
@@ -206,15 +206,15 @@ span.bible-study-passage {
   cursor: pointer;
 }
 
-.bible-study-intersections-annotation-count {
+.scripture-study-intersections-annotation-count {
   color: var(--color-yellow);
 }
 
-.bible-study-intersections-mention-count {
+.scripture-study-intersections-mention-count {
   color: var(--color-blue);
 }
 
-.bible-study-intersections-panel {
+.scripture-study-intersections-panel {
   display: block;
   margin: 0.3em 0 0.5em;
   padding: 0.4em 0.7em;
@@ -224,7 +224,7 @@ span.bible-study-passage {
   font-size: var(--font-ui-small);
 }
 
-.bible-study-intersections-group {
+.scripture-study-intersections-group {
   display: block;
   margin-top: 0.3em;
   color: var(--text-faint);
@@ -233,29 +233,29 @@ span.bible-study-passage {
   letter-spacing: 0.05em;
 }
 
-.bible-study-intersections-group:first-child {
+.scripture-study-intersections-group:first-child {
   margin-top: 0;
 }
 
-.bible-study-intersections-note {
+.scripture-study-intersections-note {
   display: block;
   padding: 0.15em 0;
   color: var(--text-muted);
   cursor: pointer;
 }
 
-.bible-study-intersections-note:hover {
+.scripture-study-intersections-note:hover {
   color: var(--text-accent);
 }
 
 /* ---- Annotations (spec §5) --------------------------------------------- */
 
-.bible-study-ref-input {
+.scripture-study-ref-input {
   width: 100%;
   margin-bottom: 8px;
 }
 
-.bible-study-ref-error {
+.scripture-study-ref-error {
   min-height: 1.4em;
   margin-bottom: 8px;
   color: var(--text-error);

@@ -12,11 +12,11 @@ export class RefPromptModal extends Modal {
   override onOpen(): void {
     this.titleEl.setText('New annotation')
     const input = this.contentEl.createEl('input', {
-      cls: 'bible-study-ref-input',
+      cls: 'scripture-study-ref-input',
       attr: { type: 'text', placeholder: 'John 15:4-6,9' },
     })
     input.value = this.initialValue
-    const error = this.contentEl.createDiv({ cls: 'bible-study-ref-error' })
+    const error = this.contentEl.createDiv({ cls: 'scripture-study-ref-error' })
     const trySubmit = (): void => {
       if (this.submit(input.value)) this.close()
       else error.setText(`Not a valid reference: ${input.value}`)

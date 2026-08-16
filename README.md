@@ -1,4 +1,4 @@
-# Bible Study
+# Scripture Study
 
 An Obsidian plugin that turns your vault into a full bible reading and study tool.
 

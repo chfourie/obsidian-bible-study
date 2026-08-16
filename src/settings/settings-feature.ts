@@ -3,7 +3,7 @@ import { PluginFeature, type SettingsStore } from '../data-access'
 import { ONLINE_TRANSLATIONS, type ModulesFeature } from '../modules'
 import type { StrongsDictionaries } from '../strongs'
 import { settingsCatalog } from './settings-catalog'
-import { BibleStudySettingTab } from './settings-tab'
+import { ScriptureStudySettingTab } from './settings-tab'
 import { SettingsTabModel } from './settings-tab-model'
 
 export class SettingsFeature extends PluginFeature {
@@ -35,6 +35,6 @@ export class SettingsFeature extends PluginFeature {
   }
 
   override async load(): Promise<void> {
-    this.plugin.addSettingTab(new BibleStudySettingTab(this.plugin, this.model))
+    this.plugin.addSettingTab(new ScriptureStudySettingTab(this.plugin, this.model))
   }
 }

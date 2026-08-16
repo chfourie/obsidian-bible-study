@@ -1,4 +1,4 @@
-import type { BibleStudySettings, PluginFeature } from '../data-access'
+import type { ScriptureStudySettings, PluginFeature } from '../data-access'
 
 export class PluginFeatureSet {
   readonly #pluginFeatures: PluginFeature[] = []
@@ -28,7 +28,7 @@ export class PluginFeatureSet {
     })
   }
 
-  readonly useSettings = (settings: BibleStudySettings): void => {
+  readonly useSettings = (settings: ScriptureStudySettings): void => {
     this.#pluginFeatures.forEach((feature) => {
       try {
         feature.useSettings({ ...settings })

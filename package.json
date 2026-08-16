@@ -1,5 +1,5 @@
 {
-	"name": "bible-study",
+	"name": "scripture-study",
 	"version": "0.1.0",
 	"description": "Turns your Obsidian vault into a full bible reading and study tool",
 	"main": "main.js",

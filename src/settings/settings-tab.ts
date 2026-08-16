@@ -7,7 +7,7 @@ import {
   type TFile,
   type TFolder,
 } from 'obsidian'
-import type { AnnotationOrdering, BibleStudySettings } from '../data-access'
+import type { AnnotationOrdering, ScriptureStudySettings } from '../data-access'
 import { STRONGS_ATTRIBUTION } from '../strongs'
 import type {
   SettingsTabModel,
@@ -70,7 +70,7 @@ class FileSuggest extends AbstractInputSuggest<TFile> {
   }
 }
 
-export class BibleStudySettingTab extends PluginSettingTab {
+export class ScriptureStudySettingTab extends PluginSettingTab {
   #unsubscribe: (() => void) | null = null
   #renderQueuedBehindFocusedInput = false
 
@@ -92,7 +92,7 @@ export class BibleStudySettingTab extends PluginSettingTab {
     this.#unsubscribe = null
   }
 
-  #update(update: (settings: BibleStudySettings) => BibleStudySettings): void {
+  #update(update: (settings: ScriptureStudySettings) => ScriptureStudySettings): void {
     void this.model.updateSettings(update)
   }
 
@@ -231,13 +231,13 @@ export class BibleStudySettingTab extends PluginSettingTab {
     const setting = new Setting(this.containerEl).setName(row.name)
     if (row.strongsTagged) {
       setting.nameEl.createSpan({
-        cls: 'bible-study-strongs-badge',
+        cls: 'scripture-study-strongs-badge',
         text: "Strong's",
       })
     }
     if (row.error !== null) {
       setting.descEl.createDiv({
-        cls: 'bible-study-settings-error',
+        cls: 'scripture-study-settings-error',
         text: row.error,
       })
     }
@@ -314,7 +314,7 @@ export class BibleStudySettingTab extends PluginSettingTab {
       )
     if (view.strongsError !== null) {
       setting.descEl.createDiv({
-        cls: 'bible-study-settings-error',
+        cls: 'scripture-study-settings-error',
         text: view.strongsError,
       })
     }
@@ -355,7 +355,7 @@ export class BibleStudySettingTab extends PluginSettingTab {
     view: SettingsTabView,
     name: string,
     key: Key,
-    labels: Record<BibleStudySettings[Key], string>,
+    labels: Record<ScriptureStudySettings[Key], string>,
   ): void {
     new Setting(this.containerEl)
       .setName(name)

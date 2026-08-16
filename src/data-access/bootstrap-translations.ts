@@ -1,19 +1,19 @@
-import type { BibleStudySettings } from './bible-study-settings.type'
+import type { ScriptureStudySettings } from './scripture-study-settings.type'
 
 const NON_TRANSLATION_MODULE_IDS = ['strongs-dictionaries']
 
-const hasApiKey = (settings: BibleStudySettings): boolean =>
+const hasApiKey = (settings: ScriptureStudySettings): boolean =>
   settings.apiBibleKey !== null && settings.apiBibleKey.trim() !== ''
 
 export const installedTranslationModuleIds = (
-  settings: BibleStudySettings,
+  settings: ScriptureStudySettings,
 ): string[] =>
   settings.installedModuleIds.filter(
     (moduleId) => !NON_TRANSLATION_MODULE_IDS.includes(moduleId),
   )
 
 export const defaultTranslationCandidates = (
-  settings: BibleStudySettings,
+  settings: ScriptureStudySettings,
 ): string[] => [
   ...installedTranslationModuleIds(settings),
   ...(hasApiKey(settings) ? settings.enabledOnlineTranslationIds : []),
@@ -28,8 +28,8 @@ const bootstrapped = (
     : (candidates[0] ?? null)
 
 export const applyTranslationBootstrap = (
-  settings: BibleStudySettings,
-): BibleStudySettings => ({
+  settings: ScriptureStudySettings,
+): ScriptureStudySettings => ({
   ...settings,
   defaultTranslationId: bootstrapped(
     settings.defaultTranslationId,

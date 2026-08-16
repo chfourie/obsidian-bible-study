@@ -10,7 +10,7 @@ import ReaderPane from './ReaderPane.svelte'
 import type { ReaderFeature } from './reader-feature'
 import type { ReaderPaneModel } from './reader-pane-model'
 
-export const READER_VIEW_TYPE = 'bible-study-reader'
+export const READER_VIEW_TYPE = 'scripture-study-reader'
 
 type ReaderViewState = {
   book?: number
@@ -34,7 +34,7 @@ export class ReaderView extends ItemView {
   }
 
   getDisplayText(): string {
-    return 'Bible Study reader'
+    return 'Scripture Study reader'
   }
 
   override getIcon(): string {

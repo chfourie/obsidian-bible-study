@@ -1,4 +1,4 @@
-# Bible Study — Ubiquitous Language
+# Scripture Study — Ubiquitous Language
 
 ## Terms
 

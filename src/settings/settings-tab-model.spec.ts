@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { SettingsStore, type BibleStudySettings } from '../data-access'
+import { SettingsStore, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest } from '../modules'
 import { SettingsTabModel, type SettingsTabDeps } from './settings-tab-model'
 
@@ -15,7 +15,7 @@ const manifest = (id: string, name = id.toUpperCase(), tagged = false): ModuleMa
 })
 
 type SetupOverrides = Partial<SettingsTabDeps> & {
-  storedSettings?: Partial<BibleStudySettings>
+  storedSettings?: Partial<ScriptureStudySettings>
 }
 
 const setup = (overrides: SetupOverrides = {}) => {

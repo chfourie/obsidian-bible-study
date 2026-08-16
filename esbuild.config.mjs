@@ -17,7 +17,7 @@ const context = await esbuild.context({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ["src/plugin/bible-study-plugin.ts"],
+	entryPoints: ["src/plugin/scripture-study-plugin.ts"],
 	bundle: true,
 	external: [
 		"obsidian",

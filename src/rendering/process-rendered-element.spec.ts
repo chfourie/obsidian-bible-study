@@ -45,7 +45,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps, '', 'Sermons/Abiding.md')
 
-    const toggle = root.querySelector('.bible-study-intersections-toggle')
+    const toggle = root.querySelector('.scripture-study-intersections-toggle')
     expect(toggle?.textContent).toBe('◆1')
   })
 
@@ -56,7 +56,7 @@ describe('processRenderedElement', () => {
     await process(root, deps)
 
     const paragraph = root.querySelector('p')
-    expect(paragraph?.querySelector('.bible-study-chip')).not.toBeNull()
+    expect(paragraph?.querySelector('.scripture-study-chip')).not.toBeNull()
     expect(paragraph?.textContent).toContain('Abide: ')
     expect(paragraph?.textContent).toContain(' in him.')
     expect(paragraph?.textContent).not.toContain('{')
@@ -68,7 +68,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps)
 
-    expect(root.querySelectorAll('.bible-study-chip')).toHaveLength(2)
+    expect(root.querySelectorAll('.scripture-study-chip')).toHaveLength(2)
   })
 
   it('leaves invalid brace content untouched', async () => {
@@ -77,7 +77,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps)
 
-    expect(root.querySelector('.bible-study-chip')).toBeNull()
+    expect(root.querySelector('.scripture-study-chip')).toBeNull()
     expect(root.textContent).toBe('{"json": true} and {Nowhere 3:16}')
   })
 
@@ -88,7 +88,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps)
 
-    expect(root.querySelector('.bible-study-chip')).toBeNull()
+    expect(root.querySelector('.scripture-study-chip')).toBeNull()
   })
 
   it('strips a visible escape backslash and leaves literal text', async () => {
@@ -97,7 +97,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps)
 
-    expect(root.querySelector('.bible-study-chip')).toBeNull()
+    expect(root.querySelector('.scripture-study-chip')).toBeNull()
     expect(root.textContent).toBe('{John 15:4}')
   })
 
@@ -107,7 +107,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps, '{John 15:4} then \\{John 15:4}')
 
-    expect(root.querySelectorAll('.bible-study-chip')).toHaveLength(1)
+    expect(root.querySelectorAll('.scripture-study-chip')).toHaveLength(1)
     expect(root.querySelector('p')?.textContent).toBe(
       'John 15:4 then {John 15:4}',
     )
@@ -119,7 +119,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps, '\\{John 15:4} then {John 15:4}')
 
-    expect(root.querySelectorAll('.bible-study-chip')).toHaveLength(1)
+    expect(root.querySelectorAll('.scripture-study-chip')).toHaveLength(1)
     expect(root.querySelector('p')?.textContent).toBe(
       '{John 15:4} then John 15:4',
     )
@@ -131,7 +131,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps, '\\{John 15:4} then \\{John 15:4}')
 
-    expect(root.querySelector('.bible-study-chip')).toBeNull()
+    expect(root.querySelector('.scripture-study-chip')).toBeNull()
     expect(root.querySelector('p')?.textContent).toBe(
       '{John 15:4} then {John 15:4}',
     )
@@ -143,7 +143,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps, '`{John 15:4}` then \\{John 15:4}')
 
-    expect(root.querySelector('.bible-study-chip')).toBeNull()
+    expect(root.querySelector('.scripture-study-chip')).toBeNull()
   })
 
   it('renders inline passages inside the flow', async () => {
@@ -152,7 +152,7 @@ describe('processRenderedElement', () => {
 
     await process(root, deps)
 
-    expect(root.querySelector('.bible-study-passage')?.textContent).toBe(
+    expect(root.querySelector('.scripture-study-passage')?.textContent).toBe(
       '“Remain.”',
     )
   })

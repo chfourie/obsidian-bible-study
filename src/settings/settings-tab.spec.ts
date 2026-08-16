@@ -7,9 +7,9 @@ import {
   TFile,
   TFolder,
 } from '../../tests/mocks/obsidian'
-import { SettingsStore, type BibleStudySettings } from '../data-access'
+import { SettingsStore, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest } from '../modules'
-import { BibleStudySettingTab } from './settings-tab'
+import { ScriptureStudySettingTab } from './settings-tab'
 import { SettingsTabModel, type SettingsTabDeps } from './settings-tab-model'
 
 const moduleManifest = (
@@ -28,8 +28,8 @@ const moduleManifest = (
 })
 
 const pluginManifest = {
-  id: 'bible-study',
-  name: 'Bible Study',
+  id: 'scripture-study',
+  name: 'Scripture Study',
   version: '0.0.0',
   minAppVersion: '1.0.0',
   description: '',
@@ -37,7 +37,7 @@ const pluginManifest = {
 }
 
 type SetupOverrides = Partial<SettingsTabDeps> & {
-  storedSettings?: Partial<BibleStudySettings>
+  storedSettings?: Partial<ScriptureStudySettings>
 }
 
 const flushAsync = () => new Promise((resolve) => window.setTimeout(resolve, 0))
@@ -71,7 +71,7 @@ const setup = async (overrides: SetupOverrides = {}) => {
   })
   const app = new App()
   const plugin = new Plugin(app, pluginManifest) as unknown as ObsidianPlugin
-  const tab = new BibleStudySettingTab(plugin, model)
+  const tab = new ScriptureStudySettingTab(plugin, model)
   document.body.appendChild(tab.containerEl)
   // Structural cast: the base class deprecates display() in favor of the
   // declarative settings API, but Obsidian still opens imperative tabs
@@ -142,7 +142,7 @@ beforeEach(() => {
   AbstractInputSuggest.created.length = 0
 })
 
-describe('BibleStudySettingTab general pickers', () => {
+describe('ScriptureStudySettingTab general pickers', () => {
   it('renders disabled placeholders while no translations are available', async () => {
     const { container } = await setup()
 
@@ -192,7 +192,7 @@ describe('BibleStudySettingTab general pickers', () => {
   })
 })
 
-describe('BibleStudySettingTab translations section', () => {
+describe('ScriptureStudySettingTab translations section', () => {
   it('masks the API key input and persists it on change', async () => {
     const { container, settingsStore } = await setup()
 
@@ -278,7 +278,7 @@ describe('BibleStudySettingTab translations section', () => {
 
     expect(
       settingNamed(container, 'World English Bible').querySelector(
-        '.bible-study-settings-error',
+        '.scripture-study-settings-error',
       )?.textContent,
     ).toBe('network gone')
   })
@@ -298,7 +298,7 @@ describe('BibleStudySettingTab translations section', () => {
     })
 
     const row = settingNamed(container, 'Berean Standard Bible')
-    expect(row.querySelector('.bible-study-strongs-badge')?.textContent).toBe(
+    expect(row.querySelector('.scripture-study-strongs-badge')?.textContent).toBe(
       "Strong's",
     )
     const buttons = [...row.querySelectorAll('button')]
@@ -347,7 +347,7 @@ describe('BibleStudySettingTab translations section', () => {
   })
 })
 
-describe('BibleStudySettingTab Strongs section', () => {
+describe('ScriptureStudySettingTab Strongs section', () => {
   it('installs the dictionaries from the toggle', async () => {
     const strongs = {
       isInstalled: async () => false,
@@ -378,7 +378,7 @@ describe('BibleStudySettingTab Strongs section', () => {
 
     expect(
       settingNamed(container, "Enable Strong's").querySelector(
-        '.bible-study-settings-error',
+        '.scripture-study-settings-error',
       )?.textContent,
     ).toBe('network gone')
   })
@@ -401,7 +401,7 @@ describe('BibleStudySettingTab Strongs section', () => {
   })
 })
 
-describe('BibleStudySettingTab reader defaults', () => {
+describe('ScriptureStudySettingTab reader defaults', () => {
   it('persists a reader default change', async () => {
     const { container, settingsStore } = await setup()
 
@@ -417,7 +417,7 @@ describe('BibleStudySettingTab reader defaults', () => {
   })
 })
 
-describe('BibleStudySettingTab annotations section', () => {
+describe('ScriptureStudySettingTab annotations section', () => {
   it('persists a trimmed folder, falling back to the default when blanked', async () => {
     const { container, settingsStore } = await setup()
 
@@ -521,7 +521,7 @@ describe('BibleStudySettingTab annotations section', () => {
   })
 })
 
-describe('BibleStudySettingTab unsaved text input', () => {
+describe('ScriptureStudySettingTab unsaved text input', () => {
   it('keeps a focused text input and its unsaved value across background refreshes', async () => {
     const { container, model } = await setup()
 

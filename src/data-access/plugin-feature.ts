@@ -1,15 +1,15 @@
 import type { Plugin } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
-  type BibleStudySettings,
-} from './bible-study-settings.type'
+  type ScriptureStudySettings,
+} from './scripture-study-settings.type'
 
 export abstract class PluginFeature {
   #settings = DEFAULT_SETTINGS
 
   protected constructor(protected plugin: Plugin) {}
 
-  protected get settings(): BibleStudySettings {
+  protected get settings(): ScriptureStudySettings {
     return this.#settings
   }
 
@@ -19,7 +19,7 @@ export abstract class PluginFeature {
 
   onSettingsChanged(): void {}
 
-  useSettings(settings: BibleStudySettings): void {
+  useSettings(settings: ScriptureStudySettings): void {
     this.#settings = settings
   }
 }

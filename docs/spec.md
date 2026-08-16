@@ -1,10 +1,10 @@
-# Bible Study — v1 Specification
+# Scripture Study — v1 Specification
 
-Bible Study is an Obsidian plugin that turns a vault into a full bible reading and study tool: `{curly-brace}` scripture references with styled rendering and inline/callout display, a reader pane (translation switching, multi-translation verse view, intersecting-reference lookup), verse annotations as vault notes, offline translation downloads, and Strong's concordance support.
+Scripture Study is an Obsidian plugin that turns a vault into a full bible reading and study tool: `{curly-brace}` scripture references with styled rendering and inline/callout display, a reader pane (translation switching, multi-translation verse view, intersecting-reference lookup), verse annotations as vault notes, offline translation downloads, and Strong's concordance support.
 
 This document consolidates every decision from the [wayfinder map](https://github.com/chfourie/obsidian-bible-study/issues/1). Terminology follows the glossary in [CONTEXT.md](../CONTEXT.md); the verse-identity decision is [ADR 0001](adr/0001-bcv-encoded-verse-ids-on-kjv-grid.md); data-source findings are in [docs/research/scripture-data-sources.md](research/scripture-data-sources.md).
 
-Plugin id: `bible-study`. Stack: TypeScript, Svelte 5, esbuild + esbuild-svelte, vitest, eslint-plugin-obsidianmd — conventions mirrored from `obsidian-journal-folder`. The scaffold is committed and green (issue #5).
+Plugin id: `scripture-study`. Stack: TypeScript, Svelte 5, esbuild + esbuild-svelte, vitest, eslint-plugin-obsidianmd — conventions mirrored from `obsidian-journal-folder`. The scaffold is committed and green (issue #5).
 
 ---
 
@@ -92,7 +92,7 @@ An Obsidian workspace leaf. Prototype (visual reference until implementation): [
 
 ### 6.2 Module storage
 
-- Modules live in the plugin data dir (e.g. `.obsidian/plugins/bible-study/modules/`), never as vault files, never synced. Each device re-downloads; synced `data.json` carries installed-module ids so a fresh device offers one-click re-download.
+- Modules live in the plugin data dir (e.g. `.obsidian/plugins/scripture-study/modules/`), never as vault files, never synced. Each device re-downloads; synced `data.json` carries installed-module ids so a fresh device offers one-click re-download.
 - **Normalize at download time** into one plugin-owned format: per-book JSON keyed by verse id, plus `manifest.json` (id, name, language, license/copyright string, source, source checksum, format version, capability flags):
 
   ```

@@ -9,7 +9,7 @@ import { ModuleStore } from './module-store'
 import { ObsidianModuleDataDir } from './obsidian-module-data-dir'
 import { PassageCache } from './passage-cache'
 
-const DEVICE_ID_KEY = 'bible-study-fums-device-id'
+const DEVICE_ID_KEY = 'scripture-study-fums-device-id'
 
 const persistentDeviceId = (): string => {
   const existing = window.localStorage.getItem(DEVICE_ID_KEY)

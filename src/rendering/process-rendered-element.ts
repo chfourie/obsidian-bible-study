@@ -69,7 +69,7 @@ const processTextNode = (
     const model = buildReferenceRenderModel(inner, context)
     if (!model || escapedInSource) continue
     parts.push(text.slice(consumed, match.index))
-    const holder = createSpan({ cls: 'bible-study-reference' })
+    const holder = createSpan({ cls: 'scripture-study-reference' })
     renders.push(renderReference(holder, model, deps, sourcePath))
     parts.push(holder)
     consumed = match.index + candidate.length

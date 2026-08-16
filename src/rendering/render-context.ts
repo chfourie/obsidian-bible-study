@@ -1,6 +1,6 @@
 import {
   installedTranslationModuleIds,
-  type BibleStudySettings,
+  type ScriptureStudySettings,
 } from '../data-access'
 import type { RenderContext } from './reference-render-model'
 
@@ -18,7 +18,7 @@ const WELL_KNOWN_TRANSLATION_IDS = [
 ]
 
 export const renderContextFromSettings = (
-  settings: BibleStudySettings,
+  settings: ScriptureStudySettings,
 ): RenderContext => {
   const installedTranslationIds = installedTranslationModuleIds(settings)
   return {

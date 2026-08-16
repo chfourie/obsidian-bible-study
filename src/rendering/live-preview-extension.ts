@@ -40,7 +40,7 @@ export class ReferenceWidget extends WidgetType {
   }
 
   override toDOM(): HTMLElement {
-    const holder = createSpan({ cls: 'bible-study-reference' })
+    const holder = createSpan({ cls: 'scripture-study-reference' })
     void renderReference(holder, this.model, this.deps, this.sourcePath)
     return holder
   }

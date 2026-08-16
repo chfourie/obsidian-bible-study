@@ -1,4 +1,4 @@
-import type { BibleStudySettings } from '../data-access'
+import type { ScriptureStudySettings } from '../data-access'
 
 export type OnlineTranslation = {
   id: string
@@ -21,7 +21,7 @@ export const apiBibleIdFor = (translationId: string): string | null =>
     ?.apiBibleId ?? null
 
 export const gatedApiBibleIdFor =
-  (settings: BibleStudySettings) =>
+  (settings: ScriptureStudySettings) =>
   (translationId: string): string | null =>
     enabledOnlineTranslations(settings).some(
       ({ id }) => id === translationId,
@@ -30,7 +30,7 @@ export const gatedApiBibleIdFor =
       : null
 
 export const enabledOnlineTranslations = (
-  settings: BibleStudySettings,
+  settings: ScriptureStudySettings,
 ): OnlineTranslation[] =>
   settings.apiBibleKey === null || settings.apiBibleKey.trim() === ''
     ? []

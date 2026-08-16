@@ -1,13 +1,13 @@
 import type { Plugin } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
-  type BibleStudySettings,
-} from './bible-study-settings.type'
+  type ScriptureStudySettings,
+} from './scripture-study-settings.type'
 import { applyTranslationBootstrap } from './bootstrap-translations'
 
 type SettingsData = Pick<Plugin, 'loadData' | 'saveData'>
 
-export type SettingsListener = (settings: BibleStudySettings) => void
+export type SettingsListener = (settings: ScriptureStudySettings) => void
 
 export class SettingsStore {
   readonly #listeners: SettingsListener[] = []
@@ -18,16 +18,16 @@ export class SettingsStore {
     this.#listeners.push(listener)
   }
 
-  async loadSettings(): Promise<BibleStudySettings> {
+  async loadSettings(): Promise<ScriptureStudySettings> {
     const stored = (await this.plugin.loadData()) as
-      | Partial<BibleStudySettings>
+      | Partial<ScriptureStudySettings>
       | null
     return { ...DEFAULT_SETTINGS, ...stored }
   }
 
   async updateSettings(
-    update: (settings: BibleStudySettings) => BibleStudySettings,
-  ): Promise<BibleStudySettings> {
+    update: (settings: ScriptureStudySettings) => ScriptureStudySettings,
+  ): Promise<ScriptureStudySettings> {
     const settings = applyTranslationBootstrap(
       update(await this.loadSettings()),
     )

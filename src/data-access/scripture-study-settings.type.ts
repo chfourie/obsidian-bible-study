@@ -2,7 +2,7 @@
 // wayfinder map enumerates the v1 surface.
 export type AnnotationOrdering = 'created-oldest-first' | 'path-a-z'
 
-export type BibleStudySettings = {
+export type ScriptureStudySettings = {
   installedModuleIds: string[]
   defaultTranslationId: string | null
   fallbackTranslationId: string | null
@@ -18,7 +18,7 @@ export type BibleStudySettings = {
   annotationOrdering: AnnotationOrdering
 }
 
-export const DEFAULT_SETTINGS: BibleStudySettings = {
+export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   installedModuleIds: [],
   defaultTranslationId: null,
   fallbackTranslationId: null,

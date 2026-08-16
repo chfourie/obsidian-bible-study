@@ -48,7 +48,7 @@ describe('renderReference chip', () => {
 
     await renderReference(parent, model('jhn 15:9,4-6'), deps)
 
-    const chip = parent.querySelector('.bible-study-chip')
+    const chip = parent.querySelector('.scripture-study-chip')
     expect(chip?.textContent).toContain('John 15:4-6,9')
     chip?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(openReference).toHaveBeenCalledWith(
@@ -62,7 +62,7 @@ describe('renderReference chip', () => {
     await renderReference(parent, model('John 15:4 nkjv'), deps)
     await renderReference(parent, model('John 15:9'), deps)
 
-    const labels = parent.querySelectorAll('.bible-study-chip-translation')
+    const labels = parent.querySelectorAll('.scripture-study-chip-translation')
     expect([...labels].map((label) => label.textContent)).toEqual(['NKJV'])
   })
 
@@ -71,7 +71,7 @@ describe('renderReference chip', () => {
 
     await renderReference(parent, model('John 15:4'), deps)
 
-    const chip = parent.querySelector('.bible-study-chip')
+    const chip = parent.querySelector('.scripture-study-chip')
     chip?.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
     )
@@ -89,7 +89,7 @@ describe('renderReference chip', () => {
 
     await renderReference(parent, model('John 15:4'), deps)
 
-    expect(parent.querySelector('.bible-study-chip-icon')).not.toBeNull()
+    expect(parent.querySelector('.scripture-study-chip-icon')).not.toBeNull()
   })
 
   it('highlights invalid trailing tokens beside the chip', async () => {
@@ -97,7 +97,7 @@ describe('renderReference chip', () => {
 
     await renderReference(parent, model('John 15:4 bogus xyz'), deps)
 
-    const tokens = parent.querySelectorAll('.bible-study-invalid-token')
+    const tokens = parent.querySelectorAll('.scripture-study-invalid-token')
     expect([...tokens].map((token) => token.textContent)).toEqual([
       'bogus',
       'xyz',
@@ -109,7 +109,7 @@ describe('renderReference chip', () => {
 
     await renderReference(parent, model('John 15:4'), deps)
 
-    expect(parent.querySelector('.bible-study-passage')).toBeNull()
+    expect(parent.querySelector('.scripture-study-passage')).toBeNull()
   })
 })
 
@@ -119,8 +119,8 @@ describe('renderReference inline', () => {
 
     await renderReference(parent, model('John 15:4 inline'), deps)
 
-    expect(parent.querySelector('.bible-study-chip')).not.toBeNull()
-    const passage = parent.querySelector('.bible-study-passage')
+    expect(parent.querySelector('.scripture-study-chip')).not.toBeNull()
+    const passage = parent.querySelector('.scripture-study-passage')
     expect(passage?.textContent).toBe('“Remain in me, and I in you.”')
   })
 
@@ -136,16 +136,16 @@ describe('renderReference inline', () => {
 
     const rendered = renderReference(parent, model('John 15:4 inline'), deps)
 
-    const placeholder = parent.querySelector('.bible-study-passage')
-    expect(placeholder?.classList.contains('bible-study-loading')).toBe(true)
+    const placeholder = parent.querySelector('.scripture-study-passage')
+    expect(placeholder?.classList.contains('scripture-study-loading')).toBe(true)
     expect(placeholder?.textContent).toBe('Loading John 15:4…')
 
     resolvePassage(passageOf('Remain.'))
     await rendered
     expect(
-      parent.querySelector('.bible-study-passage')?.textContent,
+      parent.querySelector('.scripture-study-passage')?.textContent,
     ).toBe('“Remain.”')
-    expect(parent.querySelector('.bible-study-loading')).toBeNull()
+    expect(parent.querySelector('.scripture-study-loading')).toBeNull()
   })
 
   it('adds superscript verse numbers only for multi-verse references', async () => {
@@ -160,7 +160,7 @@ describe('renderReference inline', () => {
     )
 
     expect(single.parent.querySelectorAll('sup')).toHaveLength(0)
-    const sups = multi.parent.querySelectorAll('sup.bible-study-verse-number')
+    const sups = multi.parent.querySelectorAll('sup.scripture-study-verse-number')
     expect([...sups].map((sup) => sup.textContent)).toEqual(['4', '5'])
   })
 
@@ -181,7 +181,7 @@ describe('renderReference inline', () => {
 
     await renderReference(parent, model('John 15:4 inline'), deps)
 
-    const red = parent.querySelector('.bible-study-red-letter')
+    const red = parent.querySelector('.scripture-study-red-letter')
     expect(red?.textContent).toBe('Remain in me.')
   })
 
@@ -190,11 +190,11 @@ describe('renderReference inline', () => {
 
     await renderReference(parent, model('John 15:4 nkjv inline'), deps)
 
-    const unavailable = parent.querySelector('.bible-study-unavailable')
+    const unavailable = parent.querySelector('.scripture-study-unavailable')
     expect(unavailable?.textContent).toContain(
       'John 15:4 (NKJV) unavailable offline',
     )
-    expect(unavailable?.querySelector('.bible-study-retry')).not.toBeNull()
+    expect(unavailable?.querySelector('.scripture-study-retry')).not.toBeNull()
   })
 
   it('retries the passage when the retry icon is clicked', async () => {
@@ -206,11 +206,11 @@ describe('renderReference inline', () => {
     await renderReference(parent, model('John 15:4 inline'), deps)
     available = true
     parent
-      .querySelector('.bible-study-retry')
+      .querySelector('.scripture-study-retry')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await new Promise((resolve) => window.setTimeout(resolve, 0))
 
-    expect(parent.querySelector('.bible-study-passage')?.textContent).toBe(
+    expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
       '“Remain.”',
     )
   })
@@ -224,13 +224,13 @@ describe('renderReference inline', () => {
     await renderReference(parent, model('John 15:4 inline'), deps)
     available = true
     parent
-      .querySelector('.bible-study-retry')
+      .querySelector('.scripture-study-retry')
       ?.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
       )
     await new Promise((resolve) => window.setTimeout(resolve, 0))
 
-    expect(parent.querySelector('.bible-study-passage')?.textContent).toBe(
+    expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
       '“Remain.”',
     )
   })
@@ -244,7 +244,7 @@ describe('renderReference inline', () => {
     await renderReference(parent, model('John 15:4 nkjv inline'), deps)
 
     expect(
-      parent.querySelector('.bible-study-fallback-notice')?.textContent,
+      parent.querySelector('.scripture-study-fallback-notice')?.textContent,
     ).toBe('WEB (NKJV unavailable)')
   })
 
@@ -253,7 +253,7 @@ describe('renderReference inline', () => {
 
     await renderReference(parent, model('John 15:4 inline'), deps)
 
-    expect(parent.querySelector('.bible-study-fallback-notice')).toBeNull()
+    expect(parent.querySelector('.scripture-study-fallback-notice')).toBeNull()
   })
 
   it('treats a fully absent passage as unavailable', async () => {
@@ -261,7 +261,7 @@ describe('renderReference inline', () => {
 
     await renderReference(parent, model('John 15:4 inline'), deps)
 
-    expect(parent.querySelector('.bible-study-unavailable')).not.toBeNull()
+    expect(parent.querySelector('.scripture-study-unavailable')).not.toBeNull()
   })
 })
 
@@ -284,7 +284,7 @@ describe('renderReference first-run install nudge', () => {
 
     await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
 
-    const cta = parent.querySelector('.bible-study-install-cta')
+    const cta = parent.querySelector('.scripture-study-install-cta')
     expect(cta?.textContent).toBe('Install World English Bible')
   })
 
@@ -295,7 +295,7 @@ describe('renderReference first-run install nudge', () => {
 
     await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
     parent
-      .querySelector('.bible-study-install-cta')
+      .querySelector('.scripture-study-install-cta')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await new Promise((resolve) => window.setTimeout(resolve, 0))
 
@@ -311,7 +311,7 @@ describe('renderReference first-run install nudge', () => {
     deps.firstRun = { translationName: 'World English Bible', install }
 
     await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
-    const cta = parent.querySelector('.bible-study-install-cta')
+    const cta = parent.querySelector('.scripture-study-install-cta')
     cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
@@ -330,12 +330,12 @@ describe('renderReference first-run install nudge', () => {
     deps.firstRun = { translationName: 'World English Bible', install }
 
     await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
-    const cta = parent.querySelector('.bible-study-install-cta')
+    const cta = parent.querySelector('.scripture-study-install-cta')
     cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await new Promise((resolve) => window.setTimeout(resolve, 0))
 
     expect(
-      parent.querySelector('.bible-study-install-error')?.textContent,
+      parent.querySelector('.scripture-study-install-error')?.textContent,
     ).toContain('network gone')
     expect(cta?.textContent).toBe('Install World English Bible')
     expect(cta?.getAttribute('aria-disabled')).toBeNull()
@@ -343,7 +343,7 @@ describe('renderReference first-run install nudge', () => {
     cta?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     expect(install).toHaveBeenCalledTimes(2)
-    expect(parent.querySelectorAll('.bible-study-install-error')).toHaveLength(1)
+    expect(parent.querySelectorAll('.scripture-study-install-error')).toHaveLength(1)
   })
 
   it('shows no CTA when a translation is merely unavailable offline', async () => {
@@ -355,7 +355,7 @@ describe('renderReference first-run install nudge', () => {
 
     await renderReference(parent, model('John 15:4 nkjv inline'), deps)
 
-    expect(parent.querySelector('.bible-study-install-cta')).toBeNull()
+    expect(parent.querySelector('.scripture-study-install-cta')).toBeNull()
   })
 })
 
@@ -377,7 +377,7 @@ describe('renderReference in-note intersections', () => {
 
   const openPanel = (parent: HTMLElement): void => {
     parent
-      .querySelector('.bible-study-intersections-toggle')
+      .querySelector('.scripture-study-intersections-toggle')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   }
 
@@ -386,7 +386,7 @@ describe('renderReference in-note intersections', () => {
 
     await renderReference(parent, model('John 15:4'), deps)
 
-    expect(parent.querySelector('.bible-study-intersections')).toBeNull()
+    expect(parent.querySelector('.scripture-study-intersections')).toBeNull()
   })
 
   it('renders no intersection surface when nothing intersects', async () => {
@@ -394,7 +394,7 @@ describe('renderReference in-note intersections', () => {
 
     await renderReference(parent, model('John 15:4'), deps)
 
-    expect(parent.querySelector('.bible-study-intersections')).toBeNull()
+    expect(parent.querySelector('.scripture-study-intersections')).toBeNull()
   })
 
   it('shows annotation and mention counts beside the chip', async () => {
@@ -406,7 +406,7 @@ describe('renderReference in-note intersections', () => {
 
     await renderReference(parent, model('John 15:4'), deps)
 
-    const toggle = parent.querySelector('.bible-study-intersections-toggle')
+    const toggle = parent.querySelector('.scripture-study-intersections-toggle')
     expect(toggle?.textContent).toContain('●1')
     expect(toggle?.textContent).toContain('◆2')
   })
@@ -423,7 +423,7 @@ describe('renderReference in-note intersections', () => {
       'Sermons/Fruitfulness.md',
     )
 
-    expect(parent.querySelector('.bible-study-intersections')).toBeNull()
+    expect(parent.querySelector('.scripture-study-intersections')).toBeNull()
   })
 
   it('expands to annotations first, then mentions', async () => {
@@ -435,12 +435,12 @@ describe('renderReference in-note intersections', () => {
 
     openPanel(parent)
 
-    const labels = parent.querySelectorAll('.bible-study-intersections-group')
+    const labels = parent.querySelectorAll('.scripture-study-intersections-group')
     expect([...labels].map((label) => label.textContent)).toEqual([
       'Annotations',
       'Mentions',
     ])
-    const notes = parent.querySelectorAll('.bible-study-intersections-note')
+    const notes = parent.querySelectorAll('.scripture-study-intersections-note')
     expect([...notes].map((note) => note.textContent)).toEqual([
       'John 15.4',
       'Sermons/Fruitfulness.md',
@@ -457,7 +457,7 @@ describe('renderReference in-note intersections', () => {
     openPanel(parent)
 
     expect(
-      parent.querySelector('.bible-study-intersections-panel'),
+      parent.querySelector('.scripture-study-intersections-panel'),
     ).toBeNull()
   })
 
@@ -469,7 +469,7 @@ describe('renderReference in-note intersections', () => {
 
     openPanel(parent)
     parent
-      .querySelector('.bible-study-intersections-note')
+      .querySelector('.scripture-study-intersections-note')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
     expect(openNote).toHaveBeenCalledWith('Sermons/Fruitfulness.md')
@@ -483,7 +483,7 @@ describe('renderReference in-note intersections', () => {
     await renderReference(parent, model('John 15:4 callout'), deps)
 
     expect(
-      parent.querySelector('.callout-content .bible-study-intersections'),
+      parent.querySelector('.callout-content .scripture-study-intersections'),
     ).not.toBeNull()
   })
 })
@@ -494,7 +494,7 @@ describe('renderReference callout', () => {
 
     await renderReference(parent, model('John 15:4 callout'), deps)
 
-    expect(parent.querySelector('.bible-study-chip')).toBeNull()
+    expect(parent.querySelector('.scripture-study-chip')).toBeNull()
     expect(
       parent.querySelector('.callout[data-callout="bible"]'),
     ).not.toBeNull()
@@ -516,7 +516,7 @@ describe('renderReference callout', () => {
     await renderReference(parent, model('John 15:4 callout'), deps)
 
     parent
-      .querySelector('.bible-study-callout-nav')
+      .querySelector('.scripture-study-callout-nav')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(openReference).toHaveBeenCalledWith(
       expect.objectContaining({ referenceText: 'John 15:4' }),
@@ -529,7 +529,7 @@ describe('renderReference callout', () => {
     await renderReference(parent, model('John 15:4 callout'), deps)
 
     parent
-      .querySelector('.bible-study-callout-nav')
+      .querySelector('.scripture-study-callout-nav')
       ?.dispatchEvent(
         new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
       )
@@ -544,7 +544,7 @@ describe('renderReference callout', () => {
     await renderReference(parent, model('John 15:4 callout'), deps)
 
     const content = parent.querySelector('.callout-content')
-    const sup = content?.querySelector('sup.bible-study-verse-number')
+    const sup = content?.querySelector('sup.scripture-study-verse-number')
     expect(sup?.textContent).toBe('4')
     expect(content?.textContent).toContain('Remain in me, and I in you.')
   })
@@ -559,7 +559,7 @@ describe('renderReference callout', () => {
     await renderReference(parent, model('John 15:4 callout'), deps)
 
     expect(
-      parent.querySelector('.bible-study-attribution')?.textContent,
+      parent.querySelector('.scripture-study-attribution')?.textContent,
     ).toBe('Copyright © 1982, Thomas Nelson')
   })
 
@@ -568,7 +568,7 @@ describe('renderReference callout', () => {
 
     await renderReference(parent, model('John 15:4 callout'), deps)
 
-    expect(parent.querySelector('.bible-study-attribution')).toBeNull()
+    expect(parent.querySelector('.scripture-study-attribution')).toBeNull()
   })
 
   it('names the substituted translation in the callout body', async () => {
@@ -581,7 +581,7 @@ describe('renderReference callout', () => {
 
     expect(
       parent.querySelector(
-        '.callout-content .bible-study-fallback-notice',
+        '.callout-content .scripture-study-fallback-notice',
       )?.textContent,
     ).toBe('WEB (NKJV unavailable)')
   })
@@ -592,7 +592,7 @@ describe('renderReference callout', () => {
     await renderReference(parent, model('John 15:4 callout'), deps)
 
     expect(
-      parent.querySelector('.callout-content .bible-study-unavailable'),
+      parent.querySelector('.callout-content .scripture-study-unavailable'),
     ).not.toBeNull()
   })
 })

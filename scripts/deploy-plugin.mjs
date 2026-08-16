@@ -7,7 +7,7 @@
 //   npm run deploy                            # build first, then push
 //
 // Each target line is the absolute path to the destination *plugin folder*
-// (…/.obsidian/plugins/bible-study). The folder is created if missing.
+// (…/.obsidian/plugins/scripture-study). The folder is created if missing.
 // A `.hotreload` marker is written into each target so vaults running the
 // Hot-Reload plugin pick up the new files automatically; otherwise reload
 // the plugin (or Obsidian) once after a push.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SETTINGS } from './bible-study-settings.type'
+import { DEFAULT_SETTINGS } from './scripture-study-settings.type'
 import { applyTranslationBootstrap } from './bootstrap-translations'
 
 describe('applyTranslationBootstrap', () => {

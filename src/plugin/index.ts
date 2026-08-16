@@ -1,3 +1,3 @@
-import BibleStudyPlugin from './bible-study-plugin'
+import ScriptureStudyPlugin from './scripture-study-plugin'
 
-export default BibleStudyPlugin
+export default ScriptureStudyPlugin

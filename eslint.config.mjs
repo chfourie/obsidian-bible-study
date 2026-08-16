@@ -15,6 +15,7 @@ export default defineConfig([
     ignores: [
       'main.js',
       'node_modules/',
+      '.claude/',
       'docs/',
       'tests/',
       'scripts/',
@@ -69,7 +70,7 @@ export default defineConfig([
           enforceCamelCaseLower: true,
           ignoreRegex: [
             // The plugin's own name as it appears in manifest.json.
-            '\\bBible Study\\b',
+            '\\bScripture Study\\b',
             // Proper names on the settings surface.
             '\\bAPI\\.Bible\\b',
             "\\bStrong's\\b",
