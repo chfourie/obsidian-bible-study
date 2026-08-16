@@ -25,6 +25,7 @@ export class ModulesFeature extends PluginFeature {
   readonly passageCache: PassageCache
   readonly apiBibleClient: ApiBibleClient
   readonly fumsReporter: FumsReporter
+  readonly getBibleClient: GetBibleClient
 
   constructor(
     plugin: Plugin,
@@ -33,8 +34,9 @@ export class ModulesFeature extends PluginFeature {
     super(plugin)
     const dataDir = new ObsidianModuleDataDir(plugin)
     this.store = new ModuleStore(dataDir)
+    this.getBibleClient = new GetBibleClient()
     this.manager = new ModuleManager(
-      new GetBibleClient(),
+      this.getBibleClient,
       this.store,
       settingsStore,
       { [BSB_MODULE_ID]: new BsbReleaseClient() },

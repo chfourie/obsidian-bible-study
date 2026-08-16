@@ -12,6 +12,7 @@ import {
 import type { VaultReferenceIndex } from '../vault-index'
 import {
   ReaderPaneModel,
+  type ReaderFirstRunDeps,
   type ReaderPosition,
   type ReaderStrongsDeps,
 } from './reader-pane-model'
@@ -28,6 +29,7 @@ const DEFAULT_INDEX_REFRESH_DEBOUNCE_MS = 100
 export type ReaderFeatureOptions = {
   indexRefreshDebounceMs?: number
   strongs?: ReaderStrongsDeps
+  firstRun?: ReaderFirstRunDeps
 }
 
 const INERT_STRONGS: ReaderStrongsDeps = {
@@ -45,6 +47,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   #lastPosition: ReaderPosition = DEFAULT_POSITION
   #annotator: (reference: Reference) => void = () => {}
   readonly #strongs: ReaderStrongsDeps
+  readonly #firstRun: ReaderFirstRunDeps | undefined
 
   constructor(
     plugin: Plugin,
@@ -57,6 +60,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     this.#indexRefreshDebounceMs =
       options.indexRefreshDebounceMs ?? DEFAULT_INDEX_REFRESH_DEBOUNCE_MS
     this.#strongs = options.strongs ?? INERT_STRONGS
+    this.#firstRun = options.firstRun
     const moduleSource = new ModulePassageSource(store)
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.4), so tiers compose here without a FallbackPassageSource.
@@ -121,6 +125,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
           this.index.intersectingOccurrences(reference),
         annotationDetails: (file) => this.#annotationDetails(file),
         strongs: this.#strongs,
+        firstRun: this.#firstRun,
       },
       {
         toggles: {

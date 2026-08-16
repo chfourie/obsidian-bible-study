@@ -188,4 +188,244 @@ export class Plugin {
   }
 
   async saveData(_data: unknown): Promise<void> {}
+
+  addSettingTab(_tab: PluginSettingTab): void {}
+}
+
+// Just enough of PluginSettingTab for glue registration; specs drive
+// `display`/`hide` directly when they need the rendered DOM.
+export class PluginSettingTab {
+  containerEl: HTMLElement = document.createElement('div')
+
+  constructor(
+    public app: App,
+    public plugin: Plugin
+  ) {}
+
+  display(): void {}
+
+  hide(): void {}
+}
+
+// Fluent Setting mock: builds real DOM controls so glue-level specs can read
+// back names, inputs, and interact with the handlers they registered.
+class SettingTextComponent {
+  inputEl: HTMLInputElement
+
+  constructor(parent: HTMLElement) {
+    this.inputEl = parent.createEl('input')
+    this.inputEl.type = 'text'
+  }
+
+  setPlaceholder(placeholder: string): this {
+    this.inputEl.placeholder = placeholder
+    return this
+  }
+
+  setValue(value: string): this {
+    this.inputEl.value = value
+    return this
+  }
+
+  onChange(handler: (value: string) => unknown): this {
+    this.inputEl.addEventListener('input', () => void handler(this.inputEl.value))
+    return this
+  }
+}
+
+class SettingDropdownComponent {
+  selectEl: HTMLSelectElement
+
+  constructor(parent: HTMLElement) {
+    this.selectEl = parent.createEl('select')
+  }
+
+  addOption(value: string, display: string): this {
+    const option = this.selectEl.createEl('option')
+    option.value = value
+    option.textContent = display
+    return this
+  }
+
+  addOptions(options: Record<string, string>): this {
+    Object.entries(options).forEach(([value, display]) =>
+      this.addOption(value, display)
+    )
+    return this
+  }
+
+  setValue(value: string): this {
+    this.selectEl.value = value
+    return this
+  }
+
+  setDisabled(disabled: boolean): this {
+    this.selectEl.disabled = disabled
+    return this
+  }
+
+  onChange(handler: (value: string) => unknown): this {
+    this.selectEl.addEventListener('change', () =>
+      void handler(this.selectEl.value)
+    )
+    return this
+  }
+}
+
+class SettingToggleComponent {
+  toggleEl: HTMLInputElement
+
+  constructor(parent: HTMLElement) {
+    this.toggleEl = parent.createEl('input')
+    this.toggleEl.type = 'checkbox'
+  }
+
+  setValue(value: boolean): this {
+    this.toggleEl.checked = value
+    return this
+  }
+
+  setDisabled(disabled: boolean): this {
+    this.toggleEl.disabled = disabled
+    return this
+  }
+
+  onChange(handler: (value: boolean) => unknown): this {
+    this.toggleEl.addEventListener('change', () =>
+      void handler(this.toggleEl.checked)
+    )
+    return this
+  }
+}
+
+class SettingButtonComponent {
+  buttonEl: HTMLButtonElement
+
+  constructor(parent: HTMLElement) {
+    this.buttonEl = parent.createEl('button')
+  }
+
+  setButtonText(text: string): this {
+    this.buttonEl.textContent = text
+    return this
+  }
+
+  setIcon(iconId: string): this {
+    this.buttonEl.setAttribute('data-icon', iconId)
+    return this
+  }
+
+  setTooltip(tooltip: string): this {
+    this.buttonEl.setAttribute('aria-label', tooltip)
+    return this
+  }
+
+  setCta(): this {
+    this.buttonEl.addClass('mod-cta')
+    return this
+  }
+
+  setWarning(): this {
+    this.buttonEl.addClass('mod-warning')
+    return this
+  }
+
+  setDisabled(disabled: boolean): this {
+    this.buttonEl.disabled = disabled
+    return this
+  }
+
+  onClick(handler: () => unknown): this {
+    this.buttonEl.addEventListener('click', () => void handler())
+    return this
+  }
+}
+
+export class Setting {
+  settingEl: HTMLElement
+  nameEl: HTMLElement
+  descEl: HTMLElement
+  controlEl: HTMLElement
+
+  constructor(containerEl: HTMLElement) {
+    this.settingEl = containerEl.createDiv({ cls: 'setting-item' })
+    const info = this.settingEl.createDiv({ cls: 'setting-item-info' })
+    this.nameEl = info.createDiv({ cls: 'setting-item-name' })
+    this.descEl = info.createDiv({ cls: 'setting-item-description' })
+    this.controlEl = this.settingEl.createDiv({ cls: 'setting-item-control' })
+  }
+
+  setName(name: string): this {
+    this.nameEl.setText(name)
+    return this
+  }
+
+  setDesc(desc: string): this {
+    this.descEl.setText(desc)
+    return this
+  }
+
+  setHeading(): this {
+    this.settingEl.addClass('setting-item-heading')
+    return this
+  }
+
+  setClass(cls: string): this {
+    this.settingEl.addClass(cls)
+    return this
+  }
+
+  addText(configure: (text: SettingTextComponent) => unknown): this {
+    configure(new SettingTextComponent(this.controlEl))
+    return this
+  }
+
+  addDropdown(configure: (dropdown: SettingDropdownComponent) => unknown): this {
+    configure(new SettingDropdownComponent(this.controlEl))
+    return this
+  }
+
+  addToggle(configure: (toggle: SettingToggleComponent) => unknown): this {
+    configure(new SettingToggleComponent(this.controlEl))
+    return this
+  }
+
+  addButton(configure: (button: SettingButtonComponent) => unknown): this {
+    configure(new SettingButtonComponent(this.controlEl))
+    return this
+  }
+
+  addExtraButton(configure: (button: SettingButtonComponent) => unknown): this {
+    configure(new SettingButtonComponent(this.controlEl))
+    return this
+  }
+}
+
+// Just enough of AbstractInputSuggest for the folder/file suggest glue to
+// subclass; suggestions never pop up in tests.
+export abstract class AbstractInputSuggest<T> {
+  constructor(
+    public app: App,
+    protected textInputEl: HTMLInputElement
+  ) {}
+
+  protected abstract getSuggestions(query: string): T[] | Promise<T[]>
+
+  abstract renderSuggestion(value: T, el: HTMLElement): void
+
+  onSelect(
+    _callback: (value: T, evt: MouseEvent | KeyboardEvent) => unknown
+  ): this {
+    return this
+  }
+
+  setValue(value: string): void {
+    this.textInputEl.value = value
+  }
+
+  getValue(): string {
+    return this.textInputEl.value
+  }
+
+  close(): void {}
 }

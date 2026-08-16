@@ -92,6 +92,26 @@ describe('BibleStudyPlugin same-device settings changes', () => {
     expect(annotate).toHaveBeenCalledWith(reference)
   })
 
+  it('downloads the suggested WEB module for the first-run nudge', async () => {
+    const plugin = pluginWithStorage()
+    const download = vi
+      .spyOn(plugin.modules.manager, 'downloadModule')
+      .mockResolvedValue({
+        id: 'web',
+        name: 'World English Bible',
+        language: 'English',
+        license: 'Public Domain',
+        source: 'test',
+        sourceChecksum: '',
+        formatVersion: 1,
+        capabilities: { strongsTagged: false },
+      })
+
+    await plugin.installSuggestedTranslation()
+
+    expect(download).toHaveBeenCalledWith('web')
+  })
+
   it('prefills new annotations from the open reader', () => {
     const plugin = pluginWithStorage()
     const prefillReference = vi

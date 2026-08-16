@@ -5,9 +5,11 @@ import {
   apiBibleIdFor,
   ModulesFeature,
   ObsidianModuleDataDir,
+  SUGGESTED_FIRST_TRANSLATION,
 } from '../modules'
 import { ReaderFeature } from '../reader'
 import { OnlinePassageSource, RenderingFeature } from '../rendering'
+import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
   StepBibleLexiconClient,
@@ -34,12 +36,22 @@ export default class BibleStudyPlugin extends Plugin {
     new StepBibleLexiconClient(),
     this.settingsStore,
   )
+  readonly installSuggestedTranslation = async (): Promise<void> => {
+    await this.modules.manager.downloadModule(SUGGESTED_FIRST_TRANSLATION.id)
+  }
+
+  readonly #firstRun = {
+    translationName: SUGGESTED_FIRST_TRANSLATION.name,
+    install: this.installSuggestedTranslation,
+  }
+
   readonly reader = new ReaderFeature(
     this,
     this.modules.store,
     this.vaultIndex.index,
     this.#onlineSource,
     {
+      firstRun: this.#firstRun,
       strongs: {
         dictionariesInstalled: () => this.strongsDictionaries.isInstalled(),
         entriesFor: async (numbers) =>
@@ -57,8 +69,15 @@ export default class BibleStudyPlugin extends Plugin {
     this.reader,
     this.#onlineSource,
     this.vaultIndex.index,
+    this.#firstRun,
   )
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
+  readonly settingsTab = new SettingsFeature(
+    this,
+    this.settingsStore,
+    this.modules,
+    this.strongsDictionaries,
+  )
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
@@ -71,6 +90,7 @@ export default class BibleStudyPlugin extends Plugin {
     this.#features.addFeature(this.reader)
     this.#features.addFeature(this.rendering)
     this.#features.addFeature(this.annotations)
+    this.#features.addFeature(this.settingsTab)
     this.settingsStore.onSettingsChanged((settings) => {
       this.#features.useSettings(settings)
       this.#features.onSettingsChanged()

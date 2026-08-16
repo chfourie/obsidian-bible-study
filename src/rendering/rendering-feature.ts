@@ -28,7 +28,10 @@ import { PassageRepository } from './passage-repository'
 import { TieredPassageSource } from './tiered-passage-source'
 import { processRenderedElement } from './process-rendered-element'
 import { renderContextFromSettings } from './render-context'
-import type { ReferenceRenderDeps } from './render-reference'
+import type {
+  FirstRunInstallDeps,
+  ReferenceRenderDeps,
+} from './render-reference'
 
 const sectionSource = (
   element: HTMLElement,
@@ -52,6 +55,7 @@ export class RenderingFeature extends PluginFeature {
     readonly navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR,
     onlineSource?: PassageSource,
     index?: VaultReferenceIndex,
+    firstRun?: FirstRunInstallDeps,
   ) {
     super(plugin)
     const moduleSource = new ModulePassageSource(store)
@@ -71,6 +75,7 @@ export class RenderingFeature extends PluginFeature {
         intersecting: (reference) => index.intersectingOccurrences(reference),
         openNote: (file) => navigator.openNote(file),
       },
+      firstRun,
     }
   }
 
