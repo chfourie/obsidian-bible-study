@@ -75,7 +75,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         view.fallbackTranslationOptions,
       ),
       this.#translationsGroup(view),
-      this.#downloadableGroup(view),
       this.#strongsGroup(view),
       this.#readerGroup(),
       this.#annotationsGroup(),
@@ -268,7 +267,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       items: [
         {
           name: 'Language',
-          desc: 'Filters the downloadable list.',
+          desc: 'Filters the translation list.',
           control: {
             type: 'dropdown',
             key: 'languageFilter',
@@ -277,20 +276,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
             ),
           },
         },
+        ...view.rows.map((row) => ({
+          name: row.name,
+          render: (setting: Setting) => this.#renderTranslationRow(setting, row),
+        })),
       ],
-    }
-  }
-
-  #downloadableGroup(
-    view: SettingsTabView,
-  ): SettingDefinitionGroup<SettingsControlKey> {
-    return {
-      type: 'group',
-      heading: 'Downloadable',
-      items: view.rows.map((row) => ({
-        name: row.name,
-        render: (setting: Setting) => this.#renderDownloadableRow(setting, row),
-      })),
     }
   }
 
@@ -309,7 +299,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     }
   }
 
-  #renderDownloadableRow(setting: Setting, row: TranslationRowView): void {
+  #renderTranslationRow(setting: Setting, row: TranslationRowView): void {
     this.#decorateRow(setting, row)
     if (row.busy !== null) {
       setting.addButton((button) =>

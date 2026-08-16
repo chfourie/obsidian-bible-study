@@ -346,6 +346,30 @@ describe('ScriptureStudySettingTab translations section', () => {
     expect(deleteModule).toHaveBeenCalledWith('bsb')
   })
 
+  it('lists catalogue rows in the Translations group, with no tier heading', async () => {
+    const { container } = await setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+    })
+
+    expect(hasSettingNamed(container, 'Downloadable')).toBe(false)
+    const headings = settingItems(container).filter((item) =>
+      item.classList.contains('setting-item-heading'),
+    )
+    const translationsHeading = headings.find(
+      (item) => settingName(item) === 'Translations',
+    )
+    expect(translationsHeading).toBeDefined()
+    const groupItems = []
+    let node = translationsHeading?.nextElementSibling ?? null
+    while (node && !node.classList.contains('setting-item-heading')) {
+      groupItems.push(settingName(node as HTMLElement))
+      node = node.nextElementSibling
+    }
+    expect(groupItems).toEqual(['Language', 'World English Bible'])
+  })
+
   it('renders no API key input or online rows, even with a legacy key stored', async () => {
     const { container } = await setup({
       storedSettings: { apiBibleKey: 'key-123' },
