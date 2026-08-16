@@ -36,6 +36,8 @@ describe('SettingsStore', () => {
     expect(await store.loadSettings()).toEqual({
       ...DEFAULT_SETTINGS,
       installedModuleIds: ['web'],
+      defaultTranslationId: 'web',
+      fallbackTranslationId: 'web',
     })
   })
 
@@ -51,9 +53,37 @@ describe('SettingsStore', () => {
     expect(settings).toEqual({
       ...DEFAULT_SETTINGS,
       installedModuleIds: ['web'],
+      defaultTranslationId: 'web',
+      fallbackTranslationId: 'web',
     })
     expect('apiBibleKey' in settings).toBe(false)
     expect('enabledOnlineTranslationIds' in settings).toBe(false)
+  })
+
+  it('bootstraps a legacy online-only default translation on load', async () => {
+    const { store } = setup({
+      installedModuleIds: ['web'],
+      defaultTranslationId: 'nkjv',
+      fallbackTranslationId: 'nkjv',
+    })
+
+    const settings = await store.loadSettings()
+
+    expect(settings.defaultTranslationId).toBe('web')
+    expect(settings.fallbackTranslationId).toBe('web')
+  })
+
+  it('keeps a stored default that names an installed module on load', async () => {
+    const { store } = setup({
+      installedModuleIds: ['web', 'bsb'],
+      defaultTranslationId: 'bsb',
+      fallbackTranslationId: 'bsb',
+    })
+
+    const settings = await store.loadSettings()
+
+    expect(settings.defaultTranslationId).toBe('bsb')
+    expect(settings.fallbackTranslationId).toBe('bsb')
   })
 
   it('drops the removed fields from the persisted data on the next update', async () => {

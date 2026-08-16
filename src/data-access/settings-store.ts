@@ -32,7 +32,7 @@ export class SettingsStore {
     const settings = { ...DEFAULT_SETTINGS, ...stored } as ScriptureStudySettings &
       Partial<Record<(typeof REMOVED_SETTINGS_KEYS)[number], unknown>>
     for (const key of REMOVED_SETTINGS_KEYS) delete settings[key]
-    return settings
+    return applyTranslationBootstrap(settings)
   }
 
   async updateSettings(
