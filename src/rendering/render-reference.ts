@@ -15,10 +15,16 @@ export type NoteIntersectionSource = {
   openNote: (file: string) => void
 }
 
+export type FirstRunInstallDeps = {
+  translationName: string
+  install: () => Promise<void>
+}
+
 export type ReferenceRenderDeps = {
   passages: PassageSource
   openReference: (model: ReferenceRenderModel) => void
   intersections?: NoteIntersectionSource
+  firstRun?: FirstRunInstallDeps
 }
 
 const activateAsButton = (element: HTMLElement, action: () => void): void => {
@@ -189,12 +195,23 @@ const renderQuotedRun = (host: HTMLElement, view: PassageView): void => {
 const renderUnavailable = (
   host: HTMLElement,
   model: ReferenceRenderModel,
+  deps: ReferenceRenderDeps,
   retry: () => void,
 ): void => {
   const line = host.createSpan({
     cls: 'bible-study-unavailable',
     text: unavailableText(model),
   })
+  if (model.translationId === null && deps.firstRun !== undefined) {
+    const firstRun = deps.firstRun
+    const cta = host.createSpan({
+      cls: 'bible-study-install-cta',
+      attr: { role: 'button', tabindex: 0 },
+      text: `Install ${firstRun.translationName}`,
+    })
+    activateAsButton(cta, () => void firstRun.install())
+    return
+  }
   const retryIcon = line.createSpan({
     cls: 'bible-study-retry',
     attr: { role: 'button', tabindex: 0, 'aria-label': 'Retry' },
@@ -219,7 +236,7 @@ const mountPassage = async (
   host.empty()
   host.removeClass('bible-study-loading')
   if (passage.status !== 'ok' || passage.verses.length === 0) {
-    renderUnavailable(host, model, () => {
+    renderUnavailable(host, model, deps, () => {
       void mountPassage(host, model, deps, renderPassage)
     })
     return

@@ -265,6 +265,56 @@ describe('renderReference inline', () => {
   })
 })
 
+describe('renderReference first-run install nudge', () => {
+  const noTranslationModel = (text: string): ReferenceRenderModel => {
+    const built = buildReferenceRenderModel(text, {
+      knownTranslationIds: ['web', 'nkjv'],
+      defaultTranslationId: null,
+    })
+    if (!built) throw new Error(`unparseable: ${text}`)
+    return built
+  }
+
+  it('offers a one-click install CTA when no translation is installed', async () => {
+    const { parent, deps } = setup({ status: 'unavailable' })
+    deps.firstRun = {
+      translationName: 'World English Bible',
+      install: vi.fn(async () => {}),
+    }
+
+    await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
+
+    const cta = parent.querySelector('.bible-study-install-cta')
+    expect(cta?.textContent).toBe('Install World English Bible')
+  })
+
+  it('runs the one-click install when the CTA is activated', async () => {
+    const install = vi.fn(async () => {})
+    const { parent, deps } = setup({ status: 'unavailable' })
+    deps.firstRun = { translationName: 'World English Bible', install }
+
+    await renderReference(parent, noTranslationModel('John 15:4 inline'), deps)
+    parent
+      .querySelector('.bible-study-install-cta')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+    expect(install).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows no CTA when a translation is merely unavailable offline', async () => {
+    const { parent, deps } = setup({ status: 'unavailable' })
+    deps.firstRun = {
+      translationName: 'World English Bible',
+      install: vi.fn(async () => {}),
+    }
+
+    await renderReference(parent, model('John 15:4 nkjv inline'), deps)
+
+    expect(parent.querySelector('.bible-study-install-cta')).toBeNull()
+  })
+})
+
 describe('renderReference in-note intersections', () => {
   const occurrenceGroup = (
     file: string,
