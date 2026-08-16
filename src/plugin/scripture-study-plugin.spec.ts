@@ -92,24 +92,24 @@ describe('ScriptureStudyPlugin same-device settings changes', () => {
     expect(annotate).toHaveBeenCalledWith(reference)
   })
 
-  it('downloads the suggested WEB module for the first-run nudge', async () => {
+  it('downloads the suggested BSB module for the first-run nudge', async () => {
     const plugin = pluginWithStorage()
     const download = vi
       .spyOn(plugin.modules.manager, 'downloadModule')
       .mockResolvedValue({
-        id: 'web',
-        name: 'World English Bible',
+        id: 'bsb',
+        name: 'Berean Standard Bible',
         language: 'English',
         license: 'Public Domain',
         source: 'test',
         sourceChecksum: '',
         formatVersion: 1,
-        capabilities: { strongsTagged: false },
+        capabilities: { strongsTagged: true },
       })
 
     await plugin.installSuggestedTranslation()
 
-    expect(download).toHaveBeenCalledWith('web')
+    expect(download).toHaveBeenCalledWith('bsb')
   })
 
   it('prefills new annotations from the open reader', () => {
