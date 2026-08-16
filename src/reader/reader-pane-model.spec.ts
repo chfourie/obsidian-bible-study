@@ -369,7 +369,7 @@ describe('verse details', () => {
     await model.selectVerse(verse4)
 
     model.setToggle('details', 'side-panel')
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await flushAsync()
 
     expect(model.view.details[verse4]?.translations).toHaveLength(2)
   })
