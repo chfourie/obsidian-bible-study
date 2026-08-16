@@ -1,6 +1,8 @@
 import {
   decodeVerseId,
   formatReference,
+  mergeRanges,
+  referencesIntersect,
   type Reference,
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
@@ -48,6 +50,28 @@ const verseLabels = (verses: PassageVerse[]): (string | null)[] => {
   return locations.map((location) =>
     multiChapter ? `${location.chapter}:${location.verse}` : `${location.verse}`,
   )
+}
+
+// Intersecting references collapse into one entry covering their union, at
+// the position of the earliest of them; a later reference bridging two
+// earlier entries folds all three together.
+const combineIntersecting = (references: Reference[]): Reference[] => {
+  const combined: Reference[] = []
+  for (const reference of references) {
+    let merged = reference
+    let insertAt = combined.length
+    for (let index = combined.length - 1; index >= 0; index -= 1) {
+      if (!referencesIntersect(combined[index], merged)) continue
+      merged = {
+        book: merged.book,
+        ranges: mergeRanges([...combined[index].ranges, ...merged.ranges]),
+      }
+      combined.splice(index, 1)
+      insertAt = index
+    }
+    combined.splice(insertAt, 0, merged)
+  }
+  return combined
 }
 
 export class ReferencesPanelModel {
@@ -113,20 +137,20 @@ export class ReferencesPanelModel {
   }
 
   #pendingEntries(content: string): ReferenceEntryView[] {
-    const entries = new Map<string, ReferenceEntryView>()
-    for (const occurrence of extractOccurrences(content)) {
-      const key = formatReference(occurrence.reference)
-      if (entries.has(key)) continue
-      entries.set(key, {
+    const references = combineIntersecting(
+      extractOccurrences(content).map((occurrence) => occurrence.reference),
+    )
+    return references.map((reference) => {
+      const key = formatReference(reference)
+      return {
         key,
         label: key,
-        reference: occurrence.reference,
+        reference,
         status: 'loading',
         verses: [],
         attribution: null,
-      })
-    }
-    return [...entries.values()]
+      }
+    })
   }
 
   async #loadEntries(token: number): Promise<void> {

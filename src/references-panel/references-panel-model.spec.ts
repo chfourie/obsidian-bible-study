@@ -81,6 +81,60 @@ describe('ReferencesPanelModel', () => {
     ])
   })
 
+  it('combines a reference contained by an earlier one into a single entry', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{Psalms 25:1-5} then {Psalms 25:4}',
+    })
+
+    expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+      'Psalms 25:1-5',
+    ])
+  })
+
+  it('combines overlapping references into their union', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{Psalms 25:1-3} and {Psalms 25:2-6}',
+    })
+
+    expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+      'Psalms 25:1-6',
+    ])
+  })
+
+  it('folds entries together when a later reference bridges them', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{Psalms 25:1-2} {Psalms 25:5-6} {Psalms 25:2-5}',
+    })
+
+    expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+      'Psalms 25:1-6',
+    ])
+  })
+
+  it('keeps non-intersecting references separate', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{Psalms 25:1-2} and {Psalms 25:7-8} and {John 15:1}',
+    })
+
+    expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+      'Psalms 25:1-2',
+      'Psalms 25:7-8',
+      'John 15:1',
+    ])
+  })
+
   it('includes the annotation frontmatter reference first', async () => {
     const panel = model(fakeSource().source)
 
