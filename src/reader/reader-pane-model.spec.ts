@@ -19,6 +19,7 @@ type MockTexts = Record<string, Record<number, string>>
 const translation = (id: string, strongsTagged = false) => ({
   id,
   label: id.toUpperCase(),
+  name: `${id.toUpperCase()} Full Name`,
   strongsTagged,
 })
 
@@ -285,8 +286,8 @@ describe('translation switching', () => {
     expect(view.rows).toHaveLength(1)
     expect(view.rows[0].segments[0].text).toBe('I am the true vine (KJV).')
     expect(view.translations).toEqual([
-      { id: 'web', label: 'WEB', active: false },
-      { id: 'kjv', label: 'KJV', active: true },
+      { id: 'web', label: 'WEB', name: 'WEB Full Name', active: false },
+      { id: 'kjv', label: 'KJV', name: 'KJV Full Name', active: true },
     ])
   })
 })
@@ -323,8 +324,8 @@ describe('verse details', () => {
       verseId: verse4,
       title: 'John 15:4',
       translations: [
-        { id: 'web', label: 'WEB', text: 'Remain in me.' },
-        { id: 'kjv', label: 'KJV', text: null },
+        { id: 'web', label: 'WEB', name: 'WEB Full Name', text: 'Remain in me.' },
+        { id: 'kjv', label: 'KJV', name: 'KJV Full Name', text: null },
       ],
       annotations: [
         {
@@ -829,7 +830,7 @@ describe('opening the reader at a reference', () => {
     expect(model.view.status).toBe('ok')
     expect(model.view.installNudge).toBe(null)
     expect(model.view.translations).toEqual([
-      { id: 'web', label: 'WEB', active: true },
+      { id: 'web', label: 'WEB', name: 'WEB Full Name', active: true },
     ])
   })
 
@@ -920,7 +921,7 @@ describe('opening the reader at a reference', () => {
 
     expect(model.view.status).toBe('ok')
     expect(model.view.translations).toEqual([
-      { id: 'web', label: 'WEB', active: true },
+      { id: 'web', label: 'WEB', name: 'WEB Full Name', active: true },
     ])
   })
 
@@ -1102,8 +1103,8 @@ describe('translation availability in the reader', () => {
 
     const details = model.view.details[makeVerseId(43, 15, 4)]
     expect(details.translations).toEqual([
-      { id: 'web', label: 'WEB', text: 'Remain in me.' },
-      { id: 'nkjv', label: 'NKJV', text: null },
+      { id: 'web', label: 'WEB', name: 'WEB Full Name', text: 'Remain in me.' },
+      { id: 'nkjv', label: 'NKJV', name: 'NKJV Full Name', text: null },
     ])
   })
 
@@ -1120,8 +1121,8 @@ describe('translation availability in the reader', () => {
 
     const view = model.view
     expect(view.translations).toEqual([
-      { id: 'web', label: 'WEB', active: true },
-      { id: 'nkjv', label: 'NKJV', active: false },
+      { id: 'web', label: 'WEB', name: 'WEB Full Name', active: true },
+      { id: 'nkjv', label: 'NKJV', name: 'NKJV Full Name', active: false },
     ])
     expect(view.rows).toHaveLength(5)
     expect(view.rows[0].segments[0].text).toBe('I am the true vine.')

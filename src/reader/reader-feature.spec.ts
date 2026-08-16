@@ -9,7 +9,7 @@ import { ReaderView } from './reader-view'
 
 const manifest = (id: string): ModuleManifest => ({
   id,
-  name: id.toUpperCase(),
+  name: `${id.toUpperCase()} Bible`,
   language: 'en',
   license: 'Public Domain',
   source: 'test',
@@ -118,6 +118,9 @@ describe('ReaderFeature entry points', () => {
     const view = leaves[0].view as ReaderView
     expect(view).toBeInstanceOf(ReaderView)
     expect(view.model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(view.model.view.translations).toEqual([
+      { id: 'web', label: 'WEB', name: 'WEB Bible', active: true },
+    ])
     expect(view.model.view.banner).toBe('Opened at John 15:1')
     expect(revealLeaf).toHaveBeenCalled()
   })

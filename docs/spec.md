@@ -70,7 +70,7 @@ An Obsidian workspace leaf. Prototype (visual reference until implementation): [
   1. **Details** — other translations + notes as *inline expand* under the clicked verse, or persistent *right side panel* with Translations/Notes tabs.
   2. **Nav** — book/chapter picker as *left tree panel* or *breadcrumb top links* with prev/next chapter steppers.
   3. **Layout** — *verse-per-line* or *continuous prose* (continuous honors pericope/paragraph data when provided).
-- **Multi-translation verse view:** stacked (label + text, one under another), not columns. The fallback translation is never substituted here — unavailable translations show an unavailable row.
+- **Multi-translation verse view:** stacked (full translation name with abbreviation in brackets + text, one under another), not columns. The fallback translation is never substituted here — unavailable translations show an unavailable row.
 - **Indicators:** trailing marks after verse text — ● annotation (amber), ◆n intersecting notes (blue).
 - **Entry points:** nav icon/chip on a rendered reference opens the reader at that passage (current-passage highlight: tint + left bar; dismissible entry-context banner); command-palette entry and ribbon icon open at last position.
 - **Shared elements:** translation pill switcher in the toolbar; per-translation copyright attribution line under the chapter; Strong's mode toggle (§7.3).

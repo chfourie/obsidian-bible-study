@@ -4,6 +4,7 @@
   import {
     FONT_SCALE_MAX,
     FONT_SCALE_MIN,
+    translationTitle,
     type ReaderPaneModel,
     type ReaderToggles,
     type VerseDetailsView,
@@ -262,7 +263,7 @@
       <tbody>
         {#each details.translations as row (row.id)}
           <tr>
-            <td class="bsr-trans-id">{row.label}</td>
+            <td class="bsr-trans-id">{translationTitle(row)}</td>
             <td class="bsr-trans-text">
               {#if row.text === null}
                 <span class="bsr-unavailable">Unavailable</span>
@@ -374,6 +375,7 @@
             type="button"
             class="bsr-pill"
             class:bsr-on={pill.active}
+            title={pill.name}
             onclick={() => void model.setTranslation(pill.id)}
           >{pill.label}</button>
         {/each}
@@ -569,7 +571,7 @@
                 <tbody>
                   {#each selectedDetails.translations as row (row.id)}
                     <tr>
-                      <td class="bsr-trans-id">{row.label}</td>
+                      <td class="bsr-trans-id">{translationTitle(row)}</td>
                       <td class="bsr-trans-text">
                         {#if row.text === null}
                           <span class="bsr-unavailable">Unavailable</span>
@@ -992,7 +994,7 @@
   .bsr-trans-id {
     color: var(--text-accent);
     font-weight: 600;
-    width: 52px;
+    min-width: 52px;
   }
 
   .bsr-unavailable {

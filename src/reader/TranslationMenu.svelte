@@ -5,7 +5,7 @@ a pill-styled trigger opening a body-portaled panel so the menu escapes the
 toolbar's overflow clipping and matches the plugin's look on all platforms.
 -->
 <script lang="ts">
-  import type { TranslationPill } from './reader-pane-model'
+  import { translationTitle, type TranslationPill } from './reader-pane-model'
   import { activate, computeMenuPanelPosition } from '../ui'
 
   let {
@@ -121,6 +121,7 @@ toolbar's overflow clipping and matches the plugin's look on all platforms.
   class:bsr-on={open}
   aria-haspopup="menu"
   aria-expanded={open}
+  title={shown?.name}
   onclick={toggle}
 >
   {shown?.label ?? ''}
@@ -148,7 +149,7 @@ toolbar's overflow clipping and matches the plugin's look on all platforms.
         <span class="bsr-menu-check" aria-hidden="true">
           {option.active ? '✓' : ''}
         </span>
-        <span>{option.label}</span>
+        <span>{translationTitle(option)}</span>
       </span>
     {/each}
   </div>

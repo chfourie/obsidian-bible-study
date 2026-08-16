@@ -91,6 +91,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       .map((manifest) => ({
         id: manifest.id,
         label: manifest.id.toUpperCase(),
+        name: manifest.name,
         strongsTagged: manifest.capabilities.strongsTagged === true,
       }))
   }

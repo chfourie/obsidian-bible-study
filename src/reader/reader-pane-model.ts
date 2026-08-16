@@ -58,6 +58,7 @@ export type ReaderFirstRunDeps = {
 export type ReaderTranslation = {
   id: string
   label: string
+  name: string
   strongsTagged: boolean
 }
 
@@ -93,6 +94,7 @@ export type VerseRowView = {
 export type TranslationRowView = {
   id: string
   label: string
+  name: string
   text: string | null
 }
 
@@ -134,9 +136,15 @@ const withoutDetail = (
     Object.entries(details).filter(([key]) => Number(key) !== verseId),
   )
 
+export const translationTitle = (translation: {
+  name: string
+  label: string
+}): string => `${translation.name} (${translation.label})`
+
 export type TranslationPill = {
   id: string
   label: string
+  name: string
   active: boolean
 }
 
@@ -282,6 +290,7 @@ export class ReaderPaneModel {
       translations: this.#available.map((translation) => ({
         id: translation.id,
         label: translation.label,
+        name: translation.name,
         active: translation.id === this.#translationId,
       })),
       toggles: this.#toggles,
@@ -521,6 +530,7 @@ export class ReaderPaneModel {
         return {
           id: translation.id,
           label: translation.label,
+          name: translation.name,
           text:
             passage.status === 'ok'
               ? passage.verses[0].segments
