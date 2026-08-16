@@ -63,10 +63,21 @@ body {
 
 /* ---- Inline mode (spec §3.2) ------------------------------------------- */
 
+.scripture-study-passage {
+  border-radius: var(--radius-s);
+  background-color: var(--background-secondary);
+}
+
 span.scripture-study-passage {
   margin-left: 0.35em;
+  padding: 0.1em 0.4em;
   color: var(--text-muted);
-  font-style: italic;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+div.scripture-study-passage {
+  padding: 0.5em 0.8em;
 }
 
 .scripture-study-verse-number {
