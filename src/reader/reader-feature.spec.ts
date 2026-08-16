@@ -286,6 +286,38 @@ describe('ReaderFeature entry points', () => {
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
+  it('reloads a no-translation pane when a module install lands in settings', async () => {
+    let installed: ModuleManifest[] = []
+    const store = {
+      installedManifests: async () => installed,
+      manifest: async (moduleId: string) =>
+        installed.find((entry) => entry.id === moduleId) ?? null,
+      bookContent: async (moduleId: string, book: number) =>
+        moduleId === 'web' && book === 43
+          ? { [makeVerseId(43, 15, 1)]: 'I am the true vine.' }
+          : {},
+    } as unknown as ModuleStore
+    const { feature, leaves } = harness({}, { store })
+    feature.useSettings({ ...DEFAULT_SETTINGS })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), null)
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.status).toBe('no-translation')
+
+    installed = [manifest('web')]
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      installedModuleIds: ['web'],
+      defaultTranslationId: 'web',
+    })
+    feature.onSettingsChanged()
+    await flushAsync()
+
+    expect(view.model.view.status).toBe('ok')
+    expect(view.model.view.translations.map((pill) => pill.id)).toEqual(['web'])
+  })
+
   it('passes the annotation ordering setting to new panes', async () => {
     const { feature, index, leaves } = harness({
       'Annotations/Zeal.md': {

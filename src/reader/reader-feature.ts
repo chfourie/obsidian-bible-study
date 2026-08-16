@@ -102,9 +102,15 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
 
   override onSettingsChanged(): void {
     this.#repository.clear()
-    this.#models.forEach((model) =>
-      model.setAnnotationOrdering(this.settings.annotationOrdering),
-    )
+    this.#models.forEach((model) => {
+      model.setAnnotationOrdering(this.settings.annotationOrdering)
+      // Panes with nothing on screen (no translation yet, or the passage was
+      // unavailable) reload so a module installed from the settings tab
+      // appears without reopening the pane.
+      const status = model.view.status
+      if (status === 'no-translation' || status === 'unavailable')
+        void model.openPosition(model.view.position)
+    })
   }
 
   #scheduleOccurrenceRefresh(): void {
