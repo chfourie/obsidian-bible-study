@@ -1,5 +1,7 @@
 import type { GetBibleTranslation } from './normalize-getbible-translation'
 
+export type TextTransport = (url: string) => Promise<string>
+
 export type TranslationDownload = {
   document: GetBibleTranslation
   checksum: string

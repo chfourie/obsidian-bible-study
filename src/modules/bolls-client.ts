@@ -1,6 +1,6 @@
 import { requestUrl } from 'obsidian'
 import { BOLLS_CATALOG_SNAPSHOT } from './bolls-catalog-snapshot'
-import type { TextTransport } from './getbible-client'
+import type { TextTransport } from './translation-source'
 import type { BollsVerse } from './normalize-bolls-translation'
 
 const CATALOG_URL = 'https://bolls.life/static/bolls/app/views/languages.json'

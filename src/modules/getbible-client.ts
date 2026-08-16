@@ -1,13 +1,14 @@
 import { requestUrl } from 'obsidian'
 import type { GetBibleTranslation } from './normalize-getbible-translation'
 import type {
+  TextTransport,
   TranslationDownload,
   TranslationSource,
 } from './translation-source'
 
-const GETBIBLE_BASE_URL = 'https://api.getbible.net/v2'
+export type { TextTransport } from './translation-source'
 
-export type TextTransport = (url: string) => Promise<string>
+const GETBIBLE_BASE_URL = 'https://api.getbible.net/v2'
 
 const requestUrlTransport: TextTransport = async (url) =>
   (await requestUrl({ url })).text

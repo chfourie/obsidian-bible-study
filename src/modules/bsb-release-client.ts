@@ -1,5 +1,5 @@
 import { requestUrl } from 'obsidian'
-import type { TextTransport } from './getbible-client'
+import type { TextTransport } from './translation-source'
 import type { ModuleManifest } from './module-manifest'
 import type { NormalizedModule } from './normalize-getbible-translation'
 import type {
