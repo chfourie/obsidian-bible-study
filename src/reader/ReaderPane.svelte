@@ -949,6 +949,10 @@
     padding: 0;
     margin: 0;
     font: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    word-spacing: inherit;
+    vertical-align: baseline;
     color: inherit;
     cursor: pointer;
   }
