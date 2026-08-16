@@ -951,8 +951,6 @@
     font: inherit;
     color: inherit;
     cursor: pointer;
-    text-decoration: underline dotted var(--text-accent);
-    text-underline-offset: 3px;
   }
 
   .bsr-strongs-word:hover {
