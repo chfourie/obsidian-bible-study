@@ -245,12 +245,19 @@
 {#snippet verseText(row: VerseRowView)}
   {#each row.segments as segment, index (index)}
     {#if view.strongsMode && segment.strongs !== undefined}
-      <button
-        type="button"
+      <span
+        role="button"
+        tabindex="0"
         class="bsr-strongs-word"
         class:scripture-study-red-letter={segment.redLetter}
         onclick={(event) => onWordClick(event, row.verseId, segment.strongs ?? [])}
-      >{segment.text}</button>
+        onkeydown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            onWordClick(event, row.verseId, segment.strongs ?? [])
+          }
+        }}
+      >{segment.text}</span>
     {:else if segment.redLetter}
       <span class="scripture-study-red-letter">{segment.text}</span>
     {:else}
@@ -942,18 +949,6 @@
   }
 
   .bsr-strongs-word {
-    display: inline;
-    background: none;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-    margin: 0;
-    font: inherit;
-    line-height: inherit;
-    letter-spacing: inherit;
-    word-spacing: inherit;
-    vertical-align: baseline;
-    color: inherit;
     cursor: pointer;
   }
 
