@@ -99,6 +99,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     this.#repository.clear()
     this.#models.forEach((model) => {
       model.setAnnotationOrdering(this.settings.annotationOrdering)
+      model.setDefaultFontScale(this.settings.readerFontScalePercent)
       void model.refreshTranslations()
       // Panes with nothing on screen (no translation yet, or the passage was
       // unavailable) reload so a module installed from the settings tab
@@ -137,6 +138,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
         },
         translationId: this.settings.defaultTranslationId,
         annotationOrdering: this.settings.annotationOrdering,
+        fontScalePercent: this.settings.readerFontScalePercent,
       },
     )
     model.subscribe(() => {

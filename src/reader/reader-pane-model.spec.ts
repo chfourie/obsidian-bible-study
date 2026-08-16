@@ -670,6 +670,86 @@ describe('reader toggles', () => {
   })
 })
 
+describe('reader font scale', () => {
+  const scaledModel = (fontScalePercent?: number): ReaderPaneModel =>
+    new ReaderPaneModel(
+      {
+        passages: passageSourceOver(john15Texts()),
+        availableTranslations: async () => [translation('web')],
+        intersecting: () => [],
+        annotationDetails: async () => null,
+        strongs: {
+          dictionariesInstalled: async () => false,
+          entriesFor: async () => [],
+          attribution: '',
+        },
+      },
+      { toggles: DEFAULT_TOGGLES, translationId: 'web', fontScalePercent },
+    )
+
+  it('defaults to 100% when unconfigured', () => {
+    expect(scaledModel().view.fontScalePercent).toBe(100)
+  })
+
+  it('seeds the scale from the configured default', () => {
+    expect(scaledModel(130).view.fontScalePercent).toBe(130)
+  })
+
+  it('steps up and down by 10% and notifies subscribers', () => {
+    const model = scaledModel()
+    let notified = 0
+    model.subscribe(() => notified++)
+
+    model.increaseFontScale()
+    model.increaseFontScale()
+    model.decreaseFontScale()
+
+    expect(model.view.fontScalePercent).toBe(110)
+    expect(notified).toBe(3)
+  })
+
+  it('clamps at the range limits without notifying', () => {
+    const model = scaledModel(200)
+    let notified = 0
+    model.subscribe(() => notified++)
+
+    model.increaseFontScale()
+    expect(model.view.fontScalePercent).toBe(200)
+
+    const floor = scaledModel(50)
+    floor.subscribe(() => notified++)
+    floor.decreaseFontScale()
+    expect(floor.view.fontScalePercent).toBe(50)
+    expect(notified).toBe(0)
+  })
+
+  it('clamps a configured default outside the range', () => {
+    expect(scaledModel(500).view.fontScalePercent).toBe(200)
+    expect(scaledModel(10).view.fontScalePercent).toBe(50)
+  })
+
+  it('resets to the configured default', () => {
+    const model = scaledModel(120)
+    model.increaseFontScale()
+    model.increaseFontScale()
+
+    model.resetFontScale()
+
+    expect(model.view.fontScalePercent).toBe(120)
+  })
+
+  it('resets to a default changed after construction, leaving the current scale alone', () => {
+    const model = scaledModel(100)
+    model.increaseFontScale()
+
+    model.setDefaultFontScale(150)
+    expect(model.view.fontScalePercent).toBe(110)
+
+    model.resetFontScale()
+    expect(model.view.fontScalePercent).toBe(150)
+  })
+})
+
 describe('opening the reader at a reference', () => {
   it('loads the chapter containing the reference with per-verse rows', async () => {
     const model = modelWith()

@@ -481,6 +481,13 @@ export type SettingControl = {
 } & (
   | { type: 'dropdown'; options: Record<string, string> }
   | { type: 'toggle' }
+  | {
+      type: 'slider'
+      min: number
+      max: number
+      step: number
+      displayFormat?: (value: number) => string
+    }
   | { type: 'folder'; placeholder?: string; filter?: (folder: TFolder) => boolean }
   | { type: 'file'; placeholder?: string; filter?: (file: TFile) => boolean }
 )
@@ -709,6 +716,17 @@ export class PluginSettingTab {
             .onChange(commit)
         )
         return
+      case 'slider': {
+        const slider = setting.controlEl.createEl('input')
+        slider.type = 'range'
+        slider.min = String(control.min)
+        slider.max = String(control.max)
+        slider.step = String(control.step)
+        slider.value = String(value ?? control.min)
+        slider.disabled = disabled
+        slider.addEventListener('change', () => commit(Number(slider.value)))
+        return
+      }
       case 'folder':
       case 'file':
         setting.addText((text) => {

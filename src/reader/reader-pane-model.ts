@@ -9,7 +9,15 @@ import {
   verseCount,
   type Reference,
 } from '../reference'
+import {
+  FONT_SCALE_DEFAULT,
+  FONT_SCALE_MAX,
+  FONT_SCALE_MIN,
+  FONT_SCALE_STEP,
+} from '../data-access'
 import type { PassageSource, VerseSegment } from '../rendering'
+
+export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
 import type { OccurrenceGroup } from '../vault-index'
 
 export type ReaderToggles = {
@@ -66,7 +74,11 @@ export type ReaderPaneConfig = {
   toggles: ReaderToggles
   translationId: string | null
   annotationOrdering?: AnnotationOrdering
+  fontScalePercent?: number
 }
+
+const clampFontScale = (percent: number): number =>
+  Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, percent))
 
 export type VerseRowView = {
   verseId: number
@@ -137,6 +149,7 @@ export type ReaderPaneView = {
   toggles: ReaderToggles
   hasPreviousChapter: boolean
   hasNextChapter: boolean
+  fontScalePercent: number
   selectedVerseId: number | null
   selectionEndId: number | null
   details: Record<number, VerseDetailsView>
@@ -187,6 +200,8 @@ export class ReaderPaneModel {
   readonly #listeners = new Set<() => void>()
 
   #annotationOrdering: AnnotationOrdering
+  #defaultFontScale: number
+  #fontScalePercent: number
 
   constructor(
     private readonly deps: ReaderPaneDeps,
@@ -195,6 +210,10 @@ export class ReaderPaneModel {
     this.#translationId = config.translationId
     this.#toggles = { ...config.toggles }
     this.#annotationOrdering = config.annotationOrdering ?? 'created-oldest-first'
+    this.#defaultFontScale = clampFontScale(
+      config.fontScalePercent ?? FONT_SCALE_DEFAULT,
+    )
+    this.#fontScalePercent = this.#defaultFontScale
   }
 
   subscribe(listener: () => void): () => void {
@@ -225,6 +244,29 @@ export class ReaderPaneModel {
     }
   }
 
+  increaseFontScale(): void {
+    this.#setFontScale(this.#fontScalePercent + FONT_SCALE_STEP)
+  }
+
+  decreaseFontScale(): void {
+    this.#setFontScale(this.#fontScalePercent - FONT_SCALE_STEP)
+  }
+
+  resetFontScale(): void {
+    this.#setFontScale(this.#defaultFontScale)
+  }
+
+  setDefaultFontScale(percent: number): void {
+    this.#defaultFontScale = clampFontScale(percent)
+  }
+
+  #setFontScale(percent: number): void {
+    const clamped = clampFontScale(percent)
+    if (clamped === this.#fontScalePercent) return
+    this.#fontScalePercent = clamped
+    this.#notify()
+  }
+
   setAnnotationOrdering(ordering: AnnotationOrdering): void {
     if (ordering === this.#annotationOrdering) return
     this.#annotationOrdering = ordering
@@ -243,6 +285,7 @@ export class ReaderPaneModel {
         active: translation.id === this.#translationId,
       })),
       toggles: this.#toggles,
+      fontScalePercent: this.#fontScalePercent,
       hasPreviousChapter: this.#hasPreviousChapter(),
       hasNextChapter: this.#hasNextChapter(),
       selectedVerseId: this.#selectedVerseId,

@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { setIcon } from 'obsidian'
   import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
-  import type {
-    ReaderPaneModel,
-    ReaderToggles,
-    VerseDetailsView,
-    VerseRowView,
+  import {
+    FONT_SCALE_MAX,
+    FONT_SCALE_MIN,
+    type ReaderPaneModel,
+    type ReaderToggles,
+    type VerseDetailsView,
+    type VerseRowView,
   } from './reader-pane-model'
   import TranslationMenu from './TranslationMenu.svelte'
 
@@ -88,6 +91,14 @@
   const setToggle = (key: keyof ReaderToggles, value: string): void => {
     model.setToggle(key, value as ReaderToggles[typeof key])
   }
+
+  const icon = (node: HTMLElement, name: string) => {
+    setIcon(node, name)
+  }
+
+  const contentFontSize = $derived(
+    `calc(var(--font-text-size) * ${view.fontScalePercent / 100})`,
+  )
 
   // The translation pills collapse to a dropdown when their natural width no
   // longer fits the toolbar space left over by the toggle groups. The hidden
@@ -318,6 +329,34 @@
         </span>
       </span>
     {/each}
+    <span class="bsr-seg-group">
+      <span class="bsr-seg-label">Text</span>
+      <span class="bsr-seg">
+        <button
+          type="button"
+          class="bsr-font-btn"
+          aria-label="Decrease text size"
+          disabled={view.fontScalePercent <= FONT_SCALE_MIN}
+          onclick={() => model.decreaseFontScale()}
+          use:icon={'a-arrow-down'}
+        ></button>
+        <button
+          type="button"
+          class="bsr-font-reset"
+          aria-label="Reset text size"
+          title="Reset text size"
+          onclick={() => model.resetFontScale()}
+        >{view.fontScalePercent}%</button>
+        <button
+          type="button"
+          class="bsr-font-btn"
+          aria-label="Increase text size"
+          disabled={view.fontScalePercent >= FONT_SCALE_MAX}
+          onclick={() => model.increaseFontScale()}
+          use:icon={'a-arrow-up'}
+        ></button>
+      </span>
+    </span>
     <span class="bsr-trans" bind:this={pillSlotEl}>
       <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
         {#each view.translations as pill (pill.id)}
@@ -390,7 +429,7 @@
     {/if}
 
     <div class="bsr-content">
-      <div class="bsr-scroll">
+      <div class="bsr-scroll" style:font-size={contentFontSize}>
         <div class="bsr-inner">
           <div class="bsr-title-row">
             <h1 class="bsr-title">{view.title}</h1>
@@ -624,6 +663,25 @@
   .bsr-pill.bsr-on {
     background: hsla(var(--interactive-accent-hsl), 0.15);
     color: var(--text-accent);
+  }
+
+  .bsr-font-btn {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .bsr-font-btn :global(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .bsr-font-btn:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  .bsr-font-reset {
+    min-width: 42px;
   }
 
   .bsr-pill {
@@ -861,7 +919,7 @@
   }
 
   .bsr-prose {
-    font-size: var(--font-text-size);
+    font-size: inherit;
     line-height: 1.85;
   }
 

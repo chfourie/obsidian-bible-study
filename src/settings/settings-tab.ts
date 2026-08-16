@@ -8,7 +8,13 @@ import {
   type SettingDefinitionPage,
   type TFile,
 } from 'obsidian'
-import type { AnnotationOrdering, ScriptureStudySettings } from '../data-access'
+import {
+  FONT_SCALE_MAX,
+  FONT_SCALE_MIN,
+  FONT_SCALE_STEP,
+  type AnnotationOrdering,
+  type ScriptureStudySettings,
+} from '../data-access'
 import { STRONGS_ATTRIBUTION } from '../strongs'
 import type {
   SettingsTabModel,
@@ -32,6 +38,7 @@ type SettingsControlKey =
   | 'readerNavDefault'
   | 'readerLayoutDefault'
   | 'readerStrongsDefault'
+  | 'readerFontScalePercent'
   | 'annotationsFolder'
   | 'annotationTemplatePath'
   | 'annotationOrdering'
@@ -140,6 +147,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       case 'readerNavDefault':
       case 'readerLayoutDefault':
       case 'readerStrongsDefault':
+      case 'readerFontScalePercent':
         return settings[key as ReaderDefaultKey]
       case 'annotationsFolder':
         return settings.annotationsFolder
@@ -170,6 +178,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       case 'readerNavDefault':
       case 'readerLayoutDefault':
       case 'readerStrongsDefault':
+      case 'readerFontScalePercent':
         return this.#update((settings) => ({ ...settings, [key]: value }))
       case 'annotationsFolder':
         return this.#update((settings) => ({
@@ -441,6 +450,18 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           off: 'Off',
           on: 'On',
         }),
+        {
+          name: 'Text size',
+          desc: READER_DEFAULT_DESC + ' Relative to the app font size.',
+          control: {
+            type: 'slider',
+            key: 'readerFontScalePercent',
+            min: FONT_SCALE_MIN,
+            max: FONT_SCALE_MAX,
+            step: FONT_SCALE_STEP,
+            displayFormat: (value: number) => `${value}%`,
+          },
+        },
       ],
     }
   }

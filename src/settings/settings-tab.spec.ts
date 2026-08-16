@@ -581,6 +581,21 @@ describe('ScriptureStudySettingTab reader defaults', () => {
       'breadcrumb',
     )
   })
+
+  it('persists the reader text size slider', async () => {
+    const { container, settingsStore } = await setup()
+
+    const textSize = settingNamed(container, 'Text size')
+    const slider = textSize.querySelector('input[type="range"]')
+    if (!(slider instanceof HTMLInputElement)) throw new Error('no slider')
+    expect(slider.value).toBe('100')
+
+    slider.value = '130'
+    slider.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).readerFontScalePercent).toBe(130)
+  })
 })
 
 describe('ScriptureStudySettingTab annotations section', () => {
