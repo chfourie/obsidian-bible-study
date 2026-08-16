@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
 import { normalizeBollsTranslation } from './normalize-bolls-translation'
 import type { BollsVerse } from './normalize-bolls-translation'
+import type { TaggedVerse } from './verse-content'
 
 const nkjvSlice = (): BollsVerse[] =>
   JSON.parse(
@@ -92,5 +93,107 @@ describe('normalizeBollsTranslation with plain texts', () => {
     expect(normalized.books.get(43)?.[makeVerseId(43, 16, 4)]).toBeUndefined()
     expect(normalized.books.get(43)?.[makeVerseId(44, 15, 4)]).toBeUndefined()
     expect(normalized.books.get(43)?.[makeVerseId(43, 15, 4)]).toBeDefined()
+  })
+})
+
+const kjvSlice = (): BollsVerse[] =>
+  JSON.parse(
+    readFileSync('tests/fixtures/bolls-kjv-slice.json', 'utf8'),
+  ) as BollsVerse[]
+
+const kjvMeta = {
+  name: "King James Version 1769 with Apocrypha and Strong's Numbers",
+  language: 'English',
+}
+
+const kjvSource = {
+  source: 'https://bolls.life/static/translations/KJV.json',
+  sourceChecksum: 'def456',
+}
+
+const normalizedKjv = () =>
+  normalizeBollsTranslation('kjv', kjvSlice(), kjvMeta, kjvSource)
+
+const kjvVerse = (book: number, chapter: number, verse: number): TaggedVerse => {
+  const content = normalizedKjv().books.get(book)?.[
+    makeVerseId(book, chapter, verse)
+  ]
+  if (content === undefined || typeof content === 'string')
+    throw new Error('expected a tagged verse')
+  return content
+}
+
+const taggedWord = (verse: TaggedVerse, span: number): string =>
+  verse.text.slice(verse.tags[span].start, verse.tags[span].end)
+
+describe('normalizeBollsTranslation with <S>-tagged texts', () => {
+  it('sets the strongsTagged manifest capability', () => {
+    expect(normalizedKjv().manifest.capabilities).toEqual({
+      strongsTagged: true,
+    })
+  })
+
+  it('converts trailing <S> tags into word spans with testament-prefixed numbers', () => {
+    const genesis11 = kjvVerse(1, 1, 1)
+
+    expect(genesis11.text).toBe(
+      'In the beginning God created the heaven and the earth.',
+    )
+    expect(taggedWord(genesis11, 0)).toBe('beginning')
+    expect(genesis11.tags[0].strongs).toEqual(['H7225'])
+    expect(taggedWord(genesis11, 1)).toBe('God')
+    expect(genesis11.tags[1].strongs).toEqual(['H0430'])
+  })
+
+  it('folds a standalone tag into the preceding word span', () => {
+    // '...created<S>1254</S> <S>853</S> the heaven...' — the untranslated
+    // object marker 853 rides on 'created'.
+    const genesis11 = kjvVerse(1, 1, 1)
+
+    expect(taggedWord(genesis11, 2)).toBe('created')
+    expect(genesis11.tags[2].strongs).toEqual(['H1254', 'H0853'])
+  })
+
+  it('prefixes New Testament tags with G and keeps spans on the words', () => {
+    const john154 = kjvVerse(43, 15, 4)
+
+    expect(john154.text).toBe(
+      'Abide in me, and I in you. As the branch cannot bear fruit of itself, except it abide in the vine; no more can ye, except ye abide in me.',
+    )
+    expect(taggedWord(john154, 0)).toBe('Abide')
+    expect(john154.tags[0].strongs).toEqual(['G3306'])
+    expect(taggedWord(john154, 8)).toBe('cannot')
+    expect(john154.tags[8].strongs).toEqual(['G3756', 'G1410'])
+  })
+
+  it('drops footnote <sup> blocks together with their tags', () => {
+    // Gen 1:4 carries '<sup>the light from: Heb. between...</sup>';
+    // 2 Cor 13:14 carries a tagged subscription inside <sup>.
+    expect(kjvVerse(1, 1, 4).text).toBe(
+      'And God saw the light, that it was good: and God divided the light from the darkness.',
+    )
+
+    const corinthians = kjvVerse(47, 13, 14)
+    expect(corinthians.text).toBe(
+      'The grace of the Lord Jesus Christ, and the love of God, and the communion of the Holy Ghost, be with you all. Amen.',
+    )
+    expect(corinthians.tags.at(-1)?.strongs).toEqual(['G0281'])
+  })
+
+  it('strips styling markup while keeping its words and spans intact', () => {
+    // 1 Tim 5:18 wraps the quotation in <b>...</b>.
+    const timothy = kjvVerse(54, 5, 18)
+
+    expect(timothy.text).toContain('Thou shalt not muzzle the ox')
+    const muzzleSpan = timothy.tags.find((tag) =>
+      tag.strongs.includes('G1016'),
+    )
+    expect(muzzleSpan).toBeDefined()
+    if (muzzleSpan)
+      expect(timothy.text.slice(muzzleSpan.start, muzzleSpan.end)).toBe('ox')
+  })
+
+  it('keeps untagged apocryphal books out while tagging canonical ones', () => {
+    expect(normalizedKjv().books.has(67)).toBe(false)
   })
 })
