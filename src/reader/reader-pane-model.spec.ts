@@ -198,6 +198,25 @@ describe('chapter navigation', () => {
     expect(model.view.rows.every((row) => !row.highlighted)).toBe(true)
   })
 
+  it('reports both directions available mid-canon', async () => {
+    const model = await openJohn15()
+
+    expect(model.view.hasPreviousChapter).toBe(true)
+    expect(model.view.hasNextChapter).toBe(true)
+  })
+
+  it('reports the unavailable direction at the edges of the canon', async () => {
+    const model = await openJohn15()
+
+    await model.goTo(1, 1)
+    expect(model.view.hasPreviousChapter).toBe(false)
+    expect(model.view.hasNextChapter).toBe(true)
+
+    await model.goTo(66, 22)
+    expect(model.view.hasPreviousChapter).toBe(true)
+    expect(model.view.hasNextChapter).toBe(false)
+  })
+
   it('notifies subscribers as a navigation loads', async () => {
     const model = await openJohn15()
     let notified = 0

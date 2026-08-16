@@ -356,8 +356,8 @@
         {/each}
       </select>
       <span class="bsr-spacer"></span>
-      <button type="button" class="bsr-step" onclick={() => void model.previousChapter()}>‹ Previous</button>
-      <button type="button" class="bsr-step" onclick={() => void model.nextChapter()}>Next ›</button>
+      <button type="button" class="bsr-step" disabled={!view.hasPreviousChapter} onclick={() => void model.previousChapter()}>‹ Previous</button>
+      <button type="button" class="bsr-step" disabled={!view.hasNextChapter} onclick={() => void model.nextChapter()}>Next ›</button>
     </div>
   {/if}
 
@@ -392,7 +392,25 @@
     <div class="bsr-content">
       <div class="bsr-scroll">
         <div class="bsr-inner">
-          <h1 class="bsr-title">{view.title}</h1>
+          <div class="bsr-title-row">
+            <h1 class="bsr-title">{view.title}</h1>
+            <span class="bsr-title-nav">
+              <button
+                type="button"
+                class="bsr-chapter-step"
+                aria-label="Previous chapter"
+                disabled={!view.hasPreviousChapter}
+                onclick={() => void model.previousChapter()}
+              >‹</button>
+              <button
+                type="button"
+                class="bsr-chapter-step"
+                aria-label="Next chapter"
+                disabled={!view.hasNextChapter}
+                onclick={() => void model.nextChapter()}
+              >›</button>
+            </span>
+          </div>
 
           {#if view.status === 'loading'}
             <div class="scripture-study-loading">Loading {view.title}…</div>
@@ -467,6 +485,13 @@
                 <div class="bsr-expand">{@render detailsBlock(detailsFor(row))}</div>
               {/each}
             {/if}
+          {/if}
+
+          {#if view.status === 'ok'}
+            <div class="bsr-foot-nav">
+              <button type="button" class="bsr-step" disabled={!view.hasPreviousChapter} onclick={() => void model.previousChapter()}>‹ Previous</button>
+              <button type="button" class="bsr-step" disabled={!view.hasNextChapter} onclick={() => void model.nextChapter()}>Next ›</button>
+            </div>
           {/if}
 
           {#if view.attribution !== null}
@@ -754,9 +779,56 @@
     margin: 0 auto;
   }
 
+  .bsr-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+
   .bsr-title {
     font-size: var(--h3-size);
-    margin: 0 0 12px;
+    margin: 0;
+  }
+
+  .bsr-title-nav {
+    display: inline-flex;
+    gap: 2px;
+  }
+
+  .bsr-chapter-step {
+    background: none;
+    border: none;
+    box-shadow: none;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    font-size: 1.2em;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .bsr-chapter-step:hover:not(:disabled) {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  .bsr-chapter-step:disabled,
+  .bsr-step:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  .bsr-step:disabled:hover {
+    background: none;
+  }
+
+  .bsr-foot-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
   }
 
   .bsr-verse-line {

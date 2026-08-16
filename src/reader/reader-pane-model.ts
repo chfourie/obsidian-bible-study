@@ -135,6 +135,8 @@ export type ReaderPaneView = {
   rows: VerseRowView[]
   translations: TranslationPill[]
   toggles: ReaderToggles
+  hasPreviousChapter: boolean
+  hasNextChapter: boolean
   selectedVerseId: number | null
   selectionEndId: number | null
   details: Record<number, VerseDetailsView>
@@ -241,6 +243,8 @@ export class ReaderPaneModel {
         active: translation.id === this.#translationId,
       })),
       toggles: this.#toggles,
+      hasPreviousChapter: this.#hasPreviousChapter(),
+      hasNextChapter: this.#hasNextChapter(),
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
@@ -313,16 +317,28 @@ export class ReaderPaneModel {
     await this.#loadChapter()
   }
 
+  #hasNextChapter(): boolean {
+    const { book, chapter } = this.#position
+    return book < BOOK_COUNT || chapter < chapterCount(book)
+  }
+
+  #hasPreviousChapter(): boolean {
+    const { book, chapter } = this.#position
+    return book > 1 || chapter > 1
+  }
+
   async nextChapter(): Promise<void> {
+    if (!this.#hasNextChapter()) return
     const { book, chapter } = this.#position
     if (chapter < chapterCount(book)) await this.goTo(book, chapter + 1)
-    else if (book < BOOK_COUNT) await this.goTo(book + 1, 1)
+    else await this.goTo(book + 1, 1)
   }
 
   async previousChapter(): Promise<void> {
+    if (!this.#hasPreviousChapter()) return
     const { book, chapter } = this.#position
     if (chapter > 1) await this.goTo(book, chapter - 1)
-    else if (book > 1) await this.goTo(book - 1, chapterCount(book - 1))
+    else await this.goTo(book - 1, chapterCount(book - 1))
   }
 
   async setTranslation(translationId: string): Promise<void> {
