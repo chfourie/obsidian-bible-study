@@ -1,3 +1,5 @@
+import type { BibleStudySettings } from '../data-access'
+
 export type OnlineTranslation = {
   id: string
   apiBibleId: string
@@ -17,3 +19,12 @@ export const ONLINE_TRANSLATIONS: readonly OnlineTranslation[] = [
 export const apiBibleIdFor = (translationId: string): string | null =>
   ONLINE_TRANSLATIONS.find((translation) => translation.id === translationId)
     ?.apiBibleId ?? null
+
+export const enabledOnlineTranslations = (
+  settings: BibleStudySettings,
+): OnlineTranslation[] =>
+  settings.apiBibleKey === null || settings.apiBibleKey.trim() === ''
+    ? []
+    : ONLINE_TRANSLATIONS.filter((translation) =>
+        settings.enabledOnlineTranslationIds.includes(translation.id),
+      )
