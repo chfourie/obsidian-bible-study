@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { enumerateVerseIds, makeVerseId, type Reference } from '../reference'
 import type { Passage, PassageSource } from '../rendering'
+import { extractOccurrences } from '../vault-index'
 import { ReferencesPanelModel } from './references-panel-model'
 
 type PassageRequest = { reference: Reference; translationId: string }
@@ -38,7 +39,14 @@ const model = (
   source: PassageSource,
   translationId: string | null = 'web',
 ): ReferencesPanelModel =>
-  new ReferencesPanelModel({ passages: source }, { translationId })
+  new ReferencesPanelModel(
+    {
+      passages: source,
+      extract: (content) =>
+        extractOccurrences(content, { translationIds: ['web', 'niv', 'kjv'] }),
+    },
+    { translationId },
+  )
 
 describe('ReferencesPanelModel', () => {
   it('starts with no note', () => {
@@ -132,6 +140,57 @@ describe('ReferencesPanelModel', () => {
       'Psalms 25:1-2',
       'Psalms 25:7-8',
       'John 15:1',
+    ])
+  })
+
+  it('keeps intersecting references from different translations separate', async () => {
+    const fake = fakeSource()
+    const panel = model(fake.source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{Psalms 25:1-5} then {Psalms 25:4 niv}',
+    })
+
+    expect(
+      panel.view.entries.map((entry) => [entry.label, entry.translationLabel]),
+    ).toEqual([
+      ['Psalms 25:1-5', 'WEB'],
+      ['Psalms 25:4', 'NIV'],
+    ])
+    expect(fake.requests.map((request) => request.translationId)).toEqual([
+      'web',
+      'niv',
+    ])
+  })
+
+  it('combines intersecting references naming the same translation', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{Psalms 25:1-3 niv} and {Psalms 25:2-5 niv}',
+    })
+
+    expect(
+      panel.view.entries.map((entry) => [entry.label, entry.translationLabel]),
+    ).toEqual([['Psalms 25:1-5', 'NIV']])
+  })
+
+  it('loads explicit-translation entries even without a default translation', async () => {
+    const panel = model(fakeSource().source, null)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{John 15:1} and {Psalms 25:4 niv}',
+    })
+
+    expect(panel.view.status).toBe('ok')
+    expect(
+      panel.view.entries.map((entry) => [entry.status, entry.translationLabel]),
+    ).toEqual([
+      ['unavailable', null],
+      ['ok', 'NIV'],
     ])
   })
 

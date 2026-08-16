@@ -6,7 +6,12 @@ import {
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
 import type { Reference } from '../reference'
-import { ModulePassageSource, PassageRepository } from '../rendering'
+import {
+  ModulePassageSource,
+  PassageRepository,
+  renderContextFromSettings,
+} from '../rendering'
+import { extractOccurrences } from '../vault-index'
 import { ReferencesPanelModel, type ActiveNote } from './references-panel-model'
 import { REFERENCES_VIEW_TYPE, ReferencesView } from './references-view'
 
@@ -55,11 +60,21 @@ export class ReferencesFeature extends PluginFeature {
     this.#models.forEach(
       (model) => void model.setTranslation(this.settings.defaultTranslationId),
     )
+    // Installing a module can change which translation tokens parse, so the
+    // active note is re-extracted too.
+    this.#fanOut()
   }
 
   createModel(): ReferencesPanelModel {
     const model = new ReferencesPanelModel(
-      { passages: this.#repository },
+      {
+        passages: this.#repository,
+        extract: (content) =>
+          extractOccurrences(content, {
+            translationIds: renderContextFromSettings(this.settings)
+              .knownTranslationIds,
+          }),
+      },
       { translationId: this.settings.defaultTranslationId },
     )
     this.#models.add(model)
@@ -75,8 +90,8 @@ export class ReferencesFeature extends PluginFeature {
     this.#navigator = navigator
   }
 
-  openReference(reference: Reference): void {
-    this.#navigator.openReference(reference, null)
+  openReference(reference: Reference, translationId: string | null): void {
+    this.#navigator.openReference(reference, translationId)
   }
 
   async openPanel(): Promise<void> {

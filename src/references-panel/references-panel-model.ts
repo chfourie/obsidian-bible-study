@@ -6,7 +6,7 @@ import {
   type Reference,
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
-import { extractOccurrences } from '../vault-index'
+import type { ExtractedOccurrence } from '../vault-index'
 
 export type ReferenceEntryVerse = { label: string | null; text: string }
 
@@ -16,6 +16,10 @@ export type ReferenceEntryView = {
   key: string
   label: string
   reference: Reference
+  // The explicit translation token from the note, if any; the passage loads
+  // with it, falling back to the default translation.
+  translation: string | null
+  translationLabel: string | null
   status: ReferenceEntryStatus
   verses: ReferenceEntryVerse[]
   attribution: string | null
@@ -33,7 +37,10 @@ export type ReferencesPanelView = {
   entries: ReferenceEntryView[]
 }
 
-export type ReferencesPanelDeps = { passages: PassageSource }
+export type ReferencesPanelDeps = {
+  passages: PassageSource
+  extract: (content: string) => ExtractedOccurrence[]
+}
 
 export type ReferencesPanelConfig = { translationId: string | null }
 
@@ -52,19 +59,30 @@ const verseLabels = (verses: PassageVerse[]): (string | null)[] => {
   )
 }
 
-// Intersecting references collapse into one entry covering their union, at
-// the position of the earliest of them; a later reference bridging two
-// earlier entries folds all three together.
-const combineIntersecting = (references: Reference[]): Reference[] => {
-  const combined: Reference[] = []
-  for (const reference of references) {
-    let merged = reference
+type PanelReference = { reference: Reference; translation: string | null }
+
+// Intersecting same-translation references collapse into one entry covering
+// their union, at the position of the earliest of them; a later reference
+// bridging two earlier entries folds all three together. References naming
+// different translations stay separate — they show different text.
+const combineIntersecting = (references: PanelReference[]): PanelReference[] => {
+  const combined: PanelReference[] = []
+  for (const candidate of references) {
+    let merged = candidate
     let insertAt = combined.length
     for (let index = combined.length - 1; index >= 0; index -= 1) {
-      if (!referencesIntersect(combined[index], merged)) continue
+      const existing = combined[index]
+      if (existing.translation !== merged.translation) continue
+      if (!referencesIntersect(existing.reference, merged.reference)) continue
       merged = {
-        book: merged.book,
-        ranges: mergeRanges([...combined[index].ranges, ...merged.ranges]),
+        translation: merged.translation,
+        reference: {
+          book: merged.reference.book,
+          ranges: mergeRanges([
+            ...existing.reference.ranges,
+            ...merged.reference.ranges,
+          ]),
+        },
       }
       combined.splice(index, 1)
       insertAt = index
@@ -104,8 +122,10 @@ export class ReferencesPanelModel {
   #status(): ReferencesPanelStatus {
     if (this.#file === null) return 'no-note'
     if (this.#entries.length === 0) return 'no-references'
-    if (this.#translationId === null) return 'no-translation'
-    return 'ok'
+    const someLoadable = this.#entries.some(
+      (entry) => (entry.translation ?? this.#translationId) !== null,
+    )
+    return someLoadable ? 'ok' : 'no-translation'
   }
 
   async setActiveNote(note: ActiveNote | null): Promise<void> {
@@ -128,6 +148,7 @@ export class ReferencesPanelModel {
     const token = ++this.#loadToken
     this.#entries = this.#entries.map((entry) => ({
       ...entry,
+      translationLabel: this.#translationLabel(entry.translation),
       status: 'loading',
       verses: [],
       attribution: null,
@@ -138,14 +159,19 @@ export class ReferencesPanelModel {
 
   #pendingEntries(content: string): ReferenceEntryView[] {
     const references = combineIntersecting(
-      extractOccurrences(content).map((occurrence) => occurrence.reference),
+      this.deps.extract(content).map((occurrence) => ({
+        reference: occurrence.reference,
+        translation: occurrence.translation,
+      })),
     )
-    return references.map((reference) => {
-      const key = formatReference(reference)
+    return references.map(({ reference, translation }) => {
+      const label = formatReference(reference)
       return {
-        key,
-        label: key,
+        key: `${translation ?? ''}|${label}`,
+        label,
         reference,
+        translation,
+        translationLabel: this.#translationLabel(translation),
         status: 'loading',
         verses: [],
         attribution: null,
@@ -153,22 +179,18 @@ export class ReferencesPanelModel {
     })
   }
 
+  #translationLabel(translation: string | null): string | null {
+    return (translation ?? this.#translationId)?.toUpperCase() ?? null
+  }
+
   async #loadEntries(token: number): Promise<void> {
-    const translationId = this.#translationId
-    if (translationId === null) {
-      this.#entries = this.#entries.map((entry) => ({
-        ...entry,
-        status: 'unavailable',
-      }))
-      this.#notify()
-      return
-    }
     await Promise.all(
       this.#entries.map(async (entry) => {
-        const passage = await this.deps.passages.passage(
-          entry.reference,
-          translationId,
-        )
+        const translationId = entry.translation ?? this.#translationId
+        const passage =
+          translationId === null
+            ? ({ status: 'unavailable' } as const)
+            : await this.deps.passages.passage(entry.reference, translationId)
         if (token !== this.#loadToken) return
         this.#applyPassage(entry.key, passage)
         this.#notify()

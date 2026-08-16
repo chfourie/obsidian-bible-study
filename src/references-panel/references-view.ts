@@ -36,8 +36,8 @@ export class ReferencesView extends ItemView {
       target: this.contentEl,
       props: {
         model: this.model,
-        openReference: (reference: Reference) =>
-          this.feature.openReference(reference),
+        openReference: (reference: Reference, translationId: string | null) =>
+          this.feature.openReference(reference, translationId),
       },
     }) as Record<string, unknown>
   }

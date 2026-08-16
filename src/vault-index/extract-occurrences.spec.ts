@@ -11,6 +11,7 @@ describe('extractOccurrences', () => {
         position: 7,
         reference: { book: 43, ranges: [{ startId: john(15, 4), endId: john(15, 4) }] },
         source: 'body',
+        translation: null,
       },
     ])
   })
@@ -31,8 +32,23 @@ describe('extractOccurrences', () => {
         position: 0,
         reference: { book: 43, ranges: [{ startId: john(15, 4), endId: john(15, 4) }] },
         source: 'body',
+        translation: null,
       },
     ])
+  })
+
+  it('carries the translation token when the id is known', () => {
+    const occurrences = extractOccurrences('{John 15:4 nkjv} {John 15:9}', {
+      translationIds: ['nkjv'],
+    })
+    expect(occurrences.map((o) => o.translation)).toEqual(['nkjv', null])
+  })
+
+  it('carries a known translation on a frontmatter ref', () => {
+    const occurrences = extractOccurrences('---\nref: John 15:4 kjv\n---\n', {
+      translationIds: ['kjv'],
+    })
+    expect(occurrences.map((o) => o.translation)).toEqual(['kjv'])
   })
 
   it('ignores an escaped reference', () => {
@@ -85,6 +101,7 @@ describe('extractOccurrences', () => {
           ],
         },
         source: 'annotation-frontmatter',
+        translation: null,
       },
     ])
   })
@@ -101,6 +118,7 @@ describe('extractOccurrences', () => {
         position: 0,
         reference: { book: 43, ranges: [{ startId: john(15, 4), endId: john(15, 4) }] },
         source: 'annotation-frontmatter',
+        translation: null,
       },
     ])
   })
@@ -156,6 +174,7 @@ describe('extractOccurrences', () => {
         position: 0,
         reference: { book: 43, ranges: [{ startId: john(15, 4), endId: john(15, 4) }] },
         source: 'annotation-frontmatter',
+        translation: null,
       },
     ])
   })

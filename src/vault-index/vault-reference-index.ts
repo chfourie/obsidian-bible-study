@@ -41,10 +41,9 @@ export class VaultReferenceIndex {
   }
 
   indexNote(file: string, content: string): void {
-    const occurrences = extractOccurrences(content).map((occurrence) => ({
-      ...occurrence,
-      file,
-    }))
+    const occurrences = extractOccurrences(content).map(
+      ({ position, reference, source }) => ({ position, reference, source, file }),
+    )
     const previous = this.#occurrencesByFile.get(file) ?? []
     // Annotation notes always notify: a body-only edit leaves occurrences
     // unchanged but the reader renders the body (spec §5, modify events

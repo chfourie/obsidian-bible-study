@@ -324,9 +324,29 @@ describe('ReferencesFeature entry points', () => {
       openNote: () => {},
     })
 
-    feature.openReference(ref('John 15:1'))
+    feature.openReference(ref('John 15:1'), 'kjv')
+    feature.openReference(ref('John 15:1'), null)
 
-    expect(opened).toEqual([[ref('John 15:1'), null]])
+    expect(opened).toEqual([
+      [ref('John 15:1'), 'kjv'],
+      [ref('John 15:1'), null],
+    ])
+  })
+
+  it('recognizes well-known translation tokens when extracting', async () => {
+    const { feature, commands, leaves, openFile } = harness({
+      'a.md': '{John 15:1 kjv}',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+
+    openFile(note('a.md'))
+    await flushAsync()
+
+    const entry = panelView(leaves[0]).model.view.entries[0]
+    expect(entry.translation).toBe('kjv')
+    expect(entry.translationLabel).toBe('KJV')
   })
 
   it('releases models when the view closes', async () => {

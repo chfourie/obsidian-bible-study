@@ -1,8 +1,10 @@
 <!--
 Side-panel listing every scripture referenced by the active note, with the
-passage text inline. Clicking a reference heading opens it in the reader.
+passage text inline. Headings fold their passage; the book icon opens the
+reference in the reader with the entry's translation.
 -->
 <script lang="ts">
+  import { setIcon } from 'obsidian'
   import type { Reference } from '../reference'
   import { activate } from '../ui'
   import type {
@@ -15,7 +17,7 @@ passage text inline. Clicking a reference heading opens it in the reader.
     openReference,
   }: {
     model: ReferencesPanelModel
-    openReference: (reference: Reference) => void
+    openReference: (reference: Reference, translationId: string | null) => void
   } = $props()
 
   // Initial snapshot only — the model subscription below keeps it fresh.
@@ -27,8 +29,26 @@ passage text inline. Clicking a reference heading opens it in the reader.
     }),
   )
 
+  let folded = $state(new Set<string>())
+
+  function icon(node: HTMLElement, name: string) {
+    setIcon(node, name)
+    return {
+      update(next: string) {
+        node.empty()
+        setIcon(node, next)
+      },
+    }
+  }
+
+  function toggleFold(entry: ReferenceEntryView) {
+    const next = new Set(folded)
+    if (!next.delete(entry.key)) next.add(entry.key)
+    folded = next
+  }
+
   function open(entry: ReferenceEntryView) {
-    openReference(entry.reference)
+    openReference(entry.reference, entry.translation)
   }
 </script>
 
@@ -44,33 +64,58 @@ passage text inline. Clicking a reference heading opens it in the reader.
     <div class="bsp-entries">
       {#each view.entries as entry (entry.key)}
         <section class="bsp-entry">
-          <span
-            role="link"
-            tabindex="0"
-            class="bsp-entry-title"
-            onclick={() => open(entry)}
-            onkeydown={activate(() => open(entry))}
-          >
-            {entry.label}
-          </span>
-          {#if entry.status === 'loading'}
-            <p class="bsp-entry-state">Loading…</p>
-          {:else if entry.status === 'unavailable'}
-            {#if view.status !== 'no-translation'}
-              <p class="bsp-entry-state">Unavailable offline</p>
-            {/if}
-          {:else}
-            <div class="bsp-verses">
-              {#each entry.verses as verse, index (index)}
-                <p class="bsp-verse">
-                  {#if verse.label !== null}
-                    <span class="bsp-verse-number">{verse.label}</span>
-                  {/if}{verse.text}
-                </p>
-              {/each}
-            </div>
-            {#if entry.attribution !== null}
-              <p class="bsp-attribution">{entry.attribution}</p>
+          <div class="bsp-entry-head">
+            <span
+              role="button"
+              tabindex="0"
+              class="bsp-entry-title"
+              aria-expanded={!folded.has(entry.key)}
+              onclick={() => toggleFold(entry)}
+              onkeydown={activate(() => toggleFold(entry))}
+            >
+              <span
+                class="bsp-fold-icon"
+                aria-hidden="true"
+                use:icon={folded.has(entry.key)
+                  ? 'chevron-right'
+                  : 'chevron-down'}
+              ></span>
+              {entry.label}
+              {#if entry.translationLabel !== null}
+                <span class="bsp-translation">· {entry.translationLabel}</span>
+              {/if}
+            </span>
+            <span
+              role="button"
+              tabindex="0"
+              class="bsp-open-reader"
+              aria-label="Open in reader"
+              title="Open in reader"
+              use:icon={'book-open-text'}
+              onclick={() => open(entry)}
+              onkeydown={activate(() => open(entry))}
+            ></span>
+          </div>
+          {#if !folded.has(entry.key)}
+            {#if entry.status === 'loading'}
+              <p class="bsp-entry-state">Loading…</p>
+            {:else if entry.status === 'unavailable'}
+              {#if view.status !== 'no-translation'}
+                <p class="bsp-entry-state">Unavailable offline</p>
+              {/if}
+            {:else}
+              <div class="bsp-verses">
+                {#each entry.verses as verse, index (index)}
+                  <p class="bsp-verse">
+                    {#if verse.label !== null}
+                      <span class="bsp-verse-number">{verse.label}</span>
+                    {/if}{verse.text}
+                  </p>
+                {/each}
+              </div>
+              {#if entry.attribution !== null}
+                <p class="bsp-attribution">{entry.attribution}</p>
+              {/if}
             {/if}
           {/if}
         </section>
@@ -105,15 +150,57 @@ passage text inline. Clicking a reference heading opens it in the reader.
     gap: 0.25rem;
   }
 
+  .bsp-entry-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
   .bsp-entry-title {
-    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
     font-weight: 600;
     color: var(--text-accent);
     cursor: pointer;
   }
 
-  .bsp-entry-title:hover {
-    text-decoration: underline;
+  .bsp-fold-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-muted);
+  }
+
+  .bsp-fold-icon :global(svg) {
+    width: var(--icon-xs);
+    height: var(--icon-xs);
+  }
+
+  .bsp-translation {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bsp-open-reader {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 2px;
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsp-open-reader:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .bsp-open-reader :global(svg) {
+    width: var(--icon-s);
+    height: var(--icon-s);
   }
 
   .bsp-entry-state {
