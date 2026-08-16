@@ -1,4 +1,3 @@
-import type { ModuleManifest } from '../modules'
 import {
   BOOK_COUNT,
   bookName,
@@ -48,9 +47,15 @@ export type ReaderFirstRunDeps = {
   install: () => Promise<void>
 }
 
+export type ReaderTranslation = {
+  id: string
+  label: string
+  strongsTagged: boolean
+}
+
 export type ReaderPaneDeps = {
   passages: PassageSource
-  installedTranslations: () => Promise<ModuleManifest[]>
+  availableTranslations: () => Promise<ReaderTranslation[]>
   intersecting: (reference: Reference) => OccurrenceGroup[]
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
@@ -164,7 +169,7 @@ export class ReaderPaneModel {
   #entry: Reference | null = null
   #rows: VerseRowView[] = []
   #status: ReaderPaneView['status'] = 'loading'
-  #installed: ModuleManifest[] = []
+  #available: ReaderTranslation[] = []
   #toggles: ReaderToggles
   #selectedVerseId: number | null = null
   #selectionEnd: number | null = null
@@ -219,10 +224,10 @@ export class ReaderPaneModel {
       title: `${bookName(this.#position.book)} ${this.#position.chapter}`,
       position: this.#position,
       rows: this.#rows,
-      translations: this.#installed.map((manifest) => ({
-        id: manifest.id,
-        label: manifest.id.toUpperCase(),
-        active: manifest.id === this.#translationId,
+      translations: this.#available.map((translation) => ({
+        id: translation.id,
+        label: translation.label,
+        active: translation.id === this.#translationId,
       })),
       toggles: this.#toggles,
       selectedVerseId: this.#selectedVerseId,
@@ -438,14 +443,14 @@ export class ReaderPaneModel {
   async #loadDetails(verseId: number): Promise<void> {
     const reference = singleVerseReference(this.#position.book, verseId)
     const translations = await Promise.all(
-      this.#installed.map(async (installed): Promise<TranslationRowView> => {
+      this.#available.map(async (translation): Promise<TranslationRowView> => {
         const passage = await this.deps.passages.passage(
           reference,
-          installed.id,
+          translation.id,
         )
         return {
-          id: installed.id,
-          label: installed.id.toUpperCase(),
+          id: translation.id,
+          label: translation.label,
           text:
             passage.status === 'ok'
               ? passage.verses[0].segments
@@ -511,10 +516,10 @@ export class ReaderPaneModel {
     this.#status = 'loading'
     this.#rows = []
     this.#notify()
-    const installed = await this.deps.installedTranslations()
+    const available = await this.deps.availableTranslations()
     if (token !== this.#loadToken) return
-    this.#installed = installed
-    this.#translationId ??= this.#installed[0]?.id ?? null
+    this.#available = available
+    this.#translationId ??= this.#available[0]?.id ?? null
     if (this.#translationId === null) {
       this.#status = 'no-translation'
       this.#notify()
@@ -548,12 +553,18 @@ export class ReaderPaneModel {
     this.#notify()
   }
 
+  async refreshTranslations(): Promise<void> {
+    this.#available = await this.deps.availableTranslations()
+    await this.#refreshStrongsAvailability()
+    this.#notify()
+  }
+
   async #refreshStrongsAvailability(): Promise<void> {
-    const current = this.#installed.find(
-      (installed) => installed.id === this.#translationId,
+    const current = this.#available.find(
+      (translation) => translation.id === this.#translationId,
     )
     this.#strongsAvailable =
-      current?.capabilities.strongsTagged === true &&
+      current?.strongsTagged === true &&
       (await this.deps.strongs.dictionariesInstalled())
   }
 }

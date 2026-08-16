@@ -1,7 +1,11 @@
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import type { ReferenceNavigator } from '../contracts'
 import { PluginFeature } from '../data-access'
-import { isTranslationManifest, type ModuleStore } from '../modules'
+import {
+  enabledOnlineTranslations,
+  isTranslationManifest,
+  type ModuleStore,
+} from '../modules'
 import { frontmatterLength, type Reference } from '../reference'
 import {
   ModulePassageSource,
@@ -15,6 +19,7 @@ import {
   type ReaderFirstRunDeps,
   type ReaderPosition,
   type ReaderStrongsDeps,
+  type ReaderTranslation,
 } from './reader-pane-model'
 import { READER_VIEW_TYPE, ReaderView } from './reader-view'
 
@@ -100,10 +105,25 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     }
   }
 
+  async #availableTranslations(): Promise<ReaderTranslation[]> {
+    const installed = (await this.store.installedManifests())
+      .filter(isTranslationManifest)
+      .map((manifest) => ({
+        id: manifest.id,
+        label: manifest.id.toUpperCase(),
+        strongsTagged: manifest.capabilities.strongsTagged === true,
+      }))
+    const online = enabledOnlineTranslations(this.settings)
+      .filter((online) => installed.every(({ id }) => id !== online.id))
+      .map(({ id }) => ({ id, label: id.toUpperCase(), strongsTagged: false }))
+    return [...installed, ...online]
+  }
+
   override onSettingsChanged(): void {
     this.#repository.clear()
     this.#models.forEach((model) => {
       model.setAnnotationOrdering(this.settings.annotationOrdering)
+      void model.refreshTranslations()
       // Panes with nothing on screen (no translation yet, or the passage was
       // unavailable) reload so a module installed from the settings tab
       // appears without reopening the pane.
@@ -125,8 +145,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     const model = new ReaderPaneModel(
       {
         passages: this.#repository,
-        installedTranslations: async () =>
-          (await this.store.installedManifests()).filter(isTranslationManifest),
+        availableTranslations: async () => this.#availableTranslations(),
         intersecting: (reference) =>
           this.index.intersectingOccurrences(reference),
         annotationDetails: (file) => this.#annotationDetails(file),

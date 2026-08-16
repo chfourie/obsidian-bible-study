@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { ModuleManifest } from '../modules'
 import {
   enumerateVerseIds,
   makeVerseId,
@@ -17,15 +16,10 @@ import {
 
 type MockTexts = Record<string, Record<number, string>>
 
-const manifest = (id: string): ModuleManifest => ({
+const translation = (id: string, strongsTagged = false) => ({
   id,
-  name: id.toUpperCase(),
-  language: 'en',
-  license: 'Public Domain',
-  source: 'test',
-  sourceChecksum: '',
-  formatVersion: 1,
-  capabilities: { strongsTagged: false },
+  label: id.toUpperCase(),
+  strongsTagged,
 })
 
 const passageSourceOver = (texts: MockTexts): PassageSource => ({
@@ -73,7 +67,7 @@ const modelWith = (
   new ReaderPaneModel(
     {
       passages: passageSourceOver(john15Texts()),
-      installedTranslations: async () => [manifest('web')],
+      availableTranslations: async () => [translation('web')],
       intersecting: () => [],
       annotationDetails: async () => null,
       strongs: {
@@ -262,7 +256,7 @@ describe('translation switching', () => {
         ...john15Texts(),
         kjv: { [makeVerseId(43, 15, 1)]: 'I am the true vine (KJV).' },
       }),
-      installedTranslations: async () => [manifest('web'), manifest('kjv')],
+      availableTranslations: async () => [translation('web'), translation('kjv')],
     })
     await model.openAt(ref('John 15:1'), 'web')
 
@@ -285,7 +279,7 @@ describe('verse details', () => {
       ...john15Texts(),
       kjv: { [makeVerseId(43, 15, 1)]: 'I am the true vine (KJV).' },
     }),
-    installedTranslations: async () => [manifest('web'), manifest('kjv')],
+    availableTranslations: async () => [translation('web'), translation('kjv')],
     intersecting: (reference) =>
       reference.ranges.some((range) => rangeContains(range, verse4))
         ? [
@@ -667,7 +661,7 @@ describe('opening the reader at a reference', () => {
 
   it('nudges installation when no translation is available at all', async () => {
     const model = modelWith(
-      { installedTranslations: async () => [] },
+      { availableTranslations: async () => [] },
       DEFAULT_TOGGLES,
       null,
     )
@@ -680,7 +674,7 @@ describe('opening the reader at a reference', () => {
   it('offers the suggested one-click install in the no-translation state', async () => {
     const model = modelWith(
       {
-        installedTranslations: async () => [],
+        availableTranslations: async () => [],
         firstRun: {
           translationName: 'World English Bible',
           install: async () => {},
@@ -703,7 +697,7 @@ describe('opening the reader at a reference', () => {
     let installed = false
     const model = modelWith(
       {
-        installedTranslations: async () => (installed ? [manifest('web')] : []),
+        availableTranslations: async () => (installed ? [translation('web')] : []),
         firstRun: {
           translationName: 'World English Bible',
           install: async () => {
@@ -729,7 +723,7 @@ describe('opening the reader at a reference', () => {
     let resolveInstall: () => void = () => {}
     const model = modelWith(
       {
-        installedTranslations: async () => [],
+        availableTranslations: async () => [],
         firstRun: {
           translationName: 'World English Bible',
           install: () =>
@@ -753,7 +747,7 @@ describe('opening the reader at a reference', () => {
     let notified = 0
     const model = modelWith(
       {
-        installedTranslations: async () => [],
+        availableTranslations: async () => [],
         firstRun: {
           translationName: 'World English Bible',
           install: async () => {
@@ -783,7 +777,7 @@ describe('opening the reader at a reference', () => {
     let failNext = true
     const model = modelWith(
       {
-        installedTranslations: async () => (installed ? [manifest('web')] : []),
+        availableTranslations: async () => (installed ? [translation('web')] : []),
         firstRun: {
           translationName: 'World English Bible',
           install: async () => {
@@ -833,10 +827,7 @@ describe('opening the reader at a reference', () => {
   })
 })
 
-const taggedManifest = (id: string): ModuleManifest => ({
-  ...manifest(id),
-  capabilities: { strongsTagged: true },
-})
+
 
 const strongsEntry = (strongs: string) => ({
   strongs,
@@ -848,8 +839,8 @@ const strongsEntry = (strongs: string) => ({
 
 const strongsDeps = (
   installed = true,
-): Pick<ReaderPaneDeps, 'installedTranslations' | 'strongs'> => ({
-  installedTranslations: async () => [taggedManifest('bsb')],
+): Pick<ReaderPaneDeps, 'availableTranslations' | 'strongs'> => ({
+  availableTranslations: async () => [translation('bsb', true)],
   strongs: {
     dictionariesInstalled: async () => installed,
     entriesFor: async (numbers) => numbers.map(strongsEntry),
@@ -980,5 +971,45 @@ describe("Strong's word lookup", () => {
 
     expect(model.view.details[verseId].strongs).toEqual([])
     expect(model.view.details[verseId].strongsAttribution).toBe(null)
+  })
+})
+
+describe('online translations in the reader', () => {
+  it('shows an unavailable stacked row for an online translation without content', async () => {
+    const model = modelWith({
+      availableTranslations: async () => [
+        translation('web'),
+        translation('nkjv'),
+      ],
+    })
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(makeVerseId(43, 15, 4))
+
+    const details = model.view.details[makeVerseId(43, 15, 4)]
+    expect(details.translations).toEqual([
+      { id: 'web', label: 'WEB', text: 'Remain in me.' },
+      { id: 'nkjv', label: 'NKJV', text: null },
+    ])
+  })
+
+  it('refreshes the pill list in place when available translations change', async () => {
+    let available = [translation('web')]
+    const model = modelWith({
+      availableTranslations: async () => available,
+    })
+    await model.openAt(ref('John 15:4'), 'web')
+    expect(model.view.translations.map(({ id }) => id)).toEqual(['web'])
+
+    available = [translation('web'), translation('nkjv')]
+    await model.refreshTranslations()
+
+    const view = model.view
+    expect(view.translations).toEqual([
+      { id: 'web', label: 'WEB', active: true },
+      { id: 'nkjv', label: 'NKJV', active: false },
+    ])
+    expect(view.rows).toHaveLength(5)
+    expect(view.rows[0].segments[0].text).toBe('I am the true vine.')
   })
 })
