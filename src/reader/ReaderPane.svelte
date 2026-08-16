@@ -259,22 +259,20 @@
   {:else}
     <div class="bsr-details-title">{details.title}</div>
     {@render strongsBlock(details)}
-    <table class="bsr-trans-table">
-      <tbody>
-        {#each details.translations as row (row.id)}
-          <tr>
-            <td class="bsr-trans-id">{translationTitle(row)}</td>
-            <td class="bsr-trans-text">
-              {#if row.text === null}
-                <span class="bsr-unavailable">Unavailable</span>
-              {:else}
-                {row.text}
-              {/if}
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    <div class="bsr-trans-list">
+      {#each details.translations as row (row.id)}
+        <div class="bsr-trans-row">
+          <div class="bsr-trans-id">{translationTitle(row)}</div>
+          <div class="bsr-trans-text">
+            {#if row.text === null}
+              <span class="bsr-unavailable">Unavailable</span>
+            {:else}
+              {row.text}
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </div>
     {@render notesBlock(details)}
   {/if}
 {/snippet}
@@ -567,22 +565,20 @@
             <div class="bsr-details-title">{selectedDetails.title}</div>
             {@render strongsBlock(selectedDetails)}
             {#if sideTab === 'translations'}
-              <table class="bsr-trans-table">
-                <tbody>
-                  {#each selectedDetails.translations as row (row.id)}
-                    <tr>
-                      <td class="bsr-trans-id">{translationTitle(row)}</td>
-                      <td class="bsr-trans-text">
-                        {#if row.text === null}
-                          <span class="bsr-unavailable">Unavailable</span>
-                        {:else}
-                          {row.text}
-                        {/if}
-                      </td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
+              <div class="bsr-trans-list">
+                {#each selectedDetails.translations as row (row.id)}
+                  <div class="bsr-trans-row">
+                    <div class="bsr-trans-id">{translationTitle(row)}</div>
+                    <div class="bsr-trans-text">
+                      {#if row.text === null}
+                        <span class="bsr-unavailable">Unavailable</span>
+                      {:else}
+                        {row.text}
+                      {/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
             {:else}
               {@render notesBlock(selectedDetails)}
             {/if}
@@ -975,26 +971,23 @@
     margin: 6px 0;
   }
 
-  .bsr-trans-table {
-    width: 100%;
-    border-collapse: collapse;
+  .bsr-trans-list {
     margin-bottom: 6px;
   }
 
-  .bsr-trans-table td {
-    padding: 4px 8px;
-    vertical-align: top;
+  .bsr-trans-row {
+    padding: 6px 8px;
     border-top: 1px solid var(--background-modifier-border);
   }
 
-  .bsr-trans-table tr:first-child td {
+  .bsr-trans-row:first-child {
     border-top: none;
   }
 
   .bsr-trans-id {
     color: var(--text-accent);
     font-weight: 600;
-    min-width: 52px;
+    margin-bottom: 2px;
   }
 
   .bsr-unavailable {

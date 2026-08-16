@@ -32,3 +32,6 @@ deploy-targets.json
 /.obsidian/
 .api-bible-key
 dist/
+
+# claude
+.claude/settings.local.json
