@@ -37,12 +37,12 @@ describe('scanReferenceMatches', () => {
   })
 
   it('classifies option tokens using the provided translation ids', () => {
-    const matches = scanReferenceMatches('{John 15:4 nkjv callout}', {
+    const matches = scanReferenceMatches('{John 15:4 nkjv block}', {
       translationIds: ['nkjv'],
     })
 
     expect(matches[0].parsed.translation).toBe('nkjv')
-    expect(matches[0].parsed.display).toBe('callout')
+    expect(matches[0].parsed.display).toBe('block')
     expect(matches[0].parsed.invalidTokens).toEqual([])
   })
 

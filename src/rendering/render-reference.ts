@@ -182,16 +182,6 @@ const renderFallbackNotice = (host: HTMLElement, view: PassageView): void => {
   })
 }
 
-const renderQuotedRun = (host: HTMLElement, view: PassageView): void => {
-  renderFallbackNotice(host, view)
-  host.appendText('“')
-  view.verses.forEach((block, index) => {
-    if (index > 0) host.appendText(' ')
-    renderSegments(host, block)
-  })
-  host.appendText('”')
-}
-
 const renderInstallCta = (
   host: HTMLElement,
   firstRun: FirstRunInstallDeps,
@@ -270,20 +260,6 @@ const mountPassage = async (
   renderPassage(host, buildPassageView(model, passage))
 }
 
-const renderInline = (
-  parent: HTMLElement,
-  model: ReferenceRenderModel,
-  deps: ReferenceRenderDeps,
-): Promise<void> => {
-  const host = parent.createSpan({ cls: 'scripture-study-passage' })
-  return mountPassage(host, model, deps, renderQuotedRun)
-}
-
-const calloutTitle = (model: ReferenceRenderModel): string =>
-  model.translationId === null
-    ? model.referenceText
-    : `${model.referenceText} · ${model.translationId.toUpperCase()}`
-
 const renderAttribution = (host: HTMLElement, view: PassageView): void => {
   if (view.attribution === null) return
   host.createDiv({
@@ -292,57 +268,40 @@ const renderAttribution = (host: HTMLElement, view: PassageView): void => {
   })
 }
 
-const renderProse = (host: HTMLElement, view: PassageView): void => {
+const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
-  const prose = host.createEl('p', { cls: 'scripture-study-prose' })
   view.verses.forEach((block, index) => {
-    if (index > 0) prose.appendText(' ')
-    renderSegments(prose, block)
+    const cls =
+      index === 0
+        ? 'scripture-study-verse-line scripture-study-verse-line-first'
+        : 'scripture-study-verse-line'
+    renderSegments(host.createDiv({ cls }), block)
   })
   renderAttribution(host, view)
 }
 
-const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
-  renderFallbackNotice(host, view)
-  for (const block of view.verses) {
-    renderSegments(host.createDiv({ cls: 'scripture-study-verse-line' }), block)
-  }
-  renderAttribution(host, view)
-}
-
-const renderCallout = (
+const renderBlock = (
   parent: HTMLElement,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
   sourcePath: string | null,
 ): Promise<void> => {
-  const callout = parent.createDiv({
-    cls: 'callout scripture-study-callout',
-    attr: { 'data-callout': 'bible' },
+  const inline = model.display === 'inline'
+  const block = parent.createDiv({
+    cls: inline
+      ? 'scripture-study-block scripture-study-inline-block'
+      : 'scripture-study-block',
   })
-  const title = callout.createDiv({ cls: 'callout-title' })
-  const icon = title.createDiv({ cls: 'callout-icon' })
-  setIcon(icon, 'book-open')
-  title.createDiv({
-    cls: 'callout-title-inner',
-    text: calloutTitle(model),
-  })
-  const nav = title.createSpan({
-    cls: 'scripture-study-callout-nav',
-    attr: { role: 'button', tabindex: 0, 'aria-label': 'Open in reader' },
-  })
-  setIcon(nav, 'arrow-right')
-  activateAsButton(nav, () => deps.openReference(model))
-  const content = callout.createDiv({ cls: 'callout-content' })
-  const host = content.createDiv({ cls: 'scripture-study-passage' })
-  const mounted = mountPassage(
-    host,
-    model,
-    deps,
-    model.flow ? renderProse : renderVerseLines,
-  )
+  const chipHolder = inline
+    ? block
+    : block.createDiv({ cls: 'scripture-study-block-ref' })
+  renderChip(chipHolder, model, deps)
+  const host = inline
+    ? block.createSpan({ cls: 'scripture-study-passage' })
+    : block.createDiv({ cls: 'scripture-study-passage' })
+  const mounted = mountPassage(host, model, deps, renderVerseLines)
   if (deps.intersections) {
-    renderIntersections(content, model, deps.intersections, sourcePath)
+    renderIntersections(block, model, deps.intersections, sourcePath)
   }
   return mounted
 }
@@ -353,8 +312,8 @@ export const renderReference = async (
   deps: ReferenceRenderDeps,
   sourcePath: string | null = null,
 ): Promise<void> => {
-  if (model.display === 'callout') {
-    await renderCallout(parent, model, deps, sourcePath)
+  if (model.display !== 'chip') {
+    await renderBlock(parent, model, deps, sourcePath)
     renderInvalidTokens(parent, model)
     return
   }
@@ -363,5 +322,4 @@ export const renderReference = async (
     renderIntersections(parent, model, deps.intersections, sourcePath)
   }
   renderInvalidTokens(parent, model)
-  if (model.display === 'inline') await renderInline(parent, model, deps)
 }

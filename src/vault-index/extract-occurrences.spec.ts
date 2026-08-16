@@ -26,7 +26,7 @@ describe('extractOccurrences', () => {
   })
 
   it('keeps normalized reference when option tokens trail it', () => {
-    const occurrences = extractOccurrences('{John 15:4 nkjv callout}')
+    const occurrences = extractOccurrences('{John 15:4 nkjv block}')
     expect(occurrences).toEqual([
       {
         position: 0,

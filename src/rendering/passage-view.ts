@@ -37,14 +37,14 @@ export const buildPassageView = (
   passage: Extract<Passage, { status: 'ok' }>,
 ): PassageView => {
   const numbered =
-    model.display === 'callout' || passage.verses.length > 1
+    model.display === 'block' || passage.verses.length > 1
   const labels = verseLabels(passage.verses)
   return {
     verses: passage.verses.map((verse, index) => ({
       label: numbered ? labels[index] : null,
       segments: verse.segments,
     })),
-    attribution: model.display === 'callout' ? passage.attribution : null,
+    attribution: model.display === 'block' ? passage.attribution : null,
     fallbackNotice:
       passage.fallback === undefined
         ? null

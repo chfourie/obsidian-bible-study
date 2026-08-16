@@ -146,14 +146,14 @@ describe('processRenderedElement', () => {
     expect(root.querySelector('.scripture-study-chip')).toBeNull()
   })
 
-  it('renders inline passages inside the flow', async () => {
+  it('renders inline passages beside the chip', async () => {
     const { root, deps } = setup()
     root.innerHTML = '<p>He said {John 15:4 inline} to them.</p>'
 
     await process(root, deps)
 
     expect(root.querySelector('.scripture-study-passage')?.textContent).toBe(
-      '“Remain.”',
+      'Remain.',
     )
   })
 })

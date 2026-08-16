@@ -1,6 +1,6 @@
 # Scripture Study — v1 Specification
 
-Scripture Study is an Obsidian plugin that turns a vault into a full bible reading and study tool: `{curly-brace}` scripture references with styled rendering and inline/callout display, a reader pane (translation switching, multi-translation verse view, intersecting-reference lookup), verse annotations as vault notes, offline translation downloads, and Strong's concordance support.
+Scripture Study is an Obsidian plugin that turns a vault into a full bible reading and study tool: `{curly-brace}` scripture references with styled rendering and inline/block display, a reader pane (translation switching, multi-translation verse view, intersecting-reference lookup), verse annotations as vault notes, offline translation downloads, and Strong's concordance support.
 
 This document consolidates every decision from the [wayfinder map](https://github.com/chfourie/obsidian-bible-study/issues/1). Terminology follows the glossary in [CONTEXT.md](../CONTEXT.md); the verse-identity decision is [ADR 0001](adr/0001-bcv-encoded-verse-ids-on-kjv-grid.md); data-source findings are in [docs/research/scripture-data-sources.md](research/scripture-data-sources.md).
 
@@ -26,15 +26,15 @@ Plugin id: `scripture-study`. Stack: TypeScript, Svelte 5, esbuild + esbuild-sve
 
 ## 2. Reference grammar
 
-Curly braces with bare space-separated tokens: `{John 15:1-17}`, `{John 15:4 nkjv}`, `{John 15:4 nkjv callout}`.
+Curly braces with bare space-separated tokens: `{John 15:1-17}`, `{John 15:4 nkjv}`, `{John 15:4 nkjv block}`.
 
 - **Canon & book names:** 66-book Protestant canon, English-only v1. Case-insensitive matching against English full names + OSIS abbreviations + three-letter abbreviations; optional trailing period; `1Jn` / `1 Jn` both accepted. Lookup table is many-names → book-id, so localized tables can slot in later. Deuterocanon out of v1.
 - **Verse forms:** single verse (`John 15:4`), intra-chapter range (`John 15:1-17`), whole chapter (`John 15`), cross-chapter range (`John 15:26-16:4`), comma lists (`John 15:4,7`, `John 15:4-6,9`). Whole-book references rejected.
-- **Option tokens:** translation id, display keyword (`inline` | `callout`), and layout keyword (`flow`, valid only alongside `callout` — flagged invalid otherwise) in any order after the reference — disjoint closed vocabularies. Bare (no keyword) = chip only.
+- **Option tokens:** translation id and display keyword (`inline` | `block`) in any order after the reference — disjoint closed vocabularies. Bare (no keyword) = chip only.
 - **Errors:** invalid reference part (unknown book, bad structure, out-of-range chapter/verse per versification data) → the whole `{...}` renders as plain text, unstyled (interop safety valve for Templater/JSON braces). Valid reference with unknown/duplicate/conflicting trailing tokens → invalid tokens highlighted and ignored (first valid token wins), reference renders normally.
 - **Escaping:** inline code spans and fenced code blocks never parsed; `\{John 15:4}` escapes to literal text. No per-note disable flag in v1.
 - **Editor modes:** Reading mode renders fully. Live Preview renders identically via CodeMirror 6 decorations, collapsing to raw source when the cursor enters the range (standard Obsidian convention; no partial editing UI). Source mode shows raw text.
-- **Autocompletion:** typing inside an unclosed `{` pops an editor suggest: book names while the book part is typed (canonical name inserted, matched against all aliases), then option keywords and known translation ids once the verse spec is present; option kinds already used are omitted, and `flow` is offered only once `callout` is present.
+- **Autocompletion:** typing inside an unclosed `{` pops an editor suggest: book names while the book part is typed (canonical name inserted, matched against all aliases), then option keywords and known translation ids once the verse spec is present; option kinds already used are omitted.
 
 ## 3. Rendering in notes
 
@@ -44,15 +44,15 @@ Clickable pill/chip: normalized reference text, plus translation label only when
 
 ### 3.2 `inline` mode
 
-Chip first, then verse text as a quoted, subtly muted/italic run in the paragraph flow. No verse numbers for a single verse; superscript verse numbers for multi-verse references. No length cap — a whole-chapter inline reference renders in full as flowing text (never a scroll box). No attribution line; the chip's translation label is the citation.
+A subtly tinted block holding the chip and the verse text together: the passage starts on the chip's line, then one verse per line. No verse numbers for a single verse; superscript verse numbers for multi-verse references. No length cap — a whole-chapter inline reference renders in full (never a scroll box). No attribution line; the chip's translation label is the citation.
 
-### 3.3 `callout` mode
+### 3.3 `block` mode
 
-Custom Obsidian callout type `[!bible]` (plugin-styled: book icon, accent color). Title = normalized reference + translation label; title nav icon opens the reader. Body = one verse per line by default, superscript verse numbers always; the `flow` keyword switches the body to continuous prose. Rendered expanded; no fold token in v1. Muted attribution line at the bottom (see §3.6).
+The same tinted block, with the chip on its own line above the passage. Body = one verse per line, superscript verse numbers always. Muted attribution line at the bottom (see §3.6).
 
 ### 3.4 Red-letter
 
-Words of Christ styled red (theme-adjustable CSS variable) wherever verse text renders — inline, callout, reader — when the translation data marks them; silently absent otherwise.
+Words of Christ styled red (theme-adjustable CSS variable) wherever verse text renders — inline, block, reader — when the translation data marks them; silently absent otherwise.
 
 ### 3.5 Async states
 
@@ -60,7 +60,7 @@ Chip renders immediately in all modes. Loading → subtle shimmer/placeholder ("
 
 ### 3.6 Selection & attribution
 
-Rendered verse text is normal selectable/copyable DOM text. Attribution rule: if the translation's stored metadata carries a copyright string, show it; if absent (public domain), show nothing. Callout: bottom attribution line. Inline: none. No manual curation, no popovers. Page-footer aggregation rejected for v1.
+Rendered verse text is normal selectable/copyable DOM text. Attribution rule: if the translation's stored metadata carries a copyright string, show it; if absent (public domain), show nothing. Block: bottom attribution line. Inline: none. No manual curation, no popovers. Page-footer aggregation rejected for v1.
 
 ## 4. Reader pane
 
@@ -105,15 +105,15 @@ An Obsidian workspace leaf. Prototype (visual reference until implementation): [
     001.json … 066.json
   ```
 
-- Read path is source-agnostic (`verse id → text`); content gaps = absent keys. The manifest feeds the settings list, the callout attribution line, and update detection (no source checksums from bolls — update = re-download).
+- Read path is source-agnostic (`verse id → text`); content gaps = absent keys. The manifest feeds the settings list, the block attribution line, and update detection (no source checksums from bolls — update = re-download).
 
 ### 6.3 Fallback ladder
 
-Requested translation → single configurable **offline fallback translation** (restricted to installed offline modules, defaults to first installed) → unavailable state with install CTA. Never silent: the chip/callout names the translation actually served (e.g. "WEB *(NKJV unavailable)*"). Applies to reading surfaces only — never the reader's stacked view.
+Requested translation → single configurable **offline fallback translation** (restricted to installed offline modules, defaults to first installed) → unavailable state with install CTA. Never silent: the chip/block names the translation actually served (e.g. "WEB *(NKJV unavailable)*"). Applies to reading surfaces only — never the reader's stacked view.
 
 ### 6.4 First run
 
-Nudge only: reader/callouts show an "install a translation" CTA with **BSB** as the suggested one-click default (tagged; Strong's mode lights up once the dictionaries are also enabled in settings — the nudge installs only the translation). Nothing downloads without consent.
+Nudge only: reader/blocks show an "install a translation" CTA with **BSB** as the suggested one-click default (tagged; Strong's mode lights up once the dictionaries are also enabled in settings — the nudge installs only the translation). Nothing downloads without consent.
 
 ## 7. Strong's
 
@@ -150,7 +150,7 @@ Components and their dependency direction (each consumes only what's above it):
 2. **Reference core** — grammar parser (book-name table, verse forms, option tokens, error rules) producing normalized references; interval math on verse ranges.
 3. **Vault index** — occurrence scanning/updating, intersection query (§1.2).
 4. **Module layer** — module download/normalize/store (bolls client + BSB release client), manifests, fallback resolution (§6).
-5. **Rendering** — Reading-mode post-processor + Live Preview CM6 decorations for chip/inline/callout; async states; red-letter; attribution (§3).
+5. **Rendering** — Reading-mode post-processor + Live Preview CM6 decorations for chip/inline/block; async states; red-letter; attribution (§3).
 6. **Reader pane** — workspace leaf, toggles, stacked view, indicators, entry points (§4).
 7. **Annotations** — schema, create flows, reader/in-note display (§5).
 8. **Strong's** — tagged-module spans, dictionaries module, Strong's mode UI (§7); plus the repo-side BSB build pipeline in `scripts/`.
@@ -161,7 +161,7 @@ Components and their dependency direction (each consumes only what's above it):
 1. Versification data + reference core (pure, fully unit-testable).
 2. Vault index + intersection query.
 3. Module layer with one downloadable translation end-to-end.
-4. Note rendering (chip → inline → callout), async states.
+4. Note rendering (chip → inline → block), async states.
 5. Reader pane shell + nav + layout toggles; entry points.
 6. Fallback ladder + attribution.
 7. Annotations.
@@ -176,7 +176,7 @@ Steps 1–5 need no API key and deliver a usable offline reader; 6–9 layer on 
 - User-supplied module import (translations & dictionaries) — motivating case requires DRM circumvention.
 - Tagged KJV (needs STEPBible TAGNT/TAHOT alignment work; only ready-made source is license-shaky).
 - Deuterocanon / non-English book names / localized grammar.
-- Persistent index cache; per-translation versification mapping; page-footer attribution aggregation; multiple chip styles; inline length threshold + expander; general non-bible reference callout type; community-store release (own effort, post-spec).
+- Persistent index cache; per-translation versification mapping; page-footer attribution aggregation; multiple chip styles; inline length threshold + expander; general non-bible reference block type; community-store release (own effort, post-spec).
 
 ## 11. Open items (non-blocking)
 

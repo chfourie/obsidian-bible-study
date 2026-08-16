@@ -58,9 +58,9 @@ describe('buildPassageView', () => {
     expect(view.verses.map((block) => block.label)).toEqual(['4', '5'])
   })
 
-  it('numbers callout verses even for a single verse', () => {
+  it('numbers block verses even for a single verse', () => {
     const view = buildPassageView(
-      model('John 15:4 callout'),
+      model('John 15:4 block'),
       passage([verse(15, 4, 'Remain in me.')]),
     )
 
@@ -69,7 +69,7 @@ describe('buildPassageView', () => {
 
   it('labels chapter starts with chapter and verse in multi-chapter passages', () => {
     const view = buildPassageView(
-      model('John 15:26-16:2 callout'),
+      model('John 15:26-16:2 block'),
       passage([
         verse(15, 26, 'The Counselor will testify.'),
         verse(15, 27, 'You will also testify.'),
@@ -86,11 +86,11 @@ describe('buildPassageView', () => {
     ])
   })
 
-  it('shows attribution only in callout mode', () => {
+  it('shows attribution only in block mode', () => {
     const attributed = passage([verse(15, 4, 'Remain.')], 'Copyright © 1982')
 
     expect(
-      buildPassageView(model('John 15:4 callout'), attributed).attribution,
+      buildPassageView(model('John 15:4 block'), attributed).attribution,
     ).toBe('Copyright © 1982')
     expect(
       buildPassageView(model('John 15:4 inline'), attributed).attribution,

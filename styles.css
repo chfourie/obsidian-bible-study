@@ -36,7 +36,6 @@ body {
 }
 
 .scripture-study-chip-icon,
-.scripture-study-callout-nav,
 .scripture-study-retry {
   display: inline-flex;
   align-items: center;
@@ -44,7 +43,6 @@ body {
 }
 
 .scripture-study-chip-icon svg,
-.scripture-study-callout-nav svg,
 .scripture-study-retry svg {
   width: 0.85em;
   height: 0.85em;
@@ -61,23 +59,27 @@ body {
   font-size: 0.9em;
 }
 
-/* ---- Inline mode (spec §3.2) ------------------------------------------- */
+/* ---- Inline and block modes (spec §3.2, §3.3) --------------------------- */
 
-.scripture-study-passage {
+.scripture-study-block {
+  margin: 0.5em 0;
+  padding: 0.5em 0.8em;
   border-radius: var(--radius-s);
   background-color: var(--background-secondary);
 }
 
-span.scripture-study-passage {
-  margin-left: 0.35em;
-  padding: 0.1em 0.4em;
-  color: var(--text-muted);
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+.scripture-study-block-ref {
+  margin-bottom: 0.35em;
 }
 
-div.scripture-study-passage {
-  padding: 0.5em 0.8em;
+/* Inline: the passage continues on the chip's line, then one verse per
+   line. */
+.scripture-study-inline-block .scripture-study-passage {
+  margin-left: 0.35em;
+}
+
+.scripture-study-inline-block .scripture-study-verse-line-first {
+  display: inline;
 }
 
 .scripture-study-verse-number {
@@ -174,35 +176,10 @@ div.scripture-study-passage {
   font-size: var(--font-smallest);
 }
 
-/* ---- Callout mode (spec §3.3) ------------------------------------------ */
-
-.callout[data-callout='bible'] {
-  --callout-color: var(--color-accent-rgb, 158, 130, 255);
-  --callout-icon: lucide-book-open;
-}
-
-.scripture-study-callout .callout-title {
-  align-items: center;
-}
-
-.scripture-study-callout .scripture-study-callout-nav {
-  margin-left: auto;
-  color: var(--text-muted);
-}
-
-.scripture-study-callout .scripture-study-callout-nav:hover {
-  color: var(--text-normal);
-}
-
 .scripture-study-attribution {
   margin-top: 0.5em;
   color: var(--text-faint);
   font-size: var(--font-smallest);
-}
-
-/* Reading mode wraps each rendered reference in this holder. */
-.scripture-study-reference .callout {
-  margin: 0.5em 0;
 }
 
 /* ---- In-note intersection surface (spec §5) ---------------------------- */

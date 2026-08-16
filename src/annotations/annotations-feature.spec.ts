@@ -161,7 +161,7 @@ describe('AnnotationsFeature', () => {
     const { feature, notes } = harness()
 
     expect(feature.submitRefText('John 15:4 inline')).toBe(false)
-    expect(feature.submitRefText('John 15:4 callout')).toBe(false)
+    expect(feature.submitRefText('John 15:4 block')).toBe(false)
     await flushAsync()
 
     expect(notes.size).toBe(0)

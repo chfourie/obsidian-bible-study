@@ -78,16 +78,16 @@ describe('ReferenceEditorSuggest', () => {
     } as unknown as EditorSuggestContext
 
     suggest.selectSuggestion({
-      label: 'callout',
-      insert: 'callout',
+      label: 'block',
+      insert: 'block',
       replaceFrom: 10,
     })
 
     expect(editor.replaceRange).toHaveBeenCalledWith(
-      'callout',
+      'block',
       { line: 0, ch: 15 },
       { line: 0, ch: 16 },
     )
-    expect(editor.setCursor).toHaveBeenCalledWith({ line: 0, ch: 22 })
+    expect(editor.setCursor).toHaveBeenCalledWith({ line: 0, ch: 20 })
   })
 })

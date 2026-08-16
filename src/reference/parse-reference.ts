@@ -3,7 +3,7 @@ import { makeVerseId } from './verse-id'
 import { chapterCount, verseCount } from './versification'
 import { mergeRanges, type Reference, type VerseRange } from './verse-range'
 
-export type DisplayMode = 'inline' | 'callout'
+export type DisplayMode = 'inline' | 'block'
 
 export type ReferenceToken = {
   text: string
@@ -15,7 +15,6 @@ export type ParsedReference = {
   reference: Reference
   translation: string | null
   display: DisplayMode | null
-  flow: boolean
   invalidTokens: ReferenceToken[]
 }
 
@@ -104,20 +103,14 @@ const tokenize = (text: string): ReferenceToken[] =>
     end: match.index + match[0].length,
   }))
 
-export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'callout']
-
-export const FLOW_KEYWORD = 'flow'
+export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'block']
 
 const classifyOptionTokens = (
   tokens: ReferenceToken[],
   translationIds: readonly string[],
-): Pick<
-  ParsedReference,
-  'translation' | 'display' | 'flow' | 'invalidTokens'
-> => {
+): Pick<ParsedReference, 'translation' | 'display' | 'invalidTokens'> => {
   let translation: string | null = null
   let display: DisplayMode | null = null
-  let flowToken: ReferenceToken | null = null
   const invalidTokens: ReferenceToken[] = []
   for (const token of tokens) {
     const lowered = token.text.toLowerCase()
@@ -127,18 +120,13 @@ const classifyOptionTokens = (
     )
     if (displayMode && display === null) {
       display = displayMode
-    } else if (lowered === FLOW_KEYWORD && flowToken === null) {
-      flowToken = token
     } else if (translationId !== undefined && translation === null) {
       translation = translationId
     } else {
       invalidTokens.push(token)
     }
   }
-  const flow = flowToken !== null && display === 'callout'
-  if (flowToken !== null && !flow) invalidTokens.push(flowToken)
-  invalidTokens.sort((a, b) => a.start - b.start)
-  return { translation, display, flow, invalidTokens }
+  return { translation, display, invalidTokens }
 }
 
 export const parseReference = (

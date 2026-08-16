@@ -114,14 +114,31 @@ describe('renderReference chip', () => {
 })
 
 describe('renderReference inline', () => {
-  it('renders the chip followed by a quoted passage run', async () => {
+  it('renders the chip and the passage inside one block', async () => {
     const { parent, deps } = setup(passageOf('Remain in me, and I in you.'))
 
     await renderReference(parent, model('John 15:4 inline'), deps)
 
-    expect(parent.querySelector('.scripture-study-chip')).not.toBeNull()
-    const passage = parent.querySelector('.scripture-study-passage')
-    expect(passage?.textContent).toBe('“Remain in me, and I in you.”')
+    const block = parent.querySelector(
+      '.scripture-study-block.scripture-study-inline-block',
+    )
+    expect(block?.querySelector('.scripture-study-chip')).not.toBeNull()
+    const passage = block?.querySelector('.scripture-study-passage')
+    expect(passage?.textContent).toBe('Remain in me, and I in you.')
+  })
+
+  it('renders one verse per line', async () => {
+    const { parent, deps } = setup(passageOf('Remain in me.', 'I am the vine.'))
+
+    await renderReference(parent, model('John 15:4-5 inline'), deps)
+
+    const lines = parent.querySelectorAll(
+      '.scripture-study-passage .scripture-study-verse-line',
+    )
+    expect([...lines].map((line) => line.textContent)).toEqual([
+      '4Remain in me.',
+      '5I am the vine.',
+    ])
   })
 
   it('shows a loading placeholder until the passage arrives', async () => {
@@ -144,7 +161,7 @@ describe('renderReference inline', () => {
     await rendered
     expect(
       parent.querySelector('.scripture-study-passage')?.textContent,
-    ).toBe('“Remain.”')
+    ).toBe('Remain.')
     expect(parent.querySelector('.scripture-study-loading')).toBeNull()
   })
 
@@ -211,7 +228,7 @@ describe('renderReference inline', () => {
     await new Promise((resolve) => window.setTimeout(resolve, 0))
 
     expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
-      '“Remain.”',
+      'Remain.',
     )
   })
 
@@ -231,7 +248,7 @@ describe('renderReference inline', () => {
     await new Promise((resolve) => window.setTimeout(resolve, 0))
 
     expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
-      '“Remain.”',
+      'Remain.',
     )
   })
 
@@ -475,103 +492,69 @@ describe('renderReference in-note intersections', () => {
     expect(openNote).toHaveBeenCalledWith('Sermons/Fruitfulness.md')
   })
 
-  it('renders the surface inside the callout body', async () => {
+  it('renders the surface inside the block', async () => {
     const { parent, deps } = intersectionsSetup([
       occurrenceGroup('Sermons/Fruitfulness.md', false),
     ])
 
-    await renderReference(parent, model('John 15:4 callout'), deps)
+    await renderReference(parent, model('John 15:4 block'), deps)
 
     expect(
-      parent.querySelector('.callout-content .scripture-study-intersections'),
+      parent.querySelector('.scripture-study-block .scripture-study-intersections'),
     ).not.toBeNull()
   })
 })
 
-describe('renderReference callout', () => {
-  it('renders a bible callout instead of a chip', async () => {
+describe('renderReference block', () => {
+  it('renders the chip on its own line above the passage', async () => {
     const { parent, deps } = setup()
 
-    await renderReference(parent, model('John 15:4 callout'), deps)
+    await renderReference(parent, model('John 15:4 block'), deps)
 
-    expect(parent.querySelector('.scripture-study-chip')).toBeNull()
+    const block = parent.querySelector('.scripture-study-block')
+    expect(block?.classList.contains('scripture-study-inline-block')).toBe(false)
     expect(
-      parent.querySelector('.callout[data-callout="bible"]'),
+      block?.querySelector('.scripture-study-block-ref .scripture-study-chip'),
     ).not.toBeNull()
+    expect(block?.querySelector('.scripture-study-passage')).not.toBeNull()
   })
 
-  it('titles the callout with the reference and the served translation', async () => {
-    const { parent, deps } = setup()
-
-    await renderReference(parent, model('jhn 15:4 callout'), deps)
-
-    expect(
-      parent.querySelector('.callout-title-inner')?.textContent,
-    ).toBe('John 15:4 · WEB')
-  })
-
-  it('opens the reader from the title nav icon', async () => {
+  it('opens the reader from the chip', async () => {
     const { parent, deps, openReference } = setup()
 
-    await renderReference(parent, model('John 15:4 callout'), deps)
+    await renderReference(parent, model('jhn 15:4 block'), deps)
 
     parent
-      .querySelector('.scripture-study-callout-nav')
+      .querySelector('.scripture-study-chip')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(openReference).toHaveBeenCalledWith(
       expect.objectContaining({ referenceText: 'John 15:4' }),
     )
   })
 
-  it('opens the reader from the title nav icon with the keyboard', async () => {
-    const { parent, deps, openReference } = setup()
-
-    await renderReference(parent, model('John 15:4 callout'), deps)
-
-    parent
-      .querySelector('.scripture-study-callout-nav')
-      ?.dispatchEvent(
-        new KeyboardEvent('keydown', { key: ' ', bubbles: true }),
-      )
-    expect(openReference).toHaveBeenCalledWith(
-      expect.objectContaining({ referenceText: 'John 15:4' }),
-    )
-  })
-
-  it('renders body prose with verse numbers even for a single verse', async () => {
+  it('numbers verses even for a single verse', async () => {
     const { parent, deps } = setup(passageOf('Remain in me, and I in you.'))
 
-    await renderReference(parent, model('John 15:4 callout'), deps)
+    await renderReference(parent, model('John 15:4 block'), deps)
 
-    const content = parent.querySelector('.callout-content')
-    const sup = content?.querySelector('sup.scripture-study-verse-number')
+    const passage = parent.querySelector('.scripture-study-passage')
+    const sup = passage?.querySelector('sup.scripture-study-verse-number')
     expect(sup?.textContent).toBe('4')
-    expect(content?.textContent).toContain('Remain in me, and I in you.')
+    expect(passage?.textContent).toContain('Remain in me, and I in you.')
   })
 
-  it('renders one verse per line by default', async () => {
+  it('renders one verse per line', async () => {
     const { parent, deps } = setup(passageOf('Remain in me.', 'I am the vine.'))
 
-    await renderReference(parent, model('John 15:4-5 callout'), deps)
+    await renderReference(parent, model('John 15:4-5 block'), deps)
 
     const lines = parent.querySelectorAll(
-      '.callout-content .scripture-study-verse-line',
+      '.scripture-study-passage .scripture-study-verse-line',
     )
     expect([...lines].map((line) => line.textContent)).toEqual([
       '4Remain in me.',
       '5I am the vine.',
     ])
-    expect(parent.querySelector('.scripture-study-prose')).toBeNull()
-  })
-
-  it('renders flowing prose with the flow keyword', async () => {
-    const { parent, deps } = setup(passageOf('Remain in me.', 'I am the vine.'))
-
-    await renderReference(parent, model('John 15:4-5 callout flow'), deps)
-
-    const prose = parent.querySelector('.callout-content .scripture-study-prose')
-    expect(prose?.textContent).toBe('4Remain in me. 5I am the vine.')
-    expect(parent.querySelector('.scripture-study-verse-line')).toBeNull()
   })
 
   it('shows a muted attribution line when the translation carries one', async () => {
@@ -581,7 +564,7 @@ describe('renderReference callout', () => {
     } as Passage
     const { parent, deps } = setup(attributed)
 
-    await renderReference(parent, model('John 15:4 callout'), deps)
+    await renderReference(parent, model('John 15:4 block'), deps)
 
     expect(
       parent.querySelector('.scripture-study-attribution')?.textContent,
@@ -591,33 +574,33 @@ describe('renderReference callout', () => {
   it('shows no attribution line without a copyright string', async () => {
     const { parent, deps } = setup(passageOf('Remain.'))
 
-    await renderReference(parent, model('John 15:4 callout'), deps)
+    await renderReference(parent, model('John 15:4 block'), deps)
 
     expect(parent.querySelector('.scripture-study-attribution')).toBeNull()
   })
 
-  it('names the substituted translation in the callout body', async () => {
+  it('names the substituted translation in the block body', async () => {
     const { parent, deps } = setup({
       ...passageOf('Remain in me.'),
       fallback: { requested: 'nkjv', served: 'web' },
     } as Passage)
 
-    await renderReference(parent, model('John 15:4 nkjv callout'), deps)
+    await renderReference(parent, model('John 15:4 nkjv block'), deps)
 
     expect(
       parent.querySelector(
-        '.callout-content .scripture-study-fallback-notice',
+        '.scripture-study-block .scripture-study-fallback-notice',
       )?.textContent,
     ).toBe('WEB (NKJV unavailable)')
   })
 
-  it('degrades the callout body when the passage is unavailable', async () => {
+  it('degrades the block body when the passage is unavailable', async () => {
     const { parent, deps } = setup({ status: 'unavailable' })
 
-    await renderReference(parent, model('John 15:4 callout'), deps)
+    await renderReference(parent, model('John 15:4 block'), deps)
 
     expect(
-      parent.querySelector('.callout-content .scripture-study-unavailable'),
+      parent.querySelector('.scripture-study-block .scripture-study-unavailable'),
     ).not.toBeNull()
   })
 })

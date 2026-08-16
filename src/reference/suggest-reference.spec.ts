@@ -60,7 +60,7 @@ describe('suggestReference — option tokens', () => {
   it('suggests display keywords and translations after the spec', () => {
     expect(labels('John 15:4 ')).toEqual([
       'inline',
-      'callout',
+      'block',
       'nkjv',
       'web',
       'kjv',
@@ -68,27 +68,21 @@ describe('suggestReference — option tokens', () => {
   })
 
   it('replaces only the partial option token', () => {
-    expect(suggestReference('John 15:4 c', options)).toEqual([
-      { label: 'callout', insert: 'callout', replaceFrom: 10 },
+    expect(suggestReference('John 15:4 b', options)).toEqual([
+      { label: 'block', insert: 'block', replaceFrom: 10 },
     ])
   })
 
   it('filters by the partial token case-insensitively', () => {
     expect(labels('John 15:4 NK')).toEqual(['nkjv'])
-    expect(labels('John 15:4 callout F')).toEqual(['flow'])
-  })
-
-  it('offers flow only once callout is present', () => {
-    expect(labels('John 15:4 callout ')).toEqual(['flow', 'nkjv', 'web', 'kjv'])
-    expect(labels('John 15:4 inline ')).toEqual(['nkjv', 'web', 'kjv'])
   })
 
   it('omits option kinds that are already present', () => {
-    expect(labels('John 15:4 callout flow ')).toEqual(['nkjv', 'web', 'kjv'])
-    expect(labels('John 15:4 nkjv ')).toEqual(['inline', 'callout'])
+    expect(labels('John 15:4 block ')).toEqual(['nkjv', 'web', 'kjv'])
+    expect(labels('John 15:4 nkjv ')).toEqual(['inline', 'block'])
   })
 
   it('suggests no translations when none are known', () => {
-    expect(labels('John 15:4 ', {})).toEqual(['inline', 'callout'])
+    expect(labels('John 15:4 ', {})).toEqual(['inline', 'block'])
   })
 })

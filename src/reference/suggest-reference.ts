@@ -1,10 +1,5 @@
 import { booksMatchingPrefix } from './books'
-import {
-  DISPLAY_MODES,
-  FLOW_KEYWORD,
-  matchBook,
-  type ParseOptions,
-} from './parse-reference'
+import { DISPLAY_MODES, matchBook, type ParseOptions } from './parse-reference'
 
 export type ReferenceSuggestion = {
   label: string
@@ -31,13 +26,11 @@ const optionSuggestions = (
   const displayUsed = used.some((token) =>
     DISPLAY_MODES.some((mode) => mode === token),
   )
-  const flowOffered = used.includes('callout') && !used.includes(FLOW_KEYWORD)
   const translationUsed = translationIds.some((id) =>
     used.includes(id.toLowerCase()),
   )
   const candidates = [
     ...(displayUsed ? [] : DISPLAY_MODES),
-    ...(flowOffered ? [FLOW_KEYWORD] : []),
     ...(translationUsed ? [] : translationIds),
   ]
   const prefix = current.text.toLowerCase()
