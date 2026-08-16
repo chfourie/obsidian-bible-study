@@ -71,12 +71,13 @@ const setup = async (
   const app = new App()
   const plugin = new Plugin(app, pluginManifest) as unknown as ObsidianPlugin
   const tab = new ScriptureStudySettingTab(plugin, model)
+  // Registration + open follow the real 1.13.7 lifecycle (see the mock's
+  // PluginSettingTab). The structural cast reaches the mock's renderTab(),
+  // absent from the public typings.
+  plugin.addSettingTab(tab)
   if (opened) {
     document.body.appendChild(tab.containerEl)
-    // Structural cast: the base class deprecates display() in favor of the
-    // declarative settings API; the mock's display() renders declaratively
-    // the way real Obsidian does when the tab is opened.
-    ;(tab as { display(): void }).display()
+    ;(tab as unknown as { renderTab(): void }).renderTab()
   }
   await flushAsync()
   return { tab, model, settingsStore, app, container: tab.containerEl }
@@ -184,6 +185,20 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
     await flushAsync()
 
     expect(availableTranslations).not.toHaveBeenCalled()
+  })
+
+  it('loads translation rows when opened from the cached index-time definitions', async () => {
+    // Obsidian 1.13.7 never calls getSettingDefinitions() on open when the
+    // index-time update() already cached definitions — the tab must bootstrap
+    // its model from the render itself (see the workaround note in
+    // settings-tab.ts) or the Translations section stays permanently empty.
+    const { container } = await setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+    })
+
+    expect(hasSettingNamed(container, 'World English Bible')).toBe(true)
   })
 })
 

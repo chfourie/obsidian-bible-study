@@ -197,7 +197,9 @@ export class Plugin {
 
   async saveData(_data: unknown): Promise<void> {}
 
-  addSettingTab(_tab: PluginSettingTab): void {}
+  addSettingTab(tab: PluginSettingTab): void {
+    tab.update()
+  }
 }
 
 // Fluent Setting mock: builds real DOM controls so glue-level specs can read
@@ -543,10 +545,16 @@ class FileControlSuggest extends AbstractInputSuggest<TFile> {
   }
 }
 
-// PluginSettingTab with the ≥1.13 declarative pipeline: `display()`/`update()`
-// render `getSettingDefinitions()` into real DOM, reading values through
-// `getControlValue` and persisting changes through `setControlValue`, so specs
-// can assert on the same markup the imperative Setting mock produces.
+// PluginSettingTab with the ≥1.13 declarative pipeline, faithful to the
+// 1.13.7 runtime's call order (verified against the shipped app.js):
+// - addSettingTab() calls update() while containerEl is detached; update()
+//   caches getSettingDefinitions() in settingItems and re-renders only the
+//   currently open tab.
+// - Opening the tab calls renderTab(), which renders from the *cached*
+//   settingItems when non-empty — getSettingDefinitions() is NOT re-invoked
+//   on open — and falls back to display() only when the cache is empty.
+// - Rendering reads each control's value through getControlValue and persists
+//   through setControlValue, producing the same markup as the Setting mock.
 export class PluginSettingTab {
   containerEl: HTMLElement = document.createElement('div')
   settingItems: SettingDefinitionItem[] = []
@@ -567,11 +575,20 @@ export class PluginSettingTab {
   setControlValue(_key: string, _value: unknown): void | Promise<void> {}
 
   display(): void {
-    this.update()
+    this.#render()
+  }
+
+  renderTab(): void {
+    if (this.settingItems.length > 0) this.#render()
+    else this.display()
   }
 
   update(): void {
     this.settingItems = this.getSettingDefinitions()
+    if (this.containerEl.isConnected) this.#render()
+  }
+
+  #render(): void {
     this.containerEl.empty()
     for (const item of this.settingItems) {
       if ('type' in item && item.type === 'group') {

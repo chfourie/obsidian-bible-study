@@ -49,17 +49,23 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     super(plugin.app, plugin)
   }
 
-  // Obsidian ≥1.13 renders the tab declaratively from these definitions and
-  // never calls display(): once at addSettingTab() to index the tab for
-  // settings search, then on every open. The first on-screen call per open
-  // cycle doubles as the bootstrap — subscribe and kick a refresh, torn down
-  // again in hide(). The index-time call arrives with a detached containerEl
-  // and must not refresh: refreshing hits the network at plugin load.
+  // Obsidian ≥1.13 renders the tab declaratively: addSettingTab() calls
+  // update() → getSettingDefinitions() with a detached containerEl to index
+  // the tab for settings search, and that call must not refresh — refreshing
+  // hits the network at plugin load. The bootstrap — subscribe and kick a
+  // refresh, torn down again in hide() — therefore runs on the first call
+  // that arrives with the tab on screen.
+  //
+  // WORKAROUND (Obsidian 1.13.7, remove when fixed upstream): opening the
+  // tab does not call getSettingDefinitions() — renderTab() reuses the
+  // settingItems cached by the index-time update() whenever they are
+  // non-empty, so this method alone never sees a connected containerEl and
+  // the bootstrap would never run. getControlValue() IS called for every
+  // control on each on-screen render, so it doubles as the open hook below.
+  // The workaround is removable once a per-open callback exists or open
+  // re-invokes getSettingDefinitions(); see docs/adr/0002.
   override getSettingDefinitions(): SettingDefinitionItem<SettingsControlKey>[] {
-    if (this.#unsubscribe === null && this.containerEl.isConnected) {
-      this.#unsubscribe = this.model.subscribe(() => this.update())
-      void this.model.refresh()
-    }
+    this.#bootstrapWhenOnScreen()
     const view = this.model.view
     return [
       this.#translationPicker(
@@ -87,7 +93,14 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     this.#renderedStructureSignature = null
   }
 
+  #bootstrapWhenOnScreen(): void {
+    if (this.#unsubscribe !== null || !this.containerEl.isConnected) return
+    this.#unsubscribe = this.model.subscribe(() => this.update())
+    void this.model.refresh()
+  }
+
   override getControlValue(key: string): unknown {
+    this.#bootstrapWhenOnScreen()
     const view = this.model.view
     const settings = view.settings
     switch (key as SettingsControlKey) {
