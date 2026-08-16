@@ -52,7 +52,7 @@ const taggedVerse = (book: number, raw: string): TaggedVerse => {
   }
 
   const recordTag = (strongs: string): void => {
-    const lastTag = tags.at(-1)
+    const lastTag = tags.length > 0 ? tags[tags.length - 1] : undefined
     const wordStart = text.lastIndexOf(' ') + 1
     if (wordStart < text.length) {
       tags.push({ start: wordStart, end: text.length, strongs: [strongs] })

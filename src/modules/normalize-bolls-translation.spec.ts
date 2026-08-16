@@ -177,7 +177,9 @@ describe('normalizeBollsTranslation with <S>-tagged texts', () => {
     expect(corinthians.text).toBe(
       'The grace of the Lord Jesus Christ, and the love of God, and the communion of the Holy Ghost, be with you all. Amen.',
     )
-    expect(corinthians.tags.at(-1)?.strongs).toEqual(['G0281'])
+    expect(corinthians.tags[corinthians.tags.length - 1].strongs).toEqual([
+      'G0281',
+    ])
   })
 
   it('strips styling markup while keeping its words and spans intact', () => {
