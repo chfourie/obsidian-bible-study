@@ -51,15 +51,21 @@ const taggedVerse = (book: number, raw: string): TaggedVerse => {
     }
   }
 
+  const trailingWordSpan = (): { start: number; end: number } | undefined => {
+    let end = text.length
+    while (end > 0 && /[\s\p{P}]/u.test(text[end - 1])) end -= 1
+    if (end === 0) return undefined
+    return { start: text.lastIndexOf(' ', end - 1) + 1, end }
+  }
+
   const recordTag = (strongs: string): void => {
     const lastTag = tags.length > 0 ? tags[tags.length - 1] : undefined
-    const wordStart = text.lastIndexOf(' ') + 1
-    if (wordStart < text.length) {
-      tags.push({ start: wordStart, end: text.length, strongs: [strongs] })
+    if (lastTag !== undefined && /^[\s\p{P}]*$/u.test(text.slice(lastTag.end))) {
+      lastTag.strongs.push(strongs)
       return
     }
-    if (lastTag !== undefined && lastTag.end === text.trimEnd().length)
-      lastTag.strongs.push(strongs)
+    const word = trailingWordSpan()
+    if (word !== undefined) tags.push({ ...word, strongs: [strongs] })
   }
 
   const cleaned = stripInertMarkup(raw)

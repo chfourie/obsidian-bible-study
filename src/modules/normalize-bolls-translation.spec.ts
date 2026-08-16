@@ -225,4 +225,34 @@ describe('taggedVerse edge cases', () => {
     expect(verse.text).toBe('Abide in me.')
     expect(verse.tags).toEqual([{ start: 0, end: 5, strongs: ['G3306', 'G0853'] }])
   })
+
+  it('folds a standalone tag onto the preceding word span past its punctuation', () => {
+    const verse = tagVerse('the light<S>216</S>, <S>853</S> that it was good.')
+
+    expect(verse.text).toBe('the light, that it was good.')
+    expect(verse.tags).toEqual([{ start: 4, end: 9, strongs: ['G0216', 'G0853'] }])
+  })
+
+  it('folds a standalone tag onto a preceding word that had no tag yet', () => {
+    const verse = tagVerse('Abide <S>853</S> in me.')
+
+    expect(verse.text).toBe('Abide in me.')
+    expect(verse.tags).toEqual([{ start: 0, end: 5, strongs: ['G0853'] }])
+  })
+
+  it('drops a standalone tag at verse start with no preceding word', () => {
+    const verse = tagVerse('<S>853</S> Abide in me.')
+
+    expect(verse.text).toBe('Abide in me.')
+    expect(verse.tags).toEqual([])
+  })
+
+  it('stacks adjacent tags onto a single span instead of duplicating it', () => {
+    const verse = tagVerse('the branch cannot<S>3756</S><S>1410</S> bear fruit.')
+
+    expect(verse.text).toBe('the branch cannot bear fruit.')
+    expect(verse.tags).toEqual([
+      { start: 11, end: 17, strongs: ['G3756', 'G1410'] },
+    ])
+  })
 })
