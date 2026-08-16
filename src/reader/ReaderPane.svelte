@@ -355,6 +355,18 @@
             <div class="bsr-nudge">
               No translation installed — install one in the Bible Study settings to start reading.
             </div>
+            {#if view.installNudge}
+              <button
+                type="button"
+                class="bsr-install-cta mod-cta"
+                disabled={view.installNudge.busy}
+                onclick={() => void model.installSuggestedTranslation()}
+              >
+                {view.installNudge.busy
+                  ? `Installing ${view.installNudge.translationName}…`
+                  : `Install ${view.installNudge.translationName}`}
+              </button>
+            {/if}
           {:else if view.status === 'unavailable'}
             <div class="bsr-nudge">{view.title} is unavailable in this translation.</div>
           {:else if view.toggles.layout === 'verse-per-line'}
@@ -911,6 +923,11 @@
     color: var(--text-faint);
     font-style: italic;
     margin: 12px 0;
+  }
+
+  .bsr-install-cta {
+    margin: 4px 0 12px;
+    cursor: pointer;
   }
 
   .bsr-strongs-word {

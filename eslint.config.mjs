@@ -70,6 +70,11 @@ export default defineConfig([
           ignoreRegex: [
             // The plugin's own name as it appears in manifest.json.
             '\\bBible Study\\b',
+            // Proper names on the settings surface.
+            '\\bAPI\\.Bible\\b',
+            "\\bStrong's\\b",
+            // Letter names in the annotation-ordering option.
+            '\\bA to Z\\b',
           ],
         },
       ],

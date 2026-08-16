@@ -330,6 +330,11 @@ class SettingButtonComponent {
     return this
   }
 
+  setDestructive(): this {
+    this.buttonEl.addClass('mod-destructive')
+    return this
+  }
+
   setDisabled(disabled: boolean): this {
     this.buttonEl.disabled = disabled
     return this

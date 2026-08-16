@@ -148,7 +148,9 @@ export class BibleStudySettingTab extends PluginSettingTab {
       return
     }
     setting.addDropdown((dropdown) => {
-      options.forEach((option) => dropdown.addOption(option.id, option.label))
+      options.forEach((option) => {
+        dropdown.addOption(option.id, option.label)
+      })
       dropdown
         .setValue(current ?? options[0].id)
         .onChange((translationId) => onChange(translationId))
@@ -181,9 +183,9 @@ export class BibleStudySettingTab extends PluginSettingTab {
           ...view.languages,
           view.settings.languageFilter,
         ])
-        ;[...languages]
-          .sort()
-          .forEach((language) => dropdown.addOption(language, language))
+        ;[...languages].sort().forEach((language) => {
+          dropdown.addOption(language, language)
+        })
         dropdown
           .setValue(view.settings.languageFilter)
           .onChange((language) => void this.model.setLanguageFilter(language))
@@ -250,7 +252,7 @@ export class BibleStudySettingTab extends PluginSettingTab {
     setting.addButton((button) =>
       button
         .setButtonText('Delete')
-        .setWarning()
+        .setDestructive()
         .onClick(() => void this.model.remove(row.id)),
     )
   }
@@ -329,9 +331,9 @@ export class BibleStudySettingTab extends PluginSettingTab {
       .setName(name)
       .setDesc('Seeds new reader panes; in-pane switches stay per pane.')
       .addDropdown((dropdown) => {
-        Object.entries<string>(labels).forEach(([value, label]) =>
-          dropdown.addOption(value, label),
-        )
+        Object.entries<string>(labels).forEach(([value, label]) => {
+          dropdown.addOption(value, label)
+        })
         dropdown
           .setValue(view.settings[key])
           .onChange((value) =>
