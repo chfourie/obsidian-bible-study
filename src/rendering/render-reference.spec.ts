@@ -127,18 +127,14 @@ describe('renderReference inline', () => {
     expect(passage?.textContent).toBe('Remain in me, and I in you.')
   })
 
-  it('renders one verse per line', async () => {
+  it('renders verses as one continuous run', async () => {
     const { parent, deps } = setup(passageOf('Remain in me.', 'I am the vine.'))
 
     await renderReference(parent, model('John 15:4-5 inline'), deps)
 
-    const lines = parent.querySelectorAll(
-      '.scripture-study-passage .scripture-study-verse-line',
-    )
-    expect([...lines].map((line) => line.textContent)).toEqual([
-      '4Remain in me.',
-      '5I am the vine.',
-    ])
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(passage?.textContent).toBe('4Remain in me. 5I am the vine.')
+    expect(passage?.querySelector('.scripture-study-verse-line')).toBeNull()
   })
 
   it('shows a loading placeholder until the passage arrives', async () => {

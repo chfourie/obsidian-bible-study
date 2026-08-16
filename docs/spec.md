@@ -44,7 +44,7 @@ Clickable pill/chip: normalized reference text, plus translation label only when
 
 ### 3.2 `inline` mode
 
-A subtly tinted block holding the chip and the verse text together: the passage starts on the chip's line, then one verse per line. No verse numbers for a single verse; superscript verse numbers for multi-verse references. No length cap — a whole-chapter inline reference renders in full (never a scroll box). No attribution line; the chip's translation label is the citation.
+A subtly tinted block holding the chip and the verse text together: the passage starts on the chip's line and runs as continuous text. No verse numbers for a single verse; superscript verse numbers for multi-verse references. No length cap — a whole-chapter inline reference renders in full (never a scroll box). No attribution line; the chip's translation label is the citation.
 
 ### 3.3 `block` mode
 

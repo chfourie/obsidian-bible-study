@@ -270,14 +270,18 @@ const renderAttribution = (host: HTMLElement, view: PassageView): void => {
 
 const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
-  view.verses.forEach((block, index) => {
-    const cls =
-      index === 0
-        ? 'scripture-study-verse-line scripture-study-verse-line-first'
-        : 'scripture-study-verse-line'
-    renderSegments(host.createDiv({ cls }), block)
-  })
+  for (const block of view.verses) {
+    renderSegments(host.createDiv({ cls: 'scripture-study-verse-line' }), block)
+  }
   renderAttribution(host, view)
+}
+
+const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
+  renderFallbackNotice(host, view)
+  view.verses.forEach((block, index) => {
+    if (index > 0) host.appendText(' ')
+    renderSegments(host, block)
+  })
 }
 
 const renderBlock = (
@@ -299,7 +303,12 @@ const renderBlock = (
   const host = inline
     ? block.createSpan({ cls: 'scripture-study-passage' })
     : block.createDiv({ cls: 'scripture-study-passage' })
-  const mounted = mountPassage(host, model, deps, renderVerseLines)
+  const mounted = mountPassage(
+    host,
+    model,
+    deps,
+    inline ? renderVerseRun : renderVerseLines,
+  )
   if (deps.intersections) {
     renderIntersections(block, model, deps.intersections, sourcePath)
   }

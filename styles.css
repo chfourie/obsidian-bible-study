@@ -72,14 +72,8 @@ body {
   margin-bottom: 0.35em;
 }
 
-/* Inline: the passage continues on the chip's line, then one verse per
-   line. */
 .scripture-study-inline-block .scripture-study-passage {
   margin-left: 0.35em;
-}
-
-.scripture-study-inline-block .scripture-study-verse-line-first {
-  display: inline;
 }
 
 .scripture-study-verse-number {
