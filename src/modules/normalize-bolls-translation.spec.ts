@@ -256,3 +256,32 @@ describe('taggedVerse edge cases', () => {
     ])
   })
 })
+
+describe('malformed markup never reaches storage', () => {
+  it('drops a malformed multi-number tag from an otherwise untagged verse', () => {
+    expect(verseContent('word<S>3756 1410</S> more.')).toBe('word more.')
+  })
+
+  it('drops a malformed tag alongside valid ones without leaking its text', () => {
+    const verse = tagVerse('Abide<S>3306</S> <S>3756 1410</S>in me.')
+
+    expect(verse.text).toBe('Abide in me.')
+    expect(verse.tags).toEqual([{ start: 0, end: 5, strongs: ['G3306'] }])
+  })
+
+  it('strips stray unpaired S tags from the text', () => {
+    const verse = tagVerse('Abide<S>3306</S> in </S> me <S> now.')
+
+    expect(verse.text).toBe('Abide in me now.')
+    expect(verse.tags).toEqual([{ start: 0, end: 5, strongs: ['G3306'] }])
+  })
+
+  it('drops an unclosed sup footnote to the end of the verse', () => {
+    const verse = tagVerse('Abide<S>3306</S> in me.<sup>leaking footnote')
+
+    expect(verse.text).toBe('Abide in me.')
+    expect(verseContent('Abide in me.<sup>leaking footnote')).toBe(
+      'Abide in me.',
+    )
+  })
+})

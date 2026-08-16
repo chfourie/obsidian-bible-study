@@ -24,12 +24,19 @@ export type BollsTranslationMeta = {
 }
 
 const stripInertMarkup = (raw: string): string =>
-  raw.replace(/<sup>.*?<\/sup>/gs, ' ').replace(/<(?!S>|\/S>)[^>]*>/g, '')
+  raw
+    .replace(/<sup>.*?(?:<\/sup>|$)/gs, ' ')
+    .replace(/<(?!S>|\/S>)[^>]*>/g, '')
+
+const stripStrayStrongsMarkup = (segment: string): string =>
+  segment.replace(/<\/?S>/g, ' ')
+
+const STRONGS_PAIR = /<S>([^<]*)<\/S>/g
 
 const plainText = (raw: string): string =>
-  stripInertMarkup(raw).replace(/\s+/g, ' ').trim()
-
-const STRONGS_TAG = /<S>(\d+)<\/S>/g
+  stripStrayStrongsMarkup(stripInertMarkup(raw).replace(STRONGS_PAIR, ' '))
+    .replace(/\s+/g, ' ')
+    .trim()
 const HAS_STRONGS_TAG = /<S>\d+<\/S>/
 
 const LAST_OLD_TESTAMENT_BOOK = 39
@@ -70,12 +77,12 @@ const taggedVerse = (book: number, raw: string): TaggedVerse => {
 
   const cleaned = stripInertMarkup(raw)
   let cursor = 0
-  for (const match of cleaned.matchAll(STRONGS_TAG)) {
-    appendCollapsed(cleaned.slice(cursor, match.index))
-    recordTag(strongsNumber(book, match[1]))
+  for (const match of cleaned.matchAll(STRONGS_PAIR)) {
+    appendCollapsed(stripStrayStrongsMarkup(cleaned.slice(cursor, match.index)))
     cursor = match.index + match[0].length
+    if (/^\d+$/.test(match[1])) recordTag(strongsNumber(book, match[1]))
   }
-  appendCollapsed(cleaned.slice(cursor))
+  appendCollapsed(stripStrayStrongsMarkup(cleaned.slice(cursor)))
   return { text: text.trimEnd(), tags }
 }
 
