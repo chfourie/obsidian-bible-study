@@ -210,6 +210,17 @@ export class ReaderPaneModel {
   ): void {
     this.#toggles = { ...this.#toggles, [toggle]: value }
     this.#notify()
+    // Collapsing an inline verse prunes its details but keeps it selected,
+    // so the side panel can otherwise open onto a selection with nothing
+    // loaded and hang on its loading state.
+    if (
+      toggle === 'details' &&
+      value === 'side-panel' &&
+      this.#selectedVerseId !== null &&
+      this.#details[this.#selectedVerseId] === undefined
+    ) {
+      void this.#loadDetails(this.#selectedVerseId)
+    }
   }
 
   setAnnotationOrdering(ordering: AnnotationOrdering): void {

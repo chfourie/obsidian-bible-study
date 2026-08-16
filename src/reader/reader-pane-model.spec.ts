@@ -340,6 +340,21 @@ describe('verse details', () => {
     expect(model.view.details[verse4]).toBeUndefined()
   })
 
+  it('loads details for the selected verse when switching to the side panel', async () => {
+    // Collapsing an inline verse prunes its details but keeps it selected;
+    // switching Details to side-panel must reload them or the panel shows
+    // a permanent "Loading…".
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+    await model.selectVerse(verse4)
+
+    model.setToggle('details', 'side-panel')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(model.view.details[verse4]?.translations).toHaveLength(2)
+  })
+
   it('selects instead of expanding when details show in the side panel', async () => {
     const model = modelWith(twoTranslations(), {
       ...DEFAULT_TOGGLES,
