@@ -36,6 +36,7 @@ export type TranslationRowView = {
   busy: 'downloading' | 'removing' | null
   error: string | null
   updateAvailable: boolean
+  redownloadable: boolean
   strongsTagged: boolean
 }
 
@@ -182,6 +183,7 @@ export class SettingsTabModel {
         name: installed.name,
         language: installed.language,
       }))
+    const catalogAllIds = this.#catalog.map((entry) => entry.id)
     return [...listed, ...installedOnly].map((entry) => ({
       id: entry.id,
       name: entry.name,
@@ -189,6 +191,7 @@ export class SettingsTabModel {
       busy: this.#busy.get(entry.id) ?? null,
       error: this.#errors.get(entry.id) ?? null,
       updateAvailable: this.#updates.includes(entry.id),
+      redownloadable: catalogAllIds.includes(entry.id),
       strongsTagged:
         this.#manifests.find((installed) => installed.id === entry.id)
           ?.capabilities.strongsTagged ??

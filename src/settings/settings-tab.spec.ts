@@ -346,6 +346,46 @@ describe('ScriptureStudySettingTab translations section', () => {
     expect(deleteModule).toHaveBeenCalledWith('bsb')
   })
 
+  it('offers Re-download and Delete on an installed catalogue row — bolls publishes no checksums, so updating is re-downloading', async () => {
+    const downloadModule = vi.fn(async () => {})
+    const { container } = await setup({
+      storedSettings: { installedModuleIds: ['kjv'] },
+      installedManifests: async () => [
+        moduleManifest('kjv', 'King James Version', true),
+      ],
+      availableTranslations: async () => [
+        { id: 'kjv', name: 'King James Version', language: 'English' },
+      ],
+      downloadModule,
+    })
+
+    const row = settingNamed(container, 'King James Version')
+    const buttons = [...row.querySelectorAll('button')]
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      'Re-download',
+      'Delete',
+    ])
+    expect(buttons[0].classList.contains('mod-cta')).toBe(false)
+
+    buttons[0].click()
+    await flushAsync()
+
+    expect(downloadModule).toHaveBeenCalledWith('kjv')
+  })
+
+  it('offers only Delete on an installed module the catalogue no longer lists', async () => {
+    const { container } = await setup({
+      storedSettings: { installedModuleIds: ['legacy'] },
+      installedManifests: async () => [moduleManifest('legacy', 'Legacy Module')],
+      availableTranslations: async () => [],
+    })
+
+    const row = settingNamed(container, 'Legacy Module')
+    expect(
+      [...row.querySelectorAll('button')].map((button) => button.textContent),
+    ).toEqual(['Delete'])
+  })
+
   it('lists catalogue rows in the Translations group, with no tier heading', async () => {
     const { container } = await setup({
       availableTranslations: async () => [

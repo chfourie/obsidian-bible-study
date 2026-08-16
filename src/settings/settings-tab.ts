@@ -327,6 +327,14 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           .setCta()
           .onClick(() => void this.model.download(row.id)),
       )
+    } else if (row.redownloadable) {
+      // bolls publishes no checksums, so there is no update detection for
+      // catalogue modules — updating one is an ordinary re-download.
+      setting.addButton((button) =>
+        button
+          .setButtonText('Re-download')
+          .onClick(() => void this.model.download(row.id)),
+      )
     }
     setting.addButton((button) =>
       button
