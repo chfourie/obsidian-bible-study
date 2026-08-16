@@ -269,6 +269,13 @@ describe('malformed markup never reaches storage', () => {
     expect(verse.tags).toEqual([{ start: 0, end: 5, strongs: ['G3306'] }])
   })
 
+  it('keeps words separated when a malformed tag sits between them', () => {
+    const verse = tagVerse('Abide<S>3306</S> foo<S>x</S>bar and foo<S></S>bar.')
+
+    expect(verse.text).toBe('Abide foo bar and foo bar.')
+    expect(verse.tags).toEqual([{ start: 0, end: 5, strongs: ['G3306'] }])
+  })
+
   it('strips stray unpaired S tags from the text', () => {
     const verse = tagVerse('Abide<S>3306</S> in </S> me <S> now.')
 

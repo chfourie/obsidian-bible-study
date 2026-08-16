@@ -81,6 +81,7 @@ const taggedVerse = (book: number, raw: string): TaggedVerse => {
     appendCollapsed(stripStrayStrongsMarkup(cleaned.slice(cursor, match.index)))
     cursor = match.index + match[0].length
     if (/^\d+$/.test(match[1])) recordTag(strongsNumber(book, match[1]))
+    else appendCollapsed(' ')
   }
   appendCollapsed(stripStrayStrongsMarkup(cleaned.slice(cursor)))
   return { text: text.trimEnd(), tags }
