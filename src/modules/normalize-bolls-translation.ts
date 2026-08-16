@@ -58,8 +58,7 @@ const taggedVerse = (book: number, raw: string): TaggedVerse => {
       tags.push({ start: wordStart, end: text.length, strongs: [strongs] })
       return
     }
-    text = text.trimEnd()
-    if (lastTag !== undefined && lastTag.end === text.length)
+    if (lastTag !== undefined && lastTag.end === text.trimEnd().length)
       lastTag.strongs.push(strongs)
   }
 

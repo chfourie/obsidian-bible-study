@@ -199,3 +199,30 @@ describe('normalizeBollsTranslation with <S>-tagged texts', () => {
     expect(normalizedKjv().books.has(67)).toBe(false)
   })
 })
+
+const verseContent = (text: string) => {
+  const normalized = normalizeBollsTranslation(
+    'kjv',
+    [{ book: 43, chapter: 15, verse: 4, text }],
+    kjvMeta,
+    kjvSource,
+  )
+  const content = normalized.books.get(43)?.[makeVerseId(43, 15, 4)]
+  if (content === undefined) throw new Error('expected verse content')
+  return content
+}
+
+const tagVerse = (text: string): TaggedVerse => {
+  const content = verseContent(text)
+  if (typeof content === 'string') throw new Error('expected a tagged verse')
+  return content
+}
+
+describe('taggedVerse edge cases', () => {
+  it('keeps the word separator when a standalone tag precedes the next word', () => {
+    const verse = tagVerse('Abide<S>3306</S> <S>853</S>in me.')
+
+    expect(verse.text).toBe('Abide in me.')
+    expect(verse.tags).toEqual([{ start: 0, end: 5, strongs: ['G3306', 'G0853'] }])
+  })
+})
