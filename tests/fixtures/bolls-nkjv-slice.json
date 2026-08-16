@@ -1,0 +1,29 @@
+[
+  {
+    "pk": 2153705,
+    "translation": "NKJV",
+    "book": 1,
+    "chapter": 1,
+    "verse": 1,
+    "text": "In the beginning God created the heavens and the earth.",
+    "comment": "<a href='/NKJV/1/2/4'>Gen. 2:4</a>; (<a href='/NKJV/19/8/3'>Ps. 8:3</a>; <a href='/NKJV/19/89/11'>89:11</a>; <a href='/NKJV/19/90/2'>90:2</a>); <a href='/NKJV/23/44/24'>Is. 44:24</a>; <a href='/NKJV/44/17/24'>Acts 17:24</a>; <a href='/NKJV/45/1/20'>Rom. 1:20</a>; (<a href='/NKJV/58/1/2'>Heb. 1:2</a>; <a href='/NKJV/58/11/3'>11:3</a>); <a href='/NKJV/66/4/11'>Rev. 4:11</a><br><a href='/NKJV/19/102/25'>Ps. 102:25</a>; <a href='/NKJV/23/40/21'>Is. 40:21</a>; (<a href='/NKJV/43/1/1-3'>John 1:1–3</a>; <a href='/NKJV/58/1/10'>Heb. 1:10</a>)"
+  },
+  {
+    "pk": 2180408,
+    "translation": "NKJV",
+    "book": 43,
+    "chapter": 15,
+    "verse": 4,
+    "text": "Abide in Me, and I in you. As the branch cannot bear fruit of itself, unless it abides in the vine, neither can you, unless you abide in Me.",
+    "comment": "<a href='/NKJV/43/17/23'>John 17:23</a>; <a href='/NKJV/49/3/17'>Eph. 3:17</a>; (<a href='/NKJV/51/1/23'>Col. 1:23</a>)"
+  },
+  {
+    "pk": 2180409,
+    "translation": "NKJV",
+    "book": 43,
+    "chapter": 15,
+    "verse": 5,
+    "text": "“I am the vine, you <i>are</i> the branches. He who abides in Me, and I in him, bears much  fruit; for without Me you can do  nothing.",
+    "comment": "<a href='/NKJV/47/3/5'>2 Cor. 3:5</a><br><a href='/NKJV/28/14/8'>Hos. 14:8</a>; (<a href='/NKJV/48/5/22'>Gal. 5:22</a>, <a href='/NKJV/48/5/23'>23</a>)"
+  }
+]
