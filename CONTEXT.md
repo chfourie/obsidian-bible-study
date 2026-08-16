@@ -30,10 +30,7 @@ A specific bible text (e.g. NIV, WEB) whose content is projected onto the Canoni
 A downloadable, locally-stored data bundle — a full translation download or the Strong's Dictionaries. The unit of storage and settings management. Lives in the plugin data dir (never vault files, never synced); stored in normalized form: per-book JSON keyed by verse id, plus a manifest (metadata, license string, source checksum, format version).
 
 ### Tier
-A translation's licensing class, which dictates its storage model. **Downloadable** (public domain / open license): fetched once as a full module, works offline. **Online** (licensed, e.g. NIV/NKJV): fetched per passage via the user's API key, held only in the passage cache.
-
-### Passage Cache
-The local store of online-tier verses: normalized verse-id→text entries stamped with fetch time. Hard 14-day expiry (expired = purged, never served), at most 500 consecutive verses, never synced. Compliance mechanism, not an optimization.
+Superseded in v1.1: every translation is a downloadable Module sourced from the bolls.life catalogue (or the BSB release artifact). The online tier and its passage cache were removed with API.Bible.
 
 ### Fallback Translation
 The single user-configured translation (restricted to installed modules) served when a requested translation is unavailable. Substitution is always visible — the rendered output names the translation actually served. Never applied in the reader's multi-translation stacked view.
@@ -45,7 +42,7 @@ One appearance of a reference at a position in a vault note (in the body or in a
 A vault note dedicated to commenting on a reference, with the reference in its frontmatter as source of truth. Indexed like any note but always surfaced in the reader beside its verses.
 
 ### Tagged Translation
-A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB is the only one (built from the public-domain Berean word-level tables); the capability is per-translation, not BSB-specific.
+A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB (built from the public-domain Berean word-level tables) and KJV (built from bolls.life's `<S>`-tagged dump); the capability is per-translation.
 
 ### Strong's Dictionaries
 The shared dictionary module (STEPBible TBESH/TBESG, CC BY 4.0) mapping Strong's numbers to lemma, transliteration, gloss, and definition. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.

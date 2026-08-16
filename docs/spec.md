@@ -59,7 +59,7 @@ Chip renders immediately in all modes. Loading → subtle shimmer/placeholder ("
 
 ### 3.6 Selection & attribution
 
-Rendered verse text is normal selectable/copyable DOM text. Attribution rule: if the translation's stored metadata carries a copyright string (API.Bible provides one per bible; e.g. NKJV's "New King James Version®, Copyright © 1982, Thomas Nelson…"), show it; if absent (public domain), show nothing. Callout: bottom attribution line. Inline: none. No manual curation, no popovers. Page-footer aggregation rejected for v1.
+Rendered verse text is normal selectable/copyable DOM text. Attribution rule: if the translation's stored metadata carries a copyright string, show it; if absent (public domain), show nothing. Callout: bottom attribution line. Inline: none. No manual curation, no popovers. Page-footer aggregation rejected for v1.
 
 ## 4. Reader pane
 
@@ -83,12 +83,15 @@ An Obsidian workspace leaf. Prototype (visual reference until implementation): [
 - **Reader display:** full rendered markdown body per annotation in the details surface, one collapsible block per annotation titled by note name, max-height + scroll, read-only; title/edit icon opens the note in an editor split; modify events refresh on save. Ordering is a global setting: creation date oldest-first (default) or file path A→Z.
 - **In-note intersection surface:** annotations appear there too, grouped first ("Annotations", then "Mentions").
 
-## 6. Translations: modules, storage, online tier
+## 6. Translations: modules and storage
 
-### 6.1 Tiers
+> **v1.1 revision** (multi-API grilling, 2026-08-16): the online tier (API.Bible: per-passage fetch, expiring passage cache, FUMS, API key) and the getBible source are **removed**. All translations are downloadable modules. Catalogue source: **bolls.life**. This is a personal-use licensing stance — bolls serves copyrighted texts (NIV, ESV, NKJV, LSB…) without publisher agreements, so community-store submission is off the table while they're included.
 
-- **Downloadable (public domain / open license):** fetched once as a full module, works offline. Sources: getBible v2 static JSON (KJV, WEB, ASV, …) and the tagged BSB release artifact (§7.1).
-- **Online (licensed):** per-passage fetch via the user's API.Bible key, held only in the passage cache. Starter-tier licensed English Bibles: **NKJV, NLT, NASB 1995** (NIV is *not* on Starter — verified). The user's translation is NKJV; WEB is its closest free analogue (natural setup: NKJV default + WEB fallback).
+### 6.1 Sources
+
+- **bolls.life** — the sole catalogue source. Catalogue: `https://bolls.life/static/bolls/app/views/languages.json` (149 translations, 31 languages; fetched live with a bundled snapshot fallback). Full-translation dumps: `https://bolls.life/static/translations/<ID>.json`. Book numbering matches the 1–66 grid; no red-letter markup (red-letter stays dormant for bolls modules); NKJV `comment` cross-references are dropped at normalize time.
+- **BSB release artifact** — the tagged BSB module published as a GitHub release on this repo (§7.1), unchanged.
+- **KJV is always tagged**, sourced from bolls: its dump carries word-level `<S>` Strong's tags, normalized into the same word-span format as BSB, `strongsTagged` manifest capability set (mirrors the single-module decision made for BSB — no plain/tagged split).
 
 ### 6.2 Module storage
 
@@ -101,22 +104,15 @@ An Obsidian workspace leaf. Prototype (visual reference until implementation): [
     001.json … 066.json
   ```
 
-- Read path is source-agnostic (`verse id → text`); content gaps = absent keys. The manifest feeds the settings list, the callout attribution line, and checksum-based update detection.
+- Read path is source-agnostic (`verse id → text`); content gaps = absent keys. The manifest feeds the settings list, the callout attribution line, and update detection (no source checksums from bolls — update = re-download).
 
-### 6.3 Online-tier passage cache
-
-- Same normalized form under `cache/<translation>/`, entries stamped `fetchedAt`.
-- **14-day hard expiry:** expired entries purged on load/lookup, never served — offline + expired behaves like never-fetched. (Conservative end of the 14-vs-30 ToU ambiguity; a support answer of 30 is a constant change.)
-- ≤500 consecutive verses, enforced structurally by capped per-passage fetches. No size cap/LRU; TTL is the compliance mechanism. Never syncs.
-- **API.Bible fetch rules:** passage requests silently truncate at 200 verses (HTTP 200, `verseCount: 200`) — chunk requests at ≤200 verses and verify `verseCount`. `content-type` = html/json/text. FUMS compliance via the manual report: `GET https://fums.api.bible/f3?t=<fumsToken>&dId=…&sId=…` using `meta.fumsToken` from each scripture response.
-
-### 6.4 Fallback ladder
+### 6.3 Fallback ladder
 
 Requested translation → single configurable **offline fallback translation** (restricted to installed offline modules, defaults to first installed) → unavailable state with install CTA. Never silent: the chip/callout names the translation actually served (e.g. "WEB *(NKJV unavailable)*"). Applies to reading surfaces only — never the reader's stacked view.
 
-### 6.5 First run
+### 6.4 First run
 
-Nudge only: reader/callouts show an "install a translation" CTA with WEB as the suggested one-click default. Nothing downloads without consent.
+Nudge only: reader/callouts show an "install a translation" CTA with **BSB** as the suggested one-click default (tagged; Strong's mode lights up once the dictionaries are also enabled in settings — the nudge installs only the translation). Nothing downloads without consent.
 
 ## 7. Strong's
 
@@ -124,9 +120,9 @@ Nudge only: reader/callouts show an "install a translation" CTA with WEB as the 
 
 ### 7.1 Data & modules
 
-- **Tagged translation: BSB only**, built from the public-domain Berean `bsb_tables.tsv` (word-level `Str Heb`/`Str Grk` columns, verified). One BSB module, always tagged, downloadable, not bundled.
+- **Tagged translations: BSB and KJV.** BSB is built from the public-domain Berean `bsb_tables.tsv` (word-level `Str Heb`/`Str Grk` columns, verified). One BSB module, always tagged, downloadable, not bundled.
 - **Repo-side pipeline:** a one-off script in `scripts/` converts the TSV to per-book JSON with word-level tag spans + manifest; artifacts published as a GitHub release on this repo. The plugin downloads pre-normalized JSON (fetch, checksum-verify, store) — no on-device TSV parsing. The release artifact is BSB's *only* source (avoids drift between Berean revisions and the tag snapshot).
-- **Capability model:** Strong's-tagging is a per-translation capability — manifest flag, tags stored as inert spans beside verse text. Tagged KJV is out of scope for v1 but layers on with no model change.
+- **Capability model:** Strong's-tagging is a per-translation capability — manifest flag, tags stored as inert spans beside verse text. KJV's tags come from bolls' `<S>` markup at normalize time (§6.1) — the v1 out-of-scope ruling on tagged KJV is superseded by the v1.1 source change.
 - **Dictionaries:** STEPBible TBESH/TBESG (CC BY 4.0) as a shared separate module serving all tagged translations; "Enable Strong's" downloads only the dictionaries.
 
 ### 7.2 Interaction
@@ -138,7 +134,7 @@ Reader-toolbar **Strong's mode** toggle, visible only when the viewed translatio
 Plain `PluginSettingTab` + `Setting` API (Svelte permitted for the translation list if the imperative API gets painful). Five sections:
 
 1. **General** — Default translation (dropdown: installed downloadable modules + enabled online translations); Offline fallback translation (dropdown: installed offline modules only). Bootstrap rules: auto-set to first candidate when one appears; on deletion, reassign to first remaining or unset (back to nudge state); disabled placeholder ("No translations installed — see Translations below") when empty.
-2. **Translations** — API.Bible key (masked input, stored in `data.json`; docs warn vault-publishers; online rows appear only with a valid key); Language filter (default English, persisted); management list per §6: one flat list, two visual tiers (Downloadable — free / Online — requires key), per-row actions (Download/progress/Update/Delete; enable toggle + "Clear cached passages" + 14-day note for online rows), Strong's badge on tagged translations.
+2. **Translations** — Language filter (default English, persisted); management list per §6: one flat list from the bolls catalogue + BSB, per-row actions (Download/progress/Update/Delete), Strong's badge on tagged translations (BSB, KJV). No API key, no online rows (v1.1).
 3. **Strong's** — Enable Strong's toggle (downloads/removes the dictionaries module), note pointing at badged translations when none installed, STEPBible CC BY attribution.
 4. **Reader** — four toggle defaults: Details (inline / side panel), Navigation (tree / breadcrumb), Layout (verse-per-line / continuous), Strong's mode (off / on). Defaults seed new panes only; in-pane switches are ephemeral.
 5. **Annotations** — Folder (folder-suggest, default `Annotations/`), Template file (file-suggest, default none), Display ordering (creation oldest-first default / path A→Z).
@@ -152,7 +148,7 @@ Components and their dependency direction (each consumes only what's above it):
 1. **Versification data** — static verse-counts-per-chapter table (KJV grid); validation, `nextVerse()`, ordinal↔BCV mapping.
 2. **Reference core** — grammar parser (book-name table, verse forms, option tokens, error rules) producing normalized references; interval math on verse ranges.
 3. **Vault index** — occurrence scanning/updating, intersection query (§1.2).
-4. **Module layer** — module download/normalize/store, manifests, passage cache with TTL, API.Bible client (chunking, FUMS), fallback resolution (§6).
+4. **Module layer** — module download/normalize/store (bolls client + BSB release client), manifests, fallback resolution (§6).
 5. **Rendering** — Reading-mode post-processor + Live Preview CM6 decorations for chip/inline/callout; async states; red-letter; attribution (§3).
 6. **Reader pane** — workspace leaf, toggles, stacked view, indicators, entry points (§4).
 7. **Annotations** — schema, create flows, reader/in-note display (§5).
@@ -163,10 +159,10 @@ Components and their dependency direction (each consumes only what's above it):
 
 1. Versification data + reference core (pure, fully unit-testable).
 2. Vault index + intersection query.
-3. Module layer with one downloadable translation (WEB via getBible) end-to-end.
+3. Module layer with one downloadable translation end-to-end.
 4. Note rendering (chip → inline → callout), async states.
 5. Reader pane shell + nav + layout toggles; entry points.
-6. Online tier (API.Bible client, cache, fallback ladder) + attribution.
+6. Fallback ladder + attribution.
 7. Annotations.
 8. BSB build pipeline + tagged module + Strong's dictionaries + Strong's mode.
 9. Settings tab completion + first-run nudge polish.
@@ -183,5 +179,4 @@ Steps 1–5 need no API key and deliver a usable offline reader; 6–9 layer on 
 
 ## 11. Open items (non-blocking)
 
-- API.Bible support email (drafted in issue #14): FUMS applicability to an Electron plugin, 14-vs-30-day cache retention, ToU constraints. Design already adopts the conservative reading (14 days, manual FUMS GET); a relaxed answer is a constant change, not a redesign.
 - Local repo folder rename to `obsidian-bible-study` — user's call.

@@ -1,78 +1,46 @@
 import {
-  AbstractInputSuggest,
   PluginSettingTab,
-  Setting,
-  type App,
   type Plugin,
+  type Setting,
+  type SettingDefinitionControl,
+  type SettingDefinitionGroup,
+  type SettingDefinitionItem,
   type TFile,
-  type TFolder,
 } from 'obsidian'
 import type { AnnotationOrdering, ScriptureStudySettings } from '../data-access'
 import { STRONGS_ATTRIBUTION } from '../strongs'
 import type {
   SettingsTabModel,
   SettingsTabView,
+  TranslationOption,
   TranslationRowView,
 } from './settings-tab-model'
 
 const NO_TRANSLATIONS_PLACEHOLDER =
   'No translations installed — see Translations below'
 
-class FolderSuggest extends AbstractInputSuggest<TFolder> {
-  constructor(
-    app: App,
-    inputEl: HTMLInputElement,
-    onPick: (path: string) => void,
-  ) {
-    super(app, inputEl)
-    this.onSelect((folder) => {
-      this.setValue(folder.path)
-      onPick(folder.path)
-      this.close()
-    })
-  }
+const READER_DEFAULT_DESC =
+  'Seeds new reader panes; in-pane switches stay per pane.'
 
-  protected getSuggestions(query: string): TFolder[] {
-    return this.app.vault
-      .getAllFolders()
-      .filter((folder) =>
-        folder.path.toLowerCase().includes(query.toLowerCase()),
-      )
-  }
+type SettingsControlKey =
+  | 'defaultTranslationId'
+  | 'fallbackTranslationId'
+  | 'languageFilter'
+  | 'strongsEnabled'
+  | 'readerDetailsDefault'
+  | 'readerNavDefault'
+  | 'readerLayoutDefault'
+  | 'readerStrongsDefault'
+  | 'annotationsFolder'
+  | 'annotationTemplatePath'
+  | 'annotationOrdering'
 
-  renderSuggestion(folder: TFolder, el: HTMLElement): void {
-    el.setText(folder.path)
-  }
-}
-
-class FileSuggest extends AbstractInputSuggest<TFile> {
-  constructor(
-    app: App,
-    inputEl: HTMLInputElement,
-    onPick: (path: string) => void,
-  ) {
-    super(app, inputEl)
-    this.onSelect((file) => {
-      this.setValue(file.path)
-      onPick(file.path)
-      this.close()
-    })
-  }
-
-  protected getSuggestions(query: string): TFile[] {
-    return this.app.vault
-      .getMarkdownFiles()
-      .filter((file) => file.path.toLowerCase().includes(query.toLowerCase()))
-  }
-
-  renderSuggestion(file: TFile, el: HTMLElement): void {
-    el.setText(file.path)
-  }
-}
+type ReaderDefaultKey = Extract<SettingsControlKey, `reader${string}`>
 
 export class ScriptureStudySettingTab extends PluginSettingTab {
   #unsubscribe: (() => void) | null = null
-  #renderQueuedBehindFocusedInput = false
+  #updateQueuedBehindFocusedInput = false
+  #renderedStructureSignature: string | null = null
 
   constructor(
     plugin: Plugin,
@@ -81,15 +49,117 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     super(plugin.app, plugin)
   }
 
-  override display(): void {
-    this.#unsubscribe ??= this.model.subscribe(() => this.#render())
-    this.#render()
-    void this.model.refresh()
+  // Obsidian ≥1.13 renders the tab declaratively from these definitions and
+  // never calls display(): once at addSettingTab() to index the tab for
+  // settings search, then on every open. The first on-screen call per open
+  // cycle doubles as the bootstrap — subscribe and kick a refresh, torn down
+  // again in hide(). The index-time call arrives with a detached containerEl
+  // and must not refresh: refreshing hits the network at plugin load.
+  override getSettingDefinitions(): SettingDefinitionItem<SettingsControlKey>[] {
+    if (this.#unsubscribe === null && this.containerEl.isConnected) {
+      this.#unsubscribe = this.model.subscribe(() => this.update())
+      void this.model.refresh()
+    }
+    const view = this.model.view
+    return [
+      this.#translationPicker(
+        'Default translation',
+        'Used when a reference names no translation.',
+        'defaultTranslationId',
+        view.defaultTranslationOptions,
+      ),
+      this.#translationPicker(
+        'Offline fallback translation',
+        'Served, clearly labeled, when the requested translation is unavailable.',
+        'fallbackTranslationId',
+        view.fallbackTranslationOptions,
+      ),
+      this.#translationsGroup(view),
+      this.#downloadableGroup(view),
+      ...this.#onlineGroups(view),
+      this.#strongsGroup(view),
+      this.#readerGroup(),
+      this.#annotationsGroup(),
+    ]
   }
 
   override hide(): void {
     this.#unsubscribe?.()
     this.#unsubscribe = null
+    this.#renderedStructureSignature = null
+  }
+
+  override getControlValue(key: string): unknown {
+    const view = this.model.view
+    const settings = view.settings
+    switch (key as SettingsControlKey) {
+      case 'defaultTranslationId':
+        return (
+          settings.defaultTranslationId ??
+          view.defaultTranslationOptions[0]?.id ??
+          ''
+        )
+      case 'fallbackTranslationId':
+        return (
+          settings.fallbackTranslationId ??
+          view.fallbackTranslationOptions[0]?.id ??
+          ''
+        )
+      case 'languageFilter':
+        return settings.languageFilter
+      case 'strongsEnabled':
+        return view.strongsInstalled
+      case 'readerDetailsDefault':
+      case 'readerNavDefault':
+      case 'readerLayoutDefault':
+      case 'readerStrongsDefault':
+        return settings[key as ReaderDefaultKey]
+      case 'annotationsFolder':
+        return settings.annotationsFolder
+      case 'annotationTemplatePath':
+        return settings.annotationTemplatePath ?? ''
+      case 'annotationOrdering':
+        return settings.annotationOrdering
+    }
+  }
+
+  override setControlValue(key: string, value: unknown): void | Promise<void> {
+    switch (key as SettingsControlKey) {
+      case 'defaultTranslationId':
+        return this.#update((settings) => ({
+          ...settings,
+          defaultTranslationId: value as string,
+        }))
+      case 'fallbackTranslationId':
+        return this.#update((settings) => ({
+          ...settings,
+          fallbackTranslationId: value as string,
+        }))
+      case 'languageFilter':
+        return this.model.setLanguageFilter(value as string)
+      case 'strongsEnabled':
+        return this.model.setStrongsEnabled(value === true)
+      case 'readerDetailsDefault':
+      case 'readerNavDefault':
+      case 'readerLayoutDefault':
+      case 'readerStrongsDefault':
+        return this.#update((settings) => ({ ...settings, [key]: value }))
+      case 'annotationsFolder':
+        return this.#update((settings) => ({
+          ...settings,
+          annotationsFolder: (value as string).trim() || 'Annotations',
+        }))
+      case 'annotationTemplatePath':
+        return this.#update((settings) => ({
+          ...settings,
+          annotationTemplatePath: (value as string).trim() || null,
+        }))
+      case 'annotationOrdering':
+        return this.#update((settings) => ({
+          ...settings,
+          annotationOrdering: value as AnnotationOrdering,
+        }))
+    }
   }
 
   #update(update: (settings: ScriptureStudySettings) => ScriptureStudySettings): void {
@@ -97,22 +167,49 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
   }
 
   // Rebuilding the tab while the user is typing would wipe their unsaved
-  // text (values persist only on change/blur), so a render arriving while a
+  // text (values persist only on change/blur), so an update arriving while a
   // text input has focus waits for the blur.
-  #render(): void {
+  //
+  // A rebuild is also skipped when the tab's structure is unchanged — the
+  // model notifies on every persisted value, but the control the user touched
+  // already shows the new value, and emptying the container would clamp the
+  // settings scroller back to the top.
+  override update(): void {
     const focusedInput = this.#focusedTextInput()
     if (focusedInput !== null) {
-      this.#queueRenderAfterBlur(focusedInput)
+      this.#queueUpdateAfterBlur(focusedInput)
       return
     }
-    this.#renderQueuedBehindFocusedInput = false
-    const view = this.model.view
-    this.containerEl.empty()
-    this.#renderGeneral(view)
-    this.#renderTranslations(view)
-    this.#renderStrongs(view)
-    this.#renderReader(view)
-    this.#renderAnnotations(view)
+    this.#updateQueuedBehindFocusedInput = false
+    const signature = this.#structureSignature()
+    if (signature === this.#renderedStructureSignature) return
+    this.#renderedStructureSignature = signature
+    const scroller = this.#scrolledAncestor()
+    const scrollTop = scroller?.scrollTop ?? 0
+    super.update()
+    if (scroller !== null) scroller.scrollTop = scrollTop
+  }
+
+  // Everything that shapes the rendered tree except the per-control values:
+  // rows, option lists, languages, Strong's state — plus the language filter,
+  // which feeds its own dropdown's option list.
+  #structureSignature(): string {
+    const { settings, ...structure } = this.model.view
+    return JSON.stringify({
+      ...structure,
+      languageFilter: settings.languageFilter,
+    })
+  }
+
+  #scrolledAncestor(): HTMLElement | null {
+    for (
+      let el: HTMLElement | null = this.containerEl;
+      el !== null;
+      el = el.parentElement
+    ) {
+      if (el.scrollTop > 0) return el
+    }
+    return null
   }
 
   #focusedTextInput(): HTMLInputElement | null {
@@ -123,112 +220,123 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     return isTextInput && this.containerEl.contains(active) ? active : null
   }
 
-  #queueRenderAfterBlur(input: HTMLInputElement): void {
-    if (this.#renderQueuedBehindFocusedInput) return
-    this.#renderQueuedBehindFocusedInput = true
-    input.addEventListener('blur', () => this.#render(), { once: true })
-  }
-
-  #renderGeneral(view: SettingsTabView): void {
-    this.#translationPicker(
-      'Default translation',
-      'Used when a reference names no translation.',
-      view.defaultTranslationOptions,
-      view.settings.defaultTranslationId,
-      (translationId) =>
-        this.#update((settings) => ({
-          ...settings,
-          defaultTranslationId: translationId,
-        })),
-    )
-    this.#translationPicker(
-      'Offline fallback translation',
-      'Served, clearly labeled, when the requested translation is unavailable.',
-      view.fallbackTranslationOptions,
-      view.settings.fallbackTranslationId,
-      (translationId) =>
-        this.#update((settings) => ({
-          ...settings,
-          fallbackTranslationId: translationId,
-        })),
-    )
+  #queueUpdateAfterBlur(input: HTMLInputElement): void {
+    if (this.#updateQueuedBehindFocusedInput) return
+    this.#updateQueuedBehindFocusedInput = true
+    input.addEventListener('blur', () => this.update(), { once: true })
   }
 
   #translationPicker(
     name: string,
     desc: string,
-    options: { id: string; label: string }[],
-    current: string | null,
-    onChange: (translationId: string) => void,
-  ): void {
-    const setting = new Setting(this.containerEl).setName(name).setDesc(desc)
+    key: Extract<SettingsControlKey, `${string}TranslationId`>,
+    options: TranslationOption[],
+  ): SettingDefinitionControl<SettingsControlKey> {
     if (options.length === 0) {
-      setting.addDropdown((dropdown) =>
-        dropdown
-          .addOption('', NO_TRANSLATIONS_PLACEHOLDER)
-          .setValue('')
-          .setDisabled(true),
-      )
-      return
+      return {
+        name,
+        desc,
+        control: {
+          type: 'dropdown',
+          key,
+          options: { '': NO_TRANSLATIONS_PLACEHOLDER },
+          disabled: true,
+        },
+      }
     }
-    setting.addDropdown((dropdown) => {
-      options.forEach((option) => {
-        dropdown.addOption(option.id, option.label)
+    return {
+      name,
+      desc,
+      control: {
+        type: 'dropdown',
+        key,
+        options: Object.fromEntries(
+          options.map((option) => [option.id, option.label]),
+        ),
+      },
+    }
+  }
+
+  #translationsGroup(
+    view: SettingsTabView,
+  ): SettingDefinitionGroup<SettingsControlKey> {
+    const languages = [
+      ...new Set([...view.languages, view.settings.languageFilter]),
+    ].sort()
+    return {
+      type: 'group',
+      heading: 'Translations',
+      items: [
+        {
+          name: 'API.Bible key',
+          desc:
+            'Unlocks the online tier (licensed translations, fetched per passage). ' +
+            "Stored as plain text in this plugin's data.json — remove the key " +
+            'before publishing or sharing your vault.',
+          render: (setting) => this.#renderApiKeyInput(setting, view),
+        },
+        {
+          name: 'Language',
+          desc: 'Filters the downloadable list.',
+          control: {
+            type: 'dropdown',
+            key: 'languageFilter',
+            options: Object.fromEntries(
+              languages.map((language) => [language, language]),
+            ),
+          },
+        },
+      ],
+    }
+  }
+
+  // The declarative text control has no masked variant, so the key input
+  // stays imperative inside a render definition.
+  #renderApiKeyInput(setting: Setting, view: SettingsTabView): void {
+    setting.addText((text) => {
+      text.inputEl.type = 'password'
+      text.setPlaceholder('API key').setValue(view.settings.apiBibleKey ?? '')
+      text.inputEl.addEventListener('change', () => {
+        void this.model.setApiBibleKey(text.inputEl.value)
       })
-      dropdown
-        .setValue(current ?? options[0].id)
-        .onChange((translationId) => onChange(translationId))
     })
   }
 
-  #renderTranslations(view: SettingsTabView): void {
-    new Setting(this.containerEl).setName('Translations').setHeading()
-    new Setting(this.containerEl)
-      .setName('API.Bible key')
-      .setDesc(
-        'Unlocks the online tier (licensed translations, fetched per passage). ' +
-          "Stored as plain text in this plugin's data.json — remove the key " +
-          'before publishing or sharing your vault.',
-      )
-      .addText((text) => {
-        text.inputEl.type = 'password'
-        text
-          .setPlaceholder('API key')
-          .setValue(view.settings.apiBibleKey ?? '')
-        text.inputEl.addEventListener('change', () => {
-          void this.model.setApiBibleKey(text.inputEl.value)
-        })
-      })
-    new Setting(this.containerEl)
-      .setName('Language')
-      .setDesc('Filters the downloadable list.')
-      .addDropdown((dropdown) => {
-        const languages = new Set([
-          ...view.languages,
-          view.settings.languageFilter,
-        ])
-        ;[...languages].sort().forEach((language) => {
-          dropdown.addOption(language, language)
-        })
-        dropdown
-          .setValue(view.settings.languageFilter)
-          .onChange((language) => void this.model.setLanguageFilter(language))
-      })
-
-    const downloadable = view.rows.filter((row) => row.tier === 'downloadable')
-    const online = view.rows.filter((row) => row.tier === 'online')
-    new Setting(this.containerEl).setName('Downloadable — free').setHeading()
-    downloadable.forEach((row) => this.#renderDownloadableRow(row))
-    if (online.length > 0) {
-      new Setting(this.containerEl)
-        .setName('Online — requires key')
-        .setHeading()
-      online.forEach((row) => this.#renderOnlineRow(row))
+  #downloadableGroup(
+    view: SettingsTabView,
+  ): SettingDefinitionGroup<SettingsControlKey> {
+    return {
+      type: 'group',
+      heading: 'Downloadable — free',
+      items: view.rows
+        .filter((row) => row.tier === 'downloadable')
+        .map((row) => ({
+          name: row.name,
+          render: (setting: Setting) =>
+            this.#renderDownloadableRow(setting, row),
+        })),
     }
   }
 
-  #rowSetting(row: TranslationRowView): Setting {
-    const setting = new Setting(this.containerEl).setName(row.name)
+  #onlineGroups(
+    view: SettingsTabView,
+  ): SettingDefinitionGroup<SettingsControlKey>[] {
+    const online = view.rows.filter((row) => row.tier === 'online')
+    if (online.length === 0) return []
+    return [
+      {
+        type: 'group',
+        heading: 'Online — requires key',
+        items: online.map((row) => ({
+          name: row.name,
+          desc: 'Fetched per passage with your key; cached passages expire after 14 days.',
+          render: (setting: Setting) => this.#renderOnlineRow(setting, row),
+        })),
+      },
+    ]
+  }
+
+  #decorateRow(setting: Setting, row: TranslationRowView): void {
     if (row.strongsTagged) {
       setting.nameEl.createSpan({
         cls: 'scripture-study-strongs-badge',
@@ -241,11 +349,10 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         text: row.error,
       })
     }
-    return setting
   }
 
-  #renderDownloadableRow(row: TranslationRowView): void {
-    const setting = this.#rowSetting(row)
+  #renderDownloadableRow(setting: Setting, row: TranslationRowView): void {
+    this.#decorateRow(setting, row)
     if (row.busy !== null) {
       setting.addButton((button) =>
         button
@@ -281,11 +388,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     )
   }
 
-  #renderOnlineRow(row: TranslationRowView): void {
-    const setting = this.#rowSetting(row)
-    setting.setDesc(
-      'Fetched per passage with your key; cached passages expire after 14 days.',
-    )
+  #renderOnlineRow(setting: Setting, row: TranslationRowView): void {
+    this.#decorateRow(setting, row)
     setting.addExtraButton((button) =>
       button
         .setIcon('eraser')
@@ -299,130 +403,126 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     )
   }
 
-  #renderStrongs(view: SettingsTabView): void {
-    new Setting(this.containerEl).setName("Strong's").setHeading()
-    const setting = new Setting(this.containerEl)
-      .setName("Enable Strong's")
-      .setDesc(
-        "Downloads the Strong's Dictionaries module. " + STRONGS_ATTRIBUTION,
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(view.strongsInstalled)
-          .setDisabled(view.strongsBusy)
-          .onChange((enabled) => void this.model.setStrongsEnabled(enabled)),
-      )
+  #strongsGroup(
+    view: SettingsTabView,
+  ): SettingDefinitionGroup<SettingsControlKey> {
+    return {
+      type: 'group',
+      heading: "Strong's",
+      items: [
+        {
+          name: "Enable Strong's",
+          desc: this.#strongsDesc(view),
+          control: {
+            type: 'toggle',
+            key: 'strongsEnabled',
+            disabled: view.strongsBusy,
+          },
+        },
+      ],
+    }
+  }
+
+  #strongsDesc(view: SettingsTabView): string | DocumentFragment {
+    const base =
+      "Downloads the Strong's Dictionaries module. " + STRONGS_ATTRIBUTION
+    if (view.strongsError === null && view.taggedTranslationInstalled) {
+      return base
+    }
+    const fragment = createFragment()
+    fragment.append(base)
     if (view.strongsError !== null) {
-      setting.descEl.createDiv({
-        cls: 'scripture-study-settings-error',
-        text: view.strongsError,
-      })
+      fragment.append(
+        createDiv({
+          cls: 'scripture-study-settings-error',
+          text: view.strongsError,
+        }),
+      )
     }
     if (!view.taggedTranslationInstalled) {
-      setting.descEl.createDiv({
-        text: "Strong's mode needs a translation with the Strong's badge — install one under Translations (e.g. Berean Standard Bible).",
-      })
+      fragment.append(
+        createDiv({
+          text: "Strong's mode needs a translation with the Strong's badge — install one under Translations (e.g. Berean Standard Bible).",
+        }),
+      )
+    }
+    return fragment
+  }
+
+  #readerGroup(): SettingDefinitionGroup<SettingsControlKey> {
+    return {
+      type: 'group',
+      heading: 'Reader defaults',
+      items: [
+        this.#readerDefault('Details', 'readerDetailsDefault', {
+          inline: 'Inline expand',
+          'side-panel': 'Side panel',
+        }),
+        this.#readerDefault('Navigation', 'readerNavDefault', {
+          tree: 'Tree panel',
+          breadcrumb: 'Breadcrumbs',
+        }),
+        this.#readerDefault('Layout', 'readerLayoutDefault', {
+          'verse-per-line': 'Verse per line',
+          continuous: 'Continuous prose',
+        }),
+        this.#readerDefault("Strong's mode", 'readerStrongsDefault', {
+          off: 'Off',
+          on: 'On',
+        }),
+      ],
     }
   }
 
-  #renderReader(view: SettingsTabView): void {
-    new Setting(this.containerEl).setName('Reader defaults').setHeading()
-    this.#readerToggle(view, 'Details', 'readerDetailsDefault', {
-      inline: 'Inline expand',
-      'side-panel': 'Side panel',
-    })
-    this.#readerToggle(view, 'Navigation', 'readerNavDefault', {
-      tree: 'Tree panel',
-      breadcrumb: 'Breadcrumbs',
-    })
-    this.#readerToggle(view, 'Layout', 'readerLayoutDefault', {
-      'verse-per-line': 'Verse per line',
-      continuous: 'Continuous prose',
-    })
-    this.#readerToggle(view, "Strong's mode", 'readerStrongsDefault', {
-      off: 'Off',
-      on: 'On',
-    })
-  }
-
-  #readerToggle<
-    Key extends
-      | 'readerDetailsDefault'
-      | 'readerNavDefault'
-      | 'readerLayoutDefault'
-      | 'readerStrongsDefault',
-  >(
-    view: SettingsTabView,
+  #readerDefault<Key extends ReaderDefaultKey>(
     name: string,
     key: Key,
     labels: Record<ScriptureStudySettings[Key], string>,
-  ): void {
-    new Setting(this.containerEl)
-      .setName(name)
-      .setDesc('Seeds new reader panes; in-pane switches stay per pane.')
-      .addDropdown((dropdown) => {
-        Object.entries<string>(labels).forEach(([value, label]) => {
-          dropdown.addOption(value, label)
-        })
-        dropdown
-          .setValue(view.settings[key])
-          .onChange((value) =>
-            this.#update((settings) => ({ ...settings, [key]: value })),
-          )
-      })
+  ): SettingDefinitionControl<SettingsControlKey> {
+    return {
+      name,
+      desc: READER_DEFAULT_DESC,
+      control: { type: 'dropdown', key, options: labels },
+    }
   }
 
-  #renderAnnotations(view: SettingsTabView): void {
-    new Setting(this.containerEl).setName('Annotations').setHeading()
-    new Setting(this.containerEl)
-      .setName('Folder')
-      .setDesc('Where new annotation notes are created.')
-      .addText((text) => {
-        text.setPlaceholder('Annotations').setValue(view.settings.annotationsFolder)
-        new FolderSuggest(this.app, text.inputEl, (path) =>
-          this.#update((settings) => ({ ...settings, annotationsFolder: path })),
-        )
-        text.inputEl.addEventListener('change', () =>
-          this.#update((settings) => ({
-            ...settings,
-            annotationsFolder: text.inputEl.value.trim() || 'Annotations',
-          })),
-        )
-      })
-    new Setting(this.containerEl)
-      .setName('Template file')
-      .setDesc('Copied into new annotation notes; leave empty for none.')
-      .addText((text) => {
-        text
-          .setPlaceholder('None')
-          .setValue(view.settings.annotationTemplatePath ?? '')
-        new FileSuggest(this.app, text.inputEl, (path) =>
-          this.#update((settings) => ({
-            ...settings,
-            annotationTemplatePath: path,
-          })),
-        )
-        text.inputEl.addEventListener('change', () =>
-          this.#update((settings) => ({
-            ...settings,
-            annotationTemplatePath: text.inputEl.value.trim() || null,
-          })),
-        )
-      })
-    new Setting(this.containerEl)
-      .setName('Display ordering')
-      .setDesc('Order of annotations in the reader details surface.')
-      .addDropdown((dropdown) =>
-        dropdown
-          .addOption('created-oldest-first', 'Creation date, oldest first')
-          .addOption('path-a-z', 'File path, A to Z')
-          .setValue(view.settings.annotationOrdering)
-          .onChange((ordering) =>
-            this.#update((settings) => ({
-              ...settings,
-              annotationOrdering: ordering as AnnotationOrdering,
-            })),
-          ),
-      )
+  #annotationsGroup(): SettingDefinitionGroup<SettingsControlKey> {
+    return {
+      type: 'group',
+      heading: 'Annotations',
+      items: [
+        {
+          name: 'Folder',
+          desc: 'Where new annotation notes are created.',
+          control: {
+            type: 'folder',
+            key: 'annotationsFolder',
+            placeholder: 'Annotations',
+          },
+        },
+        {
+          name: 'Template file',
+          desc: 'Copied into new annotation notes; leave empty for none.',
+          control: {
+            type: 'file',
+            key: 'annotationTemplatePath',
+            placeholder: 'None',
+            filter: (file: TFile) => file.extension === 'md',
+          },
+        },
+        {
+          name: 'Display ordering',
+          desc: 'Order of annotations in the reader details surface.',
+          control: {
+            type: 'dropdown',
+            key: 'annotationOrdering',
+            options: {
+              'created-oldest-first': 'Creation date, oldest first',
+              'path-a-z': 'File path, A to Z',
+            },
+          },
+        },
+      ],
+    }
   }
 }
