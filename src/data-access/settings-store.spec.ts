@@ -39,6 +39,36 @@ describe('SettingsStore', () => {
     })
   })
 
+  it('silently drops the removed online-tier fields on load', async () => {
+    const { store } = setup({
+      installedModuleIds: ['web'],
+      apiBibleKey: 'key-123',
+      enabledOnlineTranslationIds: ['nkjv'],
+    })
+
+    const settings = await store.loadSettings()
+
+    expect(settings).toEqual({
+      ...DEFAULT_SETTINGS,
+      installedModuleIds: ['web'],
+    })
+    expect('apiBibleKey' in settings).toBe(false)
+    expect('enabledOnlineTranslationIds' in settings).toBe(false)
+  })
+
+  it('drops the removed fields from the persisted data on the next update', async () => {
+    const { store, data } = setup({
+      installedModuleIds: ['web'],
+      apiBibleKey: 'key-123',
+      enabledOnlineTranslationIds: ['nkjv'],
+    })
+
+    await store.updateSettings((settings) => settings)
+
+    expect(data()).not.toHaveProperty('apiBibleKey')
+    expect(data()).not.toHaveProperty('enabledOnlineTranslationIds')
+  })
+
   it('persists and returns the updated settings', async () => {
     const { store, data } = setup()
 

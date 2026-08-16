@@ -19,13 +19,9 @@ import {
   createLivePreviewExtension,
   refreshRenderedReferences,
 } from './live-preview-extension'
-import {
-  ModulePassageSource,
-  type PassageSource,
-} from './module-passage-source'
+import { ModulePassageSource } from './module-passage-source'
 import type { VaultReferenceIndex } from '../vault-index'
 import { PassageRepository } from './passage-repository'
-import { TieredPassageSource } from './tiered-passage-source'
 import { processRenderedElement } from './process-rendered-element'
 import { renderContextFromSettings } from './render-context'
 import type {
@@ -53,17 +49,12 @@ export class RenderingFeature extends PluginFeature {
     plugin: Plugin,
     store: ModuleStore,
     readonly navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR,
-    onlineSource?: PassageSource,
     index?: VaultReferenceIndex,
     firstRun?: FirstRunInstallDeps,
   ) {
     super(plugin)
-    const moduleSource = new ModulePassageSource(store)
-    const tiered = onlineSource
-      ? new TieredPassageSource(moduleSource, onlineSource)
-      : moduleSource
     this.#repository = new PassageRepository(
-      new FallbackPassageSource(tiered, () =>
+      new FallbackPassageSource(new ModulePassageSource(store), () =>
         resolveFallbackTranslationId(this.settings),
       ),
     )

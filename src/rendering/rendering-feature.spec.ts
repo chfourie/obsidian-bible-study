@@ -44,7 +44,6 @@ describe('RenderingFeature in-note intersections', () => {
       plugin,
       {} as ModuleStore,
       NOOP_REFERENCE_NAVIGATOR,
-      undefined,
       index,
     )
     await feature.load()

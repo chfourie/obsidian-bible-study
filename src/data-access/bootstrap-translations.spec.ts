@@ -59,45 +59,13 @@ describe('applyTranslationBootstrap', () => {
     expect(settings.fallbackTranslationId).toBe(null)
   })
 
-  it('accepts enabled online translations as default candidates when a key is set', () => {
+  it('drops a legacy online default that no installed module backs', () => {
     const settings = applyTranslationBootstrap({
       ...DEFAULT_SETTINGS,
-      apiBibleKey: 'key-123',
-      enabledOnlineTranslationIds: ['nkjv'],
-    })
-
-    expect(settings.defaultTranslationId).toBe('nkjv')
-  })
-
-  it('never uses an online translation as the offline fallback', () => {
-    const settings = applyTranslationBootstrap({
-      ...DEFAULT_SETTINGS,
-      apiBibleKey: 'key-123',
-      enabledOnlineTranslationIds: ['nkjv'],
-    })
-
-    expect(settings.fallbackTranslationId).toBe(null)
-  })
-
-  it('drops an online default once the key is removed', () => {
-    const settings = applyTranslationBootstrap({
-      ...DEFAULT_SETTINGS,
-      apiBibleKey: null,
-      enabledOnlineTranslationIds: ['nkjv'],
+      installedModuleIds: [],
       defaultTranslationId: 'nkjv',
     })
 
     expect(settings.defaultTranslationId).toBe(null)
-  })
-
-  it('prefers installed modules over online translations for the auto-set default', () => {
-    const settings = applyTranslationBootstrap({
-      ...DEFAULT_SETTINGS,
-      installedModuleIds: ['web'],
-      apiBibleKey: 'key-123',
-      enabledOnlineTranslationIds: ['nkjv'],
-    })
-
-    expect(settings.defaultTranslationId).toBe('web')
   })
 })
