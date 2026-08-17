@@ -7,6 +7,7 @@ import {
   makeVerseId,
   parseReference,
   rangeContains,
+  referencesIntersect,
   verseCount,
   type Reference,
 } from '../reference'
@@ -388,12 +389,7 @@ export class ReaderPaneModel {
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
-      // The chapter list keeps every member, the chapter's own included, so
-      // the reader can see which verses of it a cross-reference touches.
-      chapterCrossReferences: this.#crossReferenceViews(
-        chapterReference(this.#position),
-        [],
-      ),
+      chapterCrossReferences: this.#chapterCrossReferences(),
       collection: this.#collectionView(),
       attribution: this.#attribution,
       strongsAvailable: this.#strongsAvailable,
@@ -816,6 +812,24 @@ export class ReaderPaneModel {
       },
     }
     this.#notify()
+  }
+
+  // The chapter list keeps every member, the chapter's own included, so the
+  // reader can see which verses of it a cross-reference touches — and leads
+  // with those, so the passage on screen anchors the row.
+  #chapterCrossReferences(): CrossReferenceView[] {
+    const chapter = chapterReference(this.#position)
+    return this.#crossReferenceViews(chapter, []).map((entry) => ({
+      ...entry,
+      members: [
+        ...entry.members.filter((member) =>
+          referencesIntersect(member.reference, chapter),
+        ),
+        ...entry.members.filter(
+          (member) => !referencesIntersect(member.reference, chapter),
+        ),
+      ],
+    }))
   }
 
   #crossReferenceViews(

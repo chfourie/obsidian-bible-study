@@ -1486,6 +1486,55 @@ describe('cross-references intersecting the viewed chapter', () => {
     ])
   })
 
+  it('leads with the member intersecting the viewed chapter', async () => {
+    const abiding: CrossReference = {
+      id: 'xr-abiding',
+      members: [ref('John 8:31-32'), ref('John 15:7-8')],
+      description: null,
+    }
+    const model = modelWith({ crossReferences: storeOver(() => [abiding]) })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(
+      model.view.chapterCrossReferences[0].members.map((member) => member.label),
+    ).toEqual(['John 15:7-8', 'John 8:31-32'])
+  })
+
+  it('keeps the stored order among members intersecting the chapter', async () => {
+    const branches: CrossReference = {
+      id: 'xr-branches',
+      members: [ref('Psalm 80:8-16'), ref('John 15:1-2'), ref('John 15:7-8')],
+      description: null,
+    }
+    const model = modelWith({ crossReferences: storeOver(() => [branches]) })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(
+      model.view.chapterCrossReferences[0].members.map((member) => ({
+        label: member.label,
+        index: member.index,
+      })),
+    ).toEqual([
+      { label: 'John 15:1-2', index: 1 },
+      { label: 'John 15:7-8', index: 2 },
+      { label: 'Psalms 80:8-16', index: 0 },
+    ])
+  })
+
+  it('keeps the stored order among members elsewhere', async () => {
+    const model = modelWith({
+      crossReferences: storeOver(() => [vineCrossReference]),
+    })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(
+      model.view.chapterCrossReferences[0].members.map((member) => member.label),
+    ).toEqual(['John 15:1-8', 'Psalms 80:8-16', 'Romans 11:17-24'])
+  })
+
   it('leaves cross-references touching no verse of the chapter out', async () => {
     const elsewhere: CrossReference = {
       id: 'xr-elsewhere',
