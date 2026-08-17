@@ -92,7 +92,7 @@
   }
 
   const onWordClick = (
-    event: MouseEvent,
+    event: MouseEvent | KeyboardEvent,
     verseId: number,
     strongs: string[],
   ): void => {
