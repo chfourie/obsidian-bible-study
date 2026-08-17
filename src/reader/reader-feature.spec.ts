@@ -198,7 +198,6 @@ describe('ReaderFeature entry points', () => {
     ).toEqual([
       {
         file: 'Annotations/John 15.1.md',
-        title: 'John 15.1',
         body: 'The vine is Christ.\n',
       },
     ])

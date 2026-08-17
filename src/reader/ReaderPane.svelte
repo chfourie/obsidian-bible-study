@@ -143,31 +143,17 @@
   {#if details.annotations.length === 0}
     <div class="bsr-details-empty">No annotations.</div>
   {:else}
-    {#each details.annotations as block (block.file)}
-      <details class="bsr-anno-block" open>
-        <summary class="bsr-anno-summary">
-          <span class="bsr-anno-fold" aria-hidden="true">▾</span>
-          <button
-            type="button"
-            class="bsr-anno-title"
-            aria-label="Open annotation in editor"
-            onclick={(event) => {
-              event.preventDefault()
-              openNote(block.file)
-            }}
-          >{block.title}</button>
-          <button
-            type="button"
-            class="bsr-anno-edit"
-            aria-label="Open annotation in editor"
-            onclick={(event) => {
-              event.preventDefault()
-              openNote(block.file)
-            }}
-          >✎</button>
-        </summary>
+    {#each details.annotations as block, index (block.file)}
+      {#if index > 0}<hr class="bsr-anno-sep" />{/if}
+      <div class="bsr-anno-block">
+        <button
+          type="button"
+          class="bsr-anno-edit"
+          aria-label="Open annotation in editor"
+          onclick={() => openNote(block.file)}
+        >✎</button>
         <div class="bsr-anno-body" use:markdown={{ text: block.body, path: block.file }}></div>
-      </details>
+      </div>
     {/each}
   {/if}
   <div class="bsr-group-label">Mentions</div>
@@ -946,56 +932,34 @@
   }
 
   .bsr-anno-block {
-    border: 1px solid var(--background-modifier-border);
-    border-left: 3px solid var(--color-yellow);
-    border-radius: var(--radius-m);
-    background: var(--background-secondary);
+    position: relative;
     margin: 6px 0;
-    padding: 4px 10px;
     font-size: var(--font-ui-small);
   }
 
-  .bsr-anno-summary {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    list-style: none;
-  }
-
-  .bsr-anno-fold {
-    color: var(--text-faint);
-    font-size: 0.8em;
-  }
-
-  .bsr-anno-block:not([open]) .bsr-anno-fold {
-    rotate: -90deg;
-  }
-
-  .bsr-anno-title {
-    flex: 1;
-    background: none;
+  .bsr-anno-sep {
+    width: 66.7%;
+    margin: 8px auto;
     border: none;
-    box-shadow: none;
-    padding: 0;
-    text-align: left;
-    color: var(--text-normal);
-    font-weight: 600;
-    font-size: inherit;
-    cursor: pointer;
-  }
-
-  .bsr-anno-title:hover {
-    color: var(--text-accent);
+    border-top: 1px solid var(--background-modifier-border);
   }
 
   .bsr-anno-edit {
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0;
     background: none;
     border: none;
     box-shadow: none;
     padding: 0 4px;
     color: var(--text-muted);
     cursor: pointer;
+  }
+
+  .bsr-anno-block:hover .bsr-anno-edit,
+  .bsr-anno-edit:focus-visible {
+    opacity: 1;
   }
 
   .bsr-anno-edit:hover {
@@ -1005,7 +969,6 @@
   .bsr-anno-body {
     max-height: 240px;
     overflow-y: auto;
-    padding: 4px 0 6px;
     user-select: text;
   }
 

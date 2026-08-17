@@ -122,7 +122,6 @@ export type NoteCardView = {
 
 export type AnnotationBlockView = {
   file: string
-  title: string
   body: string
 }
 
@@ -134,11 +133,6 @@ export type VerseDetailsView = {
   mentions: NoteCardView[]
   strongs: StrongsEntryView[]
   strongsAttribution: string | null
-}
-
-const noteTitle = (file: string): string => {
-  const basename = file.split('/').pop() ?? file
-  return basename.replace(/\.md$/, '')
 }
 
 const singleVerseReference = (book: number, verseId: number): Reference => ({
@@ -618,7 +612,6 @@ export class ReaderPaneModel {
         if (details === null) return null
         return {
           file: occurrence.file,
-          title: noteTitle(occurrence.file),
           body: details.body,
           created: details.created,
         }
@@ -631,7 +624,7 @@ export class ReaderPaneModel {
           ? a.created - b.created
           : a.file.localeCompare(b.file),
       )
-      .map(({ file, title, body }) => ({ file, title, body }))
+      .map(({ file, body }) => ({ file, body }))
   }
 
   async #loadChapter(): Promise<void> {

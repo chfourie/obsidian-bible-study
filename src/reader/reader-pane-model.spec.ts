@@ -440,7 +440,6 @@ describe('verse details', () => {
       annotations: [
         {
           file: 'Annotations/John 15.4.md',
-          title: 'John 15.4',
           body: 'Abiding means remaining.',
         },
       ],
@@ -685,7 +684,6 @@ describe('occurrence refresh', () => {
     expect(model.view.details[verse4].annotations).toEqual([
       {
         file: 'Annotations/John 15.4.md',
-        title: 'John 15.4',
         body: 'note body',
       },
     ])
