@@ -65,7 +65,23 @@ describe('parseBsbTables verse text edge cases', () => {
   it('keeps parentheses attached when their word is an untranslated placeholder', () => {
     expect(verse(42, 9, 14).text).toBe(
       '(There were about five thousand men.) He told His disciples, ' +
-        '“Have them sit down in groups of about fifty each.',
+        '“Have them sit down in groups of about fifty each.”',
+    )
+  })
+
+  it('emits the End text closing quote after the pnc punctuation', () => {
+    expect(verse(40, 4, 4).text).toBe(
+      'But Jesus answered, “It is written: ‘Man shall not live on bread ' +
+        'alone, but on every word that comes from the mouth of God.’”',
+    )
+  })
+
+  it('emits End text quotes mid-verse and punctuation from skipped placeholder rows', () => {
+    expect(verse(40, 4, 6).text).toBe(
+      '“If You are the Son of God,” he said, “throw Yourself down. For it ' +
+        'is written: ‘He will command His angels concerning You, and they ' +
+        'will lift You up in their hands, so that You will not strike Your ' +
+        'foot against a stone.’”',
     )
   })
 
@@ -132,7 +148,7 @@ describe('parseBsbTables red-letter spans', () => {
     expect(spanTexts(matthew44, matthew44.red)).toEqual([
       '“It is written:',
       '‘Man shall not live on bread alone, but on every word that comes ' +
-        'from the mouth of God.’',
+        'from the mouth of God.’”',
     ])
   })
 
@@ -140,7 +156,7 @@ describe('parseBsbTables red-letter spans', () => {
     const luke914 = verse(42, 9, 14)
     expect(spanTexts(luke914, luke914.red)).toEqual([
       '(There were about five thousand men.)',
-      '“Have them sit down in groups of about fifty each.',
+      '“Have them sit down in groups of about fifty each.”',
     ])
     expect(verse(40, 4, 5).red).toBeUndefined()
   })
