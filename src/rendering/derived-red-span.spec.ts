@@ -98,6 +98,48 @@ describe('derivedRedSpan', () => {
     })
   })
 
+  it('skips a carried-over closing quote when seeking the red start', () => {
+    const text = '…the prophet.” Then Jesus said, “Go.”'
+
+    expect(derivedRedSpan(text, partial(false, true))).toEqual({
+      start: 32,
+      end: text.length,
+    })
+  })
+
+  it('skips a trailing opening quote when seeking the red end', () => {
+    expect(
+      derivedRedSpan('“Go,” he said, adding, “', partial(true, false)),
+    ).toEqual({ start: 0, end: 5 })
+  })
+
+  it('skips a carried-over German closing quote at the verse start', () => {
+    const text = 'Propheten.“ Jesus sagte: „Komm.“'
+
+    expect(derivedRedSpan(text, partial(false, true))).toEqual({
+      start: 25,
+      end: text.length,
+    })
+  })
+
+  it('covers the whole verse when no opening-shaped mark exists for a red start', () => {
+    const text = '…the prophet.” Then Jesus said, Go.'
+
+    expect(derivedRedSpan(text, partial(false, true))).toEqual({
+      start: 0,
+      end: text.length,
+    })
+  })
+
+  it('anchors a spaced French opening guillemet by its leading whitespace', () => {
+    const text = 'Il dit : « Va. »'
+
+    expect(derivedRedSpan(text, partial(false, true))).toEqual({
+      start: 9,
+      end: text.length,
+    })
+  })
+
   it('anchors at position zero when the verse text starts with a quote mark', () => {
     const text = '“Go,” he said. “Come.”'
 
