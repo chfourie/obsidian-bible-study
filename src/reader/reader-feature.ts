@@ -23,11 +23,23 @@ const DEFAULT_POSITION: ReaderPosition = { book: 43, chapter: 1 }
 // multi-file edits collapse into a single refresh per open pane.
 const DEFAULT_INDEX_REFRESH_DEBOUNCE_MS = 100
 
+export type ReaderCrossReferences = {
+  intersecting: (reference: Reference) => CrossReference[]
+  create: (members: Reference[], description: string | null) => Promise<void>
+  onChanged: (listener: () => void) => () => void
+}
+
 export type ReaderFeatureOptions = {
   indexRefreshDebounceMs?: number
   strongs?: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
-  crossReferences?: (reference: Reference) => CrossReference[]
+  crossReferences?: ReaderCrossReferences
+}
+
+const INERT_CROSS_REFERENCES: ReaderCrossReferences = {
+  intersecting: () => [],
+  create: async () => {},
+  onChanged: () => () => {},
 }
 
 const INERT_STRONGS: ReaderStrongsDeps = {
@@ -42,11 +54,12 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   readonly #indexRefreshDebounceMs: number
   #pendingRefresh: number | null = null
   #unsubscribeIndex: (() => void) | null = null
+  #unsubscribeCrossReferences: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
   #annotator: (reference: Reference) => void = () => {}
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
-  readonly #crossReferences: (reference: Reference) => CrossReference[]
+  readonly #crossReferences: ReaderCrossReferences
 
   constructor(
     plugin: Plugin,
@@ -59,7 +72,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       options.indexRefreshDebounceMs ?? DEFAULT_INDEX_REFRESH_DEBOUNCE_MS
     this.#strongs = options.strongs ?? INERT_STRONGS
     this.#firstRun = options.firstRun
-    this.#crossReferences = options.crossReferences ?? (() => [])
+    this.#crossReferences = options.crossReferences ?? INERT_CROSS_REFERENCES
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.3): unavailable translations show an unavailable row.
     // Panes pick between the two repositories per their red-letter toggle,
@@ -76,6 +89,9 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     this.#unsubscribeIndex = this.index.onChanged(() =>
       this.#scheduleOccurrenceRefresh(),
     )
+    this.#unsubscribeCrossReferences = this.#crossReferences.onChanged(() =>
+      this.#scheduleOccurrenceRefresh(),
+    )
     this.plugin.registerView(
       READER_VIEW_TYPE,
       (leaf: WorkspaceLeaf) => new ReaderView(leaf, this),
@@ -90,6 +106,8 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   override unload(): void {
     this.#unsubscribeIndex?.()
     this.#unsubscribeIndex = null
+    this.#unsubscribeCrossReferences?.()
+    this.#unsubscribeCrossReferences = null
     if (this.#pendingRefresh !== null) {
       window.clearTimeout(this.#pendingRefresh)
       this.#pendingRefresh = null
@@ -147,7 +165,10 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
         availableTranslations: async () => this.#availableTranslations(),
         intersecting: (reference) =>
           this.index.intersectingOccurrences(reference),
-        crossReferences: (reference) => this.#crossReferences(reference),
+        crossReferences: (reference) =>
+          this.#crossReferences.intersecting(reference),
+        createCrossReference: (members, description) =>
+          this.#crossReferences.create(members, description),
         annotationDetails: (file) => this.#annotationDetails(file),
         strongs: this.#strongs,
         firstRun: this.#firstRun,

@@ -127,6 +127,24 @@
     return { update: render }
   }
 
+  let typedMember = $state('')
+  let collectionDescription = $state('')
+
+  const startCollecting = (): void => {
+    typedMember = ''
+    collectionDescription = ''
+    model.startCollecting()
+  }
+
+  const addTypedMember = (): void => {
+    model.addTypedReferenceToCollection(typedMember)
+    if (model.view.collection?.error === null) typedMember = ''
+  }
+
+  const createCrossReference = (description: string | null): void => {
+    void model.createCrossReference(description)
+  }
+
   const onBookPicked = (event: Event): void => {
     const book = Number((event.target as HTMLSelectElement).value)
     void model.goTo(book, 1)
@@ -299,6 +317,13 @@
       onDecreaseFontScale={() => model.decreaseFontScale()}
       onResetFontScale={() => model.resetFontScale()}
     />
+    <button
+      type="button"
+      class="bsr-collect-start"
+      title="Collect a cross-reference"
+      disabled={view.collection !== null}
+      onclick={startCollecting}
+    >Cross-reference</button>
     <span class="bsr-trans" bind:this={pillSlotEl}>
       <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
         {#each view.translations as pill (pill.id)}
@@ -323,6 +348,88 @@
       {/if}
     </span>
   </div>
+
+  {#if view.collection !== null}
+    {@const collection = view.collection}
+    <div class="bsr-basket">
+      <span class="bsr-group-label">Cross-reference</span>
+      {#if collection.stage === 'gathering'}
+        {#each collection.members as member, index (index)}
+          <span class="bsr-chip">
+            {member.label}
+            <button
+              type="button"
+              class="bsr-chip-remove"
+              aria-label="Remove {member.label}"
+              onclick={() => model.removeCollectionMember(index)}
+            >✕</button>
+          </span>
+        {/each}
+        <button
+          type="button"
+          class="bsr-basket-action"
+          disabled={!collection.canAddSelection}
+          onclick={() => model.addSelectionToCollection()}
+        >Add selection</button>
+        <input
+          class="bsr-basket-input"
+          type="text"
+          placeholder="Type a reference"
+          bind:value={typedMember}
+          onkeydown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              addTypedMember()
+            }
+          }}
+        />
+        <button type="button" class="bsr-basket-action" onclick={addTypedMember}>Add</button>
+        <span class="bsr-spacer"></span>
+        <button
+          type="button"
+          class="bsr-basket-action mod-cta"
+          disabled={!collection.canCreate}
+          onclick={() => model.beginDescribingCollection()}
+        >Create</button>
+        <button
+          type="button"
+          class="bsr-basket-action"
+          onclick={() => model.cancelCollecting()}
+        >Cancel</button>
+        {#if collection.error !== null}
+          <div class="bsr-basket-error">{collection.error}</div>
+        {/if}
+      {:else}
+        <input
+          class="bsr-basket-input bsr-basket-description"
+          type="text"
+          placeholder="Why do these belong together? (optional)"
+          bind:value={collectionDescription}
+          onkeydown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              createCrossReference(collectionDescription)
+            }
+          }}
+        />
+        <button
+          type="button"
+          class="bsr-basket-action mod-cta"
+          onclick={() => createCrossReference(collectionDescription)}
+        >Save</button>
+        <button
+          type="button"
+          class="bsr-basket-action"
+          onclick={() => createCrossReference(null)}
+        >Skip</button>
+        <button
+          type="button"
+          class="bsr-basket-action"
+          onclick={() => model.cancelDescribingCollection()}
+        >Back</button>
+      {/if}
+    </div>
+  {/if}
 
   {#if view.toggles.nav === 'breadcrumb'}
     <div class="bsr-crumb">
@@ -599,6 +706,96 @@
     display: flex;
     gap: 10px;
     white-space: nowrap;
+  }
+
+  .bsr-collect-start {
+    background: none;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-s);
+    box-shadow: none;
+    padding: 2px 10px;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsr-collect-start:hover:not(:disabled) {
+    color: var(--text-accent);
+    border-color: var(--text-accent);
+  }
+
+  .bsr-collect-start:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  .bsr-basket {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 12px;
+    background: hsla(var(--interactive-accent-hsl), 0.08);
+    border-bottom: 1px solid var(--background-modifier-border);
+  }
+
+  .bsr-basket .bsr-group-label {
+    margin-top: 0;
+  }
+
+  .bsr-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 999px;
+    padding: 1px 4px 1px 10px;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-normal);
+  }
+
+  .bsr-chip-remove {
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0 4px;
+    font-size: var(--font-smallest);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsr-chip-remove:hover {
+    color: var(--text-error);
+    background: none;
+  }
+
+  .bsr-basket-action {
+    padding: 2px 10px;
+    border-radius: var(--radius-s);
+    font-size: var(--font-ui-smaller);
+    cursor: pointer;
+  }
+
+  .bsr-basket-action:disabled {
+    color: var(--text-faint);
+    cursor: default;
+  }
+
+  .bsr-basket-input {
+    width: 160px;
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bsr-basket-description {
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .bsr-basket-error {
+    flex-basis: 100%;
+    color: var(--text-error);
+    font-size: var(--font-smallest);
   }
 
   .bsr-crumb {

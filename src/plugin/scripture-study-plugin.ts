@@ -50,8 +50,14 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     {
       firstRun: this.#firstRun,
-      crossReferences: (reference) =>
-        this.crossReferences.store.intersecting(reference),
+      crossReferences: {
+        intersecting: (reference) =>
+          this.crossReferences.store.intersecting(reference),
+        create: async (members, description) => {
+          await this.crossReferences.store.create(members, description)
+        },
+        onChanged: (listener) => this.crossReferences.store.onChanged(listener),
+      },
       strongs: {
         dictionariesInstalled: () => this.strongsDictionaries.isInstalled(),
         entriesFor: async (numbers) =>

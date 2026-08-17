@@ -61,16 +61,39 @@ const parseLine = (line: string): CrossReference | null => {
   }
 }
 
+const generateId = (): string =>
+  `xr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+export type CrossReferenceStoreOptions = {
+  path?: string
+  newId?: () => string
+}
+
 export class CrossReferenceStore {
   #entries: CrossReference[] = []
+  readonly #listeners = new Set<() => void>()
+  readonly #path: string
+  readonly #newId: () => string
 
   constructor(
     private readonly vault: CrossReferenceVault,
-    private readonly path: string = CROSS_REFERENCES_FILE_PATH,
-  ) {}
+    options: CrossReferenceStoreOptions = {},
+  ) {
+    this.#path = options.path ?? CROSS_REFERENCES_FILE_PATH
+    this.#newId = options.newId ?? generateId
+  }
+
+  onChanged(listener: () => void): () => void {
+    this.#listeners.add(listener)
+    return () => this.#listeners.delete(listener)
+  }
+
+  #notify(): void {
+    this.#listeners.forEach((listener) => listener())
+  }
 
   async load(): Promise<void> {
-    const content = await this.vault.read(this.path)
+    const content = await this.vault.read(this.#path)
     this.#entries =
       content === null
         ? []
@@ -80,6 +103,7 @@ export class CrossReferenceStore {
             .filter((line) => line !== '')
             .map(parseLine)
             .filter((entry) => entry !== null)
+    this.#notify()
   }
 
   all(): CrossReference[] {
@@ -90,5 +114,25 @@ export class CrossReferenceStore {
     return this.#entries.filter((entry) =>
       entry.members.some((member) => referencesIntersect(member, reference)),
     )
+  }
+
+  async create(
+    members: Reference[],
+    description: string | null,
+  ): Promise<CrossReference> {
+    const entry: CrossReference = { id: this.#newId(), members, description }
+    this.#entries = [...this.#entries, entry]
+    await this.save()
+    return entry
+  }
+
+  // Entries keep their file order and each occupies one line, so a save that
+  // changed nothing rewrites the file byte for byte.
+  async save(): Promise<void> {
+    await this.vault.write(
+      this.#path,
+      this.#entries.map((entry) => `${serializeCrossReference(entry)}\n`).join(''),
+    )
+    this.#notify()
   }
 }

@@ -75,6 +75,7 @@ const modelWith = (
       availableTranslations: async () => [translation('web')],
       intersecting: () => [],
       crossReferences: () => [],
+      createCrossReference: async () => {},
       annotationDetails: async () => null,
       strongs: {
         dictionariesInstalled: async () => false,
@@ -925,6 +926,7 @@ describe('reader font scale', () => {
         availableTranslations: async () => [translation('web')],
         intersecting: () => [],
         crossReferences: () => [],
+        createCrossReference: async () => {},
         annotationDetails: async () => null,
         strongs: {
           dictionariesInstalled: async () => false,
@@ -1477,5 +1479,246 @@ describe('translation availability in the reader', () => {
     ])
     expect(view.rows).toHaveLength(5)
     expect(view.rows[0].segments[0].text).toBe('I am the true vine.')
+  })
+})
+
+describe('collecting a cross-reference', () => {
+  const verse2 = makeVerseId(43, 15, 2)
+  const verse4 = makeVerseId(43, 15, 4)
+
+  const collectingModel = async (
+    overrides: Partial<ReaderPaneDeps> = {},
+  ): Promise<ReaderPaneModel> => {
+    const model = modelWith(overrides)
+    await model.openAt(ref('John 15:1'), 'web')
+    model.startCollecting()
+    return model
+  }
+
+  const gathered = (model: ReaderPaneModel): string[] =>
+    model.view.collection?.members.map((member) => member.label) ?? []
+
+  it('starts idle with no basket', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.view.collection).toBe(null)
+  })
+
+  it('opens an empty basket when collection starts', async () => {
+    const model = await collectingModel()
+
+    expect(model.view.collection).toEqual({
+      stage: 'gathering',
+      members: [],
+      canAddSelection: false,
+      canCreate: false,
+      error: null,
+    })
+  })
+
+  it('adds the current verse selection as a member and clears the selection', async () => {
+    const model = await collectingModel()
+    await model.selectVerse(verse4)
+    expect(model.view.collection?.canAddSelection).toBe(true)
+
+    model.addSelectionToCollection()
+
+    expect(model.view.collection?.members).toEqual([
+      { label: 'John 15:4', reference: ref('John 15:4') },
+    ])
+    expect(model.view.selectedVerseId).toBe(null)
+    expect(model.selectionReference()).toBe(null)
+    expect(model.view.collection?.canAddSelection).toBe(false)
+  })
+
+  it('adds an extended selection span as one member', async () => {
+    const model = await collectingModel()
+    await model.selectVerse(verse2)
+    model.extendSelectionTo(verse4)
+
+    model.addSelectionToCollection()
+
+    expect(gathered(model)).toEqual(['John 15:2-4'])
+  })
+
+  it('ignores add-selection with nothing selected', async () => {
+    const model = await collectingModel()
+
+    model.addSelectionToCollection()
+
+    expect(gathered(model)).toEqual([])
+  })
+
+  it('adds a typed reference parsed with the reference grammar', async () => {
+    const model = await collectingModel()
+
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+
+    expect(model.view.collection?.members).toEqual([
+      { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16') },
+    ])
+    expect(model.view.collection?.error).toBe(null)
+  })
+
+  it('rejects unparseable typed input visibly and leaves the basket untouched', async () => {
+    const model = await collectingModel()
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+
+    model.addTypedReferenceToCollection('Hezekiah 4:12')
+
+    expect(gathered(model)).toEqual(['Psalms 80:8-16'])
+    expect(model.view.collection?.error).toBe(
+      'Hezekiah 4:12 is not a reference.',
+    )
+  })
+
+  it('clears the rejection when a reference is added', async () => {
+    const model = await collectingModel()
+    model.addTypedReferenceToCollection('nonsense')
+
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+
+    expect(model.view.collection?.error).toBe(null)
+  })
+
+  it('removes a gathered member', async () => {
+    const model = await collectingModel()
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+    model.addTypedReferenceToCollection('Romans 11:17-24')
+
+    model.removeCollectionMember(0)
+
+    expect(gathered(model)).toEqual(['Romans 11:17-24'])
+  })
+
+  it('keeps the basket across book, chapter and translation navigation', async () => {
+    const model = await collectingModel({
+      availableTranslations: async () => [translation('web'), translation('kjv')],
+    })
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+
+    await model.goTo(43, 15)
+    await model.nextChapter()
+    await model.setTranslation('kjv')
+
+    expect(gathered(model)).toEqual(['Psalms 80:8-16'])
+  })
+
+  it('discards the basket on cancel', async () => {
+    const model = await collectingModel()
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+
+    model.cancelCollecting()
+
+    expect(model.view.collection).toBe(null)
+  })
+
+  it('gates the create action below two members', async () => {
+    const model = await collectingModel()
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+    expect(model.view.collection?.canCreate).toBe(false)
+
+    model.beginDescribingCollection()
+    expect(model.view.collection?.stage).toBe('gathering')
+
+    model.addTypedReferenceToCollection('Romans 11:17-24')
+    expect(model.view.collection?.canCreate).toBe(true)
+  })
+
+  it('prompts for a description before creating and can go back to gathering', async () => {
+    const model = await collectingModel()
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+    model.addTypedReferenceToCollection('Romans 11:17-24')
+
+    model.beginDescribingCollection()
+    expect(model.view.collection?.stage).toBe('describing')
+
+    model.cancelDescribingCollection()
+    expect(model.view.collection?.stage).toBe('gathering')
+    expect(gathered(model)).toHaveLength(2)
+  })
+
+  it('persists the gathered members with the description and returns to idle', async () => {
+    const created: { members: Reference[]; description: string | null }[] = []
+    const model = await collectingModel({
+      createCrossReference: async (members, description) => {
+        created.push({ members, description })
+      },
+    })
+    await model.selectVerse(verse4)
+    model.addSelectionToCollection()
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+    model.beginDescribingCollection()
+
+    await model.createCrossReference('Vine imagery')
+
+    expect(created).toEqual([
+      {
+        members: [ref('John 15:4'), ref('Psalm 80:8-16')],
+        description: 'Vine imagery',
+      },
+    ])
+    expect(model.view.collection).toBe(null)
+  })
+
+  it('persists a skipped description as none', async () => {
+    const created: (string | null)[] = []
+    const model = await collectingModel({
+      createCrossReference: async (_members, description) => {
+        created.push(description)
+      },
+    })
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+    model.addTypedReferenceToCollection('Romans 11:17-24')
+
+    await model.createCrossReference('   ')
+
+    expect(created).toEqual([null])
+  })
+
+  it('refuses to create below two members', async () => {
+    let creates = 0
+    const model = await collectingModel({
+      createCrossReference: async () => {
+        creates++
+      },
+    })
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+
+    await model.createCrossReference(null)
+
+    expect(creates).toBe(0)
+    expect(model.view.collection?.stage).toBe('gathering')
+  })
+
+  it('surfaces the created cross-reference in open details at once', async () => {
+    const stored: CrossReference[] = []
+    const model = await collectingModel({
+      crossReferences: (reference) =>
+        stored.filter((entry) =>
+          entry.members.some((member) => referencesIntersect(member, reference)),
+        ),
+      createCrossReference: async (members, description) => {
+        stored.push({ id: 'xr-created', members, description })
+      },
+    })
+    await model.selectVerse(verse4)
+    model.addSelectionToCollection()
+    model.addTypedReferenceToCollection('Psalm 80:8-16')
+    await model.selectVerse(verse4)
+    expect(model.view.details[verse4].crossReferences).toEqual([])
+
+    await model.createCrossReference(null)
+
+    expect(model.view.details[verse4].crossReferences).toEqual([
+      {
+        id: 'xr-created',
+        description: null,
+        members: [
+          { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16') },
+        ],
+      },
+    ])
   })
 })

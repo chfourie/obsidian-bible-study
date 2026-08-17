@@ -5,6 +5,7 @@ import {
   decodeVerseId,
   formatReference,
   makeVerseId,
+  parseReference,
   rangeContains,
   referencesIntersect,
   verseCount,
@@ -71,6 +72,10 @@ export type ReaderPaneDeps = {
   availableTranslations: () => Promise<ReaderTranslation[]>
   intersecting: (reference: Reference) => OccurrenceGroup[]
   crossReferences: (reference: Reference) => CrossReference[]
+  createCrossReference: (
+    members: Reference[],
+    description: string | null,
+  ) => Promise<void>
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
@@ -139,6 +144,18 @@ export type CrossReferenceView = {
   members: CrossReferenceMemberView[]
 }
 
+export type CollectionStage = 'gathering' | 'describing'
+
+export type CollectionView = {
+  stage: CollectionStage
+  members: CrossReferenceMemberView[]
+  canAddSelection: boolean
+  canCreate: boolean
+  error: string | null
+}
+
+const CROSS_REFERENCE_MINIMUM_MEMBERS = 2
+
 export type VerseDetailsView = {
   verseId: number
   title: string
@@ -188,6 +205,7 @@ export type ReaderPaneView = {
   selectedVerseId: number | null
   selectionEndId: number | null
   details: Record<number, VerseDetailsView>
+  collection: CollectionView | null
   attribution: string | null
   banner: string | null
   strongsAvailable: boolean
@@ -231,6 +249,13 @@ export class ReaderPaneModel {
   #installingSuggested = false
   #installError: string | null = null
   #wordStrongs: { verseId: number; numbers: string[] } | null = null
+  // The collection basket is pane-scoped and in-memory: a closed pane
+  // releases its model and the half-built cross-reference with it.
+  #collection: {
+    stage: CollectionStage
+    members: Reference[]
+    error: string | null
+  } | null = null
   #redLetterOverridden = false
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -356,6 +381,7 @@ export class ReaderPaneModel {
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
+      collection: this.#collectionView(),
       attribution: this.#attribution,
       strongsAvailable: this.#strongsAvailable,
       strongsMode: this.#strongsAvailable && this.#toggles.strongs === 'on',
@@ -528,6 +554,107 @@ export class ReaderPaneModel {
       return selection
     }
     return singleVerseReference(this.#position.book, verseId)
+  }
+
+  #collectionView(): CollectionView | null {
+    if (this.#collection === null) return null
+    return {
+      stage: this.#collection.stage,
+      members: this.#collection.members.map((member) => ({
+        label: formatReference(member),
+        reference: member,
+      })),
+      canAddSelection: this.selectionReference() !== null,
+      canCreate:
+        this.#collection.members.length >= CROSS_REFERENCE_MINIMUM_MEMBERS,
+      error: this.#collection.error,
+    }
+  }
+
+  startCollecting(): void {
+    this.#collection = { stage: 'gathering', members: [], error: null }
+    this.#notify()
+  }
+
+  cancelCollecting(): void {
+    this.#collection = null
+    this.#notify()
+  }
+
+  addSelectionToCollection(): void {
+    const selection = this.selectionReference()
+    if (this.#collection === null || selection === null) return
+    this.#gather(selection)
+    this.#resetSelection()
+    this.#refreshRowExpansion()
+  }
+
+  addTypedReferenceToCollection(text: string): void {
+    if (this.#collection === null) return
+    const trimmed = text.trim()
+    if (trimmed === '') return
+    const parsed = parseReference(trimmed, { translationIds: [] })
+    if (parsed === null) {
+      this.#collection = {
+        ...this.#collection,
+        error: `${trimmed} is not a reference.`,
+      }
+      this.#notify()
+      return
+    }
+    this.#gather(parsed.reference)
+    this.#notify()
+  }
+
+  #gather(member: Reference): void {
+    if (this.#collection === null) return
+    this.#collection = {
+      ...this.#collection,
+      members: [...this.#collection.members, member],
+      error: null,
+    }
+  }
+
+  removeCollectionMember(index: number): void {
+    if (this.#collection === null) return
+    this.#collection = {
+      ...this.#collection,
+      members: this.#collection.members.filter(
+        (_member, position) => position !== index,
+      ),
+    }
+    this.#notify()
+  }
+
+  beginDescribingCollection(): void {
+    if (this.#collection === null || this.#collectionView()?.canCreate !== true)
+      return
+    this.#collection = { ...this.#collection, stage: 'describing' }
+    this.#notify()
+  }
+
+  cancelDescribingCollection(): void {
+    if (this.#collection === null) return
+    this.#collection = { ...this.#collection, stage: 'gathering' }
+    this.#notify()
+  }
+
+  async createCrossReference(description: string | null): Promise<void> {
+    const collection = this.#collection
+    if (
+      collection === null ||
+      collection.members.length < CROSS_REFERENCE_MINIMUM_MEMBERS
+    )
+      return
+    const trimmed = description?.trim() ?? ''
+    await this.deps.createCrossReference(
+      collection.members,
+      trimmed === '' ? null : trimmed,
+    )
+    this.#collection = null
+    // Details already on screen re-read the store so the new cross-reference
+    // surfaces beside its members without reopening them.
+    await this.refreshOccurrences()
   }
 
   #displayedDetailVerseIds(): number[] {
