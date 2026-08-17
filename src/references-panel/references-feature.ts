@@ -12,10 +12,23 @@ import {
   renderContextFromSettings,
 } from '../rendering'
 import { extractOccurrences } from '../vault-index'
-import { ReferencesPanelModel, type ActiveNote } from './references-panel-model'
+import {
+  ReferencesPanelModel,
+  type ActiveNote,
+  type ReferencesPanelCrossReferences,
+} from './references-panel-model'
 import { REFERENCES_VIEW_TYPE, ReferencesView } from './references-view'
 
 export { REFERENCES_VIEW_TYPE } from './references-view'
+
+const INERT_CROSS_REFERENCES: ReferencesPanelCrossReferences = {
+  intersecting: () => [],
+}
+
+export type ReferencesFeatureOptions = {
+  crossReferences?: ReferencesPanelCrossReferences
+  onCrossReferencesChanged?: (listener: () => void) => () => void
+}
 
 export class ReferencesFeature extends PluginFeature {
   readonly #repository: PassageRepository
@@ -23,14 +36,23 @@ export class ReferencesFeature extends PluginFeature {
   #active: ActiveNote | null = null
   #showToken = 0
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
+  readonly #crossReferences: ReferencesPanelCrossReferences
+  readonly #onCrossReferencesChanged: (listener: () => void) => () => void
+  #unsubscribeCrossReferences: (() => void) | null = null
 
-  constructor(plugin: Plugin, store: ModuleStore) {
+  constructor(
+    plugin: Plugin,
+    store: ModuleStore,
+    options: ReferencesFeatureOptions = {},
+  ) {
     super(plugin)
     this.#repository = new PassageRepository(
       new ModulePassageSource(store, {
         derivedRedLetter: () => this.settings.derivedRedLetter,
       }),
     )
+    this.#crossReferences = options.crossReferences ?? INERT_CROSS_REFERENCES
+    this.#onCrossReferencesChanged = options.onCrossReferencesChanged ?? (() => () => {})
   }
 
   override async load(): Promise<void> {
@@ -56,7 +78,18 @@ export class ReferencesFeature extends PluginFeature {
         this.#noteEdited(file.path, content),
       ),
     )
+    // Cross-references are not notes: occurrence indexing does not apply, so
+    // the store's own change feed is wired in explicitly (mirroring the
+    // reader feature).
+    this.#unsubscribeCrossReferences = this.#onCrossReferencesChanged(() =>
+      this.#refreshCrossReferences(),
+    )
     await this.#showFile(workspace.getActiveFile())
+  }
+
+  override unload(): void {
+    this.#unsubscribeCrossReferences?.()
+    this.#unsubscribeCrossReferences = null
   }
 
   override onSettingsChanged(): void {
@@ -78,6 +111,7 @@ export class ReferencesFeature extends PluginFeature {
             translationIds: renderContextFromSettings(this.settings)
               .knownTranslationIds,
           }),
+        crossReferences: this.#crossReferences,
       },
       { translationId: this.settings.defaultTranslationId },
     )
@@ -130,5 +164,9 @@ export class ReferencesFeature extends PluginFeature {
 
   #fanOut(): void {
     this.#models.forEach((model) => void model.setActiveNote(this.#active))
+  }
+
+  #refreshCrossReferences(): void {
+    this.#models.forEach((model) => model.refreshCrossReferences())
   }
 }

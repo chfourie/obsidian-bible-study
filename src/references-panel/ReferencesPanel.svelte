@@ -61,6 +61,27 @@ reference in the reader with the entry's translation.
     {#if view.status === 'no-translation'}
       <p class="bsp-empty">No translation installed.</p>
     {/if}
+    {#if view.crossReferences.length > 0}
+      <div class="bsp-xrefs">
+        <div class="bsp-group-label">Cross-references</div>
+        {#each view.crossReferences as entry (entry.id)}
+          <div class="bsp-xref-block">
+            {#if entry.description !== null}
+              <div class="bsp-xref-description">{entry.description}</div>
+            {/if}
+            <div class="bsp-xref-members">
+              {#each entry.members as member (member.label)}
+                <button
+                  type="button"
+                  class="bsp-xref-member"
+                  onclick={() => openReference(member.reference, null)}
+                >{member.label}</button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
     <div class="bsp-entries">
       {#each view.entries as entry (entry.key)}
         <section class="bsp-entry">
@@ -142,6 +163,54 @@ reference in the reader with the entry's translation.
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .bsp-xrefs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .bsp-group-label {
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .bsp-xref-block {
+    font-size: var(--font-ui-small);
+  }
+
+  .bsp-xref-description {
+    color: var(--text-muted);
+  }
+
+  .bsp-xref-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .bsp-xref-member {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    height: auto;
+    font-size: inherit;
+    text-align: left;
+    color: var(--text-accent);
+    cursor: pointer;
+  }
+
+  .bsp-xref-member:hover {
+    text-decoration: underline;
+    background: none;
+    box-shadow: none;
   }
 
   .bsp-entry {

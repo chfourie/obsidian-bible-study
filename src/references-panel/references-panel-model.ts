@@ -1,4 +1,9 @@
 import {
+  otherMembersView,
+  type CrossReference,
+  type CrossReferenceView,
+} from '../cross-references'
+import {
   decodeVerseId,
   formatReference,
   mergeRanges,
@@ -35,11 +40,17 @@ export type ReferencesPanelView = {
   file: string | null
   status: ReferencesPanelStatus
   entries: ReferenceEntryView[]
+  crossReferences: CrossReferenceView[]
+}
+
+export type ReferencesPanelCrossReferences = {
+  intersecting: (reference: Reference) => CrossReference[]
 }
 
 export type ReferencesPanelDeps = {
   passages: PassageSource
   extract: (content: string) => ExtractedOccurrence[]
+  crossReferences: ReferencesPanelCrossReferences
 }
 
 export type ReferencesPanelConfig = { translationId: string | null }
@@ -95,6 +106,7 @@ const combineIntersecting = (references: PanelReference[]): PanelReference[] => 
 export class ReferencesPanelModel {
   #file: string | null = null
   #entries: ReferenceEntryView[] = []
+  #crossReferences: CrossReferenceView[] = []
   #translationId: string | null
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -116,6 +128,7 @@ export class ReferencesPanelModel {
       file: this.#file,
       status: this.#status(),
       entries: this.#entries,
+      crossReferences: this.#crossReferences,
     }
   }
 
@@ -133,13 +146,34 @@ export class ReferencesPanelModel {
     if (note === null) {
       this.#file = null
       this.#entries = []
+      this.#crossReferences = []
       this.#notify()
       return
     }
     this.#file = note.file
     this.#entries = this.#pendingEntries(note.content)
+    this.#crossReferences = this.#computeCrossReferences()
     this.#notify()
     await this.#loadEntries(token)
+  }
+
+  // Cross-references are not notes: occurrence indexing does not apply, so
+  // the caller wires store changes to this explicitly (mirroring the reader).
+  refreshCrossReferences(): void {
+    this.#crossReferences = this.#computeCrossReferences()
+    this.#notify()
+  }
+
+  #computeCrossReferences(): CrossReferenceView[] {
+    const references = this.#entries.map((entry) => entry.reference)
+    const seen = new Map<string, CrossReferenceView>()
+    for (const reference of references) {
+      for (const entry of this.deps.crossReferences.intersecting(reference)) {
+        if (!seen.has(entry.id))
+          seen.set(entry.id, otherMembersView(entry, references))
+      }
+    }
+    return [...seen.values()]
   }
 
   async setTranslation(translationId: string | null): Promise<void> {

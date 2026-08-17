@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { enumerateVerseIds, makeVerseId, type Reference } from '../reference'
+import type { CrossReference } from '../cross-references'
+import {
+  enumerateVerseIds,
+  makeVerseId,
+  referencesIntersect,
+  type Reference,
+} from '../reference'
 import type { Passage, PassageSource } from '../rendering'
 import { extractOccurrences } from '../vault-index'
-import { ReferencesPanelModel } from './references-panel-model'
+import {
+  ReferencesPanelModel,
+  type ReferencesPanelCrossReferences,
+} from './references-panel-model'
 
 type PassageRequest = { reference: Reference; translationId: string }
 
@@ -35,15 +44,37 @@ const fakeSource = () => {
   }
 }
 
+const noCrossReferences: ReferencesPanelCrossReferences = {
+  intersecting: () => [],
+}
+
+const fakeCrossReferenceStore = () => {
+  let entries: CrossReference[] = []
+  const deps: ReferencesPanelCrossReferences = {
+    intersecting: (reference) =>
+      entries.filter((entry) =>
+        entry.members.some((member) => referencesIntersect(member, reference)),
+      ),
+  }
+  return {
+    deps,
+    setEntries: (next: CrossReference[]) => {
+      entries = next
+    },
+  }
+}
+
 const model = (
   source: PassageSource,
   translationId: string | null = 'web',
+  crossReferences: ReferencesPanelCrossReferences = noCrossReferences,
 ): ReferencesPanelModel =>
   new ReferencesPanelModel(
     {
       passages: source,
       extract: (content) =>
         extractOccurrences(content, { translationIds: ['web', 'niv', 'kjv'] }),
+      crossReferences,
     },
     { translationId },
   )
@@ -52,7 +83,12 @@ describe('ReferencesPanelModel', () => {
   it('starts with no note', () => {
     const panel = model(fakeSource().source)
 
-    expect(panel.view).toEqual({ file: null, status: 'no-note', entries: [] })
+    expect(panel.view).toEqual({
+      file: null,
+      status: 'no-note',
+      entries: [],
+      crossReferences: [],
+    })
   })
 
   it('lists unique references in order of appearance with passage text', async () => {
@@ -270,7 +306,12 @@ describe('ReferencesPanelModel', () => {
 
     await panel.setActiveNote(null)
 
-    expect(panel.view).toEqual({ file: null, status: 'no-note', entries: [] })
+    expect(panel.view).toEqual({
+      file: null,
+      status: 'no-note',
+      entries: [],
+      crossReferences: [],
+    })
   })
 
   it('notifies subscribers as entries resolve', async () => {
@@ -334,5 +375,111 @@ describe('ReferencesPanelModel', () => {
 
     expect(panel.view.status).toBe('ok')
     expect(panel.view.entries[0].status).toBe('ok')
+  })
+})
+
+describe('cross-references in the References panel', () => {
+  const reference = (
+    book: number,
+    ...ranges: [start: number[], end: number[]][]
+  ): Reference => ({
+    book,
+    ranges: ranges.map(([start, end]) => ({
+      startId: makeVerseId(book, start[0], start[1]),
+      endId: makeVerseId(book, end[0], end[1]),
+    })),
+  })
+
+  const john15Vine = reference(43, [[15, 1], [15, 8]])
+  const psalm80Vine = reference(19, [[80, 8], [80, 16]])
+  const romans11Olive = reference(45, [[11, 17], [11, 24]])
+
+  const vineCrossReference: CrossReference = {
+    id: 'xr-vine',
+    members: [john15Vine, psalm80Vine, romans11Olive],
+    description: 'Vine and vineyard imagery for Israel',
+  }
+
+  it('lists an intersecting cross-reference with only the other members and its description', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([vineCrossReference])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+
+    expect(panel.view.crossReferences).toEqual([
+      {
+        id: 'xr-vine',
+        description: 'Vine and vineyard imagery for Israel',
+        members: [
+          { label: 'Psalms 80:8-16', reference: psalm80Vine },
+          { label: 'Romans 11:17-24', reference: romans11Olive },
+        ],
+      },
+    ])
+  })
+
+  it('leaves non-intersecting cross-references out of the panel', async () => {
+    const elsewhere: CrossReference = {
+      id: 'xr-elsewhere',
+      members: [reference(43, [[15, 9], [15, 9]]), reference(19, [[23, 1], [23, 1]])],
+      description: null,
+    }
+    const store = fakeCrossReferenceStore()
+    store.setEntries([vineCrossReference, elsewhere])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+
+    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
+      'xr-vine',
+    ])
+  })
+
+  it('lists a cross-reference at most once even when it intersects several entries', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([vineCrossReference])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{John 15:4} and {Psalms 80:10}',
+    })
+
+    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
+      'xr-vine',
+    ])
+    expect(
+      panel.view.crossReferences[0].members.map((member) => member.label),
+    ).toEqual(['Romans 11:17-24'])
+  })
+
+  it('updates live when the cross-reference store changes', async () => {
+    const store = fakeCrossReferenceStore()
+    const panel = model(fakeSource().source, 'web', store.deps)
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+    expect(panel.view.crossReferences).toEqual([])
+
+    store.setEntries([vineCrossReference])
+    panel.refreshCrossReferences()
+
+    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
+      'xr-vine',
+    ])
+  })
+
+  it('notifies subscribers when cross-references refresh', async () => {
+    const store = fakeCrossReferenceStore()
+    const panel = model(fakeSource().source, 'web', store.deps)
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+    let notified = 0
+    panel.subscribe(() => {
+      notified += 1
+    })
+
+    store.setEntries([vineCrossReference])
+    panel.refreshCrossReferences()
+
+    expect(notified).toBe(1)
   })
 })

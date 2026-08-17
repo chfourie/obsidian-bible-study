@@ -7,11 +7,15 @@ import {
   makeVerseId,
   parseReference,
   rangeContains,
-  referencesIntersect,
   verseCount,
   type Reference,
 } from '../reference'
-import type { CrossReference } from '../cross-references'
+import {
+  otherMembersView,
+  type CrossReference,
+  type CrossReferenceMemberView,
+  type CrossReferenceView,
+} from '../cross-references'
 import {
   FONT_SCALE_DEFAULT,
   FONT_SCALE_MAX,
@@ -131,17 +135,6 @@ export type NoteCardView = {
 export type AnnotationBlockView = {
   file: string
   body: string
-}
-
-export type CrossReferenceMemberView = {
-  label: string
-  reference: Reference
-}
-
-export type CrossReferenceView = {
-  id: string
-  description: string | null
-  members: CrossReferenceMemberView[]
 }
 
 export type CollectionStage = 'gathering' | 'describing'
@@ -746,16 +739,10 @@ export class ReaderPaneModel {
     this.#notify()
   }
 
-  // A surfaced cross-reference lists only the jump-off points: members
-  // covering the viewed verse are the passage already on screen.
   #crossReferenceViews(reference: Reference): CrossReferenceView[] {
-    return this.deps.crossReferences(reference).map((entry) => ({
-      id: entry.id,
-      description: entry.description,
-      members: entry.members
-        .filter((member) => !referencesIntersect(member, reference))
-        .map((member) => ({ label: formatReference(member), reference: member })),
-    }))
+    return this.deps
+      .crossReferences(reference)
+      .map((entry) => otherMembersView(entry, [reference]))
   }
 
   async #annotationBlocks(
