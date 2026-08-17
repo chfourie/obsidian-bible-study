@@ -188,10 +188,18 @@ reference in the reader with the entry's translation.
     text-transform: uppercase;
   }
 
+  /* The whole block is one hover target: anywhere over the description or its
+     members reveals the single edit icon anchored to the block. */
   .bsp-xref-block {
     position: relative;
-    padding-right: 20px;
+    margin: 2px -4px;
+    padding: 2px 24px 2px 4px;
+    border-radius: 4px;
     font-size: var(--font-ui-small);
+  }
+
+  .bsp-xref-block:hover {
+    background: var(--background-modifier-hover);
   }
 
   .bsp-xref-description {
@@ -200,8 +208,8 @@ reference in the reader with the entry's translation.
 
   .bsp-xref-edit {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 2px;
+    right: 2px;
     opacity: 0;
     background: none;
     border: none;

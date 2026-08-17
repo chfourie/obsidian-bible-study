@@ -388,8 +388,11 @@ export class ReaderPaneModel {
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
+      // The chapter list keeps every member, the chapter's own included, so
+      // the reader can see which verses of it a cross-reference touches.
       chapterCrossReferences: this.#crossReferenceViews(
         chapterReference(this.#position),
+        [],
       ),
       collection: this.#collectionView(),
       attribution: this.#attribution,
@@ -806,7 +809,7 @@ export class ReaderPaneModel {
         mentions: groups
           .filter((occurrence) => !occurrence.annotation)
           .map((occurrence) => ({ file: occurrence.file })),
-        crossReferences: this.#crossReferenceViews(reference),
+        crossReferences: this.#crossReferenceViews(reference, [reference]),
         strongs,
         strongsAttribution:
           strongs.length > 0 ? this.deps.strongs.attribution : null,
@@ -815,10 +818,13 @@ export class ReaderPaneModel {
     this.#notify()
   }
 
-  #crossReferenceViews(reference: Reference): CrossReferenceView[] {
+  #crossReferenceViews(
+    reference: Reference,
+    viewed: Reference[],
+  ): CrossReferenceView[] {
     return this.deps.crossReferences
       .intersecting(reference)
-      .map((entry) => crossReferenceView(entry, [reference]))
+      .map((entry) => crossReferenceView(entry, viewed))
   }
 
   async #annotationBlocks(

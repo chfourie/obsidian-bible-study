@@ -1464,7 +1464,7 @@ describe('cross-references intersecting the viewed chapter', () => {
         ),
     })
 
-  it('lists the chapter\'s cross-references with no verse selected', async () => {
+  it('lists every member, the viewed chapter\'s included', async () => {
     const model = modelWith({
       crossReferences: storeOver(() => [vineCrossReference]),
     })
@@ -1477,6 +1477,7 @@ describe('cross-references intersecting the viewed chapter', () => {
         id: 'xr-vine',
         description: 'Vine and vineyard imagery for Israel',
         members: [
+          { label: 'John 15:1-8', reference: ref('John 15:1-8'), index: 0 },
           { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
           { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
         ],
@@ -1519,7 +1520,10 @@ describe('cross-references intersecting the viewed chapter', () => {
       {
         id: 'xr-next',
         description: null,
-        members: [{ label: 'Psalms 23:1', reference: ref('Psalm 23:1'), index: 1 }],
+        members: [
+          { label: 'John 16:1', reference: ref('John 16:1'), index: 0 },
+          { label: 'Psalms 23:1', reference: ref('Psalm 23:1'), index: 1 },
+        ],
         allMembers: nextChapter.members,
       },
     ])

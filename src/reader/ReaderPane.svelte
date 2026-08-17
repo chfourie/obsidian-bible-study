@@ -1138,11 +1138,18 @@
     box-shadow: none;
   }
 
+  /* The whole block is one hover target: anywhere over the description or its
+     members reveals the single edit icon anchored to the block. */
   .bsr-xref-block {
     position: relative;
-    margin: 4px 0;
-    padding-right: 20px;
+    margin: 2px -4px;
+    padding: 2px 24px 2px 4px;
+    border-radius: 4px;
     font-size: var(--font-ui-small);
+  }
+
+  .bsr-xref-block:hover {
+    background: var(--background-modifier-hover);
   }
 
   .bsr-xref-description {
@@ -1151,8 +1158,8 @@
 
   .bsr-xref-edit {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 2px;
+    right: 2px;
     opacity: 0;
     background: none;
     border: none;
