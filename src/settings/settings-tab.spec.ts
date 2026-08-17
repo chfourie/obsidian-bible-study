@@ -8,7 +8,7 @@ import {
   TFolder,
 } from '../../tests/mocks/obsidian'
 import { SettingsStore, type ScriptureStudySettings } from '../data-access'
-import type { ModuleManifest } from '../modules'
+import { MODULE_FORMAT_VERSION, type ModuleManifest } from '../modules'
 import { ScriptureStudySettingTab } from './settings-tab'
 import { SettingsTabModel, type SettingsTabDeps } from './settings-tab-model'
 
@@ -16,6 +16,7 @@ const moduleManifest = (
   id: string,
   name = id.toUpperCase(),
   tagged = false,
+  formatVersion = MODULE_FORMAT_VERSION,
 ): ModuleManifest => ({
   id,
   name,
@@ -23,7 +24,7 @@ const moduleManifest = (
   license: 'Public Domain',
   source: 'test',
   sourceChecksum: '',
-  formatVersion: 1,
+  formatVersion,
   capabilities: { strongsTagged: tagged },
 })
 
@@ -470,6 +471,54 @@ describe('ScriptureStudySettingTab translations section', () => {
     await flushAsync()
 
     expect(downloadModule).toHaveBeenCalledWith('kjv')
+  })
+
+  it('offers Update with a format note on an installed row stored in an older module format', async () => {
+    const downloadModule = vi.fn(async () => {})
+    const { container } = await setup({
+      storedSettings: { installedModuleIds: ['kjv'] },
+      installedManifests: async () => [
+        moduleManifest('kjv', 'King James Version', true, 1),
+      ],
+      availableTranslations: async () => [
+        { id: 'kjv', name: 'King James Version', language: 'English' },
+      ],
+      downloadModule,
+    }, { page: 'Translations' })
+
+    const row = settingNamed(container, 'King James Version')
+    const buttons = [...row.querySelectorAll('button')]
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      'Update',
+      'Delete',
+    ])
+    expect(buttons[0].classList.contains('mod-cta')).toBe(true)
+    expect(row.querySelector('.setting-item-description')?.textContent).toContain(
+      'newest module format',
+    )
+
+    buttons[0].click()
+    await flushAsync()
+
+    expect(downloadModule).toHaveBeenCalledWith('kjv')
+  })
+
+  it('shows no format note on an outdated module the catalogue no longer lists', async () => {
+    const { container } = await setup({
+      storedSettings: { installedModuleIds: ['legacy'] },
+      installedManifests: async () => [
+        moduleManifest('legacy', 'Legacy Module', false, 1),
+      ],
+      availableTranslations: async () => [],
+    }, { page: 'Translations' })
+
+    const row = settingNamed(container, 'Legacy Module')
+    expect(
+      [...row.querySelectorAll('button')].map((button) => button.textContent),
+    ).toEqual(['Delete'])
+    expect(row.querySelector('.setting-item-description')?.textContent ?? '').not.toContain(
+      'newest module format',
+    )
   })
 
   it('offers only Delete on an installed module the catalogue no longer lists', async () => {

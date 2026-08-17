@@ -4,7 +4,11 @@ import {
   type ScriptureStudySettings,
   type SettingsStore,
 } from '../data-access'
-import { isTranslationManifest, type ModuleManifest } from '../modules'
+import {
+  MODULE_FORMAT_VERSION,
+  isTranslationManifest,
+  type ModuleManifest,
+} from '../modules'
 
 export type SettingsCatalogEntry = {
   id: string
@@ -37,6 +41,7 @@ export type TranslationRowView = {
   error: string | null
   updateAvailable: boolean
   redownloadable: boolean
+  formatOutdated: boolean
   strongsTagged: boolean
 }
 
@@ -202,19 +207,26 @@ export class SettingsTabModel {
         language: installed.language,
       }))
     const catalogAllIds = this.#catalog.map((entry) => entry.id)
-    return [...listed, ...installedOnly].map((entry) => ({
-      id: entry.id,
-      name: entry.name,
-      installed: installedIds.includes(entry.id),
-      busy: this.#busy.get(entry.id) ?? null,
-      error: this.#errors.get(entry.id) ?? null,
-      updateAvailable: this.#updates.includes(entry.id),
-      redownloadable: catalogAllIds.includes(entry.id),
-      strongsTagged:
-        this.#manifests.find((installed) => installed.id === entry.id)
-          ?.capabilities.strongsTagged ??
-        ('strongsTagged' in entry && entry.strongsTagged === true),
-    }))
+    return [...listed, ...installedOnly].map((entry) => {
+      const installedManifest = this.#manifests.find(
+        (installed) => installed.id === entry.id,
+      )
+      return {
+        id: entry.id,
+        name: entry.name,
+        installed: installedIds.includes(entry.id),
+        busy: this.#busy.get(entry.id) ?? null,
+        error: this.#errors.get(entry.id) ?? null,
+        updateAvailable: this.#updates.includes(entry.id),
+        redownloadable: catalogAllIds.includes(entry.id),
+        formatOutdated:
+          installedManifest !== undefined &&
+          installedManifest.formatVersion < MODULE_FORMAT_VERSION,
+        strongsTagged:
+          installedManifest?.capabilities.strongsTagged ??
+          ('strongsTagged' in entry && entry.strongsTagged === true),
+      }
+    })
   }
 
   #installedTranslationOptions(): TranslationOption[] {

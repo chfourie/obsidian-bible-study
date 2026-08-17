@@ -336,6 +336,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         text: row.error,
       })
     }
+    if (row.formatOutdated && row.redownloadable && row.busy === null) {
+      setting.descEl.createDiv({
+        text: 'Update to the newest module format — adds formatting like red letter and poetry lines where the source provides them.',
+      })
+    }
   }
 
   #renderTranslationRow(setting: Setting, row: TranslationRowView): void {
@@ -359,7 +364,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       )
       return
     }
-    if (row.updateAvailable) {
+    if (row.updateAvailable || (row.formatOutdated && row.redownloadable)) {
       setting.addButton((button) =>
         button
           .setButtonText('Update')

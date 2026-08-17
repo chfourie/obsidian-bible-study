@@ -1,16 +1,21 @@
 import { describe, expect, it, vi } from 'vitest'
 import { SettingsStore, type ScriptureStudySettings } from '../data-access'
-import type { ModuleManifest } from '../modules'
+import { MODULE_FORMAT_VERSION, type ModuleManifest } from '../modules'
 import { SettingsTabModel, type SettingsTabDeps } from './settings-tab-model'
 
-const manifest = (id: string, name = id.toUpperCase(), tagged = false): ModuleManifest => ({
+const manifest = (
+  id: string,
+  name = id.toUpperCase(),
+  tagged = false,
+  formatVersion = MODULE_FORMAT_VERSION,
+): ModuleManifest => ({
   id,
   name,
   language: 'English',
   license: 'Public Domain',
   source: 'test',
   sourceChecksum: '',
-  formatVersion: 1,
+  formatVersion,
   capabilities: { strongsTagged: tagged },
 })
 
@@ -149,6 +154,39 @@ describe('SettingsTabModel translation management list', () => {
         strongsTagged: true,
       }),
     ])
+  })
+
+  it('flags installed rows stored in an older module format', async () => {
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['web', 'kjv'] },
+      installedManifests: async () => [
+        manifest('web', 'World English Bible', false, 1),
+        manifest('kjv', 'King James Version'),
+      ],
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+        { id: 'kjv', name: 'King James Version', language: 'English' },
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.rows).toEqual([
+      expect.objectContaining({ id: 'web', formatOutdated: true }),
+      expect.objectContaining({ id: 'kjv', formatOutdated: false }),
+    ])
+  })
+
+  it('never flags uninstalled rows as format-outdated', async () => {
+    const { model } = setup({
+      availableTranslations: async () => [
+        { id: 'web', name: 'World English Bible', language: 'English' },
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.rows[0].formatOutdated).toBe(false)
   })
 
   it('shows download progress on the row until the module lands', async () => {
