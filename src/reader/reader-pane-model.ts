@@ -12,7 +12,7 @@ import {
 } from '../reference'
 import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
-  otherMembersView,
+  CrossReferenceManagement,
   type CrossReference,
   type CrossReferenceMemberView,
   type CrossReferenceView,
@@ -272,10 +272,7 @@ export class ReaderPaneModel {
     // building a brand new one.
     editing: string | null
   } | null = null
-  // In-place cross-reference management state, keyed by cross-reference id;
-  // layered onto the otherwise-pure view from otherMembersView.
-  #crossReferenceErrors: Record<string, string> = {}
-  #crossReferenceDeleteConfirmations = new Set<string>()
+  readonly #management: CrossReferenceManagement
   #redLetterOverridden = false
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -295,6 +292,17 @@ export class ReaderPaneModel {
       config.fontScalePercent ?? FONT_SCALE_DEFAULT,
     )
     this.#fontScalePercent = this.#defaultFontScale
+    this.#management = new CrossReferenceManagement({
+      commands: {
+        updateDescription: (id, description) =>
+          deps.updateCrossReferenceDescription(id, description),
+        removeMember: (id, memberIndex) =>
+          deps.removeCrossReferenceMember(id, memberIndex),
+        delete: (id) => deps.deleteCrossReference(id),
+      },
+      onChanged: () => this.refreshOccurrences(),
+      onStateChanged: () => this.#refreshCrossReferenceDetails(),
+    })
   }
 
   subscribe(listener: () => void): () => void {
@@ -811,51 +819,31 @@ export class ReaderPaneModel {
   }
 
   #crossReferenceViews(reference: Reference): CrossReferenceView[] {
-    return this.deps.crossReferences(reference).map((entry) => ({
-      ...otherMembersView(entry, [reference]),
-      error: this.#crossReferenceErrors[entry.id] ?? null,
-      confirmingDelete: this.#crossReferenceDeleteConfirmations.has(entry.id),
-    }))
+    return this.deps
+      .crossReferences(reference)
+      .map((entry) => this.#management.view(entry, [reference]))
   }
 
   async updateCrossReferenceDescription(
     id: string,
     description: string | null,
   ): Promise<void> {
-    const trimmed = description?.trim() ?? ''
-    await this.deps.updateCrossReferenceDescription(
-      id,
-      trimmed === '' ? null : trimmed,
-    )
-    await this.refreshOccurrences()
+    await this.#management.updateDescription(id, description)
   }
 
-  async removeCrossReferenceMember(id: string, memberIndex: number): Promise<void> {
-    const result = await this.deps.removeCrossReferenceMember(id, memberIndex)
-    if (result.ok) {
-      const { [id]: _removed, ...rest } = this.#crossReferenceErrors
-      this.#crossReferenceErrors = rest
-    } else {
-      this.#crossReferenceErrors = {
-        ...this.#crossReferenceErrors,
-        [id]: result.reason,
-      }
-    }
-    await this.refreshOccurrences()
+  async removeCrossReferenceMember(
+    id: string,
+    memberIndex: number,
+  ): Promise<void> {
+    await this.#management.removeMember(id, memberIndex)
   }
 
   confirmDeleteCrossReference(id: string): void {
-    this.#crossReferenceDeleteConfirmations = new Set(
-      this.#crossReferenceDeleteConfirmations,
-    ).add(id)
-    this.#refreshCrossReferenceDetails()
+    this.#management.confirmDelete(id)
   }
 
   cancelDeleteCrossReference(id: string): void {
-    const next = new Set(this.#crossReferenceDeleteConfirmations)
-    next.delete(id)
-    this.#crossReferenceDeleteConfirmations = next
-    this.#refreshCrossReferenceDetails()
+    this.#management.cancelDelete(id)
   }
 
   // Confirmation and error state are local UI state — updating them refreshes
@@ -876,9 +864,7 @@ export class ReaderPaneModel {
   }
 
   async deleteCrossReference(id: string): Promise<void> {
-    await this.deps.deleteCrossReference(id)
-    this.cancelDeleteCrossReference(id)
-    await this.refreshOccurrences()
+    await this.#management.delete(id)
   }
 
   async #annotationBlocks(

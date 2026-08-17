@@ -3,6 +3,10 @@ import {
   NOOP_REFERENCE_NAVIGATOR,
   type ReferenceNavigator,
 } from '../contracts'
+import {
+  INERT_CROSS_REFERENCE_CATALOG,
+  type CrossReferenceCatalog,
+} from '../cross-references'
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
 import type { Reference } from '../reference'
@@ -12,25 +16,13 @@ import {
   renderContextFromSettings,
 } from '../rendering'
 import { extractOccurrences } from '../vault-index'
-import {
-  ReferencesPanelModel,
-  type ActiveNote,
-  type ReferencesPanelCrossReferences,
-} from './references-panel-model'
+import { ReferencesPanelModel, type ActiveNote } from './references-panel-model'
 import { REFERENCES_VIEW_TYPE, ReferencesView } from './references-view'
 
 export { REFERENCES_VIEW_TYPE } from './references-view'
 
-const INERT_CROSS_REFERENCES: ReferencesPanelCrossReferences = {
-  intersecting: () => [],
-  updateDescription: async () => {},
-  removeMember: async () => ({ ok: true }),
-  delete: async () => {},
-}
-
 export type ReferencesFeatureOptions = {
-  crossReferences?: ReferencesPanelCrossReferences
-  onCrossReferencesChanged?: (listener: () => void) => () => void
+  crossReferences?: CrossReferenceCatalog
 }
 
 export class ReferencesFeature extends PluginFeature {
@@ -39,8 +31,7 @@ export class ReferencesFeature extends PluginFeature {
   #active: ActiveNote | null = null
   #showToken = 0
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
-  readonly #crossReferences: ReferencesPanelCrossReferences
-  readonly #onCrossReferencesChanged: (listener: () => void) => () => void
+  readonly #crossReferences: CrossReferenceCatalog
   #unsubscribeCrossReferences: (() => void) | null = null
 
   constructor(
@@ -54,8 +45,8 @@ export class ReferencesFeature extends PluginFeature {
         derivedRedLetter: () => this.settings.derivedRedLetter,
       }),
     )
-    this.#crossReferences = options.crossReferences ?? INERT_CROSS_REFERENCES
-    this.#onCrossReferencesChanged = options.onCrossReferencesChanged ?? (() => () => {})
+    this.#crossReferences =
+      options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
   }
 
   override async load(): Promise<void> {
@@ -84,7 +75,7 @@ export class ReferencesFeature extends PluginFeature {
     // Cross-references are not notes: occurrence indexing does not apply, so
     // the store's own change feed is wired in explicitly (mirroring the
     // reader feature).
-    this.#unsubscribeCrossReferences = this.#onCrossReferencesChanged(() =>
+    this.#unsubscribeCrossReferences = this.#crossReferences.onChanged(() =>
       this.#refreshCrossReferences(),
     )
     await this.#showFile(workspace.getActiveFile())

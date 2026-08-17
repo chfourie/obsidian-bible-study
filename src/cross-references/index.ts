@@ -1,3 +1,5 @@
+export * from './cross-reference-catalog'
+export * from './cross-reference-management'
 export * from './cross-reference-store'
 export * from './cross-reference-vault'
 export * from './cross-reference-view'

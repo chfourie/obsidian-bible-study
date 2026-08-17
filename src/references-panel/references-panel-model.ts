@@ -1,8 +1,8 @@
 import {
-  otherMembersView,
+  CrossReferenceManagement,
   type CrossReference,
+  type CrossReferenceCommands,
   type CrossReferenceView,
-  type MemberRemoval,
 } from '../cross-references'
 import {
   decodeVerseId,
@@ -44,11 +44,8 @@ export type ReferencesPanelView = {
   crossReferences: CrossReferenceView[]
 }
 
-export type ReferencesPanelCrossReferences = {
+export type ReferencesPanelCrossReferences = CrossReferenceCommands & {
   intersecting: (reference: Reference) => CrossReference[]
-  updateDescription: (id: string, description: string | null) => Promise<void>
-  removeMember: (id: string, memberIndex: number) => Promise<MemberRemoval>
-  delete: (id: string) => Promise<void>
 }
 
 export type ReferencesPanelDeps = {
@@ -118,17 +115,21 @@ export class ReferencesPanelModel {
   #file: string | null = null
   #entries: ReferenceEntryView[] = []
   #crossReferences: CrossReferenceView[] = []
-  #crossReferenceErrors: Record<string, string> = {}
-  #crossReferenceDeleteConfirmations = new Set<string>()
   #translationId: string | null
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
+  readonly #management: CrossReferenceManagement
 
   constructor(
     private readonly deps: ReferencesPanelDeps,
     config: ReferencesPanelConfig,
   ) {
     this.#translationId = config.translationId
+    this.#management = new CrossReferenceManagement({
+      commands: deps.crossReferences,
+      onChanged: () => this.refreshCrossReferences(),
+      onStateChanged: () => this.refreshCrossReferences(),
+    })
   }
 
   subscribe(listener: () => void): () => void {
@@ -183,13 +184,7 @@ export class ReferencesPanelModel {
     for (const reference of references) {
       for (const entry of this.deps.crossReferences.intersecting(reference)) {
         if (!seen.has(entry.id))
-          seen.set(entry.id, {
-            ...otherMembersView(entry, references),
-            error: this.#crossReferenceErrors[entry.id] ?? null,
-            confirmingDelete: this.#crossReferenceDeleteConfirmations.has(
-              entry.id,
-            ),
-          })
+          seen.set(entry.id, this.#management.view(entry, references))
       }
     }
     return [...seen.values()]
@@ -199,29 +194,14 @@ export class ReferencesPanelModel {
     id: string,
     description: string | null,
   ): Promise<void> {
-    const trimmed = description?.trim() ?? ''
-    await this.deps.crossReferences.updateDescription(
-      id,
-      trimmed === '' ? null : trimmed,
-    )
-    this.refreshCrossReferences()
+    await this.#management.updateDescription(id, description)
   }
 
   async removeCrossReferenceMember(
     id: string,
     memberIndex: number,
   ): Promise<void> {
-    const result = await this.deps.crossReferences.removeMember(id, memberIndex)
-    if (result.ok) {
-      const { [id]: _removed, ...rest } = this.#crossReferenceErrors
-      this.#crossReferenceErrors = rest
-    } else {
-      this.#crossReferenceErrors = {
-        ...this.#crossReferenceErrors,
-        [id]: result.reason,
-      }
-    }
-    this.refreshCrossReferences()
+    await this.#management.removeMember(id, memberIndex)
   }
 
   growCrossReference(id: string): void {
@@ -231,23 +211,15 @@ export class ReferencesPanelModel {
   }
 
   confirmDeleteCrossReference(id: string): void {
-    this.#crossReferenceDeleteConfirmations = new Set(
-      this.#crossReferenceDeleteConfirmations,
-    ).add(id)
-    this.refreshCrossReferences()
+    this.#management.confirmDelete(id)
   }
 
   cancelDeleteCrossReference(id: string): void {
-    const next = new Set(this.#crossReferenceDeleteConfirmations)
-    next.delete(id)
-    this.#crossReferenceDeleteConfirmations = next
-    this.refreshCrossReferences()
+    this.#management.cancelDelete(id)
   }
 
   async deleteCrossReference(id: string): Promise<void> {
-    await this.deps.crossReferences.delete(id)
-    this.cancelDeleteCrossReference(id)
-    this.refreshCrossReferences()
+    await this.#management.delete(id)
   }
 
   async setTranslation(translationId: string | null): Promise<void> {

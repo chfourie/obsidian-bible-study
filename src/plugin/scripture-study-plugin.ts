@@ -50,21 +50,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     {
       firstRun: this.#firstRun,
-      crossReferences: {
-        intersecting: (reference) =>
-          this.crossReferences.store.intersecting(reference),
-        create: async (members, description) => {
-          await this.crossReferences.store.create(members, description)
-        },
-        updateDescription: (id, description) =>
-          this.crossReferences.store.updateDescription(id, description),
-        updateMembers: (id, members) =>
-          this.crossReferences.store.updateMembers(id, members),
-        removeMember: (id, memberIndex) =>
-          this.crossReferences.store.removeMember(id, memberIndex),
-        delete: (id) => this.crossReferences.store.delete(id),
-        onChanged: (listener) => this.crossReferences.store.onChanged(listener),
-      },
+      crossReferences: this.crossReferences.store,
       strongs: {
         dictionariesInstalled: () => this.strongsDictionaries.isInstalled(),
         entriesFor: async (numbers) =>
@@ -84,17 +70,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.#firstRun,
   )
   readonly referencesPanel = new ReferencesFeature(this, this.modules.store, {
-    crossReferences: {
-      intersecting: (reference) =>
-        this.crossReferences.store.intersecting(reference),
-      updateDescription: (id, description) =>
-        this.crossReferences.store.updateDescription(id, description),
-      removeMember: (id, memberIndex) =>
-        this.crossReferences.store.removeMember(id, memberIndex),
-      delete: (id) => this.crossReferences.store.delete(id),
-    },
-    onCrossReferencesChanged: (listener) =>
-      this.crossReferences.store.onChanged(listener),
+    crossReferences: this.crossReferences.store,
   })
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(

@@ -1,6 +1,9 @@
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import type { ReferenceNavigator } from '../contracts'
-import type { CrossReference, MemberRemoval } from '../cross-references'
+import {
+  INERT_CROSS_REFERENCE_CATALOG,
+  type CrossReferenceCatalog,
+} from '../cross-references'
 import { PluginFeature } from '../data-access'
 import { isTranslationManifest, type ModuleStore } from '../modules'
 import { frontmatterLength, type Reference } from '../reference'
@@ -23,31 +26,11 @@ const DEFAULT_POSITION: ReaderPosition = { book: 43, chapter: 1 }
 // multi-file edits collapse into a single refresh per open pane.
 const DEFAULT_INDEX_REFRESH_DEBOUNCE_MS = 100
 
-export type ReaderCrossReferences = {
-  intersecting: (reference: Reference) => CrossReference[]
-  create: (members: Reference[], description: string | null) => Promise<void>
-  updateDescription: (id: string, description: string | null) => Promise<void>
-  updateMembers: (id: string, members: Reference[]) => Promise<void>
-  removeMember: (id: string, memberIndex: number) => Promise<MemberRemoval>
-  delete: (id: string) => Promise<void>
-  onChanged: (listener: () => void) => () => void
-}
-
 export type ReaderFeatureOptions = {
   indexRefreshDebounceMs?: number
   strongs?: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
-  crossReferences?: ReaderCrossReferences
-}
-
-const INERT_CROSS_REFERENCES: ReaderCrossReferences = {
-  intersecting: () => [],
-  create: async () => {},
-  updateDescription: async () => {},
-  updateMembers: async () => {},
-  removeMember: async () => ({ ok: true }),
-  delete: async () => {},
-  onChanged: () => () => {},
+  crossReferences?: CrossReferenceCatalog
 }
 
 const INERT_STRONGS: ReaderStrongsDeps = {
@@ -67,7 +50,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   #annotator: (reference: Reference) => void = () => {}
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
-  readonly #crossReferences: ReaderCrossReferences
+  readonly #crossReferences: CrossReferenceCatalog
 
   constructor(
     plugin: Plugin,
@@ -80,7 +63,8 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       options.indexRefreshDebounceMs ?? DEFAULT_INDEX_REFRESH_DEBOUNCE_MS
     this.#strongs = options.strongs ?? INERT_STRONGS
     this.#firstRun = options.firstRun
-    this.#crossReferences = options.crossReferences ?? INERT_CROSS_REFERENCES
+    this.#crossReferences =
+      options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.3): unavailable translations show an unavailable row.
     // Panes pick between the two repositories per their red-letter toggle,
@@ -175,8 +159,9 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
           this.index.intersectingOccurrences(reference),
         crossReferences: (reference) =>
           this.#crossReferences.intersecting(reference),
-        createCrossReference: (members, description) =>
-          this.#crossReferences.create(members, description),
+        createCrossReference: async (members, description) => {
+          await this.#crossReferences.create(members, description)
+        },
         updateCrossReferenceDescription: (id, description) =>
           this.#crossReferences.updateDescription(id, description),
         updateCrossReferenceMembers: (id, members) =>
