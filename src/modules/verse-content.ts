@@ -4,17 +4,33 @@ export type TagSpan = {
   strongs: string[]
 }
 
-// One poetic line within a verse, addressed by its character offset into the
-// verse text. Ticket #31 will add optional per-line metadata (indent depth,
-// paragraph start) to this record without another format break.
+// A plain character range into the verse text — the shape shared by the
+// red-letter and supplied-word channels so segmentation can compose them
+// with Strong's tag spans.
+export type FormatSpan = {
+  start: number
+  end: number
+}
+
+// One line within a verse, addressed by its character offset into the verse
+// text. Lines are joined with a single space in the flat text. A verse that
+// starts mid-line (prose continuing a paragraph) simply has no entry at 0.
 export type VerseLine = {
   start: number
+  // Poetic indent depth (1 or 2); absent for prose lines.
+  indent?: number
+  // Starts a new paragraph (prose) or stanza (poetry).
+  paragraph?: boolean
+  // Psalm superscription line, e.g. "A Psalm of David."
+  psalmHeading?: boolean
 }
 
 export type StructuredVerse = {
   text: string
   tags?: TagSpan[]
   lines?: VerseLine[]
+  red?: FormatSpan[]
+  supplied?: FormatSpan[]
 }
 
 export type TaggedVerse = StructuredVerse & { tags: TagSpan[] }
@@ -33,3 +49,9 @@ export const verseTagsOf = (content: VerseContent): TagSpan[] =>
 
 export const verseLinesOf = (content: VerseContent): VerseLine[] =>
   isStructuredVerse(content) ? (content.lines ?? []) : []
+
+export const verseRedLetterOf = (content: VerseContent): FormatSpan[] =>
+  isStructuredVerse(content) ? (content.red ?? []) : []
+
+export const verseSuppliedOf = (content: VerseContent): FormatSpan[] =>
+  isStructuredVerse(content) ? (content.supplied ?? []) : []

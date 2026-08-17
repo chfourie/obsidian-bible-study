@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto'
-import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
+import {
+  MODULE_FORMAT_VERSION,
+  type ModuleCapabilities,
+} from '../../src/modules/module-manifest'
 import type { TaggedVerse } from '../../src/modules/verse-content'
 import { parseBsbTables } from './parse-bsb-tables'
 
@@ -9,7 +12,7 @@ export type BsbArtifactManifest = {
   language: string
   license: string
   formatVersion: number
-  capabilities: { strongsTagged: boolean }
+  capabilities: ModuleCapabilities
 }
 
 export type BsbArtifact = {
@@ -24,7 +27,12 @@ export const buildBsbArtifact = (tsv: string): BsbArtifact => ({
     language: 'English',
     license: 'Public Domain',
     formatVersion: MODULE_FORMAT_VERSION,
-    capabilities: { strongsTagged: true },
+    capabilities: {
+      strongsTagged: true,
+      redLetter: true,
+      suppliedWords: true,
+      poetry: true,
+    },
   },
   books: Object.fromEntries(parseBsbTables(tsv)),
 })

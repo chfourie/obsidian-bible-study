@@ -1,9 +1,14 @@
-// v2: verses may carry a per-verse line-break channel (StructuredVerse.lines).
-// Purely additive — v1 modules (no line data) load and render unchanged.
+// v2: verses may carry optional per-verse channels beside the flat text —
+// lines (poetry/paragraph structure), red (words of Christ), and supplied
+// (translator-added words). Purely additive — v1 modules load and render
+// unchanged, and readers ignore channels they don't know.
 export const MODULE_FORMAT_VERSION = 2
 
 export type ModuleCapabilities = {
   strongsTagged: boolean
+  redLetter?: boolean
+  suppliedWords?: boolean
+  poetry?: boolean
 }
 
 export type ModuleKind = 'translation' | 'strongs-dictionaries'

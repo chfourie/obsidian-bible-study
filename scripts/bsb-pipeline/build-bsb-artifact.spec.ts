@@ -15,7 +15,12 @@ describe('buildBsbArtifact', () => {
       language: 'English',
       license: 'Public Domain',
       formatVersion: 2,
-      capabilities: { strongsTagged: true },
+      capabilities: {
+        strongsTagged: true,
+        redLetter: true,
+        suppliedWords: true,
+        poetry: true,
+      },
     })
   })
 
