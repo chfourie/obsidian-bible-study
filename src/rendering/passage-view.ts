@@ -10,6 +10,16 @@ export type VerseBlock = {
 
 const PSALMS_BOOK = 19
 
+export const isPoetryVerse = (
+  segments: VerseSegment[],
+  book: number,
+): boolean =>
+  book === PSALMS_BOOK ||
+  segments.some(
+    (segment) =>
+      segment.indent !== undefined || segment.psalmHeading === true,
+  )
+
 export type PassageView = {
   verses: VerseBlock[]
   attribution: string | null

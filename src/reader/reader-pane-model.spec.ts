@@ -9,6 +9,7 @@ import {
 import type { Passage, PassageSource } from '../rendering'
 import type { OccurrenceGroup } from '../vault-index'
 import {
+  paragraphsOf,
   ReaderPaneModel,
   type ReaderPaneDeps,
   type ReaderToggles,
@@ -96,6 +97,109 @@ const group = (file: string, annotation: boolean): OccurrenceGroup => ({
 const flushAsync = async (): Promise<void> => {
   await new Promise((resolve) => window.setTimeout(resolve, 0))
 }
+
+describe('poetry and paragraph structure', () => {
+  const structuredSource: PassageSource = {
+    passage: async (reference: Reference): Promise<Passage> => {
+      if (reference.book !== 43) return { status: 'unavailable' }
+      return {
+        status: 'ok',
+        attribution: null,
+        verses: [
+          {
+            verseId: makeVerseId(43, 15, 1),
+            segments: [{ text: 'I am the true vine.', redLetter: false }],
+            hasLineData: true,
+            startsParagraph: true,
+          },
+          {
+            verseId: makeVerseId(43, 15, 2),
+            segments: [{ text: 'Every branch in me.', redLetter: false }],
+          },
+          {
+            verseId: makeVerseId(43, 15, 3),
+            segments: [
+              {
+                text: 'A poetic line, ',
+                redLetter: false,
+                lineStart: true,
+                indent: 1,
+              },
+              {
+                text: 'an indented line.',
+                redLetter: false,
+                lineStart: true,
+                lineBreakBefore: true,
+                indent: 2,
+              },
+            ],
+            hasLineData: true,
+          },
+          {
+            verseId: makeVerseId(43, 15, 4),
+            segments: [{ text: 'Remain in me.', redLetter: false }],
+          },
+        ],
+      }
+    },
+  }
+
+  it('marks poetry rows and paragraph-starting rows', async () => {
+    const model = modelWith({ passages: structuredSource })
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    const rows = model.view.rows
+    expect(rows.map((row) => row.poetry)).toEqual([false, false, true, false])
+    expect(rows.map((row) => row.startsParagraph)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ])
+  })
+
+  it('marks every Psalms row as poetry', async () => {
+    const model = modelWith({
+      passages: passageSourceOver({
+        web: {
+          [makeVerseId(19, 23, 1)]: 'The LORD is my shepherd.',
+          [makeVerseId(19, 23, 2)]: 'He makes me lie down.',
+        },
+      }),
+    })
+
+    await model.openPosition({ book: 19, chapter: 23 })
+
+    expect(model.view.rows.map((row) => row.poetry)).toEqual([true, true])
+  })
+
+  it('groups rows into paragraphs breaking at paragraph starts and around poetry', async () => {
+    const model = modelWith({ passages: structuredSource })
+    await model.openPosition({ book: 43, chapter: 15 })
+    const rows = model.view.rows
+
+    const paragraphs = paragraphsOf(rows)
+
+    expect(
+      paragraphs.map((paragraph) => paragraph.map((row) => row.verseId)),
+    ).toEqual([
+      [makeVerseId(43, 15, 1), makeVerseId(43, 15, 2)],
+      [makeVerseId(43, 15, 3)],
+      [makeVerseId(43, 15, 4)],
+    ])
+  })
+
+  it('keeps rows without structure in one paragraph', async () => {
+    const model = modelWith()
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    const paragraphs = paragraphsOf(model.view.rows)
+
+    expect(paragraphs).toHaveLength(1)
+    expect(paragraphs[0]).toHaveLength(5)
+  })
+})
 
 describe('opening without an entry reference', () => {
   it('opens at a plain position with no banner or highlight', async () => {

@@ -167,9 +167,12 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
   }
   for (const segment of block.segments) {
     if (segment.lineBreakBefore) parent.createEl('br')
+    const indented = segment.lineStart === true && segment.indent !== undefined
     const classes = [
       ...(segment.redLetter ? ['scripture-study-red-letter'] : []),
       ...(segment.supplied ? ['scripture-study-supplied'] : []),
+      ...(segment.psalmHeading ? ['scripture-study-psalm-heading'] : []),
+      ...(indented ? [`scripture-study-indent-${segment.indent}`] : []),
     ]
     if (classes.length > 0) {
       parent.createSpan({ cls: classes.join(' '), text: segment.text })

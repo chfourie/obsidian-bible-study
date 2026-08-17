@@ -197,6 +197,87 @@ describe('renderReference inline', () => {
     expect(passage?.querySelectorAll('br')).toHaveLength(1)
   })
 
+  it('renders indent depth and psalm headings in the inline run', async () => {
+    const psalm: Passage = {
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 19023001,
+          hasLineData: true,
+          segments: [
+            {
+              text: 'A Psalm of David. ',
+              redLetter: false,
+              lineStart: true,
+              psalmHeading: true,
+            },
+            {
+              text: 'The LORD is my shepherd; ',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 1,
+            },
+            {
+              text: 'I shall not want.',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 2,
+            },
+          ],
+        },
+      ],
+    }
+    const { parent, deps } = setup(psalm)
+
+    await renderReference(parent, model('Psalms 23:1 inline'), deps)
+
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(
+      passage?.querySelector('.scripture-study-psalm-heading')?.textContent,
+    ).toBe('A Psalm of David. ')
+    expect(
+      passage?.querySelector('.scripture-study-indent-1')?.textContent,
+    ).toBe('The LORD is my shepherd; ')
+    expect(
+      passage?.querySelector('.scripture-study-indent-2')?.textContent,
+    ).toBe('I shall not want.')
+    expect(passage?.querySelectorAll('br')).toHaveLength(2)
+  })
+
+  it('applies the indent class only to the segment starting its line', async () => {
+    const poetic: Passage = {
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 19023002,
+          hasLineData: true,
+          segments: [
+            {
+              text: 'He makes me ',
+              redLetter: false,
+              lineStart: true,
+              indent: 1,
+            },
+            { text: 'lie down', redLetter: false, indent: 1, strongs: ['H7257'] },
+            { text: ' in green pastures.', redLetter: false, indent: 1 },
+          ],
+        },
+      ],
+    }
+    const { parent, deps } = setup(poetic)
+
+    await renderReference(parent, model('Psalms 23:2 inline'), deps)
+
+    const indented = parent.querySelectorAll('.scripture-study-indent-1')
+    expect([...indented].map((span) => span.textContent)).toEqual([
+      'He makes me ',
+    ])
+  })
+
   it('shows a loading placeholder until the passage arrives', async () => {
     let resolvePassage: (passage: Passage) => void = () => {}
     const { parent, deps } = setup()
@@ -681,6 +762,58 @@ describe('renderReference block', () => {
     expect(line?.textContent).toBe(
       '1The LORD is my shepherd, I lack nothing.',
     )
+  })
+
+  it('renders indent depth and psalm headings within a block verse line', async () => {
+    const psalm: Passage = {
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 19023001,
+          hasLineData: true,
+          segments: [
+            {
+              text: 'A Psalm of David. ',
+              redLetter: false,
+              lineStart: true,
+              psalmHeading: true,
+            },
+            {
+              text: 'The LORD is my shepherd; ',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 1,
+            },
+            {
+              text: 'I shall not want.',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 2,
+            },
+          ],
+        },
+      ],
+    }
+    const { parent, deps } = setup(psalm)
+
+    await renderReference(parent, model('Psalms 23:1 block'), deps)
+
+    const line = parent.querySelector(
+      '.scripture-study-passage .scripture-study-verse-line',
+    )
+    expect(
+      line?.querySelector('.scripture-study-psalm-heading')?.textContent,
+    ).toBe('A Psalm of David. ')
+    expect(line?.querySelector('.scripture-study-indent-1')?.textContent).toBe(
+      'The LORD is my shepherd; ',
+    )
+    expect(line?.querySelector('.scripture-study-indent-2')?.textContent).toBe(
+      'I shall not want.',
+    )
+    expect(line?.querySelectorAll('br')).toHaveLength(2)
   })
 
   it('shows a muted attribution line when the translation carries one', async () => {

@@ -19,12 +19,16 @@ export type VerseSegment = {
   supplied?: boolean
   strongs?: string[]
   lineBreakBefore?: boolean
+  lineStart?: boolean
+  indent?: number
+  psalmHeading?: boolean
 }
 
 export type PassageVerse = {
   verseId: number
   segments: VerseSegment[]
   hasLineData?: boolean
+  startsParagraph?: boolean
 }
 
 export type FallbackSubstitution = {
@@ -62,12 +66,10 @@ const verseSegments = (verse: VerseContent): VerseSegment[] => {
   const orderedTags = [...verseTagsOf(verse)].sort((a, b) => a.start - b.start)
   const redSpans = verseRedLetterOf(verse)
   const suppliedSpans = verseSuppliedOf(verse)
-  const lineStarts = new Set(
-    verseLinesOf(verse)
-      .map((line) => line.start)
-      .filter((start) => start > 0 && start < text.length),
-  )
-  const cuts = new Set([0, text.length, ...lineStarts])
+  const lines = [...verseLinesOf(verse)]
+    .filter((line) => line.start < text.length)
+    .sort((a, b) => a.start - b.start)
+  const cuts = new Set([0, text.length, ...lines.map((line) => line.start)])
   for (const span of [...orderedTags, ...redSpans, ...suppliedSpans]) {
     cuts.add(span.start)
     cuts.add(span.end)
@@ -86,7 +88,17 @@ const verseSegments = (verse: VerseContent): VerseSegment[] => {
     }
     if (covering(suppliedSpans, start, end)) segment.supplied = true
     if (tag !== undefined) segment.strongs = tag.strongs
-    if (lineStarts.has(start)) segment.lineBreakBefore = true
+    const line = [...lines]
+      .reverse()
+      .find((candidate) => candidate.start <= start)
+    if (line !== undefined) {
+      if (line.start === start) {
+        segment.lineStart = true
+        if (start > 0) segment.lineBreakBefore = true
+      }
+      if (line.indent !== undefined) segment.indent = line.indent
+      if (line.psalmHeading === true) segment.psalmHeading = true
+    }
     segments.push(segment)
   }
   return segments.length > 0 ? segments : [{ text: '', redLetter: false }]
@@ -118,7 +130,10 @@ export class ModulePassageSource implements PassageSource {
           verseId,
           segments: verseSegments(verse),
         }
-        if (verseLinesOf(verse).length > 0) passageVerse.hasLineData = true
+        const lines = verseLinesOf(verse)
+        if (lines.length > 0) passageVerse.hasLineData = true
+        if (lines.some((line) => line.start === 0 && line.paragraph === true))
+          passageVerse.startsParagraph = true
         verses.push(passageVerse)
       }
     }

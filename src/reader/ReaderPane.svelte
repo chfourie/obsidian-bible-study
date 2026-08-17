@@ -4,6 +4,7 @@
   import {
     FONT_SCALE_MAX,
     FONT_SCALE_MIN,
+    paragraphsOf,
     type ReaderPaneModel,
     type ReaderToggles,
     type VerseDetailsView,
@@ -253,9 +254,10 @@
   {/if}
 {/snippet}
 
-{#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied}<span
+{#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.psalmHeading}<span
       class:scripture-study-red-letter={segment.redLetter}
       class:scripture-study-supplied={segment.supplied}
+      class:scripture-study-psalm-heading={segment.psalmHeading}
     >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
 
 {#snippet detailsBlock(details: VerseDetailsView | null)}
@@ -284,27 +286,29 @@
   {/if}
 {/snippet}
 
+{#snippet segmentText(row: VerseRowView, segment: VerseSegment)}{#if view.strongsMode && segment.strongs !== undefined}<span
+      role="button"
+      tabindex="0"
+      class="bsr-strongs-word"
+      class:scripture-study-red-letter={segment.redLetter}
+      class:scripture-study-supplied={segment.supplied}
+      class:scripture-study-psalm-heading={segment.psalmHeading}
+      onclick={(event) => onWordClick(event, row.verseId, segment.strongs ?? [])}
+      onkeydown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onWordClick(event, row.verseId, segment.strongs ?? [])
+        }
+      }}
+    >{segment.text}</span>{:else}{@render formattedText(segment)}{/if}{/snippet}
+
 {#snippet verseText(row: VerseRowView)}
+  {@const lineStructured = view.toggles.layout === 'verse-per-line' || row.poetry}
   {#each row.segments as segment, index (index)}
-    {#if segment.lineBreakBefore && view.toggles.layout === 'verse-per-line'}<br />{/if}
-    {#if view.strongsMode && segment.strongs !== undefined}
-      <span
-        role="button"
-        tabindex="0"
-        class="bsr-strongs-word"
-        class:scripture-study-red-letter={segment.redLetter}
-        class:scripture-study-supplied={segment.supplied}
-        onclick={(event) => onWordClick(event, row.verseId, segment.strongs ?? [])}
-        onkeydown={(event) => {
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            onWordClick(event, row.verseId, segment.strongs ?? [])
-          }
-        }}
-      >{segment.text}</span>
-    {:else}
-      {@render formattedText(segment)}
-    {/if}
+    {#if segment.lineBreakBefore && lineStructured}<br />{/if}
+    {#if lineStructured && segment.lineStart && segment.indent !== undefined}<span
+        class="scripture-study-indent-{segment.indent}"
+      >{@render segmentText(row, segment)}</span>{:else}{@render segmentText(row, segment)}{/if}
   {/each}
   {#if verseMarks(row).anno}<span class="bsr-mark-anno" title="Annotation">●</span>{/if}
   {#if verseMarks(row).mentions > 0}
@@ -507,25 +511,27 @@
               {/if}
             {/each}
           {:else}
-            <p class="bsr-prose">
-              {#each view.rows as row (row.verseId)}
-                <span
-                  class="bsr-verse-span"
-                  class:bsr-hl={row.highlighted}
-                  class:bsr-sel={verseSelected(row.verseId)}
-                  role="button"
-                  tabindex="0"
-                  onclick={(event) => onVerseClick(event, row.verseId)}
-                  onkeydown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      void model.selectVerse(row.verseId)
-                    }
-                  }}
-                ><sup class="bsr-verse-num">{row.label}</sup>{@render verseText(row)}</span>
-                {' '}
-              {/each}
-            </p>
+            {#each paragraphsOf(view.rows) as paragraph (paragraph[0].verseId)}
+              <p class="bsr-prose">
+                {#each paragraph as row (row.verseId)}
+                  <span
+                    class="bsr-verse-span"
+                    class:bsr-hl={row.highlighted}
+                    class:bsr-sel={verseSelected(row.verseId)}
+                    role="button"
+                    tabindex="0"
+                    onclick={(event) => onVerseClick(event, row.verseId)}
+                    onkeydown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault()
+                        void model.selectVerse(row.verseId)
+                      }
+                    }}
+                  ><sup class="bsr-verse-num">{row.label}</sup>{@render verseText(row)}</span>
+                  {' '}
+                {/each}
+              </p>
+            {/each}
             {#if view.toggles.details === 'inline'}
               {#each view.rows.filter((row) => row.expanded) as row (row.verseId)}
                 <div class="bsr-expand">{@render detailsBlock(detailsFor(row))}</div>

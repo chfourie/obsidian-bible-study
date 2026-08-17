@@ -15,6 +15,7 @@ import {
   FONT_SCALE_MIN,
   FONT_SCALE_STEP,
 } from '../data-access'
+import { isPoetryVerse } from '../rendering'
 import type { PassageSource, VerseSegment } from '../rendering'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
@@ -89,6 +90,22 @@ export type VerseRowView = {
   expanded: boolean
   annotations: number
   mentions: number
+  poetry: boolean
+  startsParagraph: boolean
+}
+
+export const paragraphsOf = (rows: VerseRowView[]): VerseRowView[][] => {
+  const paragraphs: VerseRowView[][] = []
+  for (const row of rows) {
+    const current = paragraphs[paragraphs.length - 1]
+    const previous = current?.[current.length - 1]
+    const breaksBefore =
+      previous !== undefined &&
+      (row.startsParagraph || row.poetry || previous.poetry)
+    if (current === undefined || breaksBefore) paragraphs.push([row])
+    else current.push(row)
+  }
+  return paragraphs
 }
 
 export type TranslationRowView = {
@@ -619,6 +636,8 @@ export class ReaderPaneModel {
       verseId: verse.verseId,
       label: `${decodeVerseId(verse.verseId).verse}`,
       segments: verse.segments,
+      poetry: isPoetryVerse(verse.segments, this.#position.book),
+      startsParagraph: verse.startsParagraph === true,
       highlighted:
         this.#entry !== null &&
         this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),

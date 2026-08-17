@@ -164,6 +164,169 @@ describe('ModulePassageSource', () => {
     })
   })
 
+  it('carries indent and psalm-heading line properties onto segments', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [makeVerseId(19, 23, 1)]: {
+          text: 'A Psalm of David. The LORD is my shepherd; I shall not want.',
+          lines: [
+            { start: 0, psalmHeading: true },
+            { start: 18, indent: 1 },
+            { start: 43, indent: 2 },
+          ],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('Psalms 23:1'), 'web')
+
+    expect(passage).toMatchObject({
+      status: 'ok',
+      verses: [
+        {
+          verseId: makeVerseId(19, 23, 1),
+          hasLineData: true,
+          segments: [
+            {
+              text: 'A Psalm of David. ',
+              redLetter: false,
+              lineStart: true,
+              psalmHeading: true,
+            },
+            {
+              text: 'The LORD is my shepherd; ',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 1,
+            },
+            {
+              text: 'I shall not want.',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 2,
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('copies line properties to every segment of the line but marks only its first segment as lineStart', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          tags: [{ start: 18, end: 19, strongs: ['G1473'] }],
+          lines: [{ start: 0, indent: 1 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'Remain in Me, and ', lineStart: true, indent: 1 },
+            { text: 'I', strongs: ['G1473'], indent: 1 },
+            { text: ' in you.', indent: 1 },
+          ],
+        },
+      ],
+    })
+    const verse = (passage as { verses: { segments: unknown[] }[] }).verses[0]
+    const [, second, third] = verse.segments as { lineStart?: boolean }[]
+    expect(second.lineStart).toBeUndefined()
+    expect(third.lineStart).toBeUndefined()
+  })
+
+  it('leaves segments before the first line start without line properties', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          lines: [{ start: 14, indent: 1 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'Remain in Me, ', redLetter: false },
+            {
+              text: 'and I in you.',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 1,
+            },
+          ],
+        },
+      ],
+    })
+    const [first] = (
+      passage as {
+        verses: { segments: { lineStart?: boolean; indent?: number }[] }[]
+      }
+    ).verses[0].segments
+    expect(first.lineStart).toBeUndefined()
+    expect(first.indent).toBeUndefined()
+  })
+
+  it('marks a verse whose first line starts a paragraph', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 1)]: {
+          text: 'I am the true vine.',
+          lines: [{ start: 0, paragraph: true }],
+        },
+        [john(15, 2)]: 'He cuts off every branch in Me.',
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:1-2'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        { verseId: john(15, 1), startsParagraph: true },
+        { verseId: john(15, 2) },
+      ],
+    })
+    const second = (
+      passage as { verses: { startsParagraph?: boolean }[] }
+    ).verses[1]
+    expect(second.startsParagraph).toBeUndefined()
+  })
+
+  it('does not mark a paragraph start on a mid-verse line', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          lines: [{ start: 14, paragraph: true }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:4'), 'web')
+
+    const [verse] = (passage as { verses: { startsParagraph?: boolean }[] })
+      .verses
+    expect(verse.startsParagraph).toBeUndefined()
+  })
+
   it('splits at both tag boundaries and line starts in a tagged lined verse', async () => {
     const source = new ModulePassageSource({
       manifest: async () => webManifest('Public Domain'),

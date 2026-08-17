@@ -4,6 +4,7 @@ import type { Passage, PassageVerse } from './module-passage-source'
 import { buildReferenceRenderModel } from './reference-render-model'
 import {
   buildPassageView,
+  isPoetryVerse,
   loadingText,
   unavailableText,
 } from './passage-view'
@@ -167,6 +168,69 @@ describe('buildPassageView', () => {
     )
 
     expect(view.verses[0].startsNewLine).toBe(true)
+  })
+})
+
+describe('isPoetryVerse', () => {
+  const plainSegments = [{ text: 'Plain prose.', redLetter: false }]
+
+  it('classifies a verse with an indented line as poetry', () => {
+    expect(
+      isPoetryVerse(
+        [
+          { text: 'First line, ', redLetter: false, lineStart: true, indent: 1 },
+          {
+            text: 'second line.',
+            redLetter: false,
+            lineStart: true,
+            lineBreakBefore: true,
+            indent: 2,
+          },
+        ],
+        43,
+      ),
+    ).toBe(true)
+  })
+
+  it('classifies a verse with a psalm heading line as poetry', () => {
+    expect(
+      isPoetryVerse(
+        [
+          {
+            text: 'A Psalm of David.',
+            redLetter: false,
+            lineStart: true,
+            psalmHeading: true,
+          },
+        ],
+        43,
+      ),
+    ).toBe(true)
+  })
+
+  it('classifies every Psalms verse as poetry', () => {
+    expect(isPoetryVerse(plainSegments, 19)).toBe(true)
+  })
+
+  it('does not classify flat line breaks without indent as poetry', () => {
+    expect(
+      isPoetryVerse(
+        [
+          { text: 'First line, ', redLetter: false, lineStart: true },
+          {
+            text: 'second line.',
+            redLetter: false,
+            lineStart: true,
+            lineBreakBefore: true,
+          },
+        ],
+        43,
+      ),
+    ).toBe(false)
+  })
+
+  it('does not classify plain prose as poetry', () => {
+    expect(isPoetryVerse(plainSegments, 43)).toBe(false)
   })
 })
 
