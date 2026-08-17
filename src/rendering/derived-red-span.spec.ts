@@ -108,11 +108,39 @@ describe('derivedRedSpan', () => {
     })
   })
 
-  it('covers the whole verse on a lone carried-over closing quote', () => {
+  it('runs red from a lone opening quote to the verse end when red touches only the end', () => {
+    const text =
+      'These twelve Jesus sent out with the following instructions: “Do not go onto the road of the Gentiles'
+
+    expect(derivedRedSpan(text, partial(false, true))).toEqual({
+      start: text.indexOf('“'),
+      end: text.length,
+    })
+  })
+
+  it('runs red from the verse start through a lone closing quote when red touches only the start', () => {
+    const text = 'and on the third day be raised to life.” Then Peter replied.'
+
+    expect(derivedRedSpan(text, partial(true, false))).toEqual({
+      start: 0,
+      end: text.indexOf('”') + 1,
+    })
+  })
+
+  it('covers the whole verse on a lone quote mark when red touches both edges', () => {
+    const text = '“Away from Me! For it is written, he said.'
+
+    expect(derivedRedSpan(text, partial(true, true))).toEqual({
+      start: 0,
+      end: text.length,
+    })
+  })
+
+  it('starts red at a lone closing quote when red touches only the end', () => {
     const text = '…the prophet.” Then Jesus said, Go.'
 
     expect(derivedRedSpan(text, partial(false, true))).toEqual({
-      start: 0,
+      start: 13,
       end: text.length,
     })
   })
