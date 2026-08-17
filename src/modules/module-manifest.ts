@@ -1,4 +1,6 @@
-export const MODULE_FORMAT_VERSION = 1
+// v2: verses may carry a per-verse line-break channel (StructuredVerse.lines).
+// Purely additive — v1 modules (no line data) load and render unchanged.
+export const MODULE_FORMAT_VERSION = 2
 
 export type ModuleCapabilities = {
   strongsTagged: boolean

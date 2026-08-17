@@ -280,6 +280,7 @@
 
 {#snippet verseText(row: VerseRowView)}
   {#each row.segments as segment, index (index)}
+    {#if segment.lineBreakBefore && view.toggles.layout === 'verse-per-line'}<br />{/if}
     {#if view.strongsMode && segment.strongs !== undefined}
       <span
         role="button"

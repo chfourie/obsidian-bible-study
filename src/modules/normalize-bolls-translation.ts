@@ -5,7 +5,7 @@ import type {
   NormalizedModule,
   SourceInfo,
 } from './normalized-module'
-import type { TaggedVerse } from './verse-content'
+import type { TaggedVerse, VerseContent, VerseLine } from './verse-content'
 
 export type BollsVerse = {
   pk?: number
@@ -23,9 +23,12 @@ export type BollsTranslationMeta = {
   license?: string
 }
 
+const BR_TAG = /<br\s*\/?\s*>/gi
+
 const stripInertMarkup = (raw: string): string =>
   raw
     .replace(/<sup>.*?(?:<\/sup>|$)/gs, ' ')
+    .replace(BR_TAG, '\n')
     .replace(/<(?!S>|\/S>)[^>]*>/g, '')
 
 const stripStrayStrongsMarkup = (segment: string): string =>
@@ -33,10 +36,31 @@ const stripStrayStrongsMarkup = (segment: string): string =>
 
 const STRONGS_PAIR = /<S>([^<]*)<\/S>/g
 
-const plainText = (raw: string): string =>
-  stripStrayStrongsMarkup(stripInertMarkup(raw).replace(STRONGS_PAIR, ' '))
-    .replace(/\s+/g, ' ')
-    .trim()
+const collapseKeepingLineBreaks = (raw: string): string =>
+  raw
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/ ?\n[\s]*/g, '\n')
+    .replace(/^[\s]+|[\s]+$/g, '')
+
+const linedContent = (collapsed: string): VerseContent => {
+  const parts = collapsed.split('\n')
+  if (parts.length === 1) return collapsed
+  const lines: VerseLine[] = []
+  let text = ''
+  for (const part of parts) {
+    if (text !== '') text += ' '
+    lines.push({ start: text.length })
+    text += part
+  }
+  return { text, lines }
+}
+
+const plainContent = (raw: string): VerseContent =>
+  linedContent(
+    collapseKeepingLineBreaks(
+      stripStrayStrongsMarkup(stripInertMarkup(raw).replace(STRONGS_PAIR, ' ')),
+    ),
+  )
 const HAS_STRONGS_TAG = /<S>\d+<\/S>/
 
 const LAST_OLD_TESTAMENT_BOOK = 39
@@ -108,7 +132,7 @@ export const normalizeBollsTranslation = (
       content[verseId] = taggedVerse(verse.book, verse.text)
       strongsTagged = true
     } else {
-      content[verseId] = plainText(verse.text)
+      content[verseId] = plainContent(verse.text)
     }
     books.set(verse.book, content)
   }

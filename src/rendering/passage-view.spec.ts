@@ -45,7 +45,11 @@ describe('buildPassageView', () => {
     )
 
     expect(view.verses).toEqual([
-      { label: null, segments: [{ text: 'Remain in me.', redLetter: false }] },
+      {
+        label: null,
+        segments: [{ text: 'Remain in me.', redLetter: false }],
+        startsNewLine: false,
+      },
     ])
   })
 
@@ -134,6 +138,35 @@ describe('buildPassageView', () => {
     expect(view.verses[0].segments).toEqual([
       { text: 'Remain in me, and I in you.', redLetter: true },
     ])
+  })
+
+  it('marks verses carrying line data to start on their own line', () => {
+    const view = buildPassageView(
+      model('John 15:4-5 inline'),
+      passage([
+        verse(15, 4, 'Plain prose.'),
+        { ...verse(15, 5, 'Poetic line.'), hasLineData: true },
+      ]),
+    )
+
+    expect(view.verses.map((block) => block.startsNewLine)).toEqual([
+      false,
+      true,
+    ])
+  })
+
+  it('marks every Psalms verse to start on its own line', () => {
+    const psalmVerse: PassageVerse = {
+      verseId: makeVerseId(19, 23, 1),
+      segments: [{ text: 'The LORD is my shepherd.', redLetter: false }],
+    }
+
+    const view = buildPassageView(
+      model('Psalms 23:1 inline'),
+      passage([psalmVerse]),
+    )
+
+    expect(view.verses[0].startsNewLine).toBe(true)
   })
 })
 

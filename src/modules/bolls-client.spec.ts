@@ -171,7 +171,7 @@ describe('BollsClient as module source', () => {
       // Independently computed: echo -n '<dump>' | shasum -a 256
       sourceChecksum:
         '3e2ba7aeb0e9b8f771ffaf11d89748871d4e8fe60cdc9837c84975926b77e058',
-      formatVersion: 1,
+      formatVersion: 2,
       capabilities: { strongsTagged: true },
     })
     expect(module.books.get(43)).toEqual({

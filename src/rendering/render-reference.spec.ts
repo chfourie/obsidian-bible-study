@@ -137,6 +137,66 @@ describe('renderReference inline', () => {
     expect(passage?.querySelector('.scripture-study-verse-line')).toBeNull()
   })
 
+  it('starts verses carrying line data on their own line and renders their breaks', async () => {
+    const poetic: Passage = {
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 43015004,
+          segments: [{ text: 'Prose verse.', redLetter: false }],
+        },
+        {
+          verseId: 43015005,
+          hasLineData: true,
+          segments: [
+            { text: 'First line, ', redLetter: false },
+            { text: 'second line.', redLetter: false, lineBreakBefore: true },
+          ],
+        },
+      ],
+    }
+    const { parent, deps } = setup(poetic)
+
+    await renderReference(parent, model('John 15:4-5 inline'), deps)
+
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(passage?.querySelectorAll('br')).toHaveLength(2)
+    expect(passage?.textContent).toBe('4Prose verse.5First line, second line.')
+  })
+
+  it('keeps verses without line data flowing as continuous text', async () => {
+    const { parent, deps } = setup(passageOf('Remain in me.', 'I am the vine.'))
+
+    await renderReference(parent, model('John 15:4-5 inline'), deps)
+
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(passage?.querySelectorAll('br')).toHaveLength(0)
+  })
+
+  it('starts every Psalms verse on a new line even without line data', async () => {
+    const psalm: Passage = {
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 19023001,
+          segments: [{ text: 'The LORD is my shepherd.', redLetter: false }],
+        },
+        {
+          verseId: 19023002,
+          segments: [{ text: 'He makes me lie down.', redLetter: false }],
+        },
+      ],
+    }
+    const { parent, deps } = setup(psalm)
+
+    await renderReference(parent, model('Psalms 23:1-2 inline'), deps)
+
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(passage?.querySelectorAll('br')).toHaveLength(1)
+  })
+
   it('shows a loading placeholder until the passage arrives', async () => {
     let resolvePassage: (passage: Passage) => void = () => {}
     const { parent, deps } = setup()
@@ -551,6 +611,34 @@ describe('renderReference block', () => {
       '4Remain in me.',
       '5I am the vine.',
     ])
+  })
+
+  it('renders intra-verse line breaks inside a verse line', async () => {
+    const poetic: Passage = {
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 19023001,
+          hasLineData: true,
+          segments: [
+            { text: 'The LORD is my shepherd, ', redLetter: false },
+            { text: 'I lack nothing.', redLetter: false, lineBreakBefore: true },
+          ],
+        },
+      ],
+    }
+    const { parent, deps } = setup(poetic)
+
+    await renderReference(parent, model('Psalms 23:1 block'), deps)
+
+    const line = parent.querySelector(
+      '.scripture-study-passage .scripture-study-verse-line',
+    )
+    expect(line?.querySelectorAll('br')).toHaveLength(1)
+    expect(line?.textContent).toBe(
+      '1The LORD is my shepherd, I lack nothing.',
+    )
   })
 
   it('shows a muted attribution line when the translation carries one', async () => {

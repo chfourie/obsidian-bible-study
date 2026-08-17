@@ -14,7 +14,7 @@ describe('buildBsbArtifact', () => {
       name: 'Berean Standard Bible',
       language: 'English',
       license: 'Public Domain',
-      formatVersion: 1,
+      formatVersion: 2,
       capabilities: { strongsTagged: true },
     })
   })

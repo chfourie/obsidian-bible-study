@@ -5,7 +5,10 @@ import type { ReferenceRenderModel } from './reference-render-model'
 export type VerseBlock = {
   label: string | null
   segments: VerseSegment[]
+  startsNewLine: boolean
 }
+
+const PSALMS_BOOK = 19
 
 export type PassageView = {
   verses: VerseBlock[]
@@ -43,6 +46,8 @@ export const buildPassageView = (
     verses: passage.verses.map((verse, index) => ({
       label: numbered ? labels[index] : null,
       segments: verse.segments,
+      startsNewLine:
+        verse.hasLineData === true || model.reference.book === PSALMS_BOOK,
     })),
     attribution: model.display === 'block' ? passage.attribution : null,
     fallbackNotice:

@@ -1,16 +1,18 @@
 import type { BookContent, ModuleManifest, VerseContent } from '../modules'
-import { isTaggedVerse } from '../modules'
+import { verseLinesOf, verseTagsOf, verseTextOf } from '../modules'
 import { enumerateVerseIds, type Reference } from '../reference'
 
 export type VerseSegment = {
   text: string
   redLetter: boolean
   strongs?: string[]
+  lineBreakBefore?: boolean
 }
 
 export type PassageVerse = {
   verseId: number
   segments: VerseSegment[]
+  hasLineData?: boolean
 }
 
 export type FallbackSubstitution = {
@@ -37,23 +39,32 @@ export type PassageStore = {
 }
 
 const verseSegments = (verse: VerseContent): VerseSegment[] => {
-  if (!isTaggedVerse(verse)) return [{ text: verse, redLetter: false }]
-  const segments: VerseSegment[] = []
-  let cursor = 0
-  const orderedTags = [...verse.tags].sort((a, b) => a.start - b.start)
+  const text = verseTextOf(verse)
+  const orderedTags = [...verseTagsOf(verse)].sort((a, b) => a.start - b.start)
+  const lineStarts = new Set(
+    verseLinesOf(verse)
+      .map((line) => line.start)
+      .filter((start) => start > 0 && start < text.length),
+  )
+  const cuts = new Set([0, text.length, ...lineStarts])
   for (const tag of orderedTags) {
-    if (tag.start > cursor)
-      segments.push({ text: verse.text.slice(cursor, tag.start), redLetter: false })
-    segments.push({
-      text: verse.text.slice(tag.start, tag.end),
-      redLetter: false,
-      strongs: tag.strongs,
-    })
-    cursor = tag.end
+    cuts.add(tag.start)
+    cuts.add(tag.end)
   }
-  if (cursor < verse.text.length)
-    segments.push({ text: verse.text.slice(cursor), redLetter: false })
-  return segments
+  const ordered = [...cuts].sort((a, b) => a - b)
+  const segments: VerseSegment[] = []
+  for (let index = 0; index < ordered.length - 1; index++) {
+    const start = ordered[index]
+    const end = ordered[index + 1]
+    const tag = orderedTags.find(
+      (candidate) => candidate.start <= start && end <= candidate.end,
+    )
+    const segment: VerseSegment = { text: text.slice(start, end), redLetter: false }
+    if (tag !== undefined) segment.strongs = tag.strongs
+    if (lineStarts.has(start)) segment.lineBreakBefore = true
+    segments.push(segment)
+  }
+  return segments.length > 0 ? segments : [{ text: '', redLetter: false }]
 }
 
 const attributionFor = (manifest: ModuleManifest): string | null => {
@@ -78,7 +89,12 @@ export class ModulePassageSource implements PassageSource {
       for (const verseId of enumerateVerseIds(range)) {
         const verse = content[verseId]
         if (verse === undefined) continue
-        verses.push({ verseId, segments: verseSegments(verse) })
+        const passageVerse: PassageVerse = {
+          verseId,
+          segments: verseSegments(verse),
+        }
+        if (verseLinesOf(verse).length > 0) passageVerse.hasLineData = true
+        verses.push(passageVerse)
       }
     }
     if (verses.length === 0) return { status: 'unavailable' }

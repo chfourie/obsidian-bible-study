@@ -136,6 +136,70 @@ describe('ModulePassageSource', () => {
     })
   })
 
+  it('splits a lined verse into segments at its line starts', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [makeVerseId(19, 23, 1)]: {
+          text: 'The LORD is my shepherd, I lack nothing.',
+          lines: [{ start: 0 }, { start: 25 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('Psalms 23:1'), 'web')
+
+    expect(passage).toMatchObject({
+      status: 'ok',
+      verses: [
+        {
+          verseId: makeVerseId(19, 23, 1),
+          hasLineData: true,
+          segments: [
+            { text: 'The LORD is my shepherd, ', redLetter: false },
+            { text: 'I lack nothing.', redLetter: false, lineBreakBefore: true },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('splits at both tag boundaries and line starts in a tagged lined verse', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          tags: [{ start: 0, end: 6, strongs: ['G3306'] }],
+          lines: [{ start: 0 }, { start: 14 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          hasLineData: true,
+          segments: [
+            { text: 'Remain', redLetter: false, strongs: ['G3306'] },
+            { text: ' in Me, ', redLetter: false },
+            { text: 'and I in you.', redLetter: false, lineBreakBefore: true },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('carries no line-data flag for verses without a line channel', async () => {
+    const passage = await setup().passage(ref('John 15:4'), 'web')
+
+    expect(passage.status).toBe('ok')
+    if (passage.status !== 'ok') return
+    expect(passage.verses[0].hasLineData).toBeUndefined()
+  })
+
   it('shows no attribution for public domain or unlicensed modules', async () => {
     const publicDomain = await setup('Public Domain').passage(
       ref('John 15:4'),

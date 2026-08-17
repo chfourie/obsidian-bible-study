@@ -166,6 +166,7 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
     })
   }
   for (const segment of block.segments) {
+    if (segment.lineBreakBefore) parent.createEl('br')
     if (segment.redLetter) {
       parent.createSpan({ cls: 'scripture-study-red-letter', text: segment.text })
     } else {
@@ -279,7 +280,11 @@ const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
 const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
   view.verses.forEach((block, index) => {
-    if (index > 0) host.appendText(' ')
+    if (index > 0) {
+      const previous = view.verses[index - 1]
+      if (block.startsNewLine || previous.startsNewLine) host.createEl('br')
+      else host.appendText(' ')
+    }
     renderSegments(host, block)
   })
 }

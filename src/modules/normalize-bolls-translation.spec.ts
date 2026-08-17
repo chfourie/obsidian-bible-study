@@ -49,7 +49,7 @@ describe('normalizeBollsTranslation with plain texts', () => {
       license: '',
       source: 'https://bolls.life/static/translations/NKJV.json',
       sourceChecksum: 'abc123',
-      formatVersion: 1,
+      formatVersion: 2,
       capabilities: { strongsTagged: false },
     })
   })
@@ -96,6 +96,78 @@ describe('normalizeBollsTranslation with plain texts', () => {
   })
 })
 
+describe('normalizeBollsTranslation with <br/> line breaks', () => {
+  const psalmVerse = (text: string): BollsVerse => ({
+    book: 19,
+    chapter: 23,
+    verse: 1,
+    text,
+  })
+
+  const normalizedContent = (text: string) =>
+    normalizeBollsTranslation('niv', [psalmVerse(text)], nkjvMeta, sourceInfo)
+      .books.get(19)?.[makeVerseId(19, 23, 1)]
+
+  it('converts internal <br/> tags into the verse line channel', () => {
+    expect(
+      normalizedContent('The LORD is my shepherd,<br/>I lack nothing.'),
+    ).toEqual({
+      text: 'The LORD is my shepherd, I lack nothing.',
+      lines: [{ start: 0 }, { start: 25 }],
+    })
+  })
+
+  it('accepts unclosed <br> tags and collapses whitespace around breaks', () => {
+    expect(
+      normalizedContent('He makes me lie down <br>  <br /> he leads me.'),
+    ).toEqual({
+      text: 'He makes me lie down he leads me.',
+      lines: [{ start: 0 }, { start: 21 }],
+    })
+  })
+
+  it('keeps a verse with only leading or trailing breaks as plain text', () => {
+    expect(normalizedContent('<br/>He restores my soul.<br/>')).toBe(
+      'He restores my soul.',
+    )
+  })
+
+  it('keeps verses without breaks as plain strings exactly as before', () => {
+    expect(normalizedContent('He restores my soul.')).toBe(
+      'He restores my soul.',
+    )
+  })
+
+  it('drops breaks inside footnote <sup> blocks with the footnote', () => {
+    expect(
+      normalizedContent('Surely goodness<sup>note<br/>more</sup> follows me.'),
+    ).toBe('Surely goodness follows me.')
+  })
+
+  it('treats <br/> in Strong-tagged verses as plain whitespace', () => {
+    const verses: BollsVerse[] = [
+      {
+        book: 43,
+        chapter: 15,
+        verse: 4,
+        text: 'Abide<S>3306</S> in me,<br/>and I in you.',
+      },
+    ]
+
+    const content = normalizeBollsTranslation(
+      'kjv',
+      verses,
+      nkjvMeta,
+      sourceInfo,
+    ).books.get(43)?.[makeVerseId(43, 15, 4)]
+
+    expect(content).toEqual({
+      text: 'Abide in me, and I in you.',
+      tags: [{ start: 0, end: 5, strongs: ['G3306'] }],
+    })
+  })
+})
+
 const kjvSlice = (): BollsVerse[] =>
   JSON.parse(
     readFileSync('tests/fixtures/bolls-kjv-slice.json', 'utf8'),
@@ -118,9 +190,13 @@ const kjvVerse = (book: number, chapter: number, verse: number): TaggedVerse => 
   const content = normalizedKjv().books.get(book)?.[
     makeVerseId(book, chapter, verse)
   ]
-  if (content === undefined || typeof content === 'string')
+  if (
+    content === undefined ||
+    typeof content === 'string' ||
+    content.tags === undefined
+  )
     throw new Error('expected a tagged verse')
-  return content
+  return { ...content, tags: content.tags }
 }
 
 const taggedWord = (verse: TaggedVerse, span: number): string =>
@@ -214,8 +290,9 @@ const verseContent = (text: string) => {
 
 const tagVerse = (text: string): TaggedVerse => {
   const content = verseContent(text)
-  if (typeof content === 'string') throw new Error('expected a tagged verse')
-  return content
+  if (typeof content === 'string' || content.tags === undefined)
+    throw new Error('expected a tagged verse')
+  return { ...content, tags: content.tags }
 }
 
 describe('taggedVerse edge cases', () => {
