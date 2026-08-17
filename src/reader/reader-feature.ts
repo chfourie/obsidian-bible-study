@@ -27,6 +27,7 @@ export type ReaderCrossReferences = {
   intersecting: (reference: Reference) => CrossReference[]
   create: (members: Reference[], description: string | null) => Promise<void>
   updateDescription: (id: string, description: string | null) => Promise<void>
+  updateMembers: (id: string, members: Reference[]) => Promise<void>
   removeMember: (id: string, memberIndex: number) => Promise<MemberRemoval>
   delete: (id: string) => Promise<void>
   onChanged: (listener: () => void) => () => void
@@ -43,6 +44,7 @@ const INERT_CROSS_REFERENCES: ReaderCrossReferences = {
   intersecting: () => [],
   create: async () => {},
   updateDescription: async () => {},
+  updateMembers: async () => {},
   removeMember: async () => ({ ok: true }),
   delete: async () => {},
   onChanged: () => () => {},
@@ -177,6 +179,8 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
           this.#crossReferences.create(members, description),
         updateCrossReferenceDescription: (id, description) =>
           this.#crossReferences.updateDescription(id, description),
+        updateCrossReferenceMembers: (id, members) =>
+          this.#crossReferences.updateMembers(id, members),
         removeCrossReferenceMember: (id, memberIndex) =>
           this.#crossReferences.removeMember(id, memberIndex),
         deleteCrossReference: (id) => this.#crossReferences.delete(id),
@@ -242,6 +246,18 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
 
   openReference(reference: Reference, translationId: string | null): void {
     void this.#withReaderView((view) => view.model.openAt(reference, translationId))
+  }
+
+  growCrossReference(
+    id: string,
+    members: Reference[],
+    translationId: string | null,
+  ): void {
+    if (members.length === 0) return
+    void this.#withReaderView(async (view) => {
+      await view.model.openAt(members[0], translationId)
+      view.model.startEditingCrossReference(id, members)
+    })
   }
 
   async openReader(): Promise<void> {

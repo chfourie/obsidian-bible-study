@@ -13,6 +13,10 @@ export type CrossReferenceView = {
   id: string
   description: string | null
   members: CrossReferenceMemberView[]
+  // The entry's complete, unfiltered member list — what "add members" seeds
+  // a collection basket with, since the filtered view above has already
+  // dropped whichever member matches the passage being viewed.
+  allMembers: Reference[]
   // Transient in-place-management state; a surfacing model layers these on
   // top of the otherwise-pure view below.
   error: string | null
@@ -38,6 +42,7 @@ export const otherMembersView = (
       reference: member,
       index,
     })),
+  allMembers: entry.members,
   error: null,
   confirmingDelete: false,
 })

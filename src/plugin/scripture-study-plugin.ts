@@ -58,6 +58,8 @@ export default class ScriptureStudyPlugin extends Plugin {
         },
         updateDescription: (id, description) =>
           this.crossReferences.store.updateDescription(id, description),
+        updateMembers: (id, members) =>
+          this.crossReferences.store.updateMembers(id, members),
         removeMember: (id, memberIndex) =>
           this.crossReferences.store.removeMember(id, memberIndex),
         delete: (id) => this.crossReferences.store.delete(id),

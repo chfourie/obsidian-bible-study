@@ -140,6 +140,14 @@ export class CrossReferenceStore {
     await this.save()
   }
 
+  async updateMembers(id: string, members: Reference[]): Promise<void> {
+    if (!this.#entries.some((entry) => entry.id === id)) return
+    this.#entries = this.#entries.map((entry) =>
+      entry.id === id ? { ...entry, members } : entry,
+    )
+    await this.save()
+  }
+
   async removeMember(id: string, memberIndex: number): Promise<MemberRemoval> {
     const entry = this.#entries.find((candidate) => candidate.id === id)
     if (entry === undefined) return { ok: false, reason: 'Cross-reference not found.' }

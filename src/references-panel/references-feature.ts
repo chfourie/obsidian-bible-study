@@ -115,6 +115,12 @@ export class ReferencesFeature extends PluginFeature {
               .knownTranslationIds,
           }),
         crossReferences: this.#crossReferences,
+        growCrossReference: (id, members) =>
+          this.#navigator.growCrossReference(
+            id,
+            members,
+            this.settings.defaultTranslationId,
+          ),
       },
       { translationId: this.settings.defaultTranslationId },
     )

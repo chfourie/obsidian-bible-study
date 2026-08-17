@@ -86,6 +86,10 @@ export type ReaderPaneDeps = {
     id: string,
     description: string | null,
   ) => Promise<void>
+  updateCrossReferenceMembers: (
+    id: string,
+    members: Reference[],
+  ) => Promise<void>
   removeCrossReferenceMember: (
     id: string,
     memberIndex: number,
@@ -156,6 +160,9 @@ export type CollectionView = {
   canAddSelection: boolean
   canCreate: boolean
   error: string | null
+  // True when this basket grows an existing cross-reference rather than
+  // building a new one — Create saves back to the same id.
+  editing: boolean
 }
 
 export type VerseDetailsView = {
@@ -257,6 +264,9 @@ export class ReaderPaneModel {
     stage: CollectionStage
     members: Reference[]
     error: string | null
+    // The id of the cross-reference this basket grows, or null when
+    // building a brand new one.
+    editing: string | null
   } | null = null
   // In-place cross-reference management state, keyed by cross-reference id;
   // layered onto the otherwise-pure view from otherMembersView.
@@ -575,11 +585,25 @@ export class ReaderPaneModel {
       canCreate:
         this.#collection.members.length >= CROSS_REFERENCE_MINIMUM_MEMBERS,
       error: this.#collection.error,
+      editing: this.#collection.editing !== null,
     }
   }
 
   startCollecting(): void {
-    this.#collection = { stage: 'gathering', members: [], error: null }
+    this.#collection = { stage: 'gathering', members: [], error: null, editing: null }
+    this.#notify()
+  }
+
+  // Re-enters Collecting pre-loaded with an existing cross-reference's
+  // members, so growing a cluster reuses the same gathering flow as
+  // creation; Create then saves back to this id instead of making a new one.
+  startEditingCrossReference(id: string, members: Reference[]): void {
+    this.#collection = {
+      stage: 'gathering',
+      members: [...members],
+      error: null,
+      editing: id,
+    }
     this.#notify()
   }
 
@@ -654,12 +678,21 @@ export class ReaderPaneModel {
     )
       return
     const trimmed = description?.trim() ?? ''
-    await this.deps.createCrossReference(
-      collection.members,
-      trimmed === '' ? null : trimmed,
-    )
+    const nextDescription = trimmed === '' ? null : trimmed
+    if (collection.editing !== null) {
+      await this.deps.updateCrossReferenceMembers(
+        collection.editing,
+        collection.members,
+      )
+      await this.deps.updateCrossReferenceDescription(
+        collection.editing,
+        nextDescription,
+      )
+    } else {
+      await this.deps.createCrossReference(collection.members, nextDescription)
+    }
     this.#collection = null
-    // Details already on screen re-read the store so the new cross-reference
+    // Details already on screen re-read the store so the cross-reference
     // surfaces beside its members without reopening them.
     await this.refreshOccurrences()
   }

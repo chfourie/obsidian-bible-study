@@ -136,6 +136,14 @@
     model.startCollecting()
   }
 
+  const startEditingCrossReference = (
+    entry: VerseDetailsView['crossReferences'][number],
+  ): void => {
+    typedMember = ''
+    collectionDescription = entry.description ?? ''
+    model.startEditingCrossReference(entry.id, entry.allMembers)
+  }
+
   const addTypedMember = (): void => {
     model.addTypedReferenceToCollection(typedMember)
     if (model.view.collection?.error === null) typedMember = ''
@@ -259,6 +267,12 @@
             >Cancel</button>
           </div>
         {:else}
+          <button
+            type="button"
+            class="bsr-xref-delete"
+            disabled={view.collection !== null}
+            onclick={() => startEditingCrossReference(entry)}
+          >Add members</button>
           <button
             type="button"
             class="bsr-xref-delete"
@@ -490,11 +504,13 @@
           class="bsr-basket-action mod-cta"
           onclick={() => createCrossReference(collectionDescription)}
         >Save</button>
-        <button
-          type="button"
-          class="bsr-basket-action"
-          onclick={() => createCrossReference(null)}
-        >Skip</button>
+        {#if !collection.editing}
+          <button
+            type="button"
+            class="bsr-basket-action"
+            onclick={() => createCrossReference(null)}
+          >Skip</button>
+        {/if}
         <button
           type="button"
           class="bsr-basket-action"

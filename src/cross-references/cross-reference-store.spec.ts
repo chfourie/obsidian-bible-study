@@ -344,6 +344,77 @@ describe('updating a description', () => {
   })
 })
 
+describe('updating members', () => {
+  it('replaces the member list and persists', async () => {
+    const files = {
+      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+    }
+    const store = await storeOverFiles(files)
+    const grown = [john15Vine, psalm80Vine, romans11Olive, reference(19, [[23, 1], [23, 6]])]
+
+    await store.updateMembers('xr-vine', grown)
+
+    expect(store.all()[0].members).toEqual(grown)
+    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+      `${serializeCrossReference({ ...vineCrossReference, members: grown })}\n`,
+    )
+  })
+
+  it('keeps the id, description, and file position stable', async () => {
+    const other: CrossReference = {
+      id: 'xr-shepherd',
+      members: [reference(19, [[23, 1], [23, 6]]), reference(43, [[10, 11], [10, 18]])],
+      description: null,
+    }
+    const files = {
+      [CROSS_REFERENCES_FILE_PATH]: [vineCrossReference, other]
+        .map(serializeCrossReference)
+        .join('\n')
+        .concat('\n'),
+    }
+    const store = await storeOverFiles(files)
+
+    await store.updateMembers('xr-vine', [john15Vine, romans11Olive])
+
+    expect(store.all().map(({ id }) => id)).toEqual(['xr-vine', 'xr-shepherd'])
+    expect(store.all()[0]).toEqual({
+      id: 'xr-vine',
+      members: [john15Vine, romans11Olive],
+      description: 'Vine and vineyard imagery for Israel',
+    })
+    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+      store
+        .all()
+        .map((entry) => `${serializeCrossReference(entry)}\n`)
+        .join(''),
+    )
+  })
+
+  it('does nothing for an unknown id', async () => {
+    const files = {
+      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+    }
+    const store = await storeOverFiles(files)
+
+    await store.updateMembers('xr-missing', [john15Vine, psalm80Vine])
+
+    expect(store.all()).toEqual([vineCrossReference])
+  })
+
+  it('notifies change listeners', async () => {
+    const files = {
+      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+    }
+    const store = await storeOverFiles(files)
+    let notified = 0
+    store.onChanged(() => notified++)
+
+    await store.updateMembers('xr-vine', [john15Vine, psalm80Vine])
+
+    expect(notified).toBe(1)
+  })
+})
+
 describe('removing a member', () => {
   it('removes the member at the given index and persists', async () => {
     const files = {

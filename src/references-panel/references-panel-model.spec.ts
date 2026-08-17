@@ -96,6 +96,7 @@ const model = (
   source: PassageSource,
   translationId: string | null = 'web',
   crossReferences: ReferencesPanelCrossReferences = noCrossReferences,
+  growCrossReference: (id: string, members: Reference[]) => void = () => {},
 ): ReferencesPanelModel =>
   new ReferencesPanelModel(
     {
@@ -103,6 +104,7 @@ const model = (
       extract: (content) =>
         extractOccurrences(content, { translationIds: ['web', 'niv', 'kjv'] }),
       crossReferences,
+      growCrossReference,
     },
     { translationId },
   )
@@ -443,6 +445,7 @@ describe('cross-references in the References panel', () => {
           { label: 'Psalms 80:8-16', reference: psalm80Vine, index: 1 },
           { label: 'Romans 11:17-24', reference: romans11Olive, index: 2 },
         ],
+        allMembers: vineCrossReference.members,
         error: null,
         confirmingDelete: false,
       },
@@ -591,6 +594,33 @@ describe('cross-references in the References panel', () => {
       await panel.deleteCrossReference('xr-vine')
 
       expect(panel.view.crossReferences).toEqual([])
+    })
+
+    it('hands the full member list to the reader to grow a cluster', async () => {
+      const store = fakeCrossReferenceStore()
+      store.setEntries([vineCrossReference])
+      const grown: { id: string; members: Reference[] }[] = []
+      const panel = model(fakeSource().source, 'web', store.deps, (id, members) => {
+        grown.push({ id, members })
+      })
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+
+      panel.growCrossReference('xr-vine')
+
+      expect(grown).toEqual([{ id: 'xr-vine', members: vineCrossReference.members }])
+    })
+
+    it('ignores growing an id that is not currently surfaced', async () => {
+      const store = fakeCrossReferenceStore()
+      let grown = 0
+      const panel = model(fakeSource().source, 'web', store.deps, () => {
+        grown++
+      })
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+
+      panel.growCrossReference('xr-unknown')
+
+      expect(grown).toBe(0)
     })
   })
 })

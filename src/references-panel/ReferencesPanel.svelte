@@ -73,6 +73,10 @@ reference in the reader with the entry's translation.
   const removeXrefMember = (id: string, memberIndex: number): void => {
     void model.removeCrossReferenceMember(id, memberIndex)
   }
+
+  const growCrossReference = (id: string): void => {
+    model.growCrossReference(id)
+  }
 </script>
 
 <div class="bsp-panel">
@@ -147,6 +151,11 @@ reference in the reader with the entry's translation.
                 >Cancel</button>
               </div>
             {:else}
+              <button
+                type="button"
+                class="bsp-xref-delete"
+                onclick={() => growCrossReference(entry.id)}
+              >Add members</button>
               <button
                 type="button"
                 class="bsp-xref-delete"

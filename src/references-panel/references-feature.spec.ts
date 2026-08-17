@@ -322,6 +322,7 @@ describe('ReferencesFeature entry points', () => {
       openReference: (reference, translationId) =>
         opened.push([reference, translationId]),
       openNote: () => {},
+      growCrossReference: () => {},
     })
 
     feature.openReference(ref('John 15:1'), 'kjv')
