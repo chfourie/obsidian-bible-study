@@ -8,7 +8,10 @@ import {
   type Reference,
 } from '../reference'
 import type { Passage, PassageSource } from '../rendering'
-import type { CrossReference } from '../cross-references'
+import type {
+  CrossReference,
+  CrossReferenceEditing,
+} from '../cross-references'
 import type { OccurrenceGroup } from '../vault-index'
 import {
   paragraphsOf,
@@ -63,6 +66,18 @@ const john15Texts = (): MockTexts => ({
   },
 })
 
+const crossReferencesOf = (
+  overrides: Partial<CrossReferenceEditing> = {},
+): CrossReferenceEditing => ({
+  intersecting: () => [],
+  create: async () => {},
+  updateDescription: async () => {},
+  updateMembers: async () => {},
+  removeMember: async () => ({ ok: true }),
+  delete: async () => {},
+  ...overrides,
+})
+
 const modelWith = (
   overrides: Partial<ReaderPaneDeps> = {},
   toggles: ReaderToggles = DEFAULT_TOGGLES,
@@ -74,12 +89,7 @@ const modelWith = (
       passages: passageSourceOver(john15Texts()),
       availableTranslations: async () => [translation('web')],
       intersecting: () => [],
-      crossReferences: () => [],
-      createCrossReference: async () => {},
-      updateCrossReferenceDescription: async () => {},
-      updateCrossReferenceMembers: async () => {},
-      removeCrossReferenceMember: async () => ({ ok: true }),
-      deleteCrossReference: async () => {},
+      crossReferences: crossReferencesOf(),
       annotationDetails: async () => null,
       strongs: {
         dictionariesInstalled: async () => false,
@@ -929,12 +939,7 @@ describe('reader font scale', () => {
         passages: passageSourceOver(john15Texts()),
         availableTranslations: async () => [translation('web')],
         intersecting: () => [],
-        crossReferences: () => [],
-        createCrossReference: async () => {},
-        updateCrossReferenceDescription: async () => {},
-        updateCrossReferenceMembers: async () => {},
-        removeCrossReferenceMember: async () => ({ ok: true }),
-        deleteCrossReference: async () => {},
+        crossReferences: crossReferencesOf(),
         annotationDetails: async () => null,
         strongs: {
           dictionariesInstalled: async () => false,
@@ -1353,12 +1358,13 @@ describe('cross-references in verse details', () => {
     members: [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')],
     description: 'Vine and vineyard imagery for Israel',
   }
-  const storeOf =
-    (...entries: CrossReference[]) =>
-    (reference: Reference): CrossReference[] =>
-      entries.filter((entry) =>
-        entry.members.some((member) => referencesIntersect(member, reference)),
-      )
+  const storeOf = (...entries: CrossReference[]): CrossReferenceEditing =>
+    crossReferencesOf({
+      intersecting: (reference) =>
+        entries.filter((entry) =>
+          entry.members.some((member) => referencesIntersect(member, reference)),
+        ),
+    })
   const psalmTexts = (): MockTexts => ({
     web: {
       ...john15Texts().web,
@@ -1455,19 +1461,19 @@ describe('managing cross-references in verse details', () => {
     members: [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')],
     description: 'Vine and vineyard imagery for Israel',
   }
-  const storeOf =
+  const intersectingOf =
     (...entries: CrossReference[]) =>
     (reference: Reference): CrossReference[] =>
       entries.filter((entry) =>
         entry.members.some((member) => referencesIntersect(member, reference)),
       )
   // A small mutable fake store: updates staged through the deps functions
-  // become visible the next time the model reads crossReferences(), mirroring
+  // become visible the next time the model reads intersecting(), mirroring
   // how the real store's onChanged-driven refresh surfaces a saved mutation.
   const mutableStoreOf = (initial: CrossReference) => {
     let entry = initial
     return {
-      crossReferences: (reference: Reference): CrossReference[] =>
+      intersecting: (reference: Reference): CrossReference[] =>
         entry.members.some((member) => referencesIntersect(member, reference))
           ? [entry]
           : [],
@@ -1477,11 +1483,13 @@ describe('managing cross-references in verse details', () => {
     }
   }
   const modelAtVerse4 = async (
-    overrides: Partial<ReaderPaneDeps> = {},
+    overrides: Partial<CrossReferenceEditing> = {},
   ): Promise<ReaderPaneModel> => {
     const model = modelWith({
-      crossReferences: storeOf(vineCrossReference),
-      ...overrides,
+      crossReferences: crossReferencesOf({
+        intersecting: intersectingOf(vineCrossReference),
+        ...overrides,
+      }),
     })
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
@@ -1492,8 +1500,8 @@ describe('managing cross-references in verse details', () => {
     const updates: { id: string; description: string | null }[] = []
     const store = mutableStoreOf(vineCrossReference)
     const model = await modelAtVerse4({
-      crossReferences: store.crossReferences,
-      updateCrossReferenceDescription: async (id, description) => {
+      intersecting: store.intersecting,
+      updateDescription: async (id, description) => {
         updates.push({ id, description })
         store.set({ ...vineCrossReference, description })
       },
@@ -1510,7 +1518,7 @@ describe('managing cross-references in verse details', () => {
   it('clearing the description leaves it with none', async () => {
     const updates: (string | null)[] = []
     const model = await modelAtVerse4({
-      updateCrossReferenceDescription: async (_id, description) => {
+      updateDescription: async (_id, description) => {
         updates.push(description)
       },
     })
@@ -1523,7 +1531,7 @@ describe('managing cross-references in verse details', () => {
   it('removes a member in place', async () => {
     const removals: { id: string; index: number }[] = []
     const model = await modelAtVerse4({
-      removeCrossReferenceMember: async (id, index) => {
+      removeMember: async (id, index) => {
         removals.push({ id, index })
         return { ok: true }
       },
@@ -1536,7 +1544,7 @@ describe('managing cross-references in verse details', () => {
 
   it('shows a blocked removal explanation on the entry without removing it', async () => {
     const model = await modelAtVerse4({
-      removeCrossReferenceMember: async () => ({
+      removeMember: async () => ({
         ok: false,
         reason: 'A cross-reference needs at least two members — delete it instead.',
       }),
@@ -1552,7 +1560,7 @@ describe('managing cross-references in verse details', () => {
   it('clears a previous error once a removal succeeds', async () => {
     let shouldFail = true
     const model = await modelAtVerse4({
-      removeCrossReferenceMember: async () =>
+      removeMember: async () =>
         shouldFail ? { ok: false, reason: 'blocked' } : { ok: true },
     })
     await model.removeCrossReferenceMember('xr-vine', 1)
@@ -1582,8 +1590,8 @@ describe('managing cross-references in verse details', () => {
     const deleted: string[] = []
     const store = mutableStoreOf(vineCrossReference)
     const model = await modelAtVerse4({
-      crossReferences: store.crossReferences,
-      deleteCrossReference: async (id) => {
+      intersecting: store.intersecting,
+      delete: async (id) => {
         deleted.push(id)
         store.set({ ...vineCrossReference, members: [] })
       },
@@ -1647,9 +1655,13 @@ describe('collecting a cross-reference', () => {
   const verse4 = makeVerseId(43, 15, 4)
 
   const collectingModel = async (
+    crossReferences: Partial<CrossReferenceEditing> = {},
     overrides: Partial<ReaderPaneDeps> = {},
   ): Promise<ReaderPaneModel> => {
-    const model = modelWith(overrides)
+    const model = modelWith({
+      crossReferences: crossReferencesOf(crossReferences),
+      ...overrides,
+    })
     await model.openAt(ref('John 15:1'), 'web')
     model.startCollecting()
     return model
@@ -1755,9 +1767,15 @@ describe('collecting a cross-reference', () => {
   })
 
   it('keeps the basket across book, chapter and translation navigation', async () => {
-    const model = await collectingModel({
-      availableTranslations: async () => [translation('web'), translation('kjv')],
-    })
+    const model = await collectingModel(
+      {},
+      {
+        availableTranslations: async () => [
+          translation('web'),
+          translation('kjv'),
+        ],
+      },
+    )
     model.addTypedReferenceToCollection('Psalm 80:8-16')
 
     await model.goTo(43, 15)
@@ -1804,7 +1822,7 @@ describe('collecting a cross-reference', () => {
   it('persists the gathered members with the description and returns to idle', async () => {
     const created: { members: Reference[]; description: string | null }[] = []
     const model = await collectingModel({
-      createCrossReference: async (members, description) => {
+      create: async (members, description) => {
         created.push({ members, description })
       },
     })
@@ -1828,7 +1846,7 @@ describe('collecting a cross-reference', () => {
   it('persists a skipped description as none', async () => {
     const created: (string | null)[] = []
     const model = await collectingModel({
-      createCrossReference: async (_members, description) => {
+      create: async (_members, description) => {
         created.push(description)
       },
     })
@@ -1844,7 +1862,7 @@ describe('collecting a cross-reference', () => {
   it('refuses to create below two members', async () => {
     let creates = 0
     const model = await collectingModel({
-      createCrossReference: async () => {
+      create: async () => {
         creates++
       },
     })
@@ -1859,11 +1877,11 @@ describe('collecting a cross-reference', () => {
   it('surfaces the created cross-reference in open details at once', async () => {
     const stored: CrossReference[] = []
     const model = await collectingModel({
-      crossReferences: (reference) =>
+      intersecting: (reference) =>
         stored.filter((entry) =>
           entry.members.some((member) => referencesIntersect(member, reference)),
         ),
-      createCrossReference: async (members, description) => {
+      create: async (members, description) => {
         stored.push({ id: 'xr-created', members, description })
       },
     })
@@ -1942,9 +1960,11 @@ describe('growing a cross-reference', () => {
   it('saves the grown member list back to the same id and returns to idle', async () => {
     const memberUpdates: { id: string; members: Reference[] }[] = []
     const model = modelWith({
-      updateCrossReferenceMembers: async (id, members) => {
-        memberUpdates.push({ id, members })
-      },
+      crossReferences: crossReferencesOf({
+        updateMembers: async (id, members) => {
+          memberUpdates.push({ id, members })
+        },
+      }),
     })
     await model.openAt(ref('John 15:1'), 'web')
     model.startEditingCrossReference(vine.id, vine.members, vine.description)
@@ -1961,9 +1981,11 @@ describe('growing a cross-reference', () => {
   it('preserves the description when the prompt is left as-is', async () => {
     const descriptionUpdates: (string | null)[] = []
     const model = modelWith({
-      updateCrossReferenceDescription: async (_id, description) => {
-        descriptionUpdates.push(description)
-      },
+      crossReferences: crossReferencesOf({
+        updateDescription: async (_id, description) => {
+          descriptionUpdates.push(description)
+        },
+      }),
     })
     await model.openAt(ref('John 15:1'), 'web')
     model.startEditingCrossReference(vine.id, vine.members, vine.description)
@@ -1977,9 +1999,11 @@ describe('growing a cross-reference', () => {
   it('saves an edited description over the existing one', async () => {
     const descriptionUpdates: (string | null)[] = []
     const model = modelWith({
-      updateCrossReferenceDescription: async (_id, description) => {
-        descriptionUpdates.push(description)
-      },
+      crossReferences: crossReferencesOf({
+        updateDescription: async (_id, description) => {
+          descriptionUpdates.push(description)
+        },
+      }),
     })
     await model.openAt(ref('John 15:1'), 'web')
     model.startEditingCrossReference(vine.id, vine.members, vine.description)
@@ -2006,12 +2030,14 @@ describe('growing a cross-reference', () => {
     let memberUpdates = 0
     let descriptionUpdates = 0
     const model = modelWith({
-      updateCrossReferenceMembers: async () => {
-        memberUpdates++
-      },
-      updateCrossReferenceDescription: async () => {
-        descriptionUpdates++
-      },
+      crossReferences: crossReferencesOf({
+        updateMembers: async () => {
+          memberUpdates++
+        },
+        updateDescription: async () => {
+          descriptionUpdates++
+        },
+      }),
     })
     await model.openAt(ref('John 15:1'), 'web')
     model.startEditingCrossReference(vine.id, vine.members, vine.description)
@@ -2037,9 +2063,11 @@ describe('growing a cross-reference', () => {
 
     let creates = 0
     const guarded = modelWith({
-      updateCrossReferenceMembers: async () => {
-        creates++
-      },
+      crossReferences: crossReferencesOf({
+        updateMembers: async () => {
+          creates++
+        },
+      }),
     })
     await guarded.openAt(ref('John 15:1'), 'web')
     guarded.startEditingCrossReference(vine.id, [vine.members[0]], vine.description)

@@ -157,18 +157,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
         availableTranslations: async () => this.#availableTranslations(),
         intersecting: (reference) =>
           this.index.intersectingOccurrences(reference),
-        crossReferences: (reference) =>
-          this.#crossReferences.intersecting(reference),
-        createCrossReference: async (members, description) => {
-          await this.#crossReferences.create(members, description)
-        },
-        updateCrossReferenceDescription: (id, description) =>
-          this.#crossReferences.updateDescription(id, description),
-        updateCrossReferenceMembers: (id, members) =>
-          this.#crossReferences.updateMembers(id, members),
-        removeCrossReferenceMember: (id, memberIndex) =>
-          this.#crossReferences.removeMember(id, memberIndex),
-        deleteCrossReference: (id) => this.#crossReferences.delete(id),
+        crossReferences: this.#crossReferences,
         annotationDetails: (file) => this.#annotationDetails(file),
         strongs: this.#strongs,
         firstRun: this.#firstRun,

@@ -1,19 +1,24 @@
 import type { Reference } from '../reference'
-import type { CrossReference, MemberRemoval } from './cross-reference-store'
+import type { CrossReference } from './cross-reference-store'
+import type { CrossReferenceCommands } from './cross-reference-management'
 
-// Everything a surfacing feature asks of the cross-reference store.
-// CrossReferenceStore satisfies this as it stands, so features take the store
-// itself rather than a hand-built bundle of delegating adapters over it.
-export type CrossReferenceCatalog = {
+// Everything a surfacing model asks of the cross-reference store: the entries
+// intersecting what it shows, and the changes it can make to them. Creating
+// hands back the new entry, which no surfacing model has a use for.
+export type CrossReferenceEditing = CrossReferenceCommands & {
   intersecting: (reference: Reference) => CrossReference[]
   create: (
     members: Reference[],
     description: string | null,
-  ) => Promise<CrossReference>
-  updateDescription: (id: string, description: string | null) => Promise<void>
+  ) => Promise<unknown>
   updateMembers: (id: string, members: Reference[]) => Promise<void>
-  removeMember: (id: string, memberIndex: number) => Promise<MemberRemoval>
-  delete: (id: string) => Promise<void>
+}
+
+// What a feature needs on top: the store's change feed, so panes re-read it
+// when a cross-reference changes elsewhere. CrossReferenceStore satisfies this
+// as it stands, so features take the store itself rather than a hand-built
+// bundle of delegating adapters over it.
+export type CrossReferenceCatalog = CrossReferenceEditing & {
   onChanged: (listener: () => void) => () => void
 }
 
@@ -21,7 +26,7 @@ export type CrossReferenceCatalog = {
 // cross-references and accepts no changes to them.
 export const INERT_CROSS_REFERENCE_CATALOG: CrossReferenceCatalog = {
   intersecting: () => [],
-  create: async (members, description) => ({ id: '', members, description }),
+  create: async () => {},
   updateDescription: async () => {},
   updateMembers: async () => {},
   removeMember: async () => ({ ok: true }),

@@ -13,10 +13,9 @@ import {
 import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
   CrossReferenceManagement,
-  type CrossReference,
+  type CrossReferenceEditing,
   type CrossReferenceMemberView,
   type CrossReferenceView,
-  type MemberRemoval,
 } from '../cross-references'
 import {
   FONT_SCALE_DEFAULT,
@@ -77,24 +76,7 @@ export type ReaderPaneDeps = {
   passages: PassageSource
   availableTranslations: () => Promise<ReaderTranslation[]>
   intersecting: (reference: Reference) => OccurrenceGroup[]
-  crossReferences: (reference: Reference) => CrossReference[]
-  createCrossReference: (
-    members: Reference[],
-    description: string | null,
-  ) => Promise<void>
-  updateCrossReferenceDescription: (
-    id: string,
-    description: string | null,
-  ) => Promise<void>
-  updateCrossReferenceMembers: (
-    id: string,
-    members: Reference[],
-  ) => Promise<void>
-  removeCrossReferenceMember: (
-    id: string,
-    memberIndex: number,
-  ) => Promise<MemberRemoval>
-  deleteCrossReference: (id: string) => Promise<void>
+  crossReferences: CrossReferenceEditing
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
@@ -293,13 +275,7 @@ export class ReaderPaneModel {
     )
     this.#fontScalePercent = this.#defaultFontScale
     this.#management = new CrossReferenceManagement({
-      commands: {
-        updateDescription: (id, description) =>
-          deps.updateCrossReferenceDescription(id, description),
-        removeMember: (id, memberIndex) =>
-          deps.removeCrossReferenceMember(id, memberIndex),
-        delete: (id) => deps.deleteCrossReference(id),
-      },
+      commands: deps.crossReferences,
       onChanged: () => this.refreshOccurrences(),
       onStateChanged: () => this.#refreshCrossReferenceDetails(),
     })
@@ -712,16 +688,19 @@ export class ReaderPaneModel {
     const trimmed = collection.description.trim()
     const nextDescription = trimmed === '' ? null : trimmed
     if (collection.editing !== null) {
-      await this.deps.updateCrossReferenceMembers(
+      await this.deps.crossReferences.updateMembers(
         collection.editing,
         collection.members,
       )
-      await this.deps.updateCrossReferenceDescription(
+      await this.deps.crossReferences.updateDescription(
         collection.editing,
         nextDescription,
       )
     } else {
-      await this.deps.createCrossReference(collection.members, nextDescription)
+      await this.deps.crossReferences.create(
+        collection.members,
+        nextDescription,
+      )
     }
     this.#collection = null
     // Details already on screen re-read the store so the cross-reference
@@ -819,8 +798,8 @@ export class ReaderPaneModel {
   }
 
   #crossReferenceViews(reference: Reference): CrossReferenceView[] {
-    return this.deps
-      .crossReferences(reference)
+    return this.deps.crossReferences
+      .intersecting(reference)
       .map((entry) => this.#management.view(entry, [reference]))
   }
 
