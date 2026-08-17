@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { setIcon } from 'obsidian'
   import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
   import type { CrossReferenceView } from '../cross-references'
   import {
@@ -128,6 +129,10 @@
     return { update: render }
   }
 
+  const icon = (node: HTMLElement, name: string) => {
+    setIcon(node, name)
+  }
+
   const editCrossReference = (entry: CrossReferenceView): void => {
     model.startEditingCrossReference({
       id: entry.id,
@@ -174,11 +179,38 @@
   </div>
 {/snippet}
 
-{#snippet notesBlock(details: VerseDetailsView, withCrossReferences: boolean)}
-  <div class="bsr-notes-head">
-    <span class="bsr-group-label">Annotations</span>
-    <button type="button" class="bsr-annotate" onclick={() => annotateVerseBlock(details.verseId)}>Annotate</button>
+{#snippet sectionHeading(
+  label: string,
+  action: string,
+  onAdd: () => void,
+  disabled = false,
+)}
+  <div class="bsr-section-head">
+    <span class="bsr-group-label">{label}</span>
+    <button
+      type="button"
+      class="bsr-section-add"
+      aria-label={action}
+      title={action}
+      {disabled}
+      onclick={onAdd}
+    ><span class="bsr-section-add-icon" use:icon={'circle-plus'}></span></button>
   </div>
+{/snippet}
+
+{#snippet crossReferencesHeading()}
+  {@render sectionHeading(
+    'Cross-references',
+    'Collect a cross-reference',
+    () => model.startCollecting(),
+    view.collection !== null,
+  )}
+{/snippet}
+
+{#snippet notesBlock(details: VerseDetailsView, withCrossReferences: boolean)}
+  {@render sectionHeading('Annotations', 'Annotate this verse', () =>
+    annotateVerseBlock(details.verseId),
+  )}
   {#if details.annotations.length === 0}
     <div class="bsr-details-empty">No annotations.</div>
   {:else}
@@ -195,13 +227,14 @@
       </div>
     {/each}
   {/if}
-  {#if withCrossReferences && details.crossReferences.length > 0}
-    <div class="bsr-group-label">Cross-references</div>
-    {#each details.crossReferences as entry (entry.id)}
+  {#if withCrossReferences}
+    {@render crossReferencesHeading()}
+    {#each details.crossReferences as entry, index (entry.id)}
+      {#if index > 0}<hr class="bsr-xref-sep" />{/if}
       {@render crossReferenceRow(entry)}
     {/each}
   {/if}
-  <div class="bsr-group-label">Mentions</div>
+  <div class="bsr-group-label bsr-section-label">Mentions</div>
   {#if details.mentions.length === 0}
     <div class="bsr-details-empty">No intersecting notes.</div>
   {:else}
@@ -323,13 +356,6 @@
       onDecreaseFontScale={() => model.decreaseFontScale()}
       onResetFontScale={() => model.resetFontScale()}
     />
-    <button
-      type="button"
-      class="bsr-collect-start"
-      title="Collect a cross-reference"
-      disabled={view.collection !== null}
-      onclick={() => model.startCollecting()}
-    >Cross-reference</button>
     <span class="bsr-trans" bind:this={pillSlotEl}>
       <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
         {#each view.translations as pill (pill.id)}
@@ -637,14 +663,13 @@
             {/if}
           {/if}
         </div>
-        {#if view.chapterCrossReferences.length > 0}
-          <div class="bsr-side-xrefs">
-            <div class="bsr-group-label">Cross-references</div>
-            {#each view.chapterCrossReferences as entry (entry.id)}
-              {@render crossReferenceRow(entry)}
-            {/each}
-          </div>
-        {/if}
+        <div class="bsr-side-xrefs">
+          {@render crossReferencesHeading()}
+          {#each view.chapterCrossReferences as entry, index (entry.id)}
+            {#if index > 0}<hr class="bsr-xref-sep" />{/if}
+            {@render crossReferenceRow(entry)}
+          {/each}
+        </div>
       </div>
     {/if}
   </div>
@@ -728,27 +753,6 @@
     display: flex;
     gap: 10px;
     white-space: nowrap;
-  }
-
-  .bsr-collect-start {
-    background: none;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-s);
-    box-shadow: none;
-    padding: 2px 10px;
-    font-size: var(--font-ui-smaller);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsr-collect-start:hover:not(:disabled) {
-    color: var(--text-accent);
-    border-color: var(--text-accent);
-  }
-
-  .bsr-collect-start:disabled {
-    color: var(--text-faint);
-    cursor: default;
   }
 
   .bsr-basket {
@@ -1152,19 +1156,82 @@
     background: var(--background-modifier-hover);
   }
 
+  /* The add action stays out of the way until the heading line is hovered. */
+  .bsr-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .bsr-section-add {
+    display: inline-flex;
+    align-items: center;
+    opacity: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0 2px;
+    height: auto;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsr-section-head:hover .bsr-section-add:not(:disabled),
+  .bsr-section-add:focus-visible {
+    opacity: 1;
+  }
+
+  .bsr-section-add:hover {
+    color: var(--text-accent);
+    background: none;
+    box-shadow: none;
+  }
+
+  .bsr-section-add-icon {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .bsr-section-add-icon :global(svg) {
+    width: var(--icon-s);
+    height: var(--icon-s);
+  }
+
+  /* Item-level divider: deliberately subordinate to the section labels, which
+     alone delimit the sections. */
+  .bsr-xref-sep,
+  .bsr-anno-sep {
+    width: 2.5rem;
+    margin: 8px 0;
+    border: none;
+    border-top: 1px solid var(--background-modifier-border);
+  }
+
+  .bsr-section-head,
+  .bsr-section-label {
+    margin-top: 16px;
+  }
+
   .bsr-xref-description {
     color: var(--text-muted);
   }
 
   .bsr-xref-edit {
     position: absolute;
-    top: 2px;
-    right: 2px;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: flex-start;
     opacity: 0;
     background: none;
     border: none;
     box-shadow: none;
-    padding: 0 4px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    line-height: 1;
     color: var(--text-muted);
     cursor: pointer;
   }
@@ -1211,13 +1278,6 @@
     box-shadow: none;
   }
 
-  .bsr-notes-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 8px;
-  }
-
   .bsr-group-label {
     display: block;
     margin-top: 8px;
@@ -1227,43 +1287,43 @@
     letter-spacing: 0.05em;
   }
 
-  .bsr-notes-head .bsr-group-label {
-    margin-top: 0;
-  }
-
-  .bsr-annotate {
-    background: hsla(var(--interactive-accent-hsl), 0.15);
-    border: none;
-    border-radius: var(--radius-s);
-    box-shadow: none;
-    padding: 2px 10px;
-    font-size: var(--font-ui-smaller);
-    color: var(--text-accent);
-    cursor: pointer;
-  }
-
   .bsr-anno-block {
     position: relative;
-    margin: 6px 0;
+    margin: 4px -4px 8px;
+    padding: 2px 24px 2px 4px;
+    border-radius: 4px;
     font-size: var(--font-ui-small);
   }
 
-  .bsr-anno-sep {
-    width: 66.7%;
-    margin: 8px auto;
-    border: none;
-    border-top: 1px solid var(--background-modifier-border);
+  .bsr-anno-block:hover {
+    background: var(--background-modifier-hover);
+  }
+
+  /* Rendered markdown brings its own paragraph margins; trimming the outer
+     ones keeps the block spaced like the mention list beside it. */
+  .bsr-anno-body :global(> :first-child) {
+    margin-top: 0;
+  }
+
+  .bsr-anno-body :global(> :last-child) {
+    margin-bottom: 0;
   }
 
   .bsr-anno-edit {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: flex-start;
     opacity: 0;
     background: none;
     border: none;
     box-shadow: none;
-    padding: 0 4px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    line-height: 1;
     color: var(--text-muted);
     cursor: pointer;
   }
@@ -1409,5 +1469,9 @@
 
   .bsr-side-xrefs .bsr-group-label {
     margin-top: 4px;
+  }
+
+  .bsr-side-xrefs .bsr-section-head {
+    margin-top: 0;
   }
 </style>

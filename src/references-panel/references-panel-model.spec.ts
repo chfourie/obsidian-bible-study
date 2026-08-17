@@ -457,6 +457,81 @@ describe('cross-references in the References panel', () => {
     ).toEqual(['Romans 11:17-24'])
   })
 
+  it('orders members by book and start verse', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([
+      {
+        id: 'xr-order',
+        members: [
+          john15Vine,
+          romans11Olive,
+          reference(43, [[8, 31], [8, 32]]),
+          psalm80Vine,
+        ],
+        description: null,
+      },
+    ])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Romans 11:20}' })
+
+    expect(
+      panel.view.crossReferences[0].members.map((member) => member.label),
+    ).toEqual(['Psalms 80:8-16', 'John 8:31-32', 'John 15:1-8'])
+  })
+
+  it('leads a cross-reference with members sharing a chapter with the note', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([
+      {
+        id: 'xr-order',
+        members: [
+          psalm80Vine,
+          reference(43, [[15, 22], [15, 25]]),
+          reference(43, [[8, 31], [8, 32]]),
+        ],
+        description: null,
+      },
+    ])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Psalms 80:10}' })
+
+    expect(
+      panel.view.crossReferences[0].members.map((member) => member.label),
+    ).toEqual(['John 8:31-32', 'John 15:22-25'])
+  })
+
+  it('orders cross-references by their leading member', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([
+      {
+        id: 'xr-john',
+        members: [romans11Olive, reference(43, [[15, 22], [15, 25]])],
+        description: null,
+      },
+      {
+        id: 'xr-deuteronomy',
+        members: [romans11Olive, reference(5, [[9, 2], [9, 5]])],
+        description: null,
+      },
+      {
+        id: 'xr-same-chapter',
+        members: [romans11Olive, reference(45, [[11, 1], [11, 4]])],
+        description: null,
+      },
+    ])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Romans 11:20}' })
+
+    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
+      'xr-same-chapter',
+      'xr-deuteronomy',
+      'xr-john',
+    ])
+  })
+
   it('updates live when the cross-reference store changes', async () => {
     const store = fakeCrossReferenceStore()
     const panel = model(fakeSource().source, 'web', store.deps)

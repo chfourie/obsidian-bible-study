@@ -1501,7 +1501,7 @@ describe('cross-references intersecting the viewed chapter', () => {
     ).toEqual(['John 15:7-8', 'John 8:31-32'])
   })
 
-  it('keeps the stored order among members intersecting the chapter', async () => {
+  it('orders members intersecting the chapter by start verse', async () => {
     const branches: CrossReference = {
       id: 'xr-branches',
       members: [ref('Psalm 80:8-16'), ref('John 15:1-2'), ref('John 15:7-8')],
@@ -1523,16 +1523,52 @@ describe('cross-references intersecting the viewed chapter', () => {
     ])
   })
 
-  it('keeps the stored order among members elsewhere', async () => {
-    const model = modelWith({
-      crossReferences: storeOver(() => [vineCrossReference]),
-    })
+  it('orders members elsewhere by book and start verse', async () => {
+    const shuffled: CrossReference = {
+      id: 'xr-vine',
+      members: [
+        ref('Romans 11:17-24'),
+        ref('John 15:1-8'),
+        ref('Psalm 80:8-16'),
+      ],
+      description: null,
+    }
+    const model = modelWith({ crossReferences: storeOver(() => [shuffled]) })
 
     await model.openAt(ref('John 15:4'), 'web')
 
     expect(
       model.view.chapterCrossReferences[0].members.map((member) => member.label),
     ).toEqual(['John 15:1-8', 'Psalms 80:8-16', 'Romans 11:17-24'])
+  })
+
+  it('orders cross-references by their leading member', async () => {
+    const later: CrossReference = {
+      id: 'xr-later',
+      members: [ref('John 15:22-25'), ref('Deuteronomy 9:2-5')],
+      description: null,
+    }
+    const earlier: CrossReference = {
+      id: 'xr-earlier',
+      members: [ref('John 15:7-8'), ref('John 8:31-32')],
+      description: null,
+    }
+    const away: CrossReference = {
+      id: 'xr-away',
+      members: [ref('John 15:1'), ref('Deuteronomy 9:2-5')],
+      description: null,
+    }
+    const model = modelWith({
+      crossReferences: storeOver(() => [later, earlier, away]),
+    })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(model.view.chapterCrossReferences.map((entry) => entry.id)).toEqual([
+      'xr-away',
+      'xr-earlier',
+      'xr-later',
+    ])
   })
 
   it('leaves cross-references touching no verse of the chapter out', async () => {

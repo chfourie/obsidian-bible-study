@@ -1,5 +1,6 @@
 import {
   crossReferenceView,
+  orderCrossReferences,
   type CrossReference,
   type CrossReferenceView,
 } from '../cross-references'
@@ -176,7 +177,7 @@ export class ReferencesPanelModel {
           seen.set(entry.id, crossReferenceView(entry, references))
       }
     }
-    return [...seen.values()]
+    return orderCrossReferences([...seen.values()], references)
   }
 
   editCrossReference(id: string): void {

@@ -7,13 +7,13 @@ import {
   makeVerseId,
   parseReference,
   rangeContains,
-  referencesIntersect,
   verseCount,
   type Reference,
 } from '../reference'
 import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
   crossReferenceView,
+  orderCrossReferences,
   type CrossReference,
   type CrossReferenceEditing,
   type CrossReferenceMemberView,
@@ -815,30 +815,22 @@ export class ReaderPaneModel {
   }
 
   // The chapter list keeps every member, the chapter's own included, so the
-  // reader can see which verses of it a cross-reference touches — and leads
-  // with those, so the passage on screen anchors the row.
+  // reader can see which verses of it a cross-reference touches — and the
+  // ordering leads with those, so the passage on screen anchors the row.
   #chapterCrossReferences(): CrossReferenceView[] {
-    const chapter = chapterReference(this.#position)
-    return this.#crossReferenceViews(chapter, []).map((entry) => ({
-      ...entry,
-      members: [
-        ...entry.members.filter((member) =>
-          referencesIntersect(member.reference, chapter),
-        ),
-        ...entry.members.filter(
-          (member) => !referencesIntersect(member.reference, chapter),
-        ),
-      ],
-    }))
+    return this.#crossReferenceViews(chapterReference(this.#position), [])
   }
 
   #crossReferenceViews(
     reference: Reference,
     viewed: Reference[],
   ): CrossReferenceView[] {
-    return this.deps.crossReferences
-      .intersecting(reference)
-      .map((entry) => crossReferenceView(entry, viewed))
+    return orderCrossReferences(
+      this.deps.crossReferences
+        .intersecting(reference)
+        .map((entry) => crossReferenceView(entry, viewed)),
+      [reference],
+    )
   }
 
   async #annotationBlocks(

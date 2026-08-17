@@ -68,7 +68,10 @@ reference in the reader with the entry's translation.
     {#if view.crossReferences.length > 0}
       <div class="bsp-xrefs">
         <div class="bsp-group-label">Cross-references</div>
-        {#each view.crossReferences as entry (entry.id)}
+        {#each view.crossReferences as entry, index (entry.id)}
+          {#if index > 0}
+            <hr class="bsp-xref-divider" />
+          {/if}
           <div class="bsp-xref-block">
             <button
               type="button"
@@ -202,19 +205,32 @@ reference in the reader with the entry's translation.
     background: var(--background-modifier-hover);
   }
 
+  .bsp-xref-divider {
+    width: 66%;
+    margin: 0 auto;
+    border: 0;
+    border-top: 1px solid var(--background-modifier-border);
+  }
+
   .bsp-xref-description {
     color: var(--text-muted);
   }
 
   .bsp-xref-edit {
     position: absolute;
-    top: 2px;
-    right: 2px;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    align-items: flex-start;
     opacity: 0;
     background: none;
     border: none;
     box-shadow: none;
-    padding: 0 4px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    line-height: 1;
     color: var(--text-muted);
     cursor: pointer;
   }
