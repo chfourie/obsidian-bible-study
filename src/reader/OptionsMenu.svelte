@@ -68,6 +68,7 @@ options can be adjusted in one visit.
         width: activeWindow.innerWidth,
         height: activeWindow.innerHeight,
       },
+      align: 'left',
     })
     panelStyle = `top: ${top}px; left: ${left}px;`
   }

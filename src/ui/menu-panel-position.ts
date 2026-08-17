@@ -4,8 +4,9 @@
 // them in.
 //
 // Placements:
-//   'below' — drop below the anchor, right edges aligned, flipping above
-//             when the viewport bottom is too close (toolbar dropdowns).
+//   'below' — drop below the anchor, right edges aligned (or left with
+//             align: 'left'), flipping above when the viewport bottom is
+//             too close (toolbar dropdowns).
 //   'right' — fly out to the right of the anchor, tops aligned, flipping to
 //             the left on overflow (the ribbon icon sits on the left edge).
 // A null anchor centres the panel near the top of the viewport — the
@@ -23,6 +24,7 @@ export type PanelSize = { width: number; height: number }
 export type Viewport = { width: number; height: number }
 export type MenuPanelPosition = { top: number; left: number }
 export type MenuPanelPlacement = 'below' | 'right'
+export type MenuPanelAlign = 'left' | 'right'
 
 // Keep the panel at least this far from every viewport edge.
 const MARGIN = 8
@@ -32,9 +34,10 @@ export const computeMenuPanelPosition = (opts: {
   panel: PanelSize
   viewport: Viewport
   placement?: MenuPanelPlacement
+  align?: MenuPanelAlign
   gap?: number
 }): MenuPanelPosition => {
-  const { anchor, panel, viewport, placement = 'below', gap = 6 } = opts
+  const { anchor, panel, viewport, placement = 'below', align = 'right', gap = 6 } = opts
   if (anchor === null) return centeredPosition(panel, viewport)
   if (placement === 'right')
     return {
@@ -43,7 +46,11 @@ export const computeMenuPanelPosition = (opts: {
     }
   return {
     top: verticalPosition(anchor, panel, viewport, gap),
-    left: clamp(anchor.right - panel.width, panel.width, viewport.width),
+    left: clamp(
+      align === 'left' ? anchor.left : anchor.right - panel.width,
+      panel.width,
+      viewport.width,
+    ),
   }
 }
 

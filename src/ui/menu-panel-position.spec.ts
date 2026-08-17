@@ -16,6 +16,28 @@ describe('computeMenuPanelPosition', () => {
     expect(position).toEqual({ top: 70, left: 400 })
   })
 
+  it('aligns left edges when the align option is left', () => {
+    const position = computeMenuPanelPosition({
+      anchor,
+      panel: { width: 180, height: 200 },
+      viewport,
+      align: 'left',
+    })
+
+    expect(position).toEqual({ top: 70, left: 500 })
+  })
+
+  it('keeps a left-aligned panel inside the viewport margin on the right', () => {
+    const position = computeMenuPanelPosition({
+      anchor: { ...anchor, left: 700, right: 780 },
+      panel: { width: 180, height: 200 },
+      viewport,
+      align: 'left',
+    })
+
+    expect(position.left).toBe(612)
+  })
+
   it('keeps the panel inside the viewport margins on the left', () => {
     const position = computeMenuPanelPosition({
       anchor: { ...anchor, left: 20, right: 100 },
