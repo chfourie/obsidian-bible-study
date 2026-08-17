@@ -23,6 +23,9 @@ export { REFERENCES_VIEW_TYPE } from './references-view'
 
 const INERT_CROSS_REFERENCES: ReferencesPanelCrossReferences = {
   intersecting: () => [],
+  updateDescription: async () => {},
+  removeMember: async () => ({ ok: true }),
+  delete: async () => {},
 }
 
 export type ReferencesFeatureOptions = {

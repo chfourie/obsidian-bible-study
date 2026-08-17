@@ -1,6 +1,6 @@
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import type { ReferenceNavigator } from '../contracts'
-import type { CrossReference } from '../cross-references'
+import type { CrossReference, MemberRemoval } from '../cross-references'
 import { PluginFeature } from '../data-access'
 import { isTranslationManifest, type ModuleStore } from '../modules'
 import { frontmatterLength, type Reference } from '../reference'
@@ -26,6 +26,9 @@ const DEFAULT_INDEX_REFRESH_DEBOUNCE_MS = 100
 export type ReaderCrossReferences = {
   intersecting: (reference: Reference) => CrossReference[]
   create: (members: Reference[], description: string | null) => Promise<void>
+  updateDescription: (id: string, description: string | null) => Promise<void>
+  removeMember: (id: string, memberIndex: number) => Promise<MemberRemoval>
+  delete: (id: string) => Promise<void>
   onChanged: (listener: () => void) => () => void
 }
 
@@ -39,6 +42,9 @@ export type ReaderFeatureOptions = {
 const INERT_CROSS_REFERENCES: ReaderCrossReferences = {
   intersecting: () => [],
   create: async () => {},
+  updateDescription: async () => {},
+  removeMember: async () => ({ ok: true }),
+  delete: async () => {},
   onChanged: () => () => {},
 }
 
@@ -169,6 +175,11 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
           this.#crossReferences.intersecting(reference),
         createCrossReference: (members, description) =>
           this.#crossReferences.create(members, description),
+        updateCrossReferenceDescription: (id, description) =>
+          this.#crossReferences.updateDescription(id, description),
+        removeCrossReferenceMember: (id, memberIndex) =>
+          this.#crossReferences.removeMember(id, memberIndex),
+        deleteCrossReference: (id) => this.#crossReferences.delete(id),
         annotationDetails: (file) => this.#annotationDetails(file),
         strongs: this.#strongs,
         firstRun: this.#firstRun,

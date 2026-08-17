@@ -56,6 +56,11 @@ export default class ScriptureStudyPlugin extends Plugin {
         create: async (members, description) => {
           await this.crossReferences.store.create(members, description)
         },
+        updateDescription: (id, description) =>
+          this.crossReferences.store.updateDescription(id, description),
+        removeMember: (id, memberIndex) =>
+          this.crossReferences.store.removeMember(id, memberIndex),
+        delete: (id) => this.crossReferences.store.delete(id),
         onChanged: (listener) => this.crossReferences.store.onChanged(listener),
       },
       strongs: {
@@ -80,6 +85,11 @@ export default class ScriptureStudyPlugin extends Plugin {
     crossReferences: {
       intersecting: (reference) =>
         this.crossReferences.store.intersecting(reference),
+      updateDescription: (id, description) =>
+        this.crossReferences.store.updateDescription(id, description),
+      removeMember: (id, memberIndex) =>
+        this.crossReferences.store.removeMember(id, memberIndex),
+      delete: (id) => this.crossReferences.store.delete(id),
     },
     onCrossReferencesChanged: (listener) =>
       this.crossReferences.store.onChanged(listener),

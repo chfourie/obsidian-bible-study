@@ -11,10 +11,12 @@ import {
   type Reference,
 } from '../reference'
 import {
+  CROSS_REFERENCE_MINIMUM_MEMBERS,
   otherMembersView,
   type CrossReference,
   type CrossReferenceMemberView,
   type CrossReferenceView,
+  type MemberRemoval,
 } from '../cross-references'
 import {
   FONT_SCALE_DEFAULT,
@@ -80,6 +82,15 @@ export type ReaderPaneDeps = {
     members: Reference[],
     description: string | null,
   ) => Promise<void>
+  updateCrossReferenceDescription: (
+    id: string,
+    description: string | null,
+  ) => Promise<void>
+  removeCrossReferenceMember: (
+    id: string,
+    memberIndex: number,
+  ) => Promise<MemberRemoval>
+  deleteCrossReference: (id: string) => Promise<void>
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
@@ -146,8 +157,6 @@ export type CollectionView = {
   canCreate: boolean
   error: string | null
 }
-
-const CROSS_REFERENCE_MINIMUM_MEMBERS = 2
 
 export type VerseDetailsView = {
   verseId: number
@@ -249,6 +258,10 @@ export class ReaderPaneModel {
     members: Reference[]
     error: string | null
   } | null = null
+  // In-place cross-reference management state, keyed by cross-reference id;
+  // layered onto the otherwise-pure view from otherMembersView.
+  #crossReferenceErrors: Record<string, string> = {}
+  #crossReferenceDeleteConfirmations = new Set<string>()
   #redLetterOverridden = false
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -553,9 +566,10 @@ export class ReaderPaneModel {
     if (this.#collection === null) return null
     return {
       stage: this.#collection.stage,
-      members: this.#collection.members.map((member) => ({
+      members: this.#collection.members.map((member, index) => ({
         label: formatReference(member),
         reference: member,
+        index,
       })),
       canAddSelection: this.selectionReference() !== null,
       canCreate:
@@ -740,9 +754,74 @@ export class ReaderPaneModel {
   }
 
   #crossReferenceViews(reference: Reference): CrossReferenceView[] {
-    return this.deps
-      .crossReferences(reference)
-      .map((entry) => otherMembersView(entry, [reference]))
+    return this.deps.crossReferences(reference).map((entry) => ({
+      ...otherMembersView(entry, [reference]),
+      error: this.#crossReferenceErrors[entry.id] ?? null,
+      confirmingDelete: this.#crossReferenceDeleteConfirmations.has(entry.id),
+    }))
+  }
+
+  async updateCrossReferenceDescription(
+    id: string,
+    description: string | null,
+  ): Promise<void> {
+    const trimmed = description?.trim() ?? ''
+    await this.deps.updateCrossReferenceDescription(
+      id,
+      trimmed === '' ? null : trimmed,
+    )
+    await this.refreshOccurrences()
+  }
+
+  async removeCrossReferenceMember(id: string, memberIndex: number): Promise<void> {
+    const result = await this.deps.removeCrossReferenceMember(id, memberIndex)
+    if (result.ok) {
+      const { [id]: _removed, ...rest } = this.#crossReferenceErrors
+      this.#crossReferenceErrors = rest
+    } else {
+      this.#crossReferenceErrors = {
+        ...this.#crossReferenceErrors,
+        [id]: result.reason,
+      }
+    }
+    await this.refreshOccurrences()
+  }
+
+  confirmDeleteCrossReference(id: string): void {
+    this.#crossReferenceDeleteConfirmations = new Set(
+      this.#crossReferenceDeleteConfirmations,
+    ).add(id)
+    this.#refreshCrossReferenceDetails()
+  }
+
+  cancelDeleteCrossReference(id: string): void {
+    const next = new Set(this.#crossReferenceDeleteConfirmations)
+    next.delete(id)
+    this.#crossReferenceDeleteConfirmations = next
+    this.#refreshCrossReferenceDetails()
+  }
+
+  // Confirmation and error state are local UI state — updating them refreshes
+  // the cross-reference views already open without a full details reload.
+  #refreshCrossReferenceDetails(): void {
+    this.#details = Object.fromEntries(
+      Object.entries(this.#details).map(([verseId, detail]) => [
+        verseId,
+        {
+          ...detail,
+          crossReferences: this.#crossReferenceViews(
+            singleVerseReference(this.#position.book, detail.verseId),
+          ),
+        },
+      ]),
+    )
+    this.#notify()
+  }
+
+  async deleteCrossReference(id: string): Promise<void> {
+    await this.deps.deleteCrossReference(id)
+    this.cancelDeleteCrossReference(id)
+    await this.refreshOccurrences()
   }
 
   async #annotationBlocks(

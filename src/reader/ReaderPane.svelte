@@ -145,6 +145,27 @@
     void model.createCrossReference(description)
   }
 
+  let editingXrefDescription: string | null = $state(null)
+  let xrefDescriptionDraft = $state('')
+
+  const startEditingXrefDescription = (entry: VerseDetailsView['crossReferences'][number]): void => {
+    editingXrefDescription = entry.id
+    xrefDescriptionDraft = entry.description ?? ''
+  }
+
+  const commitXrefDescription = (id: string): void => {
+    void model.updateCrossReferenceDescription(id, xrefDescriptionDraft)
+    editingXrefDescription = null
+  }
+
+  const cancelEditingXrefDescription = (): void => {
+    editingXrefDescription = null
+  }
+
+  const removeXrefMember = (id: string, memberIndex: number): void => {
+    void model.removeCrossReferenceMember(id, memberIndex)
+  }
+
   const onBookPicked = (event: Event): void => {
     const book = Number((event.target as HTMLSelectElement).value)
     void model.goTo(book, 1)
@@ -180,18 +201,70 @@
     <div class="bsr-group-label">Cross-references</div>
     {#each details.crossReferences as entry (entry.id)}
       <div class="bsr-xref-block">
-        {#if entry.description !== null}
-          <div class="bsr-xref-description">{entry.description}</div>
+        {#if editingXrefDescription === entry.id}
+          <input
+            class="bsr-xref-description-input"
+            type="text"
+            placeholder="Why do these belong together? (optional)"
+            bind:value={xrefDescriptionDraft}
+            onkeydown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                commitXrefDescription(entry.id)
+              } else if (event.key === 'Escape') {
+                cancelEditingXrefDescription()
+              }
+            }}
+            onblur={() => commitXrefDescription(entry.id)}
+          />
+        {:else}
+          <button
+            type="button"
+            class="bsr-xref-description"
+            onclick={() => startEditingXrefDescription(entry)}
+          >{entry.description ?? 'Add a description…'}</button>
         {/if}
         <div class="bsr-xref-members">
-          {#each entry.members as member (member.label)}
-            <button
-              type="button"
-              class="bsr-xref-member"
-              onclick={() => openReference(member.reference)}
-            >{member.label}</button>
+          {#each entry.members as member (member.index)}
+            <span class="bsr-xref-member-chip">
+              <button
+                type="button"
+                class="bsr-xref-member"
+                onclick={() => openReference(member.reference)}
+              >{member.label}</button>
+              <button
+                type="button"
+                class="bsr-xref-member-remove"
+                aria-label="Remove {member.label} from this cross-reference"
+                onclick={() => removeXrefMember(entry.id, member.index)}
+              >✕</button>
+            </span>
           {/each}
         </div>
+        {#if entry.error !== null}
+          <div class="bsr-xref-error">{entry.error}</div>
+        {/if}
+        {#if entry.confirmingDelete}
+          <div class="bsr-xref-confirm-delete">
+            <span>Delete this cross-reference?</span>
+            <button
+              type="button"
+              class="bsr-xref-confirm-action"
+              onclick={() => void model.deleteCrossReference(entry.id)}
+            >Delete</button>
+            <button
+              type="button"
+              class="bsr-xref-confirm-action"
+              onclick={() => model.cancelDeleteCrossReference(entry.id)}
+            >Cancel</button>
+          </div>
+        {:else}
+          <button
+            type="button"
+            class="bsr-xref-delete"
+            onclick={() => model.confirmDeleteCrossReference(entry.id)}
+          >Delete cross-reference</button>
+        {/if}
       </div>
     {/each}
   {/if}
@@ -1113,13 +1186,44 @@
   }
 
   .bsr-xref-description {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    height: auto;
+    font-size: inherit;
+    text-align: left;
     color: var(--text-muted);
+    cursor: text;
+  }
+
+  .bsr-xref-description:hover {
+    color: var(--text-normal);
+    background: none;
+    box-shadow: none;
+  }
+
+  .bsr-xref-description-input {
+    width: 100%;
+    font-size: inherit;
+    margin: 2px 0;
   }
 
   .bsr-xref-members {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 8px;
+    margin-top: 2px;
+  }
+
+  .bsr-xref-member-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
   }
 
   .bsr-xref-member {
@@ -1141,6 +1245,64 @@
     text-decoration: underline;
     background: none;
     box-shadow: none;
+  }
+
+  .bsr-xref-member-remove {
+    padding: 0 2px;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    height: auto;
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+    cursor: pointer;
+  }
+
+  .bsr-xref-member-remove:hover {
+    color: var(--text-error);
+    background: none;
+    box-shadow: none;
+  }
+
+  .bsr-xref-error {
+    margin-top: 2px;
+    color: var(--text-error);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bsr-xref-delete {
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    box-shadow: none;
+    height: auto;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-faint);
+    cursor: pointer;
+  }
+
+  .bsr-xref-delete:hover {
+    color: var(--text-error);
+    background: none;
+    box-shadow: none;
+  }
+
+  .bsr-xref-confirm-delete {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-error);
+  }
+
+  .bsr-xref-confirm-action {
+    padding: 1px 8px;
+    height: auto;
+    font-size: var(--font-ui-smaller);
   }
 
   .bsr-notes-head {

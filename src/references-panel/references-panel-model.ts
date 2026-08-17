@@ -2,6 +2,7 @@ import {
   otherMembersView,
   type CrossReference,
   type CrossReferenceView,
+  type MemberRemoval,
 } from '../cross-references'
 import {
   decodeVerseId,
@@ -45,6 +46,9 @@ export type ReferencesPanelView = {
 
 export type ReferencesPanelCrossReferences = {
   intersecting: (reference: Reference) => CrossReference[]
+  updateDescription: (id: string, description: string | null) => Promise<void>
+  removeMember: (id: string, memberIndex: number) => Promise<MemberRemoval>
+  delete: (id: string) => Promise<void>
 }
 
 export type ReferencesPanelDeps = {
@@ -107,6 +111,8 @@ export class ReferencesPanelModel {
   #file: string | null = null
   #entries: ReferenceEntryView[] = []
   #crossReferences: CrossReferenceView[] = []
+  #crossReferenceErrors: Record<string, string> = {}
+  #crossReferenceDeleteConfirmations = new Set<string>()
   #translationId: string | null
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -170,10 +176,65 @@ export class ReferencesPanelModel {
     for (const reference of references) {
       for (const entry of this.deps.crossReferences.intersecting(reference)) {
         if (!seen.has(entry.id))
-          seen.set(entry.id, otherMembersView(entry, references))
+          seen.set(entry.id, {
+            ...otherMembersView(entry, references),
+            error: this.#crossReferenceErrors[entry.id] ?? null,
+            confirmingDelete: this.#crossReferenceDeleteConfirmations.has(
+              entry.id,
+            ),
+          })
       }
     }
     return [...seen.values()]
+  }
+
+  async updateCrossReferenceDescription(
+    id: string,
+    description: string | null,
+  ): Promise<void> {
+    const trimmed = description?.trim() ?? ''
+    await this.deps.crossReferences.updateDescription(
+      id,
+      trimmed === '' ? null : trimmed,
+    )
+    this.refreshCrossReferences()
+  }
+
+  async removeCrossReferenceMember(
+    id: string,
+    memberIndex: number,
+  ): Promise<void> {
+    const result = await this.deps.crossReferences.removeMember(id, memberIndex)
+    if (result.ok) {
+      const { [id]: _removed, ...rest } = this.#crossReferenceErrors
+      this.#crossReferenceErrors = rest
+    } else {
+      this.#crossReferenceErrors = {
+        ...this.#crossReferenceErrors,
+        [id]: result.reason,
+      }
+    }
+    this.refreshCrossReferences()
+  }
+
+  confirmDeleteCrossReference(id: string): void {
+    this.#crossReferenceDeleteConfirmations = new Set(
+      this.#crossReferenceDeleteConfirmations,
+    ).add(id)
+    this.refreshCrossReferences()
+  }
+
+  cancelDeleteCrossReference(id: string): void {
+    const next = new Set(this.#crossReferenceDeleteConfirmations)
+    next.delete(id)
+    this.#crossReferenceDeleteConfirmations = next
+    this.refreshCrossReferences()
+  }
+
+  async deleteCrossReference(id: string): Promise<void> {
+    await this.deps.crossReferences.delete(id)
+    this.cancelDeleteCrossReference(id)
+    this.refreshCrossReferences()
   }
 
   async setTranslation(translationId: string | null): Promise<void> {
