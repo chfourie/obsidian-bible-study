@@ -55,8 +55,11 @@ export class RenderingFeature extends PluginFeature {
   ) {
     super(plugin)
     this.#repository = new PassageRepository(
-      new FallbackPassageSource(new ModulePassageSource(store), () =>
-        resolveFallbackTranslationId(this.settings),
+      new FallbackPassageSource(
+        new ModulePassageSource(store, {
+          derivedRedLetter: () => this.settings.derivedRedLetter,
+        }),
+        () => resolveFallbackTranslationId(this.settings),
       ),
     )
     this.#deps = {

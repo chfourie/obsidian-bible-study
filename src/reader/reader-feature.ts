@@ -41,6 +41,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   #pendingRefresh: number | null = null
   #unsubscribeIndex: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
+  #derivedRedLetter = false
   #annotator: (reference: Reference) => void = () => {}
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
@@ -58,7 +59,11 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     this.#firstRun = options.firstRun
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.3): unavailable translations show an unavailable row.
-    this.#repository = new PassageRepository(new ModulePassageSource(store))
+    this.#repository = new PassageRepository(
+      new ModulePassageSource(store, {
+        derivedRedLetter: () => this.settings.derivedRedLetter,
+      }),
+    )
   }
 
   override async load(): Promise<void> {
@@ -98,15 +103,23 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
 
   override onSettingsChanged(): void {
     this.#repository.clear()
+    const derivedRedLetterFlipped =
+      this.#derivedRedLetter !== this.settings.derivedRedLetter
+    this.#derivedRedLetter = this.settings.derivedRedLetter
     this.#models.forEach((model) => {
       model.setAnnotationOrdering(this.settings.annotationOrdering)
       model.setDefaultFontScale(this.settings.readerFontScalePercent)
       void model.refreshTranslations()
       // Panes with nothing on screen (no translation yet, or the passage was
       // unavailable) reload so a module installed from the settings tab
-      // appears without reopening the pane.
+      // appears without reopening the pane. A flipped derived red letter
+      // setting repaints on-screen passages too.
       const status = model.view.status
-      if (status === 'no-translation' || status === 'unavailable')
+      if (
+        status === 'no-translation' ||
+        status === 'unavailable' ||
+        derivedRedLetterFlipped
+      )
         void model.openPosition(model.view.position)
     })
   }

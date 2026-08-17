@@ -180,6 +180,7 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
       expect.arrayContaining([
         'Default translation',
         'Offline fallback translation',
+        'Derived red letter',
         'Language',
         "Enable Strong's",
         'Details',
@@ -613,6 +614,20 @@ describe('ScriptureStudySettingTab Strongs section', () => {
     expect(
       settingNamed(withTagged, "Enable Strong's").textContent,
     ).not.toContain("Strong's badge")
+  })
+})
+
+describe('ScriptureStudySettingTab derived red letter', () => {
+  it('persists the derived red letter toggle, default off', async () => {
+    const { container, settingsStore } = await setup()
+
+    const setting = settingNamed(container, 'Derived red letter')
+    expect(toggleOf(setting).checked).toBe(false)
+
+    changeToggle(setting, true)
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).derivedRedLetter).toBe(true)
   })
 })
 

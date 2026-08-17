@@ -33,6 +33,7 @@ type SettingsControlKey =
   | 'defaultTranslationId'
   | 'fallbackTranslationId'
   | 'languageFilter'
+  | 'derivedRedLetter'
   | 'strongsEnabled'
   | 'readerDetailsDefault'
   | 'readerNavDefault'
@@ -89,6 +90,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         'fallbackTranslationId',
         view.fallbackTranslationOptions,
       ),
+      {
+        name: 'Derived red letter',
+        desc: 'Shows whole verses containing the words of Christ in red in translations without their own red-letter data.',
+        control: { type: 'toggle', key: 'derivedRedLetter' },
+      },
       this.#translationsPage(view),
       this.#strongsGroup(view),
       this.#readerGroup(),
@@ -141,6 +147,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         )
       case 'languageFilter':
         return settings.languageFilter
+      case 'derivedRedLetter':
+        return settings.derivedRedLetter
       case 'strongsEnabled':
         return view.strongsInstalled
       case 'readerDetailsDefault':
@@ -172,6 +180,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         }))
       case 'languageFilter':
         return this.model.setLanguageFilter(value as string)
+      case 'derivedRedLetter':
+        return this.#update((settings) => ({
+          ...settings,
+          derivedRedLetter: value === true,
+        }))
       case 'strongsEnabled':
         return this.model.setStrongsEnabled(value === true)
       case 'readerDetailsDefault':

@@ -26,7 +26,11 @@ export class ReferencesFeature extends PluginFeature {
 
   constructor(plugin: Plugin, store: ModuleStore) {
     super(plugin)
-    this.#repository = new PassageRepository(new ModulePassageSource(store))
+    this.#repository = new PassageRepository(
+      new ModulePassageSource(store, {
+        derivedRedLetter: () => this.settings.derivedRedLetter,
+      }),
+    )
   }
 
   override async load(): Promise<void> {

@@ -320,6 +320,42 @@ describe('ReaderFeature entry points', () => {
     expect(view.model.view.translations.map((pill) => pill.id)).toEqual(['web'])
   })
 
+  it('renders cue-marked verses red in reader panes when derived red letter is on', async () => {
+    const { feature, leaves } = harness()
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      derivedRedLetter: true,
+    })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.rows[0].segments).toEqual([
+      { text: 'I am the true vine.', redLetter: true },
+    ])
+  })
+
+  it('repaints open panes when the derived red letter setting flips', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(false)
+
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      derivedRedLetter: true,
+    })
+    feature.onSettingsChanged()
+    await flushAsync()
+
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(true)
+  })
+
   it('passes the annotation ordering setting to new panes', async () => {
     const { feature, index, leaves } = harness({
       'Annotations/Zeal.md': {

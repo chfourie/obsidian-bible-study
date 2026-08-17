@@ -454,3 +454,113 @@ describe('ModulePassageSource', () => {
     expect(empty).toMatchObject({ attribution: null })
   })
 })
+
+describe('ModulePassageSource derived red letter', () => {
+  const books: Record<number, Record<number, string>> = {
+    40: { [makeVerseId(40, 4, 4)]: 'But Jesus answered, It is written.' },
+    43: {
+      [john(11, 35)]: 'Jesus wept.',
+      [john(15, 4)]: 'Remain in me, and I in you.',
+    },
+  }
+
+  const derivedSource = (
+    enabled: boolean,
+    manifestOverrides: Partial<ModuleManifest> = {},
+  ) =>
+    new ModulePassageSource(
+      {
+        manifest: async () => ({
+          ...webManifest('Public Domain'),
+          ...manifestOverrides,
+        }),
+        bookContent: async (_moduleId, book) => books[book] ?? null,
+      },
+      { derivedRedLetter: () => enabled },
+    )
+
+  it('renders a full-cue verse entirely red when the module has no native red letter', async () => {
+    const passage = await derivedSource(true).passage(ref('John 15:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'Remain in me, and I in you.', redLetter: true },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('renders a partial-cue verse entirely red at whole-verse granularity', async () => {
+    const passage = await derivedSource(true).passage(
+      ref('Matthew 4:4'),
+      'web',
+    )
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'But Jesus answered, It is written.', redLetter: true },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('leaves an uncued verse plain', async () => {
+    const passage = await derivedSource(true).passage(ref('John 11:35'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [{ segments: [{ text: 'Jesus wept.', redLetter: false }] }],
+    })
+  })
+
+  it('derives nothing while the setting is off', async () => {
+    const passage = await derivedSource(false).passage(ref('John 15:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'Remain in me, and I in you.', redLetter: false },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('leaves a module with native red-letter data untouched', async () => {
+    const source = new ModulePassageSource(
+      {
+        manifest: async () => ({
+          ...webManifest('Public Domain'),
+          id: 'bsb',
+          capabilities: { strongsTagged: true, redLetter: true },
+        }),
+        bookContent: async () => ({
+          [john(15, 4)]: {
+            text: 'He said, Remain in me, and I in you.',
+            red: [{ start: 9, end: 36 }],
+          },
+        }),
+      },
+      { derivedRedLetter: () => true },
+    )
+
+    const passage = await source.passage(ref('John 15:4'), 'bsb')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'He said, ', redLetter: false },
+            { text: 'Remain in me, and I in you.', redLetter: true },
+          ],
+        },
+      ],
+    })
+  })
+})

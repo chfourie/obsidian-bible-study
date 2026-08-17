@@ -12,6 +12,7 @@ export type ScriptureStudySettings = {
   defaultTranslationId: string | null
   fallbackTranslationId: string | null
   languageFilter: string
+  derivedRedLetter: boolean
   readerDetailsDefault: 'inline' | 'side-panel'
   readerNavDefault: 'tree' | 'breadcrumb'
   readerLayoutDefault: 'verse-per-line' | 'continuous'
@@ -27,6 +28,7 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   defaultTranslationId: null,
   fallbackTranslationId: null,
   languageFilter: 'English',
+  derivedRedLetter: false,
   readerDetailsDefault: 'inline',
   readerNavDefault: 'tree',
   readerLayoutDefault: 'verse-per-line',

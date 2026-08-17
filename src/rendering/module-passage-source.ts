@@ -11,7 +11,11 @@ import {
   verseTagsOf,
   verseTextOf,
 } from '../modules'
-import { enumerateVerseIds, type Reference } from '../reference'
+import {
+  enumerateVerseIds,
+  redLetterCueOf,
+  type Reference,
+} from '../reference'
 
 export type VerseSegment = {
   text: string
@@ -110,8 +114,18 @@ const attributionFor = (manifest: ModuleManifest): string | null => {
   return license
 }
 
+export type ModulePassageOptions = {
+  derivedRedLetter?: () => boolean
+}
+
+const wholeVerseRed = (segments: VerseSegment[]): VerseSegment[] =>
+  segments.map((segment) => ({ ...segment, redLetter: true }))
+
 export class ModulePassageSource implements PassageSource {
-  constructor(private readonly store: PassageStore) {}
+  constructor(
+    private readonly store: PassageStore,
+    private readonly options: ModulePassageOptions = {},
+  ) {}
 
   async passage(
     reference: Reference,
@@ -119,6 +133,9 @@ export class ModulePassageSource implements PassageSource {
   ): Promise<Passage> {
     const manifest = await this.store.manifest(translationId)
     if (manifest === null) return { status: 'unavailable' }
+    const deriveRed =
+      this.options.derivedRedLetter?.() === true &&
+      manifest.capabilities.redLetter !== true
     const content =
       (await this.store.bookContent(translationId, reference.book)) ?? {}
     const verses: PassageVerse[] = []
@@ -126,9 +143,13 @@ export class ModulePassageSource implements PassageSource {
       for (const verseId of enumerateVerseIds(range)) {
         const verse = content[verseId]
         if (verse === undefined) continue
+        const segments = verseSegments(verse)
         const passageVerse: PassageVerse = {
           verseId,
-          segments: verseSegments(verse),
+          segments:
+            deriveRed && redLetterCueOf(verseId).kind !== 'none'
+              ? wholeVerseRed(segments)
+              : segments,
         }
         const lines = verseLinesOf(verse)
         if (lines.length > 0) passageVerse.hasLineData = true
