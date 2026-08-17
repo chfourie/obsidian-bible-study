@@ -16,6 +16,7 @@ import {
   redLetterCueOf,
   type Reference,
 } from '../reference'
+import { derivedRedSpan } from './derived-red-span'
 
 export type VerseSegment = {
   text: string
@@ -65,10 +66,12 @@ const covering = (
 ): boolean =>
   spans.some((span) => span.start <= start && end <= span.end)
 
-const verseSegments = (verse: VerseContent): VerseSegment[] => {
+const verseSegments = (
+  verse: VerseContent,
+  redSpans: FormatSpan[],
+): VerseSegment[] => {
   const text = verseTextOf(verse)
   const orderedTags = [...verseTagsOf(verse)].sort((a, b) => a.start - b.start)
-  const redSpans = verseRedLetterOf(verse)
   const suppliedSpans = verseSuppliedOf(verse)
   const lines = [...verseLinesOf(verse)]
     .filter((line) => line.start < text.length)
@@ -118,9 +121,6 @@ export type ModulePassageOptions = {
   derivedRedLetter?: () => boolean
 }
 
-const wholeVerseRed = (segments: VerseSegment[]): VerseSegment[] =>
-  segments.map((segment) => ({ ...segment, redLetter: true }))
-
 export class ModulePassageSource implements PassageSource {
   constructor(
     private readonly store: PassageStore,
@@ -143,13 +143,15 @@ export class ModulePassageSource implements PassageSource {
       for (const verseId of enumerateVerseIds(range)) {
         const verse = content[verseId]
         if (verse === undefined) continue
-        const segments = verseSegments(verse)
+        const derived = deriveRed
+          ? derivedRedSpan(verseTextOf(verse), redLetterCueOf(verseId))
+          : null
         const passageVerse: PassageVerse = {
           verseId,
-          segments:
-            deriveRed && redLetterCueOf(verseId).kind !== 'none'
-              ? wholeVerseRed(segments)
-              : segments,
+          segments: verseSegments(
+            verse,
+            derived !== null ? [derived] : verseRedLetterOf(verse),
+          ),
         }
         const lines = verseLinesOf(verse)
         if (lines.length > 0) passageVerse.hasLineData = true

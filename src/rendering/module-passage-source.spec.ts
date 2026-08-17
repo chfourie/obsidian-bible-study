@@ -457,7 +457,12 @@ describe('ModulePassageSource', () => {
 
 describe('ModulePassageSource derived red letter', () => {
   const books: Record<number, Record<number, string>> = {
-    40: { [makeVerseId(40, 4, 4)]: 'But Jesus answered, It is written.' },
+    40: {
+      [makeVerseId(40, 3, 15)]: '“Let it be so now,” Jesus replied.',
+      [makeVerseId(40, 4, 4)]: 'But Jesus answered, It is written.',
+      [makeVerseId(40, 4, 7)]: 'Jesus replied, "It also says."',
+      [makeVerseId(40, 4, 17)]: 'Jesus began to preach, “Repent, for ‘the kingdom’ is near.”',
+    },
     43: {
       [john(11, 35)]: 'Jesus wept.',
       [john(15, 4)]: 'Remain in me, and I in you.',
@@ -493,7 +498,7 @@ describe('ModulePassageSource derived red letter', () => {
     })
   })
 
-  it('renders a partial-cue verse entirely red at whole-verse granularity', async () => {
+  it('renders a partial-cue verse entirely red when its text has no double quotes', async () => {
     const passage = await derivedSource(true).passage(
       ref('Matthew 4:4'),
       'web',
@@ -504,6 +509,96 @@ describe('ModulePassageSource derived red letter', () => {
         {
           segments: [
             { text: 'But Jesus answered, It is written.', redLetter: true },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('starts red at the opening double quote when speech opens mid-verse', async () => {
+    const passage = await derivedSource(true).passage(
+      ref('Matthew 4:17'),
+      'web',
+    )
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'Jesus began to preach, ', redLetter: false },
+            {
+              text: '“Repent, for ‘the kingdom’ is near.”',
+              redLetter: true,
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('ends red at the closing double quote when speech closes mid-verse', async () => {
+    const passage = await derivedSource(true).passage(
+      ref('Matthew 3:15'),
+      'web',
+    )
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: '“Let it be so now,”', redLetter: true },
+            { text: ' Jesus replied.', redLetter: false },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('anchors on straight double quotes', async () => {
+    const passage = await derivedSource(true).passage(
+      ref('Matthew 4:7'),
+      'web',
+    )
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'Jesus replied, ', redLetter: false },
+            { text: '"It also says."', redLetter: true },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('composes the derived red cut with Strong-tag boundaries', async () => {
+    const source = new ModulePassageSource(
+      {
+        manifest: async () => ({
+          ...webManifest('Public Domain'),
+          capabilities: { strongsTagged: true },
+        }),
+        bookContent: async () => ({
+          [makeVerseId(40, 4, 4)]: {
+            text: 'But Jesus answered, “It is written.”',
+            tags: [{ start: 21, end: 23, strongs: ['G1125'] }],
+          },
+        }),
+      },
+      { derivedRedLetter: () => true },
+    )
+
+    const passage = await source.passage(ref('Matthew 4:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'But Jesus answered, ', redLetter: false },
+            { text: '“', redLetter: true },
+            { text: 'It', redLetter: true, strongs: ['G1125'] },
+            { text: ' is written.”', redLetter: true },
           ],
         },
       ],
