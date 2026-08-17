@@ -71,9 +71,7 @@ const crossReferencesOf = (
 ): CrossReferenceEditing => ({
   intersecting: () => [],
   create: async () => {},
-  updateDescription: async () => {},
   update: async () => {},
-  removeMember: async () => ({ ok: true }),
   delete: async () => {},
   ...overrides,
 })
@@ -1391,8 +1389,6 @@ describe('cross-references in verse details', () => {
           { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
         ],
         allMembers: vineCrossReference.members,
-        error: null,
-        confirmingDelete: false,
       },
     ])
   })
@@ -1454,154 +1450,98 @@ describe('cross-references in verse details', () => {
   })
 })
 
-describe('managing cross-references in verse details', () => {
-  const verse4 = makeVerseId(43, 15, 4)
+describe('cross-references intersecting the viewed chapter', () => {
   const vineCrossReference: CrossReference = {
     id: 'xr-vine',
     members: [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')],
     description: 'Vine and vineyard imagery for Israel',
   }
-  const intersectingOf =
-    (...entries: CrossReference[]) =>
-    (reference: Reference): CrossReference[] =>
-      entries.filter((entry) =>
-        entry.members.some((member) => referencesIntersect(member, reference)),
-      )
-  // A small mutable fake store: updates staged through the deps functions
-  // become visible the next time the model reads intersecting(), mirroring
-  // how the real store's onChanged-driven refresh surfaces a saved mutation.
-  const mutableStoreOf = (initial: CrossReference) => {
-    let entry = initial
-    return {
-      intersecting: (reference: Reference): CrossReference[] =>
-        entry.members.some((member) => referencesIntersect(member, reference))
-          ? [entry]
-          : [],
-      set: (next: CrossReference): void => {
-        entry = next
-      },
-    }
-  }
-  const modelAtVerse4 = async (
-    overrides: Partial<CrossReferenceEditing> = {},
-  ): Promise<ReaderPaneModel> => {
+  const storeOver = (entries: () => CrossReference[]): CrossReferenceEditing =>
+    crossReferencesOf({
+      intersecting: (reference) =>
+        entries().filter((entry) =>
+          entry.members.some((member) => referencesIntersect(member, reference)),
+        ),
+    })
+
+  it('lists the chapter\'s cross-references with no verse selected', async () => {
     const model = modelWith({
-      crossReferences: crossReferencesOf({
-        intersecting: intersectingOf(vineCrossReference),
-        ...overrides,
-      }),
+      crossReferences: storeOver(() => [vineCrossReference]),
+    })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(model.view.selectedVerseId).toBe(null)
+    expect(model.view.chapterCrossReferences).toEqual([
+      {
+        id: 'xr-vine',
+        description: 'Vine and vineyard imagery for Israel',
+        members: [
+          { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
+          { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
+        ],
+        allMembers: vineCrossReference.members,
+      },
+    ])
+  })
+
+  it('leaves cross-references touching no verse of the chapter out', async () => {
+    const elsewhere: CrossReference = {
+      id: 'xr-elsewhere',
+      members: [ref('Psalm 23:1'), ref('Romans 8:1')],
+      description: null,
+    }
+    const model = modelWith({
+      crossReferences: storeOver(() => [vineCrossReference, elsewhere]),
+    })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(model.view.chapterCrossReferences.map((entry) => entry.id)).toEqual([
+      'xr-vine',
+    ])
+  })
+
+  it('re-scopes to the chapter navigated to', async () => {
+    const nextChapter: CrossReference = {
+      id: 'xr-next',
+      members: [ref('John 16:1'), ref('Psalm 23:1')],
+      description: null,
+    }
+    const model = modelWith({
+      crossReferences: storeOver(() => [vineCrossReference, nextChapter]),
     })
     await model.openAt(ref('John 15:4'), 'web')
-    await model.selectVerse(verse4)
-    return model
-  }
 
-  it('edits the description in place', async () => {
-    const updates: { id: string; description: string | null }[] = []
-    const store = mutableStoreOf(vineCrossReference)
-    const model = await modelAtVerse4({
-      intersecting: store.intersecting,
-      updateDescription: async (id, description) => {
-        updates.push({ id, description })
-        store.set({ ...vineCrossReference, description })
+    await model.nextChapter()
+
+    expect(model.view.chapterCrossReferences).toEqual([
+      {
+        id: 'xr-next',
+        description: null,
+        members: [{ label: 'Psalms 23:1', reference: ref('Psalm 23:1'), index: 1 }],
+        allMembers: nextChapter.members,
       },
-    })
-
-    await model.updateCrossReferenceDescription('xr-vine', 'A better reason')
-
-    expect(updates).toEqual([{ id: 'xr-vine', description: 'A better reason' }])
-    expect(model.view.details[verse4].crossReferences[0].description).toBe(
-      'A better reason',
-    )
+    ])
   })
 
-  it('clearing the description leaves it with none', async () => {
-    const updates: (string | null)[] = []
-    const model = await modelAtVerse4({
-      updateDescription: async (_id, description) => {
-        updates.push(description)
-      },
+  it('updates live when the cross-reference store changes', async () => {
+    let entries: CrossReference[] = []
+    const model = modelWith({ crossReferences: storeOver(() => entries) })
+    await model.openAt(ref('John 15:4'), 'web')
+    expect(model.view.chapterCrossReferences).toEqual([])
+    let notified = 0
+    model.subscribe(() => {
+      notified += 1
     })
 
-    await model.updateCrossReferenceDescription('xr-vine', '   ')
+    entries = [vineCrossReference]
+    await model.refreshOccurrences()
 
-    expect(updates).toEqual([null])
-  })
-
-  it('removes a member in place', async () => {
-    const removals: { id: string; index: number }[] = []
-    const model = await modelAtVerse4({
-      removeMember: async (id, index) => {
-        removals.push({ id, index })
-        return { ok: true }
-      },
-    })
-
-    await model.removeCrossReferenceMember('xr-vine', 1)
-
-    expect(removals).toEqual([{ id: 'xr-vine', index: 1 }])
-  })
-
-  it('shows a blocked removal explanation on the entry without removing it', async () => {
-    const model = await modelAtVerse4({
-      removeMember: async () => ({
-        ok: false,
-        reason: 'A cross-reference needs at least two members — delete it instead.',
-      }),
-    })
-
-    await model.removeCrossReferenceMember('xr-vine', 1)
-
-    expect(model.view.details[verse4].crossReferences[0].error).toBe(
-      'A cross-reference needs at least two members — delete it instead.',
-    )
-  })
-
-  it('clears a previous error once a removal succeeds', async () => {
-    let shouldFail = true
-    const model = await modelAtVerse4({
-      removeMember: async () =>
-        shouldFail ? { ok: false, reason: 'blocked' } : { ok: true },
-    })
-    await model.removeCrossReferenceMember('xr-vine', 1)
-    expect(model.view.details[verse4].crossReferences[0].error).toBe('blocked')
-
-    shouldFail = false
-    await model.removeCrossReferenceMember('xr-vine', 1)
-
-    expect(model.view.details[verse4].crossReferences[0].error).toBe(null)
-  })
-
-  it('asks for confirmation before deleting, and cancel backs out', async () => {
-    const model = await modelAtVerse4()
-
-    model.confirmDeleteCrossReference('xr-vine')
-    expect(model.view.details[verse4].crossReferences[0].confirmingDelete).toBe(
-      true,
-    )
-
-    model.cancelDeleteCrossReference('xr-vine')
-    expect(model.view.details[verse4].crossReferences[0].confirmingDelete).toBe(
-      false,
-    )
-  })
-
-  it('deletes the cross-reference after confirmation', async () => {
-    const deleted: string[] = []
-    const store = mutableStoreOf(vineCrossReference)
-    const model = await modelAtVerse4({
-      intersecting: store.intersecting,
-      delete: async (id) => {
-        deleted.push(id)
-        store.set({ ...vineCrossReference, members: [] })
-      },
-    })
-
-    model.confirmDeleteCrossReference('xr-vine')
-    await model.deleteCrossReference('xr-vine')
-
-    expect(deleted).toEqual(['xr-vine'])
-    expect(model.view.details[verse4].crossReferences).toEqual([])
+    expect(model.view.chapterCrossReferences.map((entry) => entry.id)).toEqual([
+      'xr-vine',
+    ])
+    expect(notified).toBeGreaterThan(0)
   })
 })
 
@@ -1686,12 +1626,12 @@ describe('collecting a cross-reference', () => {
     const model = await collectingModel()
 
     expect(model.view.collection).toEqual({
-      stage: 'gathering',
       members: [],
       canAddSelection: false,
-      canCreate: false,
+      canSave: false,
       error: null,
       editing: false,
+      confirmingDelete: false,
       description: '',
       typedMember: '',
     })
@@ -1838,32 +1778,17 @@ describe('collecting a cross-reference', () => {
     expect(model.view.collection).toBe(null)
   })
 
-  it('gates the create action below two members', async () => {
+  it('gates saving below two members', async () => {
     const model = await collectingModel()
     addTyped(model, 'Psalm 80:8-16')
-    expect(model.view.collection?.canCreate).toBe(false)
-
-    model.beginDescribingCollection()
-    expect(model.view.collection?.stage).toBe('gathering')
+    expect(model.view.collection?.canSave).toBe(false)
 
     addTyped(model, 'Romans 11:17-24')
-    expect(model.view.collection?.canCreate).toBe(true)
+
+    expect(model.view.collection?.canSave).toBe(true)
   })
 
-  it('prompts for a description before creating and can go back to gathering', async () => {
-    const model = await collectingModel()
-    addTyped(model, 'Psalm 80:8-16')
-    addTyped(model, 'Romans 11:17-24')
-
-    model.beginDescribingCollection()
-    expect(model.view.collection?.stage).toBe('describing')
-
-    model.cancelDescribingCollection()
-    expect(model.view.collection?.stage).toBe('gathering')
-    expect(gathered(model)).toHaveLength(2)
-  })
-
-  it('persists the gathered members with the description and returns to idle', async () => {
+  it('persists the gathered members with the description in one step', async () => {
     const created: { members: Reference[]; description: string | null }[] = []
     const model = await collectingModel({
       create: async (members, description) => {
@@ -1873,10 +1798,9 @@ describe('collecting a cross-reference', () => {
     await model.selectVerse(verse4)
     model.addSelectionToCollection()
     addTyped(model, 'Psalm 80:8-16')
-    model.beginDescribingCollection()
 
     model.describeCollection('Vine imagery')
-    await model.createCrossReference()
+    await model.saveCrossReference()
 
     expect(created).toEqual([
       {
@@ -1887,7 +1811,7 @@ describe('collecting a cross-reference', () => {
     expect(model.view.collection).toBe(null)
   })
 
-  it('persists a skipped description as none', async () => {
+  it('persists a blank description as none', async () => {
     const created: (string | null)[] = []
     const model = await collectingModel({
       create: async (_members, description) => {
@@ -1898,12 +1822,12 @@ describe('collecting a cross-reference', () => {
     addTyped(model, 'Romans 11:17-24')
 
     model.describeCollection('   ')
-    await model.createCrossReference()
+    await model.saveCrossReference()
 
     expect(created).toEqual([null])
   })
 
-  it('refuses to create below two members', async () => {
+  it('refuses to save below two members and keeps the strip open', async () => {
     let creates = 0
     const model = await collectingModel({
       create: async () => {
@@ -1912,10 +1836,10 @@ describe('collecting a cross-reference', () => {
     })
     addTyped(model, 'Psalm 80:8-16')
 
-    await model.createCrossReference()
+    await model.saveCrossReference()
 
     expect(creates).toBe(0)
-    expect(model.view.collection?.stage).toBe('gathering')
+    expect(model.view.collection?.members).toHaveLength(1)
   })
 
   it('surfaces the created cross-reference in open details at once', async () => {
@@ -1935,7 +1859,7 @@ describe('collecting a cross-reference', () => {
     await model.selectVerse(verse4)
     expect(model.view.details[verse4].crossReferences).toEqual([])
 
-    await model.createCrossReference()
+    await model.saveCrossReference()
 
     expect(model.view.details[verse4].crossReferences).toEqual([
       {
@@ -1945,14 +1869,12 @@ describe('collecting a cross-reference', () => {
           { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
         ],
         allMembers: [ref('John 15:4'), ref('Psalm 80:8-16')],
-        error: null,
-        confirmingDelete: false,
       },
     ])
   })
 })
 
-describe('growing a cross-reference', () => {
+describe('editing an existing cross-reference in the strip', () => {
   const vine: CrossReference = {
     id: 'xr-vine',
     members: [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')],
@@ -1962,32 +1884,38 @@ describe('growing a cross-reference', () => {
   const gathered = (model: ReaderPaneModel): string[] =>
     model.view.collection?.members.map((member) => member.label) ?? []
 
-  it('opens Collecting pre-loaded with the entry\'s existing members and description', async () => {
-    const model = modelWith()
+  const editingModel = async (
+    crossReferences: Partial<CrossReferenceEditing> = {},
+  ): Promise<ReaderPaneModel> => {
+    const model = modelWith({
+      crossReferences: crossReferencesOf(crossReferences),
+    })
     await model.openAt(ref('John 15:1'), 'web')
-
     model.startEditingCrossReference(vine)
+    return model
+  }
+
+  it('opens the strip pre-loaded with the entry\'s members and description', async () => {
+    const model = await editingModel()
 
     expect(model.view.collection).toEqual({
-      stage: 'gathering',
       members: [
         { label: 'John 15:1-8', reference: ref('John 15:1-8'), index: 0 },
         { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
         { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
       ],
       canAddSelection: false,
-      canCreate: true,
+      canSave: true,
       error: null,
       editing: true,
+      confirmingDelete: false,
       description: 'Vine and vineyard imagery for Israel',
       typedMember: '',
     })
   })
 
   it('gathers exactly as creation does: selection, typed entry, and removal of a pre-loaded member', async () => {
-    const model = modelWith()
-    await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine)
+    const model = await editingModel()
 
     await model.selectVerse(makeVerseId(43, 15, 4))
     model.addSelectionToCollection()
@@ -2002,24 +1930,20 @@ describe('growing a cross-reference', () => {
     ])
   })
 
-  it('saves the grown members and description back to the same id in one update', async () => {
+  it('saves the edited members and description back to the same id in one update', async () => {
     const updates: {
       id: string
       members: Reference[]
       description: string | null
     }[] = []
-    const model = modelWith({
-      crossReferences: crossReferencesOf({
-        update: async (id, members, description) => {
-          updates.push({ id, members, description })
-        },
-      }),
+    const model = await editingModel({
+      update: async (id, members, description) => {
+        updates.push({ id, members, description })
+      },
     })
-    await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine)
     addTyped(model, 'Psalm 23:1')
 
-    await model.createCrossReference()
+    await model.saveCrossReference()
 
     expect(updates).toEqual([
       {
@@ -2033,23 +1957,19 @@ describe('growing a cross-reference', () => {
 
   it('saves an edited description over the existing one', async () => {
     const descriptions: (string | null)[] = []
-    const model = modelWith({
-      crossReferences: crossReferencesOf({
-        update: async (_id, _members, description) => {
-          descriptions.push(description)
-        },
-      }),
+    const model = await editingModel({
+      update: async (_id, _members, description) => {
+        descriptions.push(description)
+      },
     })
-    await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine)
 
     model.describeCollection('Grafted branches')
-    await model.createCrossReference()
+    await model.saveCrossReference()
 
     expect(descriptions).toEqual(['Grafted branches'])
   })
 
-  it('refuses to grow while another basket is in progress', async () => {
+  it('refuses to edit while another basket is in progress', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
     model.startCollecting()
@@ -2063,15 +1983,11 @@ describe('growing a cross-reference', () => {
 
   it('does not touch the store on cancel', async () => {
     let updates = 0
-    const model = modelWith({
-      crossReferences: crossReferencesOf({
-        update: async () => {
-          updates++
-        },
-      }),
+    const model = await editingModel({
+      update: async () => {
+        updates++
+      },
     })
-    await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine)
     addTyped(model, 'Psalm 23:1')
     model.removeCollectionMember(0)
 
@@ -2081,39 +1997,86 @@ describe('growing a cross-reference', () => {
     expect(updates).toBe(0)
   })
 
-  it('gates saving below two members after pruning the basket', async () => {
-    const model = modelWith()
-    await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine)
+  it('gates saving below two members after pruning the strip', async () => {
+    const model = await editingModel()
 
     model.removeCollectionMember(2)
     model.removeCollectionMember(1)
 
-    expect(model.view.collection?.canCreate).toBe(false)
+    expect(model.view.collection?.canSave).toBe(false)
 
-    let creates = 0
+    let updates = 0
     const guarded = modelWith({
       crossReferences: crossReferencesOf({
         update: async () => {
-          creates++
+          updates++
         },
       }),
     })
     await guarded.openAt(ref('John 15:1'), 'web')
     guarded.startEditingCrossReference({ ...vine, members: [vine.members[0]] })
-    await guarded.createCrossReference()
+    await guarded.saveCrossReference()
 
-    expect(creates).toBe(0)
+    expect(updates).toBe(0)
   })
 
   it('does not carry editing state into a fresh collection', async () => {
-    const model = modelWith()
-    await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine)
+    const model = await editingModel()
     model.cancelCollecting()
 
     model.startCollecting()
 
     expect(model.view.collection?.editing).toBe(false)
+  })
+
+  it('asks for confirmation before deleting, and cancel backs out', async () => {
+    const model = await editingModel()
+
+    model.confirmDeleteCrossReference()
+    expect(model.view.collection?.confirmingDelete).toBe(true)
+
+    model.cancelDeleteCrossReference()
+    expect(model.view.collection?.confirmingDelete).toBe(false)
+  })
+
+  it('deletes the edited cross-reference and closes the strip', async () => {
+    const deleted: string[] = []
+    let entries: CrossReference[] = [vine]
+    const model = await editingModel({
+      intersecting: (reference) =>
+        entries.filter((entry) =>
+          entry.members.some((member) => referencesIntersect(member, reference)),
+        ),
+      delete: async (id) => {
+        deleted.push(id)
+        entries = entries.filter((entry) => entry.id !== id)
+      },
+    })
+
+    model.confirmDeleteCrossReference()
+    await model.deleteCrossReference()
+
+    expect(deleted).toEqual(['xr-vine'])
+    expect(model.view.collection).toBe(null)
+    expect(model.view.chapterCrossReferences).toEqual([])
+  })
+
+  it('ignores delete while creating a new cross-reference', async () => {
+    let deletes = 0
+    const model = modelWith({
+      crossReferences: crossReferencesOf({
+        delete: async () => {
+          deletes++
+        },
+      }),
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+    model.startCollecting()
+
+    model.confirmDeleteCrossReference()
+    await model.deleteCrossReference()
+
+    expect(deletes).toBe(0)
+    expect(model.view.collection).not.toBe(null)
   })
 })

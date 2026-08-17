@@ -12,7 +12,7 @@ import {
 } from '../reference'
 import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
-  CrossReferenceManagement,
+  crossReferenceView,
   type CrossReference,
   type CrossReferenceEditing,
   type CrossReferenceMemberView,
@@ -135,19 +135,20 @@ export type AnnotationBlockView = {
   body: string
 }
 
-export type CollectionStage = 'gathering' | 'describing'
-
+// The strip that builds a cross-reference: members, description and the
+// actions over them, whether it is creating one or editing one that exists.
 export type CollectionView = {
-  stage: CollectionStage
   members: CrossReferenceMemberView[]
   canAddSelection: boolean
-  canCreate: boolean
+  canSave: boolean
   error: string | null
-  // True when this basket grows an existing cross-reference rather than
-  // building a new one — Create saves back to the same id.
+  // True when this strip edits an existing cross-reference rather than
+  // building a new one — saving writes back to the same id.
   editing: boolean
-  // Seeded from the cross-reference being grown, so saving an untouched
-  // prompt keeps the description it already had.
+  // Deleting the edited cross-reference takes a second press to go through.
+  confirmingDelete: boolean
+  // Seeded from the cross-reference being edited, so saving an untouched
+  // strip keeps the description it already had.
   description: string
   typedMember: string
 }
@@ -201,6 +202,9 @@ export type ReaderPaneView = {
   selectedVerseId: number | null
   selectionEndId: number | null
   details: Record<number, VerseDetailsView>
+  // Every cross-reference touching the chapter on screen, independent of any
+  // verse selection — the reader surfaces these as a chapter-wide list.
+  chapterCrossReferences: CrossReferenceView[]
   collection: CollectionView | null
   attribution: string | null
   banner: string | null
@@ -248,18 +252,17 @@ export class ReaderPaneModel {
   // The collection basket is pane-scoped and in-memory: a closed pane
   // releases its model and the half-built cross-reference with it.
   #collection: {
-    stage: CollectionStage
     members: Reference[]
     error: string | null
+    confirmingDelete: boolean
     description: string
     // The half-typed reference in the basket's input: model-owned so adding
     // it can clear it on success and keep it for correction on failure.
     typed: string
-    // The id of the cross-reference this basket grows, or null when
-    // building a brand new one.
+    // The id of the cross-reference this strip edits, or null when building
+    // a brand new one.
     editing: string | null
   } | null = null
-  readonly #management: CrossReferenceManagement
   #redLetterOverridden = false
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
@@ -279,11 +282,6 @@ export class ReaderPaneModel {
       config.fontScalePercent ?? FONT_SCALE_DEFAULT,
     )
     this.#fontScalePercent = this.#defaultFontScale
-    this.#management = new CrossReferenceManagement({
-      commands: deps.crossReferences,
-      onChanged: () => this.refreshOccurrences(),
-      onStateChanged: () => this.#refreshCrossReferenceDetails(),
-    })
   }
 
   subscribe(listener: () => void): () => void {
@@ -390,6 +388,9 @@ export class ReaderPaneModel {
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
+      chapterCrossReferences: this.#crossReferenceViews(
+        chapterReference(this.#position),
+      ),
       collection: this.#collectionView(),
       attribution: this.#attribution,
       strongsAvailable: this.#strongsAvailable,
@@ -568,17 +569,17 @@ export class ReaderPaneModel {
   #collectionView(): CollectionView | null {
     if (this.#collection === null) return null
     return {
-      stage: this.#collection.stage,
       members: this.#collection.members.map((member, index) => ({
         label: formatReference(member),
         reference: member,
         index,
       })),
       canAddSelection: this.selectionReference() !== null,
-      canCreate:
+      canSave:
         this.#collection.members.length >= CROSS_REFERENCE_MINIMUM_MEMBERS,
       error: this.#collection.error,
       editing: this.#collection.editing !== null,
+      confirmingDelete: this.#collection.confirmingDelete,
       description: this.#collection.description,
       typedMember: this.#collection.typed,
     }
@@ -586,9 +587,9 @@ export class ReaderPaneModel {
 
   startCollecting(): void {
     this.#collection = {
-      stage: 'gathering',
       members: [],
       error: null,
+      confirmingDelete: false,
       editing: null,
       description: '',
       typed: '',
@@ -596,16 +597,16 @@ export class ReaderPaneModel {
     this.#notify()
   }
 
-  // Re-enters Collecting pre-loaded with an existing cross-reference's
-  // members and description, so growing a cluster reuses the same gathering
-  // flow as creation; Create then saves back to this id instead of making a
-  // new one. A basket already in progress wins: growing would discard it.
+  // Opens the same strip pre-loaded with an existing cross-reference's members
+  // and description, so editing one reuses the creation flow; saving then
+  // writes back to this id instead of making a new entry. A strip already in
+  // progress wins: editing would discard it.
   startEditingCrossReference(entry: CrossReference): void {
     if (this.#collection !== null) return
     this.#collection = {
-      stage: 'gathering',
       members: [...entry.members],
       error: null,
+      confirmingDelete: false,
       editing: entry.id,
       description: entry.description ?? '',
       typed: '',
@@ -676,20 +677,29 @@ export class ReaderPaneModel {
     this.#notify()
   }
 
-  beginDescribingCollection(): void {
-    if (this.#collection === null || this.#collectionView()?.canCreate !== true)
-      return
-    this.#collection = { ...this.#collection, stage: 'describing' }
+  // Only an existing cross-reference can be deleted: a strip building a new
+  // one has nothing in the store to remove.
+  confirmDeleteCrossReference(): void {
+    if (this.#collection === null || this.#collection.editing === null) return
+    this.#collection = { ...this.#collection, confirmingDelete: true }
     this.#notify()
   }
 
-  cancelDescribingCollection(): void {
+  cancelDeleteCrossReference(): void {
     if (this.#collection === null) return
-    this.#collection = { ...this.#collection, stage: 'gathering' }
+    this.#collection = { ...this.#collection, confirmingDelete: false }
     this.#notify()
   }
 
-  async createCrossReference(): Promise<void> {
+  async deleteCrossReference(): Promise<void> {
+    const editing = this.#collection?.editing ?? null
+    if (editing === null) return
+    await this.deps.crossReferences.delete(editing)
+    this.#collection = null
+    await this.refreshOccurrences()
+  }
+
+  async saveCrossReference(): Promise<void> {
     const collection = this.#collection
     if (
       collection === null ||
@@ -808,50 +818,7 @@ export class ReaderPaneModel {
   #crossReferenceViews(reference: Reference): CrossReferenceView[] {
     return this.deps.crossReferences
       .intersecting(reference)
-      .map((entry) => this.#management.view(entry, [reference]))
-  }
-
-  async updateCrossReferenceDescription(
-    id: string,
-    description: string | null,
-  ): Promise<void> {
-    await this.#management.updateDescription(id, description)
-  }
-
-  async removeCrossReferenceMember(
-    id: string,
-    memberIndex: number,
-  ): Promise<void> {
-    await this.#management.removeMember(id, memberIndex)
-  }
-
-  confirmDeleteCrossReference(id: string): void {
-    this.#management.confirmDelete(id)
-  }
-
-  cancelDeleteCrossReference(id: string): void {
-    this.#management.cancelDelete(id)
-  }
-
-  // Confirmation and error state are local UI state — updating them refreshes
-  // the cross-reference views already open without a full details reload.
-  #refreshCrossReferenceDetails(): void {
-    this.#details = Object.fromEntries(
-      Object.entries(this.#details).map(([verseId, detail]) => [
-        verseId,
-        {
-          ...detail,
-          crossReferences: this.#crossReferenceViews(
-            singleVerseReference(this.#position.book, detail.verseId),
-          ),
-        },
-      ]),
-    )
-    this.#notify()
-  }
-
-  async deleteCrossReference(id: string): Promise<void> {
-    await this.#management.delete(id)
+      .map((entry) => crossReferenceView(entry, [reference]))
   }
 
   async #annotationBlocks(

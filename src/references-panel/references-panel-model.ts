@@ -1,7 +1,6 @@
 import {
-  CrossReferenceManagement,
+  crossReferenceView,
   type CrossReference,
-  type CrossReferenceCommands,
   type CrossReferenceView,
 } from '../cross-references'
 import {
@@ -44,7 +43,7 @@ export type ReferencesPanelView = {
   crossReferences: CrossReferenceView[]
 }
 
-export type ReferencesPanelCrossReferences = CrossReferenceCommands & {
+export type ReferencesPanelCrossReferences = {
   intersecting: (reference: Reference) => CrossReference[]
 }
 
@@ -52,9 +51,9 @@ export type ReferencesPanelDeps = {
   passages: PassageSource
   extract: (content: string) => ExtractedOccurrence[]
   crossReferences: ReferencesPanelCrossReferences
-  // Growing a cluster re-enters the reader's collection flow, which lives
-  // outside the panel — this bridges the panel action to that flow.
-  growCrossReference: (entry: CrossReference) => void
+  // The panel surfaces cross-references but never edits them in place: editing
+  // happens in the reader's strip, which lives outside the panel.
+  editCrossReference: (entry: CrossReference) => void
 }
 
 export type ReferencesPanelConfig = { translationId: string | null }
@@ -114,18 +113,12 @@ export class ReferencesPanelModel {
   #translationId: string | null
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
-  readonly #management: CrossReferenceManagement
 
   constructor(
     private readonly deps: ReferencesPanelDeps,
     config: ReferencesPanelConfig,
   ) {
     this.#translationId = config.translationId
-    this.#management = new CrossReferenceManagement({
-      commands: deps.crossReferences,
-      onChanged: () => this.refreshCrossReferences(),
-      onStateChanged: () => this.refreshCrossReferences(),
-    })
   }
 
   subscribe(listener: () => void): () => void {
@@ -180,46 +173,20 @@ export class ReferencesPanelModel {
     for (const reference of references) {
       for (const entry of this.deps.crossReferences.intersecting(reference)) {
         if (!seen.has(entry.id))
-          seen.set(entry.id, this.#management.view(entry, references))
+          seen.set(entry.id, crossReferenceView(entry, references))
       }
     }
     return [...seen.values()]
   }
 
-  async updateCrossReferenceDescription(
-    id: string,
-    description: string | null,
-  ): Promise<void> {
-    await this.#management.updateDescription(id, description)
-  }
-
-  async removeCrossReferenceMember(
-    id: string,
-    memberIndex: number,
-  ): Promise<void> {
-    await this.#management.removeMember(id, memberIndex)
-  }
-
-  growCrossReference(id: string): void {
+  editCrossReference(id: string): void {
     const entry = this.#crossReferences.find((candidate) => candidate.id === id)
     if (entry === undefined) return
-    this.deps.growCrossReference({
+    this.deps.editCrossReference({
       id,
       members: entry.allMembers,
       description: entry.description,
     })
-  }
-
-  confirmDeleteCrossReference(id: string): void {
-    this.#management.confirmDelete(id)
-  }
-
-  cancelDeleteCrossReference(id: string): void {
-    this.#management.cancelDelete(id)
-  }
-
-  async deleteCrossReference(id: string): Promise<void> {
-    await this.#management.delete(id)
   }
 
   async setTranslation(translationId: string | null): Promise<void> {

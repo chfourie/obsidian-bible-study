@@ -64,11 +64,9 @@ const parseLine = (line: string): CrossReference | null => {
 const generateId = (): string =>
   `xr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
-// A cross-reference always connects at least two references; removing a
-// member below that floor is blocked rather than allowed to degenerate.
+// A cross-reference always connects at least two references; the editing
+// strip refuses to save below that floor rather than let one degenerate.
 export const CROSS_REFERENCE_MINIMUM_MEMBERS = 2
-
-export type MemberRemoval = { ok: true } | { ok: false; reason: string }
 
 export type CrossReferenceStoreOptions = {
   newId?: () => string
@@ -129,14 +127,6 @@ export class CrossReferenceStore {
     return entry
   }
 
-  async updateDescription(id: string, description: string | null): Promise<void> {
-    if (!this.#entries.some((entry) => entry.id === id)) return
-    this.#entries = this.#entries.map((entry) =>
-      entry.id === id ? { ...entry, description } : entry,
-    )
-    await this.save()
-  }
-
   async update(
     id: string,
     members: Reference[],
@@ -147,30 +137,6 @@ export class CrossReferenceStore {
       entry.id === id ? { ...entry, members, description } : entry,
     )
     await this.save()
-  }
-
-  async removeMember(id: string, memberIndex: number): Promise<MemberRemoval> {
-    const entry = this.#entries.find((candidate) => candidate.id === id)
-    if (entry === undefined) return { ok: false, reason: 'Cross-reference not found.' }
-    if (entry.members.length <= CROSS_REFERENCE_MINIMUM_MEMBERS) {
-      return {
-        ok: false,
-        reason:
-          'A cross-reference needs at least two members — delete it instead.',
-      }
-    }
-    this.#entries = this.#entries.map((candidate) =>
-      candidate.id === id
-        ? {
-            ...candidate,
-            members: candidate.members.filter(
-              (_member, index) => index !== memberIndex,
-            ),
-          }
-        : candidate,
-    )
-    await this.save()
-    return { ok: true }
   }
 
   async delete(id: string): Promise<void> {

@@ -46,9 +46,6 @@ const fakeSource = () => {
 
 const noCrossReferences: ReferencesPanelCrossReferences = {
   intersecting: () => [],
-  updateDescription: async () => {},
-  removeMember: async () => ({ ok: true }),
-  delete: async () => {},
 }
 
 const fakeCrossReferenceStore = () => {
@@ -58,31 +55,6 @@ const fakeCrossReferenceStore = () => {
       entries.filter((entry) =>
         entry.members.some((member) => referencesIntersect(member, reference)),
       ),
-    updateDescription: async (id, description) => {
-      entries = entries.map((entry) =>
-        entry.id === id ? { ...entry, description } : entry,
-      )
-    },
-    removeMember: async (id, memberIndex) => {
-      const entry = entries.find((candidate) => candidate.id === id)
-      if (entry === undefined) return { ok: false, reason: 'not found' }
-      if (entry.members.length <= 2)
-        return { ok: false, reason: 'needs at least two members' }
-      entries = entries.map((candidate) =>
-        candidate.id === id
-          ? {
-              ...candidate,
-              members: candidate.members.filter(
-                (_member, index) => index !== memberIndex,
-              ),
-            }
-          : candidate,
-      )
-      return { ok: true }
-    },
-    delete: async (id) => {
-      entries = entries.filter((entry) => entry.id !== id)
-    },
   }
   return {
     deps,
@@ -96,7 +68,7 @@ const model = (
   source: PassageSource,
   translationId: string | null = 'web',
   crossReferences: ReferencesPanelCrossReferences = noCrossReferences,
-  growCrossReference: (entry: CrossReference) => void = () => {},
+  editCrossReference: (entry: CrossReference) => void = () => {},
 ): ReferencesPanelModel =>
   new ReferencesPanelModel(
     {
@@ -104,7 +76,7 @@ const model = (
       extract: (content) =>
         extractOccurrences(content, { translationIds: ['web', 'niv', 'kjv'] }),
       crossReferences,
-      growCrossReference,
+      editCrossReference,
     },
     { translationId },
   )
@@ -446,8 +418,6 @@ describe('cross-references in the References panel', () => {
           { label: 'Romans 11:17-24', reference: romans11Olive, index: 2 },
         ],
         allMembers: vineCrossReference.members,
-        error: null,
-        confirmingDelete: false,
       },
     ])
   })
@@ -516,103 +486,24 @@ describe('cross-references in the References panel', () => {
     expect(notified).toBe(1)
   })
 
-  describe('managing cross-references in the panel', () => {
-    it('edits the description in place', async () => {
+  describe('editing a cross-reference from the panel', () => {
+    it('hands the full member list and description to the reader to edit', async () => {
       const store = fakeCrossReferenceStore()
       store.setEntries([vineCrossReference])
-      const panel = model(fakeSource().source, 'web', store.deps)
-      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
-
-      await panel.updateCrossReferenceDescription('xr-vine', 'A better reason')
-
-      expect(panel.view.crossReferences[0].description).toBe('A better reason')
-    })
-
-    it('clearing the description leaves it with none', async () => {
-      const store = fakeCrossReferenceStore()
-      store.setEntries([vineCrossReference])
-      const panel = model(fakeSource().source, 'web', store.deps)
-      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
-
-      await panel.updateCrossReferenceDescription('xr-vine', '   ')
-
-      expect(panel.view.crossReferences[0].description).toBe(null)
-    })
-
-    it('removes a member in place', async () => {
-      const store = fakeCrossReferenceStore()
-      store.setEntries([vineCrossReference])
-      const panel = model(fakeSource().source, 'web', store.deps)
-      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
-
-      await panel.removeCrossReferenceMember('xr-vine', 1)
-
-      expect(
-        panel.view.crossReferences[0].members.map((member) => member.label),
-      ).toEqual(['Romans 11:17-24'])
-    })
-
-    it('blocks removal that would leave fewer than two members', async () => {
-      const pair: CrossReference = {
-        id: 'xr-pair',
-        members: [john15Vine, psalm80Vine],
-        description: null,
-      }
-      const store = fakeCrossReferenceStore()
-      store.setEntries([pair])
-      const panel = model(fakeSource().source, 'web', store.deps)
-      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
-
-      await panel.removeCrossReferenceMember('xr-pair', 1)
-
-      expect(panel.view.crossReferences[0].error).toBe(
-        'needs at least two members',
-      )
-      expect(panel.view.crossReferences[0].members).toHaveLength(1)
-    })
-
-    it('asks for confirmation before deleting, and cancel backs out', async () => {
-      const store = fakeCrossReferenceStore()
-      store.setEntries([vineCrossReference])
-      const panel = model(fakeSource().source, 'web', store.deps)
-      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
-
-      panel.confirmDeleteCrossReference('xr-vine')
-      expect(panel.view.crossReferences[0].confirmingDelete).toBe(true)
-
-      panel.cancelDeleteCrossReference('xr-vine')
-      expect(panel.view.crossReferences[0].confirmingDelete).toBe(false)
-    })
-
-    it('deletes the cross-reference after confirmation', async () => {
-      const store = fakeCrossReferenceStore()
-      store.setEntries([vineCrossReference])
-      const panel = model(fakeSource().source, 'web', store.deps)
-      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
-
-      panel.confirmDeleteCrossReference('xr-vine')
-      await panel.deleteCrossReference('xr-vine')
-
-      expect(panel.view.crossReferences).toEqual([])
-    })
-
-    it('hands the full member list and description to the reader to grow a cluster', async () => {
-      const store = fakeCrossReferenceStore()
-      store.setEntries([vineCrossReference])
-      const grown: CrossReference[] = []
+      const edited: CrossReference[] = []
       const panel = model(
         fakeSource().source,
         'web',
         store.deps,
         (entry) => {
-          grown.push(entry)
+          edited.push(entry)
         },
       )
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
-      panel.growCrossReference('xr-vine')
+      panel.editCrossReference('xr-vine')
 
-      expect(grown).toEqual([
+      expect(edited).toEqual([
         {
           id: 'xr-vine',
           members: vineCrossReference.members,
@@ -621,17 +512,17 @@ describe('cross-references in the References panel', () => {
       ])
     })
 
-    it('ignores growing an id that is not currently surfaced', async () => {
+    it('ignores editing an id that is not currently surfaced', async () => {
       const store = fakeCrossReferenceStore()
-      let grown = 0
+      let edited = 0
       const panel = model(fakeSource().source, 'web', store.deps, () => {
-        grown++
+        edited++
       })
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
-      panel.growCrossReference('xr-unknown')
+      panel.editCrossReference('xr-unknown')
 
-      expect(grown).toBe(0)
+      expect(edited).toBe(0)
     })
   })
 })

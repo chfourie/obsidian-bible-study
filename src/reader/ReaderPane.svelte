@@ -1,5 +1,6 @@
 <script lang="ts">
   import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
+  import type { CrossReferenceView } from '../cross-references'
   import {
     paragraphsOf,
     type ReaderPaneModel,
@@ -127,9 +128,7 @@
     return { update: render }
   }
 
-  const startEditingCrossReference = (
-    entry: VerseDetailsView['crossReferences'][number],
-  ): void => {
+  const editCrossReference = (entry: CrossReferenceView): void => {
     model.startEditingCrossReference({
       id: entry.id,
       members: entry.allMembers,
@@ -137,34 +136,8 @@
     })
   }
 
-  const createCrossReference = (): void => {
-    void model.createCrossReference()
-  }
-
-  const createWithoutDescription = (): void => {
-    model.describeCollection('')
-    createCrossReference()
-  }
-
-  let editingXrefDescription: string | null = $state(null)
-  let xrefDescriptionDraft = $state('')
-
-  const startEditingXrefDescription = (entry: VerseDetailsView['crossReferences'][number]): void => {
-    editingXrefDescription = entry.id
-    xrefDescriptionDraft = entry.description ?? ''
-  }
-
-  const commitXrefDescription = (id: string): void => {
-    void model.updateCrossReferenceDescription(id, xrefDescriptionDraft)
-    editingXrefDescription = null
-  }
-
-  const cancelEditingXrefDescription = (): void => {
-    editingXrefDescription = null
-  }
-
-  const removeXrefMember = (id: string, memberIndex: number): void => {
-    void model.removeCrossReferenceMember(id, memberIndex)
+  const saveCrossReference = (): void => {
+    void model.saveCrossReference()
   }
 
   const onBookPicked = (event: Event): void => {
@@ -177,7 +150,31 @@
   }
 </script>
 
-{#snippet notesBlock(details: VerseDetailsView)}
+{#snippet crossReferenceRow(entry: CrossReferenceView)}
+  <div class="bsr-xref-block">
+    <button
+      type="button"
+      class="bsr-xref-edit"
+      aria-label="Edit cross-reference in the reader"
+      disabled={view.collection !== null}
+      onclick={() => editCrossReference(entry)}
+    >✎</button>
+    {#if entry.description !== null}
+      <div class="bsr-xref-description">{entry.description}</div>
+    {/if}
+    <div class="bsr-xref-members">
+      {#each entry.members as member (member.index)}
+        <button
+          type="button"
+          class="bsr-xref-member"
+          onclick={() => openReference(member.reference)}
+        >{member.label}</button>
+      {/each}
+    </div>
+  </div>
+{/snippet}
+
+{#snippet notesBlock(details: VerseDetailsView, withCrossReferences: boolean)}
   <div class="bsr-notes-head">
     <span class="bsr-group-label">Annotations</span>
     <button type="button" class="bsr-annotate" onclick={() => annotateVerseBlock(details.verseId)}>Annotate</button>
@@ -198,81 +195,10 @@
       </div>
     {/each}
   {/if}
-  {#if details.crossReferences.length > 0}
+  {#if withCrossReferences && details.crossReferences.length > 0}
     <div class="bsr-group-label">Cross-references</div>
     {#each details.crossReferences as entry (entry.id)}
-      <div class="bsr-xref-block">
-        {#if editingXrefDescription === entry.id}
-          <input
-            class="bsr-xref-description-input"
-            type="text"
-            placeholder="Why do these belong together? (optional)"
-            bind:value={xrefDescriptionDraft}
-            onkeydown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                commitXrefDescription(entry.id)
-              } else if (event.key === 'Escape') {
-                cancelEditingXrefDescription()
-              }
-            }}
-            onblur={() => commitXrefDescription(entry.id)}
-          />
-        {:else}
-          <button
-            type="button"
-            class="bsr-xref-description"
-            onclick={() => startEditingXrefDescription(entry)}
-          >{entry.description ?? 'Add a description…'}</button>
-        {/if}
-        <div class="bsr-xref-members">
-          {#each entry.members as member (member.index)}
-            <span class="bsr-xref-member-chip">
-              <button
-                type="button"
-                class="bsr-xref-member"
-                onclick={() => openReference(member.reference)}
-              >{member.label}</button>
-              <button
-                type="button"
-                class="bsr-xref-member-remove"
-                aria-label="Remove {member.label} from this cross-reference"
-                onclick={() => removeXrefMember(entry.id, member.index)}
-              >✕</button>
-            </span>
-          {/each}
-        </div>
-        {#if entry.error !== null}
-          <div class="bsr-xref-error">{entry.error}</div>
-        {/if}
-        {#if entry.confirmingDelete}
-          <div class="bsr-xref-confirm-delete">
-            <span>Delete this cross-reference?</span>
-            <button
-              type="button"
-              class="bsr-xref-confirm-action"
-              onclick={() => void model.deleteCrossReference(entry.id)}
-            >Delete</button>
-            <button
-              type="button"
-              class="bsr-xref-confirm-action"
-              onclick={() => model.cancelDeleteCrossReference(entry.id)}
-            >Cancel</button>
-          </div>
-        {:else}
-          <button
-            type="button"
-            class="bsr-xref-action"
-            disabled={view.collection !== null}
-            onclick={() => startEditingCrossReference(entry)}
-          >Add members</button>
-          <button
-            type="button"
-            class="bsr-xref-action"
-            onclick={() => model.confirmDeleteCrossReference(entry.id)}
-          >Delete cross-reference</button>
-        {/if}
-      </div>
+      {@render crossReferenceRow(entry)}
     {/each}
   {/if}
   <div class="bsr-group-label">Mentions</div>
@@ -326,7 +252,7 @@
     <div class="bsr-details-title">{details.title}</div>
     {@render strongsBlock(details)}
     {@render translationsTable(details)}
-    {@render notesBlock(details)}
+    {@render notesBlock(details, true)}
   {/if}
 {/snippet}
 
@@ -433,88 +359,88 @@
     {@const collection = view.collection}
     <div class="bsr-basket">
       <span class="bsr-group-label">Cross-reference</span>
-      {#if collection.stage === 'gathering'}
-        {#each collection.members as member, index (index)}
-          <span class="bsr-chip">
-            {member.label}
-            <button
-              type="button"
-              class="bsr-chip-remove"
-              aria-label="Remove {member.label}"
-              onclick={() => model.removeCollectionMember(index)}
-            >✕</button>
-          </span>
-        {/each}
-        <button
-          type="button"
-          class="bsr-basket-action"
-          disabled={!collection.canAddSelection}
-          onclick={() => model.addSelectionToCollection()}
-        >Add selection</button>
-        <input
-          class="bsr-basket-input"
-          type="text"
-          placeholder="Type a reference"
-          value={collection.typedMember}
-          oninput={(event) => model.typeMember(event.currentTarget.value)}
-          onkeydown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              model.addTypedReferenceToCollection()
-            }
-          }}
-        />
-        <button
-          type="button"
-          class="bsr-basket-action"
-          onclick={() => model.addTypedReferenceToCollection()}
-        >Add</button>
-        <span class="bsr-spacer"></span>
-        <button
-          type="button"
-          class="bsr-basket-action mod-cta"
-          disabled={!collection.canCreate}
-          onclick={() => model.beginDescribingCollection()}
-        >Create</button>
-        <button
-          type="button"
-          class="bsr-basket-action"
-          onclick={() => model.cancelCollecting()}
-        >Cancel</button>
-        {#if collection.error !== null}
-          <div class="bsr-basket-error">{collection.error}</div>
-        {/if}
-      {:else}
-        <input
-          class="bsr-basket-input bsr-basket-description"
-          type="text"
-          placeholder="Why do these belong together? (optional)"
-          value={collection.description}
-          oninput={(event) => model.describeCollection(event.currentTarget.value)}
-          onkeydown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              createCrossReference()
-            }
-          }}
-        />
-        <button
-          type="button"
-          class="bsr-basket-action mod-cta"
-          onclick={createCrossReference}
-        >Save</button>
-        {#if !collection.editing}
+      {#each collection.members as member, index (index)}
+        <span class="bsr-chip">
+          {member.label}
+          <button
+            type="button"
+            class="bsr-chip-remove"
+            aria-label="Remove {member.label}"
+            onclick={() => model.removeCollectionMember(index)}
+          >✕</button>
+        </span>
+      {/each}
+      <button
+        type="button"
+        class="bsr-basket-action"
+        disabled={!collection.canAddSelection}
+        onclick={() => model.addSelectionToCollection()}
+      >Add selection</button>
+      <input
+        class="bsr-basket-input"
+        type="text"
+        placeholder="Type a reference"
+        value={collection.typedMember}
+        oninput={(event) => model.typeMember(event.currentTarget.value)}
+        onkeydown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            model.addTypedReferenceToCollection()
+          }
+        }}
+      />
+      <button
+        type="button"
+        class="bsr-basket-action"
+        onclick={() => model.addTypedReferenceToCollection()}
+      >Add</button>
+      <input
+        class="bsr-basket-input bsr-basket-description"
+        type="text"
+        placeholder="Why do these belong together? (optional)"
+        value={collection.description}
+        oninput={(event) => model.describeCollection(event.currentTarget.value)}
+        onkeydown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            saveCrossReference()
+          }
+        }}
+      />
+      <button
+        type="button"
+        class="bsr-basket-action mod-cta"
+        disabled={!collection.canSave}
+        onclick={saveCrossReference}
+      >{collection.editing ? 'Save' : 'Create'}</button>
+      <button
+        type="button"
+        class="bsr-basket-action"
+        onclick={() => model.cancelCollecting()}
+      >Cancel</button>
+      {#if collection.editing}
+        {#if collection.confirmingDelete}
+          <span class="bsr-basket-confirm">Delete this cross-reference?</span>
           <button
             type="button"
             class="bsr-basket-action"
-            onclick={createWithoutDescription}
-          >Skip</button>
+            onclick={() => void model.deleteCrossReference()}
+          >Delete</button>
+          <button
+            type="button"
+            class="bsr-basket-action"
+            onclick={() => model.cancelDeleteCrossReference()}
+          >Keep</button>
+        {:else}
+          <button
+            type="button"
+            class="bsr-basket-action bsr-basket-delete"
+            onclick={() => model.confirmDeleteCrossReference()}
+          >Delete</button>
         {/if}
-        <button
-          type="button"
-          class="bsr-basket-action"
-          onclick={() => model.cancelDescribingCollection()}
-        >Back</button>
+      {/if}
+      {#if collection.error !== null}
+        <div class="bsr-basket-error">{collection.error}</div>
       {/if}
     </div>
   {/if}
@@ -707,10 +633,18 @@
             {#if sideTab === 'translations'}
               {@render translationsTable(selectedDetails)}
             {:else}
-              {@render notesBlock(selectedDetails)}
+              {@render notesBlock(selectedDetails, false)}
             {/if}
           {/if}
         </div>
+        {#if view.chapterCrossReferences.length > 0}
+          <div class="bsr-side-xrefs">
+            <div class="bsr-group-label">Cross-references</div>
+            {#each view.chapterCrossReferences as entry (entry.id)}
+              {@render crossReferenceRow(entry)}
+            {/each}
+          </div>
+        {/if}
       </div>
     {/if}
   </div>
@@ -878,6 +812,15 @@
   .bsr-basket-description {
     flex: 1;
     min-width: 160px;
+  }
+
+  .bsr-basket-confirm {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-error);
+  }
+
+  .bsr-basket-delete:hover {
+    color: var(--text-error);
   }
 
   .bsr-basket-error {
@@ -1196,36 +1139,41 @@
   }
 
   .bsr-xref-block {
+    position: relative;
     margin: 4px 0;
+    padding-right: 20px;
     font-size: var(--font-ui-small);
   }
 
   .bsr-xref-description {
-    display: block;
-    width: 100%;
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-    height: auto;
-    font-size: inherit;
-    text-align: left;
     color: var(--text-muted);
-    cursor: text;
   }
 
-  .bsr-xref-description:hover {
-    color: var(--text-normal);
+  .bsr-xref-edit {
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0;
     background: none;
+    border: none;
     box-shadow: none;
+    padding: 0 4px;
+    color: var(--text-muted);
+    cursor: pointer;
   }
 
-  .bsr-xref-description-input {
-    width: 100%;
-    font-size: inherit;
-    margin: 2px 0;
+  .bsr-xref-block:hover .bsr-xref-edit,
+  .bsr-xref-edit:focus-visible {
+    opacity: 1;
+  }
+
+  .bsr-xref-edit:hover:not(:disabled) {
+    color: var(--text-accent);
+  }
+
+  .bsr-xref-edit:disabled {
+    color: var(--text-faint);
+    cursor: default;
   }
 
   .bsr-xref-members {
@@ -1233,12 +1181,6 @@
     flex-wrap: wrap;
     gap: 4px 8px;
     margin-top: 2px;
-  }
-
-  .bsr-xref-member-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
   }
 
   .bsr-xref-member {
@@ -1260,64 +1202,6 @@
     text-decoration: underline;
     background: none;
     box-shadow: none;
-  }
-
-  .bsr-xref-member-remove {
-    padding: 0 2px;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-    height: auto;
-    font-size: var(--font-smallest);
-    color: var(--text-faint);
-    cursor: pointer;
-  }
-
-  .bsr-xref-member-remove:hover {
-    color: var(--text-error);
-    background: none;
-    box-shadow: none;
-  }
-
-  .bsr-xref-error {
-    margin-top: 2px;
-    color: var(--text-error);
-    font-size: var(--font-ui-smaller);
-  }
-
-  .bsr-xref-action {
-    margin-top: 4px;
-    padding: 0;
-    border: none;
-    background: none;
-    box-shadow: none;
-    height: auto;
-    font-size: var(--font-ui-smaller);
-    color: var(--text-faint);
-    cursor: pointer;
-  }
-
-  .bsr-xref-action:hover {
-    color: var(--text-error);
-    background: none;
-    box-shadow: none;
-  }
-
-  .bsr-xref-confirm-delete {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 4px;
-    font-size: var(--font-ui-smaller);
-    color: var(--text-error);
-  }
-
-  .bsr-xref-confirm-action {
-    padding: 1px 8px;
-    height: auto;
-    font-size: var(--font-ui-smaller);
   }
 
   .bsr-notes-head {
@@ -1504,5 +1388,19 @@
     flex: 1;
     overflow-y: auto;
     padding: 10px 12px 40px;
+  }
+
+  /* Chapter-scoped, so it sits apart from the selected verse's details above
+     and takes only the height its rows need, up to its own scroll. */
+  .bsr-side-xrefs {
+    flex: 0 0 auto;
+    max-height: 40%;
+    overflow-y: auto;
+    border-top: 1px solid var(--background-modifier-border);
+    padding: 4px 12px 10px;
+  }
+
+  .bsr-side-xrefs .bsr-group-label {
+    margin-top: 4px;
   }
 </style>
