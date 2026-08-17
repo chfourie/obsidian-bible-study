@@ -206,24 +206,28 @@
   {:else}
     <div class="bsr-details-title">{details.title}</div>
     {@render strongsBlock(details)}
-    <table class="bsr-trans-table">
-      <tbody>
-        {#each details.translations as row (row.id)}
-          <tr>
-            <td class="bsr-trans-id" title={row.name}>{row.label}</td>
-            <td class="bsr-trans-text">
-              {#if row.segments === null}
-                <span class="bsr-unavailable">Unavailable</span>
-              {:else}
-                {#each row.segments as segment, index (index)}{@render formattedText(segment)}{/each}
-              {/if}
-            </td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+    {@render translationsTable(details)}
     {@render notesBlock(details)}
   {/if}
+{/snippet}
+
+{#snippet translationsTable(details: VerseDetailsView)}
+  <table class="bsr-trans-table">
+    <tbody>
+      {#each details.translations as row (row.id)}
+        <tr>
+          <td class="bsr-trans-id" title={row.name}>{row.label}</td>
+          <td class="bsr-trans-text">
+            {#if row.segments === null}
+              <span class="bsr-unavailable">Unavailable</span>
+            {:else}
+              {#each row.segments as segment, index (index)}{@render formattedText(segment)}{/each}
+            {/if}
+          </td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
 {/snippet}
 
 {#snippet segmentText(row: VerseRowView, segment: VerseSegment)}{#if view.strongsMode && segment.strongs !== undefined}<span
@@ -485,22 +489,7 @@
             <div class="bsr-details-title">{selectedDetails.title}</div>
             {@render strongsBlock(selectedDetails)}
             {#if sideTab === 'translations'}
-              <table class="bsr-trans-table">
-                <tbody>
-                  {#each selectedDetails.translations as row (row.id)}
-                    <tr>
-                      <td class="bsr-trans-id" title={row.name}>{row.label}</td>
-                      <td class="bsr-trans-text">
-                        {#if row.text === null}
-                          <span class="bsr-unavailable">Unavailable</span>
-                        {:else}
-                          {row.text}
-                        {/if}
-                      </td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
+              {@render translationsTable(selectedDetails)}
             {:else}
               {@render notesBlock(selectedDetails)}
             {/if}
