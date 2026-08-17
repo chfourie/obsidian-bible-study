@@ -39,3 +39,8 @@ export const buildBsbArtifact = (tsv: string): BsbArtifact => ({
 
 export const sha256Hex = (text: string): string =>
   createHash('sha256').update(text, 'utf8').digest('hex')
+
+export {
+  deriveRedLetterCues,
+  renderRedLetterCuesModule,
+} from './derive-red-letter-cues'

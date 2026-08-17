@@ -15,6 +15,7 @@ import { pathToFileURL } from 'node:url'
 
 const TSV_URL = 'https://bereanbible.com/bsb_tables.tsv'
 const OUT_DIR = 'dist/bsb-module'
+const RED_LETTER_CUES_FILE = 'src/reference/red-letter-cues-data.ts'
 
 const loadPipeline = async () => {
   const outfile = path.join(tmpdir(), `bsb-pipeline-${Date.now()}.mjs`)
@@ -38,7 +39,12 @@ const loadTsv = async (tsvPath) => {
   return response.text()
 }
 
-const { buildBsbArtifact, sha256Hex } = await loadPipeline()
+const {
+  buildBsbArtifact,
+  deriveRedLetterCues,
+  renderRedLetterCuesModule,
+  sha256Hex,
+} = await loadPipeline()
 const tsv = await loadTsv(process.argv[2])
 const artifact = buildBsbArtifact(tsv)
 
@@ -58,7 +64,11 @@ await writeFile(
   JSON.stringify({ bsb: checksum }, null, 2),
 )
 
+const encodedCues = deriveRedLetterCues(artifact.books)
+await writeFile(RED_LETTER_CUES_FILE, renderRedLetterCuesModule(encodedCues))
+
 console.log(`Books: ${bookCount}, verses: ${verseCount}`)
+console.log(`Red-letter cue table regenerated at ${RED_LETTER_CUES_FILE}`)
 console.log(`sha256(bsb-module.json) = ${checksum}`)
 console.log(`Artifacts written to ${OUT_DIR}/ — attach both files to the`)
 console.log('GitHub release tagged "bsb-module".')

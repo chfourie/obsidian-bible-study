@@ -1,6 +1,7 @@
 export * from './books'
 export * from './format-reference'
 export * from './parse-reference'
+export * from './red-letter-cues'
 export * from './scan-references'
 export * from './suggest-reference'
 export * from './verse-id'
