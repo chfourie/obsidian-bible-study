@@ -1,9 +1,6 @@
 <script lang="ts">
-  import { setIcon } from 'obsidian'
   import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
   import {
-    FONT_SCALE_MAX,
-    FONT_SCALE_MIN,
     paragraphsOf,
     type ReaderPaneModel,
     type ReaderToggles,
@@ -12,6 +9,7 @@
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
   import TranslationMenu from './TranslationMenu.svelte'
+  import OptionsMenu from './OptionsMenu.svelte'
 
   let {
     model,
@@ -48,62 +46,8 @@
       : (view.details[view.selectedVerseId] ?? null),
   )
 
-  type ToggleGroup = {
-    key: keyof ReaderToggles
-    label: string
-    options: { value: string; label: string }[]
-  }
-
-  const strongsToggleGroup: ToggleGroup = {
-    key: 'strongs',
-    label: "Strong's",
-    options: [
-      { value: 'off', label: 'Off' },
-      { value: 'on', label: 'On' },
-    ],
-  }
-
-  const toggleGroups: ToggleGroup[] = [
-    {
-      key: 'details',
-      label: 'Details',
-      options: [
-        { value: 'inline', label: 'Inline' },
-        { value: 'side-panel', label: 'Side panel' },
-      ],
-    },
-    {
-      key: 'nav',
-      label: 'Nav',
-      options: [
-        { value: 'tree', label: 'Tree' },
-        { value: 'breadcrumb', label: 'Breadcrumb' },
-      ],
-    },
-    {
-      key: 'layout',
-      label: 'Layout',
-      options: [
-        { value: 'verse-per-line', label: 'Verse per line' },
-        { value: 'continuous', label: 'Continuous' },
-      ],
-    },
-    {
-      key: 'redLetter',
-      label: 'Red letter',
-      options: [
-        { value: 'off', label: 'Off' },
-        { value: 'on', label: 'On' },
-      ],
-    },
-  ]
-
   const setToggle = (key: keyof ReaderToggles, value: string): void => {
     model.setToggle(key, value as ReaderToggles[typeof key])
-  }
-
-  const icon = (node: HTMLElement, name: string) => {
-    setIcon(node, name)
   }
 
   const contentFontSize = $derived(
@@ -335,48 +279,15 @@
   {/if}
 
   <div class="bsr-toolbar">
-    {#each view.strongsAvailable ? [...toggleGroups, strongsToggleGroup] : toggleGroups as toggleGroup (toggleGroup.key)}
-      <span class="bsr-seg-group">
-        <span class="bsr-seg-label">{toggleGroup.label}</span>
-        <span class="bsr-seg">
-          {#each toggleGroup.options as option (option.value)}
-            <button
-              type="button"
-              class:bsr-on={view.toggles[toggleGroup.key] === option.value}
-              onclick={() => setToggle(toggleGroup.key, option.value)}
-            >{option.label}</button>
-          {/each}
-        </span>
-      </span>
-    {/each}
-    <span class="bsr-seg-group">
-      <span class="bsr-seg-label">Text</span>
-      <span class="bsr-seg">
-        <button
-          type="button"
-          class="bsr-font-btn"
-          aria-label="Decrease text size"
-          disabled={view.fontScalePercent <= FONT_SCALE_MIN}
-          onclick={() => model.decreaseFontScale()}
-          use:icon={'a-arrow-down'}
-        ></button>
-        <button
-          type="button"
-          class="bsr-font-reset"
-          aria-label="Reset text size"
-          title="Reset text size"
-          onclick={() => model.resetFontScale()}
-        >{view.fontScalePercent}%</button>
-        <button
-          type="button"
-          class="bsr-font-btn"
-          aria-label="Increase text size"
-          disabled={view.fontScalePercent >= FONT_SCALE_MAX}
-          onclick={() => model.increaseFontScale()}
-          use:icon={'a-arrow-up'}
-        ></button>
-      </span>
-    </span>
+    <OptionsMenu
+      toggles={view.toggles}
+      strongsAvailable={view.strongsAvailable}
+      fontScalePercent={view.fontScalePercent}
+      onSetToggle={setToggle}
+      onIncreaseFontScale={() => model.increaseFontScale()}
+      onDecreaseFontScale={() => model.decreaseFontScale()}
+      onResetFontScale={() => model.resetFontScale()}
+    />
     <span class="bsr-trans" bind:this={pillSlotEl}>
       <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
         {#each view.translations as pill (pill.id)}
@@ -651,60 +562,9 @@
     border-bottom: 1px solid var(--background-modifier-border);
   }
 
-  .bsr-seg-group {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .bsr-seg-label {
-    font-size: var(--font-smallest);
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .bsr-seg {
-    display: inline-flex;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-s);
-    overflow: hidden;
-  }
-
-  .bsr-seg button {
-    background: var(--background-secondary);
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 2px 8px;
-    font-size: var(--font-ui-smaller);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsr-seg button.bsr-on,
   .bsr-pill.bsr-on {
     background: hsla(var(--interactive-accent-hsl), 0.15);
     color: var(--text-accent);
-  }
-
-  .bsr-font-btn {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .bsr-font-btn :global(svg) {
-    width: 14px;
-    height: 14px;
-  }
-
-  .bsr-font-btn:disabled {
-    color: var(--text-faint);
-    cursor: default;
-  }
-
-  .bsr-font-reset {
-    min-width: 42px;
   }
 
   .bsr-pill {
