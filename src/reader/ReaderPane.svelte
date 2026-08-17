@@ -14,11 +14,13 @@
   let {
     model,
     openNote,
+    openReference,
     onAnnotate,
     renderMarkdown,
   }: {
     model: ReaderPaneModel
     openNote: (file: string) => void
+    openReference: (reference: Reference) => void
     onAnnotate: (reference: Reference) => void
     renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) => void
   } = $props()
@@ -153,6 +155,25 @@
           onclick={() => openNote(block.file)}
         >✎</button>
         <div class="bsr-anno-body" use:markdown={{ text: block.body, path: block.file }}></div>
+      </div>
+    {/each}
+  {/if}
+  {#if details.crossReferences.length > 0}
+    <div class="bsr-group-label">Cross-references</div>
+    {#each details.crossReferences as entry (entry.id)}
+      <div class="bsr-xref-block">
+        {#if entry.description !== null}
+          <div class="bsr-xref-description">{entry.description}</div>
+        {/if}
+        <div class="bsr-xref-members">
+          {#each entry.members as member (member.label)}
+            <button
+              type="button"
+              class="bsr-xref-member"
+              onclick={() => openReference(member.reference)}
+            >{member.label}</button>
+          {/each}
+        </div>
       </div>
     {/each}
   {/if}
@@ -885,6 +906,42 @@
 
   .bsr-mention-link:hover {
     color: var(--text-accent);
+    background: none;
+    box-shadow: none;
+  }
+
+  .bsr-xref-block {
+    margin: 4px 0;
+    font-size: var(--font-ui-small);
+  }
+
+  .bsr-xref-description {
+    color: var(--text-muted);
+  }
+
+  .bsr-xref-members {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .bsr-xref-member {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    height: auto;
+    font-size: inherit;
+    text-align: left;
+    color: var(--text-accent);
+    cursor: pointer;
+  }
+
+  .bsr-xref-member:hover {
+    text-decoration: underline;
     background: none;
     box-shadow: none;
   }

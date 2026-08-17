@@ -48,6 +48,8 @@ export class ReaderView extends ItemView {
       props: {
         model: this.model,
         openNote: (file: string) => this.feature.openNote(file),
+        openReference: (reference: Reference) =>
+          this.feature.openReference(reference, null),
         onAnnotate: (reference: Reference) =>
           this.feature.annotateReference(reference),
         renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) =>

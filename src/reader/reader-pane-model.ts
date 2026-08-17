@@ -6,9 +6,11 @@ import {
   formatReference,
   makeVerseId,
   rangeContains,
+  referencesIntersect,
   verseCount,
   type Reference,
 } from '../reference'
+import type { CrossReference } from '../cross-references'
 import {
   FONT_SCALE_DEFAULT,
   FONT_SCALE_MAX,
@@ -68,6 +70,7 @@ export type ReaderPaneDeps = {
   passages: PassageSource
   availableTranslations: () => Promise<ReaderTranslation[]>
   intersecting: (reference: Reference) => OccurrenceGroup[]
+  crossReferences: (reference: Reference) => CrossReference[]
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
@@ -125,12 +128,24 @@ export type AnnotationBlockView = {
   body: string
 }
 
+export type CrossReferenceMemberView = {
+  label: string
+  reference: Reference
+}
+
+export type CrossReferenceView = {
+  id: string
+  description: string | null
+  members: CrossReferenceMemberView[]
+}
+
 export type VerseDetailsView = {
   verseId: number
   title: string
   translations: TranslationRowView[]
   annotations: AnnotationBlockView[]
   mentions: NoteCardView[]
+  crossReferences: CrossReferenceView[]
   strongs: StrongsEntryView[]
   strongsAttribution: string | null
 }
@@ -595,12 +610,25 @@ export class ReaderPaneModel {
         mentions: groups
           .filter((occurrence) => !occurrence.annotation)
           .map((occurrence) => ({ file: occurrence.file })),
+        crossReferences: this.#crossReferenceViews(reference),
         strongs,
         strongsAttribution:
           strongs.length > 0 ? this.deps.strongs.attribution : null,
       },
     }
     this.#notify()
+  }
+
+  // A surfaced cross-reference lists only the jump-off points: members
+  // covering the viewed verse are the passage already on screen.
+  #crossReferenceViews(reference: Reference): CrossReferenceView[] {
+    return this.deps.crossReferences(reference).map((entry) => ({
+      id: entry.id,
+      description: entry.description,
+      members: entry.members
+        .filter((member) => !referencesIntersect(member, reference))
+        .map((member) => ({ label: formatReference(member), reference: member })),
+    }))
   }
 
   async #annotationBlocks(

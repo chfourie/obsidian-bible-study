@@ -1,5 +1,6 @@
 import { App, Plugin, type PluginManifest } from 'obsidian'
 import { AnnotationsFeature } from '../annotations'
+import { CrossReferencesFeature } from '../cross-references'
 import { DEFAULT_SETTINGS, SettingsStore } from '../data-access'
 import {
   ModulesFeature,
@@ -41,12 +42,16 @@ export default class ScriptureStudyPlugin extends Plugin {
     install: this.installSuggestedTranslation,
   }
 
+  readonly crossReferences = new CrossReferencesFeature(this)
+
   readonly reader = new ReaderFeature(
     this,
     this.modules.store,
     this.vaultIndex.index,
     {
       firstRun: this.#firstRun,
+      crossReferences: (reference) =>
+        this.crossReferences.store.intersecting(reference),
       strongs: {
         dictionariesInstalled: () => this.strongsDictionaries.isInstalled(),
         entriesFor: async (numbers) =>
@@ -87,6 +92,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.referencesPanel.useNavigator(this.reader)
     this.#features.addFeature(this.vaultIndex)
     this.#features.addFeature(this.modules)
+    this.#features.addFeature(this.crossReferences)
     this.#features.addFeature(this.reader)
     this.#features.addFeature(this.referencesPanel)
     this.#features.addFeature(this.rendering)

@@ -1,5 +1,6 @@
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import type { ReferenceNavigator } from '../contracts'
+import type { CrossReference } from '../cross-references'
 import { PluginFeature } from '../data-access'
 import { isTranslationManifest, type ModuleStore } from '../modules'
 import { frontmatterLength, type Reference } from '../reference'
@@ -26,6 +27,7 @@ export type ReaderFeatureOptions = {
   indexRefreshDebounceMs?: number
   strongs?: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
+  crossReferences?: (reference: Reference) => CrossReference[]
 }
 
 const INERT_STRONGS: ReaderStrongsDeps = {
@@ -44,6 +46,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   #annotator: (reference: Reference) => void = () => {}
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
+  readonly #crossReferences: (reference: Reference) => CrossReference[]
 
   constructor(
     plugin: Plugin,
@@ -56,6 +59,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       options.indexRefreshDebounceMs ?? DEFAULT_INDEX_REFRESH_DEBOUNCE_MS
     this.#strongs = options.strongs ?? INERT_STRONGS
     this.#firstRun = options.firstRun
+    this.#crossReferences = options.crossReferences ?? (() => [])
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.3): unavailable translations show an unavailable row.
     // Panes pick between the two repositories per their red-letter toggle,
@@ -143,6 +147,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
         availableTranslations: async () => this.#availableTranslations(),
         intersecting: (reference) =>
           this.index.intersectingOccurrences(reference),
+        crossReferences: (reference) => this.#crossReferences(reference),
         annotationDetails: (file) => this.#annotationDetails(file),
         strongs: this.#strongs,
         firstRun: this.#firstRun,
