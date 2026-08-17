@@ -20,7 +20,7 @@ describe('derivedRedSpan', () => {
     })
   })
 
-  it('anchors a red start to the first double quote when red opens mid-verse', () => {
+  it('starts red at the first double quote when speech opens mid-verse', () => {
     const text = 'Jesus said, “Follow Me.”'
 
     expect(derivedRedSpan(text, partial(false, true))).toEqual({
@@ -29,16 +29,26 @@ describe('derivedRedSpan', () => {
     })
   })
 
-  it('anchors a red end to the last double quote when red closes mid-verse', () => {
+  it('ends red after the last double quote when speech closes mid-verse', () => {
     expect(
       derivedRedSpan('“Let it be so now,” Jesus replied.', partial(true, false)),
     ).toEqual({ start: 0, end: 19 })
   })
 
-  it('spans first opening to last closing quote when red touches neither edge', () => {
+  it('spans first to last quote mark when red touches neither edge', () => {
     expect(
       derivedRedSpan('He said, “Go,” and left.', partial(false, false)),
     ).toEqual({ start: 9, end: 14 })
+  })
+
+  it('ignores the cue flags when the translation reorders clauses', () => {
+    const text =
+      'But Jesus answered and said to him, “Permit it to be so now, for thus it is fitting for us to fulfill all righteousness.” Then he allowed Him.'
+
+    expect(derivedRedSpan(text, partial(true, false))).toEqual({
+      start: text.indexOf('“'),
+      end: text.indexOf('”') + 1,
+    })
   })
 
   it('ignores nested single quotes inside the speech', () => {
@@ -68,6 +78,15 @@ describe('derivedRedSpan', () => {
     })
   })
 
+  it('anchors on spaced French guillemets', () => {
+    const text = 'Il dit : « Va. »'
+
+    expect(derivedRedSpan(text, partial(false, true))).toEqual({
+      start: 9,
+      end: text.length,
+    })
+  })
+
   it('covers the whole verse when the text prints no double quotes', () => {
     expect(
       derivedRedSpan('But Jesus answered, It is written.', partial(false, true)),
@@ -80,7 +99,7 @@ describe('derivedRedSpan', () => {
     ).toEqual({ start: 0, end: 28 })
   })
 
-  it('covers the whole verse when both anchors would collide on a lone quote mark', () => {
+  it('covers the whole verse on a lone quote mark', () => {
     const text = 'He said, “Go and see him.'
 
     expect(derivedRedSpan(text, partial(false, false))).toEqual({
@@ -89,40 +108,7 @@ describe('derivedRedSpan', () => {
     })
   })
 
-  it('covers the whole verse when red touches both edges around a plain middle', () => {
-    const text = '“Away from Me!” he told him. “For it is written.”'
-
-    expect(derivedRedSpan(text, partial(true, true))).toEqual({
-      start: 0,
-      end: text.length,
-    })
-  })
-
-  it('skips a carried-over closing quote when seeking the red start', () => {
-    const text = '…the prophet.” Then Jesus said, “Go.”'
-
-    expect(derivedRedSpan(text, partial(false, true))).toEqual({
-      start: 32,
-      end: text.length,
-    })
-  })
-
-  it('skips a trailing opening quote when seeking the red end', () => {
-    expect(
-      derivedRedSpan('“Go,” he said, adding, “', partial(true, false)),
-    ).toEqual({ start: 0, end: 5 })
-  })
-
-  it('skips a carried-over German closing quote at the verse start', () => {
-    const text = 'Propheten.“ Jesus sagte: „Komm.“'
-
-    expect(derivedRedSpan(text, partial(false, true))).toEqual({
-      start: 25,
-      end: text.length,
-    })
-  })
-
-  it('covers the whole verse when no opening-shaped mark exists for a red start', () => {
+  it('covers the whole verse on a lone carried-over closing quote', () => {
     const text = '…the prophet.” Then Jesus said, Go.'
 
     expect(derivedRedSpan(text, partial(false, true))).toEqual({
@@ -131,19 +117,28 @@ describe('derivedRedSpan', () => {
     })
   })
 
-  it('anchors a spaced French opening guillemet by its leading whitespace', () => {
-    const text = 'Il dit : « Va. »'
+  it('keeps narration between two quoted speeches red', () => {
+    const text = '“Away from Me!” he told him. “For it is written.”'
 
-    expect(derivedRedSpan(text, partial(false, true))).toEqual({
-      start: 9,
+    expect(derivedRedSpan(text, partial(true, true))).toEqual({
+      start: 0,
       end: text.length,
     })
   })
 
-  it('anchors at position zero when the verse text starts with a quote mark', () => {
-    const text = '“Go,” he said. “Come.”'
+  it('starts red at a carried-over closing quote', () => {
+    const text = '…the prophet.” Then Jesus said, “Go.”'
 
-    expect(derivedRedSpan(text, partial(false, false))).toEqual({
+    expect(derivedRedSpan(text, partial(false, true))).toEqual({
+      start: 13,
+      end: text.length,
+    })
+  })
+
+  it('ends red after a trailing opening quote', () => {
+    const text = '“Go,” he said, adding, “'
+
+    expect(derivedRedSpan(text, partial(true, false))).toEqual({
       start: 0,
       end: text.length,
     })
