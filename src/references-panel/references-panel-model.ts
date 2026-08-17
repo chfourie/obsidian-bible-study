@@ -54,11 +54,7 @@ export type ReferencesPanelDeps = {
   crossReferences: ReferencesPanelCrossReferences
   // Growing a cluster re-enters the reader's collection flow, which lives
   // outside the panel — this bridges the panel action to that flow.
-  growCrossReference: (
-    id: string,
-    members: Reference[],
-    description: string | null,
-  ) => void
+  growCrossReference: (entry: CrossReference) => void
 }
 
 export type ReferencesPanelConfig = { translationId: string | null }
@@ -207,7 +203,11 @@ export class ReferencesPanelModel {
   growCrossReference(id: string): void {
     const entry = this.#crossReferences.find((candidate) => candidate.id === id)
     if (entry === undefined) return
-    this.deps.growCrossReference(id, entry.allMembers, entry.description)
+    this.deps.growCrossReference({
+      id,
+      members: entry.allMembers,
+      description: entry.description,
+    })
   }
 
   confirmDeleteCrossReference(id: string): void {

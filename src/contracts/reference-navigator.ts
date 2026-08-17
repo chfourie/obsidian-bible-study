@@ -1,3 +1,4 @@
+import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 
 // Rendered references open the reader pane through this seam; the reader
@@ -7,12 +8,7 @@ export interface ReferenceNavigator {
   openNote(file: string): void
   // Grows an existing cross-reference: opens the reader at one of its
   // members and re-enters the collection flow pre-loaded with all of them.
-  growCrossReference(
-    id: string,
-    members: Reference[],
-    description: string | null,
-    translationId: string | null,
-  ): void
+  growCrossReference(entry: CrossReference, translationId: string | null): void
 }
 
 export const NOOP_REFERENCE_NAVIGATOR: ReferenceNavigator = {

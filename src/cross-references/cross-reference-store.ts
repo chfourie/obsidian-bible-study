@@ -71,21 +71,18 @@ export const CROSS_REFERENCE_MINIMUM_MEMBERS = 2
 export type MemberRemoval = { ok: true } | { ok: false; reason: string }
 
 export type CrossReferenceStoreOptions = {
-  path?: string
   newId?: () => string
 }
 
 export class CrossReferenceStore {
   #entries: CrossReference[] = []
   readonly #listeners = new Set<() => void>()
-  readonly #path: string
   readonly #newId: () => string
 
   constructor(
     private readonly vault: CrossReferenceVault,
     options: CrossReferenceStoreOptions = {},
   ) {
-    this.#path = options.path ?? CROSS_REFERENCES_FILE_PATH
     this.#newId = options.newId ?? generateId
   }
 
@@ -99,7 +96,7 @@ export class CrossReferenceStore {
   }
 
   async load(): Promise<void> {
-    const content = await this.vault.read(this.#path)
+    const content = await this.vault.read(CROSS_REFERENCES_FILE_PATH)
     this.#entries =
       content === null
         ? []
@@ -140,10 +137,14 @@ export class CrossReferenceStore {
     await this.save()
   }
 
-  async updateMembers(id: string, members: Reference[]): Promise<void> {
+  async update(
+    id: string,
+    members: Reference[],
+    description: string | null,
+  ): Promise<void> {
     if (!this.#entries.some((entry) => entry.id === id)) return
     this.#entries = this.#entries.map((entry) =>
-      entry.id === id ? { ...entry, members } : entry,
+      entry.id === id ? { ...entry, members, description } : entry,
     )
     await this.save()
   }
@@ -182,7 +183,7 @@ export class CrossReferenceStore {
   // changed nothing rewrites the file byte for byte.
   async save(): Promise<void> {
     await this.vault.write(
-      this.#path,
+      CROSS_REFERENCES_FILE_PATH,
       this.#entries.map((entry) => `${serializeCrossReference(entry)}\n`).join(''),
     )
     this.#notify()

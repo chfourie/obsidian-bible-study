@@ -11,7 +11,11 @@ export type CrossReferenceEditing = CrossReferenceCommands & {
     members: Reference[],
     description: string | null,
   ) => Promise<unknown>
-  updateMembers: (id: string, members: Reference[]) => Promise<void>
+  update: (
+    id: string,
+    members: Reference[],
+    description: string | null,
+  ) => Promise<void>
 }
 
 // What a feature needs on top: the store's change feed, so panes re-read it
@@ -28,7 +32,7 @@ export const INERT_CROSS_REFERENCE_CATALOG: CrossReferenceCatalog = {
   intersecting: () => [],
   create: async () => {},
   updateDescription: async () => {},
-  updateMembers: async () => {},
+  update: async () => {},
   removeMember: async () => ({ ok: true }),
   delete: async () => {},
   onChanged: () => () => {},

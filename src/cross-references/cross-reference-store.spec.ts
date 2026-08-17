@@ -344,7 +344,7 @@ describe('updating a description', () => {
   })
 })
 
-describe('updating members', () => {
+describe('updating members and description together', () => {
   it('replaces the member list and persists', async () => {
     const files = {
       [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
@@ -352,12 +352,50 @@ describe('updating members', () => {
     const store = await storeOverFiles(files)
     const grown = [john15Vine, psalm80Vine, romans11Olive, reference(19, [[23, 1], [23, 6]])]
 
-    await store.updateMembers('xr-vine', grown)
+    await store.update('xr-vine', grown, vineCrossReference.description)
 
     expect(store.all()[0].members).toEqual(grown)
     expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
       `${serializeCrossReference({ ...vineCrossReference, members: grown })}\n`,
     )
+  })
+
+  it('replaces the description alongside the members', async () => {
+    const files = {
+      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+    }
+    const store = await storeOverFiles(files)
+
+    await store.update('xr-vine', [john15Vine, psalm80Vine], 'Vines only')
+
+    expect(store.all()[0]).toEqual({
+      id: 'xr-vine',
+      members: [john15Vine, psalm80Vine],
+      description: 'Vines only',
+    })
+  })
+
+  it('writes and notifies once', async () => {
+    const files = {
+      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+    }
+    let writes = 0
+    const vault = vaultWith(files)
+    const store = new CrossReferenceStore({
+      read: async (path) => await vault.read(path),
+      write: async (path, content) => {
+        writes++
+        await vault.write(path, content)
+      },
+    })
+    await store.load()
+    let notified = 0
+    store.onChanged(() => notified++)
+
+    await store.update('xr-vine', [john15Vine, psalm80Vine], 'Vines only')
+
+    expect(writes).toBe(1)
+    expect(notified).toBe(1)
   })
 
   it('keeps the id, description, and file position stable', async () => {
@@ -374,7 +412,11 @@ describe('updating members', () => {
     }
     const store = await storeOverFiles(files)
 
-    await store.updateMembers('xr-vine', [john15Vine, romans11Olive])
+    await store.update(
+      'xr-vine',
+      [john15Vine, romans11Olive],
+      vineCrossReference.description,
+    )
 
     expect(store.all().map(({ id }) => id)).toEqual(['xr-vine', 'xr-shepherd'])
     expect(store.all()[0]).toEqual({
@@ -396,7 +438,7 @@ describe('updating members', () => {
     }
     const store = await storeOverFiles(files)
 
-    await store.updateMembers('xr-missing', [john15Vine, psalm80Vine])
+    await store.update('xr-missing', [john15Vine, psalm80Vine], null)
 
     expect(store.all()).toEqual([vineCrossReference])
   })
@@ -409,7 +451,7 @@ describe('updating members', () => {
     let notified = 0
     store.onChanged(() => notified++)
 
-    await store.updateMembers('xr-vine', [john15Vine, psalm80Vine])
+    await store.update('xr-vine', [john15Vine, psalm80Vine], null)
 
     expect(notified).toBe(1)
   })

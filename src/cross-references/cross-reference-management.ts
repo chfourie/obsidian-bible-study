@@ -1,6 +1,6 @@
 import type { Reference } from '../reference'
 import type { CrossReference, MemberRemoval } from './cross-reference-store'
-import { otherMembersView, type CrossReferenceView } from './cross-reference-view'
+import { crossReferenceView, type CrossReferenceView } from './cross-reference-view'
 
 // The commands in-place management issues; a subset of CrossReferenceCatalog.
 export type CrossReferenceCommands = {
@@ -32,7 +32,7 @@ export class CrossReferenceManagement {
 
   view(entry: CrossReference, viewed: Reference[]): CrossReferenceView {
     return {
-      ...otherMembersView(entry, viewed),
+      ...crossReferenceView(entry, viewed),
       error: this.#errors[entry.id] ?? null,
       confirmingDelete: this.#confirmingDelete.has(entry.id),
     }

@@ -3,6 +3,7 @@ import type { ReferenceNavigator } from '../contracts'
 import {
   INERT_CROSS_REFERENCE_CATALOG,
   type CrossReferenceCatalog,
+  type CrossReference,
 } from '../cross-references'
 import { PluginFeature } from '../data-access'
 import { isTranslationManifest, type ModuleStore } from '../modules'
@@ -222,16 +223,11 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     void this.#withReaderView((view) => view.model.openAt(reference, translationId))
   }
 
-  growCrossReference(
-    id: string,
-    members: Reference[],
-    description: string | null,
-    translationId: string | null,
-  ): void {
-    if (members.length === 0) return
+  growCrossReference(entry: CrossReference, translationId: string | null): void {
+    if (entry.members.length === 0) return
     void this.#withReaderView(async (view) => {
-      await view.model.openAt(members[0], translationId)
-      view.model.startEditingCrossReference(id, members, description)
+      await view.model.openAt(entry.members[0], translationId)
+      view.model.startEditingCrossReference(entry)
     })
   }
 

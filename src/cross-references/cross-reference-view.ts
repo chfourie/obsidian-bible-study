@@ -25,7 +25,7 @@ export type CrossReferenceView = {
 
 // A surfaced cross-reference lists only the jump-off points: members whose
 // verses are already part of the passage being viewed are left out.
-export const otherMembersView = (
+export const crossReferenceView = (
   entry: CrossReference,
   viewed: Reference[],
 ): CrossReferenceView => ({

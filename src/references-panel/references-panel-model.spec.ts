@@ -96,11 +96,7 @@ const model = (
   source: PassageSource,
   translationId: string | null = 'web',
   crossReferences: ReferencesPanelCrossReferences = noCrossReferences,
-  growCrossReference: (
-    id: string,
-    members: Reference[],
-    description: string | null,
-  ) => void = () => {},
+  growCrossReference: (entry: CrossReference) => void = () => {},
 ): ReferencesPanelModel =>
   new ReferencesPanelModel(
     {
@@ -603,17 +599,13 @@ describe('cross-references in the References panel', () => {
     it('hands the full member list and description to the reader to grow a cluster', async () => {
       const store = fakeCrossReferenceStore()
       store.setEntries([vineCrossReference])
-      const grown: {
-        id: string
-        members: Reference[]
-        description: string | null
-      }[] = []
+      const grown: CrossReference[] = []
       const panel = model(
         fakeSource().source,
         'web',
         store.deps,
-        (id, members, description) => {
-          grown.push({ id, members, description })
+        (entry) => {
+          grown.push(entry)
         },
       )
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })

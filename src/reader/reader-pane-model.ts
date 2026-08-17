@@ -13,6 +13,7 @@ import {
 import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
   CrossReferenceManagement,
+  type CrossReference,
   type CrossReferenceEditing,
   type CrossReferenceMemberView,
   type CrossReferenceView,
@@ -148,6 +149,7 @@ export type CollectionView = {
   // Seeded from the cross-reference being grown, so saving an untouched
   // prompt keeps the description it already had.
   description: string
+  typedMember: string
 }
 
 export type VerseDetailsView = {
@@ -250,6 +252,9 @@ export class ReaderPaneModel {
     members: Reference[]
     error: string | null
     description: string
+    // The half-typed reference in the basket's input: model-owned so adding
+    // it can clear it on success and keep it for correction on failure.
+    typed: string
     // The id of the cross-reference this basket grows, or null when
     // building a brand new one.
     editing: string | null
@@ -575,6 +580,7 @@ export class ReaderPaneModel {
       error: this.#collection.error,
       editing: this.#collection.editing !== null,
       description: this.#collection.description,
+      typedMember: this.#collection.typed,
     }
   }
 
@@ -585,6 +591,7 @@ export class ReaderPaneModel {
       error: null,
       editing: null,
       description: '',
+      typed: '',
     }
     this.#notify()
   }
@@ -593,18 +600,15 @@ export class ReaderPaneModel {
   // members and description, so growing a cluster reuses the same gathering
   // flow as creation; Create then saves back to this id instead of making a
   // new one. A basket already in progress wins: growing would discard it.
-  startEditingCrossReference(
-    id: string,
-    members: Reference[],
-    description: string | null,
-  ): void {
+  startEditingCrossReference(entry: CrossReference): void {
     if (this.#collection !== null) return
     this.#collection = {
       stage: 'gathering',
-      members: [...members],
+      members: [...entry.members],
       error: null,
-      editing: id,
-      description: description ?? '',
+      editing: entry.id,
+      description: entry.description ?? '',
+      typed: '',
     }
     this.#notify()
   }
@@ -628,9 +632,15 @@ export class ReaderPaneModel {
     this.#refreshRowExpansion()
   }
 
-  addTypedReferenceToCollection(text: string): void {
+  typeMember(text: string): void {
     if (this.#collection === null) return
-    const trimmed = text.trim()
+    this.#collection = { ...this.#collection, typed: text }
+    this.#notify()
+  }
+
+  addTypedReferenceToCollection(): void {
+    if (this.#collection === null) return
+    const trimmed = this.#collection.typed.trim()
     if (trimmed === '') return
     const parsed = parseReference(trimmed, { translationIds: [] })
     if (parsed === null) {
@@ -642,6 +652,7 @@ export class ReaderPaneModel {
       return
     }
     this.#gather(parsed.reference)
+    this.#collection = { ...this.#collection, typed: '' }
     this.#notify()
   }
 
@@ -688,12 +699,9 @@ export class ReaderPaneModel {
     const trimmed = collection.description.trim()
     const nextDescription = trimmed === '' ? null : trimmed
     if (collection.editing !== null) {
-      await this.deps.crossReferences.updateMembers(
+      await this.deps.crossReferences.update(
         collection.editing,
         collection.members,
-      )
-      await this.deps.crossReferences.updateDescription(
-        collection.editing,
         nextDescription,
       )
     } else {

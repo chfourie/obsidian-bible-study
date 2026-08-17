@@ -127,23 +127,14 @@
     return { update: render }
   }
 
-  let typedMember = $state('')
-
-  const startCollecting = (): void => {
-    typedMember = ''
-    model.startCollecting()
-  }
-
   const startEditingCrossReference = (
     entry: VerseDetailsView['crossReferences'][number],
   ): void => {
-    typedMember = ''
-    model.startEditingCrossReference(entry.id, entry.allMembers, entry.description)
-  }
-
-  const addTypedMember = (): void => {
-    model.addTypedReferenceToCollection(typedMember)
-    if (model.view.collection?.error === null) typedMember = ''
+    model.startEditingCrossReference({
+      id: entry.id,
+      members: entry.allMembers,
+      description: entry.description,
+    })
   }
 
   const createCrossReference = (): void => {
@@ -411,7 +402,7 @@
       class="bsr-collect-start"
       title="Collect a cross-reference"
       disabled={view.collection !== null}
-      onclick={startCollecting}
+      onclick={() => model.startCollecting()}
     >Cross-reference</button>
     <span class="bsr-trans" bind:this={pillSlotEl}>
       <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
@@ -464,15 +455,20 @@
           class="bsr-basket-input"
           type="text"
           placeholder="Type a reference"
-          bind:value={typedMember}
+          value={collection.typedMember}
+          oninput={(event) => model.typeMember(event.currentTarget.value)}
           onkeydown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
-              addTypedMember()
+              model.addTypedReferenceToCollection()
             }
           }}
         />
-        <button type="button" class="bsr-basket-action" onclick={addTypedMember}>Add</button>
+        <button
+          type="button"
+          class="bsr-basket-action"
+          onclick={() => model.addTypedReferenceToCollection()}
+        >Add</button>
         <span class="bsr-spacer"></span>
         <button
           type="button"
