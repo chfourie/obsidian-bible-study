@@ -337,7 +337,7 @@ describe('ReaderFeature entry points', () => {
     ])
   })
 
-  it('keeps an open pane on its own red-letter toggle when the global setting flips', async () => {
+  it('follows a global red-letter flip in panes the user never toggled', async () => {
     const { feature, leaves } = harness()
     await feature.load()
     feature.openReference(ref('John 15:1'), 'web')
@@ -353,8 +353,32 @@ describe('ReaderFeature entry points', () => {
     feature.onSettingsChanged()
     await flushAsync()
 
-    expect(view.model.view.toggles.redLetter).toBe('off')
-    expect(view.model.view.rows[0].segments[0].redLetter).toBe(false)
+    expect(view.model.view.toggles.redLetter).toBe('on')
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(true)
+  })
+
+  it('keeps a user-toggled pane on its own choice when the global setting flips', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    view.model.setToggle('redLetter', 'on')
+    await flushAsync()
+
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      derivedRedLetter: true,
+    })
+    feature.onSettingsChanged()
+    await flushAsync()
+    feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
+    feature.onSettingsChanged()
+    await flushAsync()
+
+    expect(view.model.view.toggles.redLetter).toBe('on')
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(true)
   })
 
   it('turns derived red on for one pane while the global setting is off', async () => {
@@ -428,6 +452,16 @@ describe('ReaderFeature entry points', () => {
     view.model.setToggle('redLetter', 'off')
     await flushAsync()
     expect(view.model.view.rows[0].segments).toEqual(nativeSegments)
+  })
+
+  it('omits the red-letter toggle from view state until the user overrides it', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+
+    expect(view.getState()).toEqual({ book: 43, chapter: 15 })
   })
 
   it('round-trips the red-letter toggle through the pane view state', async () => {

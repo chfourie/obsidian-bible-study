@@ -222,6 +222,7 @@ export class ReaderPaneModel {
   #installingSuggested = false
   #installError: string | null = null
   #wordStrongs: { verseId: number; numbers: string[] } | null = null
+  #redLetterOverridden = false
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
 
@@ -255,13 +256,33 @@ export class ReaderPaneModel {
     toggle: Key,
     value: ReaderToggles[Key],
   ): void {
+    if (toggle === 'redLetter') this.#redLetterOverridden = true
+    this.#applyToggle(toggle, value)
+  }
+
+  // An overridden pane keeps the user's red-letter choice; untouched panes
+  // track the global setting.
+  setRedLetterDefault(value: ReaderToggles['redLetter']): void {
+    if (this.#redLetterOverridden) return
+    this.#applyToggle('redLetter', value)
+  }
+
+  get redLetterOverridden(): boolean {
+    return this.#redLetterOverridden
+  }
+
+  #applyToggle<Key extends keyof ReaderToggles>(
+    toggle: Key,
+    value: ReaderToggles[Key],
+  ): void {
     const changed = this.#toggles[toggle] !== value
     this.#toggles = { ...this.#toggles, [toggle]: value }
     this.#notify()
-    // The red-letter toggle changes what the passage source serves, so an
-    // already-loaded chapter refetches; before the first load the pending
-    // open picks the toggle up on its own.
-    if (toggle === 'redLetter' && changed && this.#status !== 'loading') {
+    // The red-letter toggle changes what the passage source serves, so any
+    // chapter load that has started refetches — the load token retires an
+    // in-flight fetch. Before the first load the pending open picks the
+    // toggle up on its own.
+    if (toggle === 'redLetter' && changed && this.#loadToken > 0) {
       void this.#loadChapter()
       return
     }

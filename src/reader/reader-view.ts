@@ -72,10 +72,14 @@ export class ReaderView extends ItemView {
     }
   }
 
+  // Untouched panes omit the toggle so a reopened pane seeds from the
+  // global setting instead of a frozen copy of it.
   override getState(): Record<string, unknown> {
     return {
       ...this.model.view.position,
-      redLetter: this.model.view.toggles.redLetter,
+      ...(this.model.redLetterOverridden
+        ? { redLetter: this.model.view.toggles.redLetter }
+        : {}),
     }
   }
 

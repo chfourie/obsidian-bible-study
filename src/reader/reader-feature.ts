@@ -110,10 +110,10 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
       model.setAnnotationOrdering(this.settings.annotationOrdering)
       model.setDefaultFontScale(this.settings.readerFontScalePercent)
       void model.refreshTranslations()
+      model.setRedLetterDefault(this.settings.derivedRedLetter ? 'on' : 'off')
       // Panes with nothing on screen (no translation yet, or the passage was
       // unavailable) reload so a module installed from the settings tab
-      // appears without reopening the pane. The global derived red letter
-      // setting only seeds new panes; open panes keep their own toggle.
+      // appears without reopening the pane.
       const status = model.view.status
       if (status === 'no-translation' || status === 'unavailable')
         void model.openPosition(model.view.position)

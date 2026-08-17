@@ -794,6 +794,96 @@ describe('reader toggles', () => {
     expect(model.view.status).toBe('ok')
   })
 
+  it('refetches with the new toggle when red letter flips mid-load', async () => {
+    let release = (): void => {}
+    let passageCalls = 0
+    let model: ReaderPaneModel
+    const gated: PassageSource = {
+      passage: async (reference, translationId) => {
+        passageCalls++
+        if (passageCalls === 1)
+          await new Promise<void>((resolve) => (release = resolve))
+        const derived = model.view.toggles.redLetter === 'on'
+        const passage = await passageSourceOver(john15Texts()).passage(
+          reference,
+          translationId,
+        )
+        if (passage.status !== 'ok') return passage
+        return {
+          ...passage,
+          verses: passage.verses.map((verse) => ({
+            ...verse,
+            segments: verse.segments.map((segment) => ({
+              ...segment,
+              redLetter: derived,
+            })),
+          })),
+        }
+      },
+    }
+    model = modelWith({ passages: gated })
+    const opening = model.openPosition({ book: 43, chapter: 15 })
+    await flushAsync()
+    expect(model.view.status).toBe('loading')
+
+    model.setToggle('redLetter', 'on')
+    release()
+    await opening
+    await flushAsync()
+
+    expect(model.view.status).toBe('ok')
+    expect(model.view.rows[0].segments[0].redLetter).toBe(true)
+  })
+
+  it('follows a changed red-letter default until the user overrides it', async () => {
+    const model = modelWith()
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    model.setRedLetterDefault('on')
+    await flushAsync()
+    expect(model.view.toggles.redLetter).toBe('on')
+
+    model.setToggle('redLetter', 'off')
+    await flushAsync()
+    model.setRedLetterDefault('on')
+    await flushAsync()
+
+    expect(model.view.toggles.redLetter).toBe('off')
+  })
+
+  it('reloads the chapter when an untouched pane follows a new default', async () => {
+    let passageCalls = 0
+    const counting: PassageSource = {
+      passage: async (reference, translationId) => {
+        passageCalls++
+        return passageSourceOver(john15Texts()).passage(
+          reference,
+          translationId,
+        )
+      },
+    }
+    const model = modelWith({ passages: counting })
+    await model.openPosition({ book: 43, chapter: 15 })
+    const callsAfterOpen = passageCalls
+
+    model.setRedLetterDefault('on')
+    await flushAsync()
+
+    expect(passageCalls).toBe(callsAfterOpen + 1)
+    expect(model.view.status).toBe('ok')
+  })
+
+  it('reports whether the user has overridden the red-letter toggle', () => {
+    const model = modelWith()
+    expect(model.redLetterOverridden).toBe(false)
+
+    model.setRedLetterDefault('on')
+    expect(model.redLetterOverridden).toBe(false)
+
+    model.setToggle('redLetter', 'off')
+    expect(model.redLetterOverridden).toBe(true)
+  })
+
   it('does not load a chapter when the red-letter toggle is set before opening', () => {
     let passageCalls = 0
     const counting: PassageSource = {
