@@ -1,10 +1,22 @@
-import type { BookContent, ModuleManifest, VerseContent } from '../modules'
-import { verseLinesOf, verseTagsOf, verseTextOf } from '../modules'
+import type {
+  BookContent,
+  FormatSpan,
+  ModuleManifest,
+  VerseContent,
+} from '../modules'
+import {
+  verseLinesOf,
+  verseRedLetterOf,
+  verseSuppliedOf,
+  verseTagsOf,
+  verseTextOf,
+} from '../modules'
 import { enumerateVerseIds, type Reference } from '../reference'
 
 export type VerseSegment = {
   text: string
   redLetter: boolean
+  supplied?: boolean
   strongs?: string[]
   lineBreakBefore?: boolean
 }
@@ -38,18 +50,27 @@ export type PassageStore = {
   bookContent(moduleId: string, book: number): Promise<BookContent | null>
 }
 
+const covering = (
+  spans: FormatSpan[],
+  start: number,
+  end: number,
+): boolean =>
+  spans.some((span) => span.start <= start && end <= span.end)
+
 const verseSegments = (verse: VerseContent): VerseSegment[] => {
   const text = verseTextOf(verse)
   const orderedTags = [...verseTagsOf(verse)].sort((a, b) => a.start - b.start)
+  const redSpans = verseRedLetterOf(verse)
+  const suppliedSpans = verseSuppliedOf(verse)
   const lineStarts = new Set(
     verseLinesOf(verse)
       .map((line) => line.start)
       .filter((start) => start > 0 && start < text.length),
   )
   const cuts = new Set([0, text.length, ...lineStarts])
-  for (const tag of orderedTags) {
-    cuts.add(tag.start)
-    cuts.add(tag.end)
+  for (const span of [...orderedTags, ...redSpans, ...suppliedSpans]) {
+    cuts.add(span.start)
+    cuts.add(span.end)
   }
   const ordered = [...cuts].sort((a, b) => a - b)
   const segments: VerseSegment[] = []
@@ -59,7 +80,11 @@ const verseSegments = (verse: VerseContent): VerseSegment[] => {
     const tag = orderedTags.find(
       (candidate) => candidate.start <= start && end <= candidate.end,
     )
-    const segment: VerseSegment = { text: text.slice(start, end), redLetter: false }
+    const segment: VerseSegment = {
+      text: text.slice(start, end),
+      redLetter: covering(redSpans, start, end),
+    }
+    if (covering(suppliedSpans, start, end)) segment.supplied = true
     if (tag !== undefined) segment.strongs = tag.strongs
     if (lineStarts.has(start)) segment.lineBreakBefore = true
     segments.push(segment)

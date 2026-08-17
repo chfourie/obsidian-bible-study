@@ -192,6 +192,86 @@ describe('ModulePassageSource', () => {
     })
   })
 
+  it('splits at red-letter boundaries and marks the covered segments', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 4)]: {
+          text: 'He said, "Remain in Me, and I in you."',
+          red: [{ start: 9, end: 38 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'He said, ', redLetter: false },
+            { text: '"Remain in Me, and I in you."', redLetter: true },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('splits at supplied-word boundaries and marks the covered segments', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [makeVerseId(40, 1, 1)]: {
+          text: 'the book of the genealogy of Jesus',
+          supplied: [{ start: 0, end: 3 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('Matthew 1:1'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'the', redLetter: false, supplied: true },
+            { text: ' book of the genealogy of Jesus', redLetter: false },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('composes red-letter and supplied cuts with Strong-tag boundaries', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 4)]: {
+          text: 'Remain in Me, and I in you.',
+          tags: [{ start: 0, end: 6, strongs: ['G3306'] }],
+          red: [{ start: 0, end: 13 }],
+          supplied: [{ start: 10, end: 12 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:4'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: 'Remain', redLetter: true, strongs: ['G3306'] },
+            { text: ' in ', redLetter: true },
+            { text: 'Me', redLetter: true, supplied: true },
+            { text: ',', redLetter: true },
+            { text: ' and I in you.', redLetter: false },
+          ],
+        },
+      ],
+    })
+  })
+
   it('carries no line-data flag for verses without a line channel', async () => {
     const passage = await setup().passage(ref('John 15:4'), 'web')
 

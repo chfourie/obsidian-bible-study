@@ -9,6 +9,7 @@
     type VerseDetailsView,
     type VerseRowView,
   } from './reader-pane-model'
+  import type { VerseSegment } from '../rendering'
   import TranslationMenu from './TranslationMenu.svelte'
 
   let {
@@ -252,6 +253,11 @@
   {/if}
 {/snippet}
 
+{#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied}<span
+      class:scripture-study-red-letter={segment.redLetter}
+      class:scripture-study-supplied={segment.supplied}
+    >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
+
 {#snippet detailsBlock(details: VerseDetailsView | null)}
   {#if details === null}
     <div class="bsr-details-empty">Loading…</div>
@@ -264,10 +270,10 @@
           <tr>
             <td class="bsr-trans-id" title={row.name}>{row.label}</td>
             <td class="bsr-trans-text">
-              {#if row.text === null}
+              {#if row.segments === null}
                 <span class="bsr-unavailable">Unavailable</span>
               {:else}
-                {row.text}
+                {#each row.segments as segment, index (index)}{@render formattedText(segment)}{/each}
               {/if}
             </td>
           </tr>
@@ -287,6 +293,7 @@
         tabindex="0"
         class="bsr-strongs-word"
         class:scripture-study-red-letter={segment.redLetter}
+        class:scripture-study-supplied={segment.supplied}
         onclick={(event) => onWordClick(event, row.verseId, segment.strongs ?? [])}
         onkeydown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
@@ -295,10 +302,8 @@
           }
         }}
       >{segment.text}</span>
-    {:else if segment.redLetter}
-      <span class="scripture-study-red-letter">{segment.text}</span>
     {:else}
-      {segment.text}
+      {@render formattedText(segment)}
     {/if}
   {/each}
   {#if verseMarks(row).anno}<span class="bsr-mark-anno" title="Annotation">●</span>{/if}

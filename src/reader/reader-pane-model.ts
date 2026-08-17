@@ -95,7 +95,7 @@ export type TranslationRowView = {
   id: string
   label: string
   name: string
-  text: string | null
+  segments: VerseSegment[] | null
 }
 
 export type NoteCardView = {
@@ -531,12 +531,8 @@ export class ReaderPaneModel {
           id: translation.id,
           label: translation.label,
           name: translation.name,
-          text:
-            passage.status === 'ok'
-              ? passage.verses[0].segments
-                  .map((segment) => segment.text)
-                  .join('')
-              : null,
+          segments:
+            passage.status === 'ok' ? passage.verses[0].segments : null,
         }
       }),
     )

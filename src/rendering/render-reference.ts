@@ -167,8 +167,12 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
   }
   for (const segment of block.segments) {
     if (segment.lineBreakBefore) parent.createEl('br')
-    if (segment.redLetter) {
-      parent.createSpan({ cls: 'scripture-study-red-letter', text: segment.text })
+    const classes = [
+      ...(segment.redLetter ? ['scripture-study-red-letter'] : []),
+      ...(segment.supplied ? ['scripture-study-supplied'] : []),
+    ]
+    if (classes.length > 0) {
+      parent.createSpan({ cls: classes.join(' '), text: segment.text })
     } else {
       parent.appendChild(parent.ownerDocument.createTextNode(segment.text))
     }

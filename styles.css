@@ -83,6 +83,10 @@ body {
   font-style: normal;
 }
 
+.scripture-study-supplied {
+  font-style: italic;
+}
+
 .scripture-study-red-letter {
   color: var(--scripture-study-red-letter-color);
 }

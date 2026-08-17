@@ -258,6 +258,48 @@ describe('renderReference inline', () => {
     expect(red?.textContent).toBe('Remain in me.')
   })
 
+  it('marks supplied segments with the supplied class and keeps copy text clean', async () => {
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 40001001,
+          segments: [
+            { text: 'the', redLetter: false, supplied: true },
+            { text: ' book of the genealogy', redLetter: false },
+          ],
+        },
+      ],
+    })
+
+    await renderReference(parent, model('Matthew 1:1 inline'), deps)
+
+    const supplied = parent.querySelector('.scripture-study-supplied')
+    expect(supplied?.textContent).toBe('the')
+    expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
+      'the book of the genealogy',
+    )
+  })
+
+  it('marks a segment both red-letter and supplied with both classes', async () => {
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 43015004,
+          segments: [{ text: 'Me', redLetter: true, supplied: true }],
+        },
+      ],
+    })
+
+    await renderReference(parent, model('John 15:4 inline'), deps)
+
+    const span = parent.querySelector('.scripture-study-red-letter')
+    expect(span?.classList.contains('scripture-study-supplied')).toBe(true)
+  })
+
   it('degrades to a muted unavailable line with a retry icon', async () => {
     const { parent, deps } = setup({ status: 'unavailable' })
 

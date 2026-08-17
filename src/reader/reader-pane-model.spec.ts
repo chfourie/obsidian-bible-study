@@ -324,8 +324,13 @@ describe('verse details', () => {
       verseId: verse4,
       title: 'John 15:4',
       translations: [
-        { id: 'web', label: 'WEB', name: 'WEB Full Name', text: 'Remain in me.' },
-        { id: 'kjv', label: 'KJV', name: 'KJV Full Name', text: null },
+        {
+          id: 'web',
+          label: 'WEB',
+          name: 'WEB Full Name',
+          segments: [{ text: 'Remain in me.', redLetter: false }],
+        },
+        { id: 'kjv', label: 'KJV', name: 'KJV Full Name', segments: null },
       ],
       annotations: [
         {
@@ -1103,8 +1108,13 @@ describe('translation availability in the reader', () => {
 
     const details = model.view.details[makeVerseId(43, 15, 4)]
     expect(details.translations).toEqual([
-      { id: 'web', label: 'WEB', name: 'WEB Full Name', text: 'Remain in me.' },
-      { id: 'nkjv', label: 'NKJV', name: 'NKJV Full Name', text: null },
+      {
+        id: 'web',
+        label: 'WEB',
+        name: 'WEB Full Name',
+        segments: [{ text: 'Remain in me.', redLetter: false }],
+      },
+      { id: 'nkjv', label: 'NKJV', name: 'NKJV Full Name', segments: null },
     ])
   })
 
