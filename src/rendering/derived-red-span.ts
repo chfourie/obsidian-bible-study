@@ -3,11 +3,20 @@ import type { RedLetterCue } from '../reference'
 
 const DOUBLE_QUOTE_MARKS = /["“”„«»]/g
 
+// Every double-quote form is ambiguous across conventions (“ closes German
+// „…“, « closes German »…«), so marks are classified by attachment instead:
+// a mark glued to the word before it closes speech, one detached from it
+// opens speech. This also survives French spaced guillemets (« Va. »).
+const opensSpeech = (text: string, index: number): boolean =>
+  index === 0 || /\s/.test(text[index - 1])
+
 // Anchors a partial cue's red span to double-quote punctuation in the
 // translation's own text: red not touching the verse start begins at the
-// first double-quote mark, red not touching the verse end stops after the
-// last one. Single quotes are nested quotations and never anchor. Without a
-// usable anchor the whole verse goes red — words of Christ are never dropped.
+// first opening-shaped mark, red not touching the verse end stops after the
+// last closing-shaped one — so a closing quote carried over from the prior
+// verse never drags narrative into the red span. Single quotes are nested
+// quotations and never anchor. Without a usable anchor the whole verse goes
+// red — words of Christ are never dropped.
 export const derivedRedSpan = (
   text: string,
   cue: RedLetterCue,
@@ -18,10 +27,12 @@ export const derivedRedSpan = (
   const marks = [...text.matchAll(DOUBLE_QUOTE_MARKS)].map(
     (match) => match.index,
   )
-  if (marks.length === 0) return wholeVerse
-  if (!cue.redAtStart && !cue.redAtEnd && marks.length < 2) return wholeVerse
-  return {
-    start: cue.redAtStart ? 0 : marks[0],
-    end: cue.redAtEnd ? text.length : marks[marks.length - 1] + 1,
-  }
+  const openings = marks.filter((index) => opensSpeech(text, index))
+  const closings = marks.filter((index) => !opensSpeech(text, index))
+  if (!cue.redAtStart && openings.length === 0) return wholeVerse
+  if (!cue.redAtEnd && closings.length === 0) return wholeVerse
+  const start = cue.redAtStart ? 0 : openings[0]
+  const end = cue.redAtEnd ? text.length : closings[closings.length - 1] + 1
+  if (start >= end) return wholeVerse
+  return { start, end }
 }
