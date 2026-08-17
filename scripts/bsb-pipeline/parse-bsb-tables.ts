@@ -190,11 +190,20 @@ const assembleVerse = (rows: string[][], state: AssemblyState): TaggedVerse => {
     }
 
     const word = translatedWord(cleanColumn(row[COLUMN.bsbText] ?? ''))
-    const pnc = suffixSegments(row[COLUMN.pnc] ?? '')
-    const endQ = suffixSegments(row[COLUMN.endQ] ?? '')
-    const closesAfterSuffix = (row[COLUMN.endText] ?? '').includes(RED_CLOSE)
+    const suffixes = [
+      suffixSegments(row[COLUMN.pnc] ?? ''),
+      suffixSegments(row[COLUMN.endQ] ?? ''),
+      suffixSegments(row[COLUMN.endText] ?? ''),
+    ]
+    const appendSuffixes = (): void => {
+      for (const suffix of suffixes) {
+        append(suffix.beforeClose)
+        if (suffix.closes) closeRed()
+        append(suffix.afterClose)
+      }
+    }
     if (word === null) {
-      if (pnc.closes || endQ.closes || closesAfterSuffix) closeRed()
+      appendSuffixes()
       continue
     }
 
@@ -212,13 +221,7 @@ const assembleVerse = (rows: string[][], state: AssemblyState): TaggedVerse => {
     if (word.translated && strongs !== null)
       tags.push({ start, end: text.length, strongs: [strongs] })
 
-    append(pnc.beforeClose)
-    if (pnc.closes) closeRed()
-    append(pnc.afterClose)
-    append(endQ.beforeClose)
-    if (endQ.closes) closeRed()
-    append(endQ.afterClose)
-    if (closesAfterSuffix) closeRed()
+    appendSuffixes()
   }
 
   const carryRed = state.red
