@@ -35,13 +35,12 @@ const INERT_STRONGS: ReaderStrongsDeps = {
 }
 
 export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
-  readonly #repository: PassageRepository
+  readonly #repositories: Record<'plain' | 'red', PassageRepository>
   readonly #models = new Set<ReaderPaneModel>()
   readonly #indexRefreshDebounceMs: number
   #pendingRefresh: number | null = null
   #unsubscribeIndex: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
-  #derivedRedLetter = false
   #annotator: (reference: Reference) => void = () => {}
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
@@ -59,11 +58,14 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     this.#firstRun = options.firstRun
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.3): unavailable translations show an unavailable row.
-    this.#repository = new PassageRepository(
-      new ModulePassageSource(store, {
-        derivedRedLetter: () => this.settings.derivedRedLetter,
-      }),
-    )
+    // Panes pick between the two repositories per their red-letter toggle,
+    // so the caches never mix derived-red and plain passages.
+    this.#repositories = {
+      plain: new PassageRepository(new ModulePassageSource(store)),
+      red: new PassageRepository(
+        new ModulePassageSource(store, { derivedRedLetter: () => true }),
+      ),
+    }
   }
 
   override async load(): Promise<void> {
@@ -102,24 +104,18 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   }
 
   override onSettingsChanged(): void {
-    this.#repository.clear()
-    const derivedRedLetterFlipped =
-      this.#derivedRedLetter !== this.settings.derivedRedLetter
-    this.#derivedRedLetter = this.settings.derivedRedLetter
+    this.#repositories.plain.clear()
+    this.#repositories.red.clear()
     this.#models.forEach((model) => {
       model.setAnnotationOrdering(this.settings.annotationOrdering)
       model.setDefaultFontScale(this.settings.readerFontScalePercent)
       void model.refreshTranslations()
       // Panes with nothing on screen (no translation yet, or the passage was
       // unavailable) reload so a module installed from the settings tab
-      // appears without reopening the pane. A flipped derived red letter
-      // setting repaints on-screen passages too.
+      // appears without reopening the pane. The global derived red letter
+      // setting only seeds new panes; open panes keep their own toggle.
       const status = model.view.status
-      if (
-        status === 'no-translation' ||
-        status === 'unavailable' ||
-        derivedRedLetterFlipped
-      )
+      if (status === 'no-translation' || status === 'unavailable')
         void model.openPosition(model.view.position)
     })
   }
@@ -133,9 +129,17 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   }
 
   createModel(): ReaderPaneModel {
-    const model = new ReaderPaneModel(
+    let model: ReaderPaneModel
+    const paneRepository = (): PassageRepository =>
+      this.#repositories[
+        model.view.toggles.redLetter === 'on' ? 'red' : 'plain'
+      ]
+    model = new ReaderPaneModel(
       {
-        passages: this.#repository,
+        passages: {
+          passage: (reference, translationId) =>
+            paneRepository().passage(reference, translationId),
+        },
         availableTranslations: async () => this.#availableTranslations(),
         intersecting: (reference) =>
           this.index.intersectingOccurrences(reference),
@@ -149,6 +153,7 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
           nav: this.settings.readerNavDefault,
           layout: this.settings.readerLayoutDefault,
           strongs: this.settings.readerStrongsDefault,
+          redLetter: this.settings.derivedRedLetter ? 'on' : 'off',
         },
         translationId: this.settings.defaultTranslationId,
         annotationOrdering: this.settings.annotationOrdering,

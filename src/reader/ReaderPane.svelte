@@ -88,6 +88,14 @@
         { value: 'continuous', label: 'Continuous' },
       ],
     },
+    {
+      key: 'redLetter',
+      label: 'Red letter',
+      options: [
+        { value: 'off', label: 'Off' },
+        { value: 'on', label: 'On' },
+      ],
+    },
   ]
 
   const setToggle = (key: keyof ReaderToggles, value: string): void => {

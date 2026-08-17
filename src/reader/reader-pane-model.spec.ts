@@ -48,6 +48,7 @@ const DEFAULT_TOGGLES: ReaderToggles = {
   nav: 'tree',
   layout: 'verse-per-line',
   strongs: 'off',
+  redLetter: 'off',
 }
 
 const john15Texts = (): MockTexts => ({
@@ -741,6 +742,7 @@ describe('reader toggles', () => {
       nav: 'breadcrumb',
       layout: 'continuous',
       strongs: 'on',
+      redLetter: 'on',
     })
 
     expect(model.view.toggles).toEqual({
@@ -748,6 +750,7 @@ describe('reader toggles', () => {
       nav: 'breadcrumb',
       layout: 'continuous',
       strongs: 'on',
+      redLetter: 'on',
     })
   })
 
@@ -764,8 +767,50 @@ describe('reader toggles', () => {
       nav: 'tree',
       layout: 'continuous',
       strongs: 'off',
+      redLetter: 'off',
     })
     expect(notified).toBe(2)
+  })
+
+  it('reloads the chapter when the red-letter toggle changes', async () => {
+    let passageCalls = 0
+    const counting: PassageSource = {
+      passage: async (reference, translationId) => {
+        passageCalls++
+        return passageSourceOver(john15Texts()).passage(
+          reference,
+          translationId,
+        )
+      },
+    }
+    const model = modelWith({ passages: counting })
+    await model.openPosition({ book: 43, chapter: 15 })
+    const callsAfterOpen = passageCalls
+
+    model.setToggle('redLetter', 'on')
+    await flushAsync()
+
+    expect(passageCalls).toBe(callsAfterOpen + 1)
+    expect(model.view.status).toBe('ok')
+  })
+
+  it('does not load a chapter when the red-letter toggle is set before opening', () => {
+    let passageCalls = 0
+    const counting: PassageSource = {
+      passage: async (reference, translationId) => {
+        passageCalls++
+        return passageSourceOver(john15Texts()).passage(
+          reference,
+          translationId,
+        )
+      },
+    }
+    const model = modelWith({ passages: counting })
+
+    model.setToggle('redLetter', 'on')
+
+    expect(passageCalls).toBe(0)
+    expect(model.view.toggles.redLetter).toBe('on')
   })
 
   it('stops notifying after unsubscribe', () => {

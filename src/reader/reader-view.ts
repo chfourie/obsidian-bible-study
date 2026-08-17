@@ -15,6 +15,7 @@ export const READER_VIEW_TYPE = 'scripture-study-reader'
 type ReaderViewState = {
   book?: number
   chapter?: number
+  redLetter?: 'off' | 'on'
 }
 
 export class ReaderView extends ItemView {
@@ -60,6 +61,9 @@ export class ReaderView extends ItemView {
     result: ViewStateResult,
   ): Promise<void> {
     await super.setState(state, result)
+    if (state?.redLetter === 'off' || state?.redLetter === 'on') {
+      this.model.setToggle('redLetter', state.redLetter)
+    }
     if (typeof state?.book === 'number' && typeof state?.chapter === 'number') {
       await this.model.openPosition({
         book: state.book,
@@ -69,7 +73,10 @@ export class ReaderView extends ItemView {
   }
 
   override getState(): Record<string, unknown> {
-    return { ...this.model.view.position }
+    return {
+      ...this.model.view.position,
+      redLetter: this.model.view.toggles.redLetter,
+    }
   }
 
   override async onClose(): Promise<void> {

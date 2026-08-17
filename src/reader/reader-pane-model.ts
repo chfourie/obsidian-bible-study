@@ -26,6 +26,7 @@ export type ReaderToggles = {
   nav: 'tree' | 'breadcrumb'
   layout: 'verse-per-line' | 'continuous'
   strongs: 'off' | 'on'
+  redLetter: 'off' | 'on'
 }
 
 export type StrongsEntryView = {
@@ -254,8 +255,16 @@ export class ReaderPaneModel {
     toggle: Key,
     value: ReaderToggles[Key],
   ): void {
+    const changed = this.#toggles[toggle] !== value
     this.#toggles = { ...this.#toggles, [toggle]: value }
     this.#notify()
+    // The red-letter toggle changes what the passage source serves, so an
+    // already-loaded chapter refetches; before the first load the pending
+    // open picks the toggle up on its own.
+    if (toggle === 'redLetter' && changed && this.#status !== 'loading') {
+      void this.#loadChapter()
+      return
+    }
     // Collapsing an inline verse prunes its details but keeps it selected,
     // so the side panel can otherwise open onto a selection with nothing
     // loaded and hang on its loading state.

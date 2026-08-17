@@ -183,6 +183,12 @@ export abstract class ItemView {
 
   abstract getViewType(): string
   abstract getDisplayText(): string
+
+  async setState(_state: unknown, _result: unknown): Promise<void> {}
+
+  getState(): Record<string, unknown> {
+    return {}
+  }
 }
 
 export class Plugin {

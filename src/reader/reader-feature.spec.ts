@@ -337,13 +337,13 @@ describe('ReaderFeature entry points', () => {
     ])
   })
 
-  it('repaints open panes when the derived red letter setting flips', async () => {
+  it('keeps an open pane on its own red-letter toggle when the global setting flips', async () => {
     const { feature, leaves } = harness()
     await feature.load()
     feature.openReference(ref('John 15:1'), 'web')
     await flushAsync()
     const view = leaves[0].view as ReaderView
-    expect(view.model.view.rows[0].segments[0].redLetter).toBe(false)
+    expect(view.model.view.toggles.redLetter).toBe('off')
 
     feature.useSettings({
       ...DEFAULT_SETTINGS,
@@ -353,7 +353,109 @@ describe('ReaderFeature entry points', () => {
     feature.onSettingsChanged()
     await flushAsync()
 
+    expect(view.model.view.toggles.redLetter).toBe('off')
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(false)
+  })
+
+  it('turns derived red on for one pane while the global setting is off', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(false)
+
+    view.model.setToggle('redLetter', 'on')
+    await flushAsync()
+
     expect(view.model.view.rows[0].segments[0].redLetter).toBe(true)
+  })
+
+  it('turns derived red off for one pane while the global setting is on', async () => {
+    const { feature, leaves } = harness()
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      derivedRedLetter: true,
+    })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.toggles.redLetter).toBe('on')
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(true)
+
+    view.model.setToggle('redLetter', 'off')
+    await flushAsync()
+
+    expect(view.model.view.rows[0].segments[0].redLetter).toBe(false)
+  })
+
+  it('leaves native red spans alone when the pane toggle flips', async () => {
+    const nativeRedManifest = {
+      ...manifest('web'),
+      capabilities: { strongsTagged: false, redLetter: true },
+    }
+    const store = {
+      installedManifests: async () => [nativeRedManifest],
+      manifest: async (moduleId: string) =>
+        moduleId === 'web' ? nativeRedManifest : null,
+      bookContent: async (moduleId: string, book: number) =>
+        moduleId === 'web' && book === 43
+          ? {
+              [makeVerseId(43, 15, 1)]: {
+                text: 'I am the true vine.',
+                red: [{ start: 0, end: 4 }],
+              },
+            }
+          : {},
+    } as unknown as ModuleStore
+    const { feature, leaves } = harness({}, { store })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    const nativeSegments = [
+      { text: 'I am', redLetter: true },
+      { text: ' the true vine.', redLetter: false },
+    ]
+    expect(view.model.view.rows[0].segments).toEqual(nativeSegments)
+
+    view.model.setToggle('redLetter', 'on')
+    await flushAsync()
+    expect(view.model.view.rows[0].segments).toEqual(nativeSegments)
+
+    view.model.setToggle('redLetter', 'off')
+    await flushAsync()
+    expect(view.model.view.rows[0].segments).toEqual(nativeSegments)
+  })
+
+  it('round-trips the red-letter toggle through the pane view state', async () => {
+    const { feature, leaves, commands } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    view.model.setToggle('redLetter', 'on')
+    await flushAsync()
+    expect(view.getState()).toEqual({
+      book: 43,
+      chapter: 15,
+      redLetter: 'on',
+    })
+
+    leaves[0].detached = true
+    commands[0].callback()
+    await flushAsync()
+    const reopened = leaves[1].view as ReaderView
+    await reopened.setState(
+      { book: 43, chapter: 15, redLetter: 'on' },
+      { history: false },
+    )
+    await flushAsync()
+
+    expect(reopened.model.view.toggles.redLetter).toBe('on')
+    expect(reopened.model.view.rows[0].segments[0].redLetter).toBe(true)
   })
 
   it('passes the annotation ordering setting to new panes', async () => {
@@ -426,6 +528,7 @@ describe('ReaderFeature entry points', () => {
       readerNavDefault: 'breadcrumb',
       readerLayoutDefault: 'continuous',
       readerStrongsDefault: 'on',
+      derivedRedLetter: true,
     })
     await feature.load()
 
@@ -438,6 +541,7 @@ describe('ReaderFeature entry points', () => {
       nav: 'breadcrumb',
       layout: 'continuous',
       strongs: 'on',
+      redLetter: 'on',
     })
   })
 })
