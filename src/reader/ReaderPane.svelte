@@ -230,15 +230,17 @@
   {#if details.mentions.length === 0}
     <div class="bsr-details-empty">No intersecting notes.</div>
   {:else}
-    {#each details.mentions as note (note.file)}
-      <button
-        type="button"
-        class="bsr-note-card"
-        onclick={() => openNote(note.file)}
-      >
-        <span class="bsr-note-path">{note.file}</span>
-      </button>
-    {/each}
+    <ul class="bsr-mention-list">
+      {#each details.mentions as note (note.file)}
+        <li class="bsr-mention-item">
+          <button
+            type="button"
+            class="bsr-mention-link"
+            onclick={() => openNote(note.file)}
+          >{note.file}</button>
+        </li>
+      {/each}
+    </ul>
   {/if}
 {/snippet}
 
@@ -1021,27 +1023,35 @@
     font-style: italic;
   }
 
-  .bsr-note-card {
-    display: block;
-    width: 100%;
-    text-align: left;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m);
-    background: var(--background-secondary);
-    box-shadow: none;
-    padding: 6px 10px;
-    margin: 6px 0;
+  .bsr-mention-list {
+    margin: 4px 0;
+    padding-left: 1.2em;
     font-size: var(--font-ui-small);
-    cursor: pointer;
-    border-left: 3px solid var(--color-blue);
   }
 
-  .bsr-note-card:hover {
-    border-color: var(--text-accent);
+  .bsr-mention-item::marker {
+    color: var(--text-faint);
   }
 
-  .bsr-note-path {
+  .bsr-mention-link {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    height: auto;
+    font-size: inherit;
+    text-align: left;
     color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsr-mention-link:hover {
+    color: var(--text-accent);
+    background: none;
+    box-shadow: none;
   }
 
   .bsr-notes-head {
