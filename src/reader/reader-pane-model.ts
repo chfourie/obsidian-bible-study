@@ -163,6 +163,9 @@ export type CollectionView = {
   // True when this basket grows an existing cross-reference rather than
   // building a new one — Create saves back to the same id.
   editing: boolean
+  // Seeded from the cross-reference being grown, so saving an untouched
+  // prompt keeps the description it already had.
+  description: string
 }
 
 export type VerseDetailsView = {
@@ -264,6 +267,7 @@ export class ReaderPaneModel {
     stage: CollectionStage
     members: Reference[]
     error: string | null
+    description: string
     // The id of the cross-reference this basket grows, or null when
     // building a brand new one.
     editing: string | null
@@ -586,24 +590,44 @@ export class ReaderPaneModel {
         this.#collection.members.length >= CROSS_REFERENCE_MINIMUM_MEMBERS,
       error: this.#collection.error,
       editing: this.#collection.editing !== null,
+      description: this.#collection.description,
     }
   }
 
   startCollecting(): void {
-    this.#collection = { stage: 'gathering', members: [], error: null, editing: null }
+    this.#collection = {
+      stage: 'gathering',
+      members: [],
+      error: null,
+      editing: null,
+      description: '',
+    }
     this.#notify()
   }
 
   // Re-enters Collecting pre-loaded with an existing cross-reference's
-  // members, so growing a cluster reuses the same gathering flow as
-  // creation; Create then saves back to this id instead of making a new one.
-  startEditingCrossReference(id: string, members: Reference[]): void {
+  // members and description, so growing a cluster reuses the same gathering
+  // flow as creation; Create then saves back to this id instead of making a
+  // new one. A basket already in progress wins: growing would discard it.
+  startEditingCrossReference(
+    id: string,
+    members: Reference[],
+    description: string | null,
+  ): void {
+    if (this.#collection !== null) return
     this.#collection = {
       stage: 'gathering',
       members: [...members],
       error: null,
       editing: id,
+      description: description ?? '',
     }
+    this.#notify()
+  }
+
+  describeCollection(description: string): void {
+    if (this.#collection === null) return
+    this.#collection = { ...this.#collection, description }
     this.#notify()
   }
 
@@ -670,14 +694,14 @@ export class ReaderPaneModel {
     this.#notify()
   }
 
-  async createCrossReference(description: string | null): Promise<void> {
+  async createCrossReference(): Promise<void> {
     const collection = this.#collection
     if (
       collection === null ||
       collection.members.length < CROSS_REFERENCE_MINIMUM_MEMBERS
     )
       return
-    const trimmed = description?.trim() ?? ''
+    const trimmed = collection.description.trim()
     const nextDescription = trimmed === '' ? null : trimmed
     if (collection.editing !== null) {
       await this.deps.updateCrossReferenceMembers(

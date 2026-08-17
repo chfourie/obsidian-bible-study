@@ -96,7 +96,11 @@ const model = (
   source: PassageSource,
   translationId: string | null = 'web',
   crossReferences: ReferencesPanelCrossReferences = noCrossReferences,
-  growCrossReference: (id: string, members: Reference[]) => void = () => {},
+  growCrossReference: (
+    id: string,
+    members: Reference[],
+    description: string | null,
+  ) => void = () => {},
 ): ReferencesPanelModel =>
   new ReferencesPanelModel(
     {
@@ -596,18 +600,33 @@ describe('cross-references in the References panel', () => {
       expect(panel.view.crossReferences).toEqual([])
     })
 
-    it('hands the full member list to the reader to grow a cluster', async () => {
+    it('hands the full member list and description to the reader to grow a cluster', async () => {
       const store = fakeCrossReferenceStore()
       store.setEntries([vineCrossReference])
-      const grown: { id: string; members: Reference[] }[] = []
-      const panel = model(fakeSource().source, 'web', store.deps, (id, members) => {
-        grown.push({ id, members })
-      })
+      const grown: {
+        id: string
+        members: Reference[]
+        description: string | null
+      }[] = []
+      const panel = model(
+        fakeSource().source,
+        'web',
+        store.deps,
+        (id, members, description) => {
+          grown.push({ id, members, description })
+        },
+      )
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
       panel.growCrossReference('xr-vine')
 
-      expect(grown).toEqual([{ id: 'xr-vine', members: vineCrossReference.members }])
+      expect(grown).toEqual([
+        {
+          id: 'xr-vine',
+          members: vineCrossReference.members,
+          description: vineCrossReference.description,
+        },
+      ])
     })
 
     it('ignores growing an id that is not currently surfaced', async () => {

@@ -128,11 +128,9 @@
   }
 
   let typedMember = $state('')
-  let collectionDescription = $state('')
 
   const startCollecting = (): void => {
     typedMember = ''
-    collectionDescription = ''
     model.startCollecting()
   }
 
@@ -140,8 +138,7 @@
     entry: VerseDetailsView['crossReferences'][number],
   ): void => {
     typedMember = ''
-    collectionDescription = entry.description ?? ''
-    model.startEditingCrossReference(entry.id, entry.allMembers)
+    model.startEditingCrossReference(entry.id, entry.allMembers, entry.description)
   }
 
   const addTypedMember = (): void => {
@@ -149,8 +146,13 @@
     if (model.view.collection?.error === null) typedMember = ''
   }
 
-  const createCrossReference = (description: string | null): void => {
-    void model.createCrossReference(description)
+  const createCrossReference = (): void => {
+    void model.createCrossReference()
+  }
+
+  const createWithoutDescription = (): void => {
+    model.describeCollection('')
+    createCrossReference()
   }
 
   let editingXrefDescription: string | null = $state(null)
@@ -269,13 +271,13 @@
         {:else}
           <button
             type="button"
-            class="bsr-xref-delete"
+            class="bsr-xref-action"
             disabled={view.collection !== null}
             onclick={() => startEditingCrossReference(entry)}
           >Add members</button>
           <button
             type="button"
-            class="bsr-xref-delete"
+            class="bsr-xref-action"
             onclick={() => model.confirmDeleteCrossReference(entry.id)}
           >Delete cross-reference</button>
         {/if}
@@ -491,24 +493,25 @@
           class="bsr-basket-input bsr-basket-description"
           type="text"
           placeholder="Why do these belong together? (optional)"
-          bind:value={collectionDescription}
+          value={collection.description}
+          oninput={(event) => model.describeCollection(event.currentTarget.value)}
           onkeydown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
-              createCrossReference(collectionDescription)
+              createCrossReference()
             }
           }}
         />
         <button
           type="button"
           class="bsr-basket-action mod-cta"
-          onclick={() => createCrossReference(collectionDescription)}
+          onclick={createCrossReference}
         >Save</button>
         {#if !collection.editing}
           <button
             type="button"
             class="bsr-basket-action"
-            onclick={() => createCrossReference(null)}
+            onclick={createWithoutDescription}
           >Skip</button>
         {/if}
         <button
@@ -1288,7 +1291,7 @@
     font-size: var(--font-ui-smaller);
   }
 
-  .bsr-xref-delete {
+  .bsr-xref-action {
     margin-top: 4px;
     padding: 0;
     border: none;
@@ -1300,7 +1303,7 @@
     cursor: pointer;
   }
 
-  .bsr-xref-delete:hover {
+  .bsr-xref-action:hover {
     color: var(--text-error);
     background: none;
     box-shadow: none;

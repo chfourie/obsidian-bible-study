@@ -251,12 +251,13 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
   growCrossReference(
     id: string,
     members: Reference[],
+    description: string | null,
     translationId: string | null,
   ): void {
     if (members.length === 0) return
     void this.#withReaderView(async (view) => {
       await view.model.openAt(members[0], translationId)
-      view.model.startEditingCrossReference(id, members)
+      view.model.startEditingCrossReference(id, members, description)
     })
   }
 

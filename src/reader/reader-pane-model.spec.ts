@@ -1675,6 +1675,7 @@ describe('collecting a cross-reference', () => {
       canCreate: false,
       error: null,
       editing: false,
+      description: '',
     })
   })
 
@@ -1812,7 +1813,8 @@ describe('collecting a cross-reference', () => {
     model.addTypedReferenceToCollection('Psalm 80:8-16')
     model.beginDescribingCollection()
 
-    await model.createCrossReference('Vine imagery')
+    model.describeCollection('Vine imagery')
+    await model.createCrossReference()
 
     expect(created).toEqual([
       {
@@ -1833,7 +1835,8 @@ describe('collecting a cross-reference', () => {
     model.addTypedReferenceToCollection('Psalm 80:8-16')
     model.addTypedReferenceToCollection('Romans 11:17-24')
 
-    await model.createCrossReference('   ')
+    model.describeCollection('   ')
+    await model.createCrossReference()
 
     expect(created).toEqual([null])
   })
@@ -1847,7 +1850,7 @@ describe('collecting a cross-reference', () => {
     })
     model.addTypedReferenceToCollection('Psalm 80:8-16')
 
-    await model.createCrossReference(null)
+    await model.createCrossReference()
 
     expect(creates).toBe(0)
     expect(model.view.collection?.stage).toBe('gathering')
@@ -1870,7 +1873,7 @@ describe('collecting a cross-reference', () => {
     await model.selectVerse(verse4)
     expect(model.view.details[verse4].crossReferences).toEqual([])
 
-    await model.createCrossReference(null)
+    await model.createCrossReference()
 
     expect(model.view.details[verse4].crossReferences).toEqual([
       {
@@ -1897,11 +1900,11 @@ describe('growing a cross-reference', () => {
   const gathered = (model: ReaderPaneModel): string[] =>
     model.view.collection?.members.map((member) => member.label) ?? []
 
-  it('opens Collecting pre-loaded with the entry\'s existing members', async () => {
+  it('opens Collecting pre-loaded with the entry\'s existing members and description', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
 
-    model.startEditingCrossReference(vine.id, vine.members)
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
 
     expect(model.view.collection).toEqual({
       stage: 'gathering',
@@ -1914,13 +1917,14 @@ describe('growing a cross-reference', () => {
       canCreate: true,
       error: null,
       editing: true,
+      description: 'Vine and vineyard imagery for Israel',
     })
   })
 
   it('gathers exactly as creation does: selection, typed entry, and removal of a pre-loaded member', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine.id, vine.members)
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
 
     await model.selectVerse(makeVerseId(43, 15, 4))
     model.addSelectionToCollection()
@@ -1943,10 +1947,10 @@ describe('growing a cross-reference', () => {
       },
     })
     await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine.id, vine.members)
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
     model.addTypedReferenceToCollection('Psalm 23:1')
 
-    await model.createCrossReference('Vine and vineyard imagery for Israel')
+    await model.createCrossReference()
 
     expect(memberUpdates).toEqual([
       { id: 'xr-vine', members: [...vine.members, ref('Psalm 23:1')] },
@@ -1962,11 +1966,40 @@ describe('growing a cross-reference', () => {
       },
     })
     await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine.id, vine.members)
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
+    model.addTypedReferenceToCollection('Psalm 23:1')
 
-    await model.createCrossReference(vine.description)
+    await model.createCrossReference()
 
-    expect(descriptionUpdates).toEqual([vine.description])
+    expect(descriptionUpdates).toEqual(['Vine and vineyard imagery for Israel'])
+  })
+
+  it('saves an edited description over the existing one', async () => {
+    const descriptionUpdates: (string | null)[] = []
+    const model = modelWith({
+      updateCrossReferenceDescription: async (_id, description) => {
+        descriptionUpdates.push(description)
+      },
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
+
+    model.describeCollection('Grafted branches')
+    await model.createCrossReference()
+
+    expect(descriptionUpdates).toEqual(['Grafted branches'])
+  })
+
+  it('refuses to grow while another basket is in progress', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+    model.startCollecting()
+    model.addTypedReferenceToCollection('Psalm 23:1')
+
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
+
+    expect(gathered(model)).toEqual(['Psalms 23:1'])
+    expect(model.view.collection?.editing).toBe(false)
   })
 
   it('does not touch the store on cancel', async () => {
@@ -1981,7 +2014,7 @@ describe('growing a cross-reference', () => {
       },
     })
     await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine.id, vine.members)
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
     model.addTypedReferenceToCollection('Psalm 23:1')
     model.removeCollectionMember(0)
 
@@ -1995,7 +2028,7 @@ describe('growing a cross-reference', () => {
   it('gates saving below two members after pruning the basket', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine.id, vine.members)
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
 
     model.removeCollectionMember(2)
     model.removeCollectionMember(1)
@@ -2009,8 +2042,8 @@ describe('growing a cross-reference', () => {
       },
     })
     await guarded.openAt(ref('John 15:1'), 'web')
-    guarded.startEditingCrossReference(vine.id, [vine.members[0]])
-    await guarded.createCrossReference(null)
+    guarded.startEditingCrossReference(vine.id, [vine.members[0]], vine.description)
+    await guarded.createCrossReference()
 
     expect(creates).toBe(0)
   })
@@ -2018,7 +2051,7 @@ describe('growing a cross-reference', () => {
   it('does not carry editing state into a fresh collection', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
-    model.startEditingCrossReference(vine.id, vine.members)
+    model.startEditingCrossReference(vine.id, vine.members, vine.description)
     model.cancelCollecting()
 
     model.startCollecting()

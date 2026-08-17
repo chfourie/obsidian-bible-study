@@ -10,6 +10,7 @@ export interface ReferenceNavigator {
   growCrossReference(
     id: string,
     members: Reference[],
+    description: string | null,
     translationId: string | null,
   ): void
 }

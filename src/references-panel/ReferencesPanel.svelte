@@ -153,12 +153,12 @@ reference in the reader with the entry's translation.
             {:else}
               <button
                 type="button"
-                class="bsp-xref-delete"
+                class="bsp-xref-action"
                 onclick={() => growCrossReference(entry.id)}
               >Add members</button>
               <button
                 type="button"
-                class="bsp-xref-delete"
+                class="bsp-xref-action"
                 onclick={() => model.confirmDeleteCrossReference(entry.id)}
               >Delete cross-reference</button>
             {/if}
@@ -353,7 +353,7 @@ reference in the reader with the entry's translation.
     font-size: var(--font-ui-smaller);
   }
 
-  .bsp-xref-delete {
+  .bsp-xref-action {
     margin-top: 4px;
     padding: 0;
     border: none;
@@ -365,7 +365,7 @@ reference in the reader with the entry's translation.
     cursor: pointer;
   }
 
-  .bsp-xref-delete:hover {
+  .bsp-xref-action:hover {
     color: var(--text-error);
     background: none;
     box-shadow: none;
