@@ -6,7 +6,7 @@ import type {
   StudyMaterialSource,
 } from '../contracts'
 import type { CrossReference } from '../cross-references'
-import { DEFAULT_SETTINGS } from '../data-access'
+import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelFeature } from './study-panel-feature'
@@ -48,6 +48,7 @@ type FakeCommand = { id: string; name: string; callback: () => void }
 // touches anything else about it.
 const fakeStudyMaterial = () => {
   const listeners = new Set<() => void>()
+  const selectionListeners = new Set<() => void>()
   let material: StudyMaterial = {
     selectedVerseId: null,
     selectionEndId: null,
@@ -63,12 +64,18 @@ const fakeStudyMaterial = () => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
+    onSelection: (listener: () => void) => {
+      selectionListeners.add(listener)
+      return () => selectionListeners.delete(listener)
+    },
   } as unknown as StudyMaterialSource
   return {
     source,
     subscriptions: () => listeners.size,
+    selectionSubscriptions: () => selectionListeners.size,
     select: (verseId: number) => {
       material = { ...material, selectedVerseId: verseId }
+      selectionListeners.forEach((listener) => listener())
       listeners.forEach((listener) => listener())
     },
     collect: () => {
@@ -90,7 +97,10 @@ const fakeStudyMaterial = () => {
   }
 }
 
-const harness = (notes: Record<string, string> = {}) => {
+const harness = (
+  notes: Record<string, string> = {},
+  settings: Partial<ScriptureStudySettings> = {},
+) => {
   const readGates: Record<string, Promise<void>> = {}
   const leaves: FakeLeaf[] = []
   let factory: ((leaf: WorkspaceLeaf) => unknown) | null = null
@@ -158,7 +168,11 @@ const harness = (notes: Record<string, string> = {}) => {
     studyMaterialFor: (view) => (view === null ? null : readers.get(view) ?? null),
   }
   const feature = new StudyPanelFeature(plugin, fakeStore(), { studyMaterial })
-  feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
+  feature.useSettings({
+    ...DEFAULT_SETTINGS,
+    defaultTranslationId: 'web',
+    ...settings,
+  })
   const announceFocus = (leaf: WorkspaceLeaf | null) => {
     handlers['active-leaf-change']?.forEach((handler) =>
       (handler as (leaf: WorkspaceLeaf | null) => void)(leaf),
@@ -758,5 +772,100 @@ describe('StudyPanelFeature entry points', () => {
     await flushAsync()
 
     expect(view.model.view.status).toBe('no-note')
+  })
+})
+
+describe('revealing the panel on selection', () => {
+  it('opens and reveals a closed panel when a verse is selected', async () => {
+    const { feature, leaves, revealLeaf, focusReader } = harness()
+    await feature.load()
+    const reader = focusReader()
+
+    reader.select(makeVerseId(43, 15, 1))
+    await flushAsync()
+
+    expect(leaves).toHaveLength(1)
+    expect(panelView(leaves[0]).model.studySource).toBe(reader.source)
+    expect(revealLeaf).toHaveBeenCalled()
+  })
+
+  it('reveals a panel that is already open', async () => {
+    const { feature, commands, leaves, revealLeaf, focusReader } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const reader = focusReader()
+    revealLeaf.mockClear()
+
+    reader.select(makeVerseId(43, 15, 1))
+    await flushAsync()
+
+    expect(leaves).toHaveLength(1)
+    expect(revealLeaf).toHaveBeenCalled()
+  })
+
+  it('opens nothing on selection when the setting is off', async () => {
+    const { feature, leaves, revealLeaf, focusReader } = harness(
+      {},
+      { revealPanelOnSelection: false },
+    )
+    await feature.load()
+    const reader = focusReader()
+
+    reader.select(makeVerseId(43, 15, 1))
+    await flushAsync()
+
+    expect(leaves).toEqual([])
+    expect(revealLeaf).not.toHaveBeenCalled()
+  })
+
+  it('still updates an open panel on selection when the setting is off', async () => {
+    const { feature, commands, leaves, focusReader } = harness(
+      {},
+      { revealPanelOnSelection: false },
+    )
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const reader = focusReader()
+
+    reader.select(makeVerseId(43, 15, 1))
+    await flushAsync()
+
+    expect(leaves).toHaveLength(1)
+    expect(panelView(leaves[0]).model.view.studyMaterial?.selectedVerseId).toBe(
+      makeVerseId(43, 15, 1),
+    )
+  })
+
+  it('never reveals on focus changes, material changes or note edits', async () => {
+    const { feature, leaves, focusReader, focusNote, editNote } = harness({
+      'a.md': '{John 15:1}',
+    })
+    await feature.load()
+
+    const reader = focusReader()
+    reader.collect()
+    focusNote('a.md')
+    editNote('a.md', '{John 15:2}')
+    await flushAsync()
+
+    expect(leaves).toEqual([])
+  })
+
+  it('stops revealing for a reader the panel no longer follows', async () => {
+    const { feature, leaves, focusReader, focusNote } = harness({
+      'a.md': '{John 15:1}',
+    })
+    await feature.load()
+    const reader = focusReader()
+
+    focusNote('a.md')
+    await flushAsync()
+    reader.select(makeVerseId(43, 15, 1))
+    await flushAsync()
+
+    expect(leaves).toEqual([])
+    expect(reader.selectionSubscriptions()).toBe(0)
   })
 })

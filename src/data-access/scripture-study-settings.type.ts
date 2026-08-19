@@ -45,6 +45,7 @@ export type ScriptureStudySettings = {
   readerLayoutDefault: 'verse-per-line' | 'continuous'
   readerStrongsDefault: 'off' | 'on'
   readerFontScalePercent: number
+  revealPanelOnSelection: boolean
   annotationsFolder: string
   annotationTemplatePath: string | null
   annotationOrdering: AnnotationOrdering
@@ -62,6 +63,7 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   readerLayoutDefault: 'verse-per-line',
   readerStrongsDefault: 'off',
   readerFontScalePercent: FONT_SCALE_DEFAULT,
+  revealPanelOnSelection: true,
   annotationsFolder: 'Annotations',
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',

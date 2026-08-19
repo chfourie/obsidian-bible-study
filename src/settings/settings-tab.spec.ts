@@ -185,6 +185,7 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Default translation',
         'Offline fallback translation',
         'Derived red letter',
+        'Reveal Study Panel on selection',
         'Language',
         "Enable Strong's",
         'Details',
@@ -634,6 +635,22 @@ describe('ScriptureStudySettingTab derived red letter', () => {
     await flushAsync()
 
     expect((await settingsStore.loadSettings()).derivedRedLetter).toBe(true)
+  })
+})
+
+describe('ScriptureStudySettingTab reveal on selection', () => {
+  it('persists the reveal toggle, default on', async () => {
+    const { container, settingsStore } = await setup()
+
+    const setting = settingNamed(container, 'Reveal Study Panel on selection')
+    expect(toggleOf(setting).checked).toBe(true)
+
+    changeToggle(setting, false)
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).revealPanelOnSelection).toBe(
+      false,
+    )
   })
 })
 

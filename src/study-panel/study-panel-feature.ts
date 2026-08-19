@@ -55,6 +55,7 @@ export class StudyPanelFeature extends PluginFeature {
   #followed: WorkspaceLeaf | null = null
   readonly #tabs = new TabMemory<WorkspaceLeaf>()
   #unsubscribeCrossReferences: (() => void) | null = null
+  #unsubscribeSelection: (() => void) | null = null
 
   constructor(
     plugin: Plugin,
@@ -116,6 +117,7 @@ export class StudyPanelFeature extends PluginFeature {
   override unload(): void {
     this.#unsubscribeCrossReferences?.()
     this.#unsubscribeCrossReferences = null
+    this.#followMaterial(null)
   }
 
   override onSettingsChanged(): void {
@@ -212,7 +214,7 @@ export class StudyPanelFeature extends PluginFeature {
     const material = this.#studyMaterial.studyMaterialFor(leaf?.view ?? null)
     if (material !== null) {
       this.#followed = leaf
-      this.#material = material
+      this.#followMaterial(material)
       this.#models.forEach((model) => {
         model.showStudyMaterial(material)
         model.useTabState(this.#followedState())
@@ -235,9 +237,23 @@ export class StudyPanelFeature extends PluginFeature {
     this.#tabs.retain(live)
     if (this.#followed === null || live.has(this.#followed)) return
     this.#followed = null
-    this.#material = null
+    this.#followMaterial(null)
     if (!this.#focusLeaf(workspace.getMostRecentLeaf()))
       void this.#showFile(null)
+  }
+
+  // The panel mirrors one reader tab at a time, and listens for deliberate
+  // selections there — the only material change allowed to reveal it.
+  #followMaterial(source: StudyMaterialSource | null): void {
+    if (source === this.#material) return
+    this.#unsubscribeSelection?.()
+    this.#material = source
+    this.#unsubscribeSelection =
+      source === null ? null : source.onSelection(() => this.#verseSelected())
+  }
+
+  #verseSelected(): void {
+    if (this.settings.revealPanelOnSelection) void this.openPanel()
   }
 
   #followedState(): StudyTabState | null {
@@ -252,7 +268,7 @@ export class StudyPanelFeature extends PluginFeature {
         : { file: file.path, content: await this.plugin.app.vault.cachedRead(file) }
     if (token !== this.#showToken) return
     this.#active = active
-    this.#material = null
+    this.#followMaterial(null)
     this.#fanOut()
   }
 

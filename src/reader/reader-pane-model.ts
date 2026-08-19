@@ -219,6 +219,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #redLetterOverridden = false
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
+  readonly #selectionListeners = new Set<() => void>()
 
   #annotationOrdering: AnnotationOrdering
   #defaultFontScale: number
@@ -244,6 +245,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   #notify(): void {
     this.#listeners.forEach((listener) => listener())
+  }
+
+  // Only a verse click or a Strong's word tap announces here: the feed marks
+  // the user's own act of selecting, not the material changes it causes.
+  onSelection(listener: () => void): () => void {
+    this.#selectionListeners.add(listener)
+    return () => this.#selectionListeners.delete(listener)
+  }
+
+  #announceSelection(): void {
+    this.#selectionListeners.forEach((listener) => listener())
   }
 
   setToggle<Key extends keyof ReaderToggles>(
@@ -457,6 +469,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#wordStrongs = { verseId, numbers: strongsNumbers }
     this.#selectedVerseId = verseId
     this.#selectionEnd = null
+    this.#announceSelection()
     if (this.#toggles.details === 'inline') {
       this.#expanded.add(verseId)
       this.#refreshRowExpansion()
@@ -470,6 +483,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#wordStrongs = null
     this.#selectedVerseId = verseId
     this.#selectionEnd = null
+    this.#announceSelection()
     if (this.#toggles.details === 'inline') {
       if (this.#expanded.has(verseId)) {
         this.#expanded.delete(verseId)

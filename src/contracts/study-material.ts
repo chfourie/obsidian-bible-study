@@ -82,6 +82,11 @@ export type StudyMaterial = {
 export interface StudyMaterialSource {
   readonly studyMaterial: StudyMaterial
   subscribe(listener: () => void): () => void
+  // Fires only when the user explicitly picks a verse or a Strong's-tagged
+  // word in this tab. Separate from subscribe(), which reports every material
+  // change: a surface may act on a deliberate selection — revealing itself,
+  // say — without acting on material that merely changed underneath it.
+  onSelection(listener: () => void): () => void
   // The reference an annotation of this verse covers: the current selection
   // when it contains the verse, otherwise the verse alone.
   annotationReference(verseId: number): Reference

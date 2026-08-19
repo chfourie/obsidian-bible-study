@@ -40,6 +40,7 @@ type SettingsControlKey =
   | 'fallbackTranslationId'
   | 'languageFilter'
   | 'derivedRedLetter'
+  | 'revealPanelOnSelection'
   | 'strongsEnabled'
   | 'readerDetailsDefault'
   | 'readerNavDefault'
@@ -101,6 +102,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         desc: 'Shows whole verses containing the words of Christ in red in translations without their own red-letter data.',
         control: { type: 'toggle', key: 'derivedRedLetter' },
       },
+      {
+        name: 'Reveal Study Panel on selection',
+        desc: 'Opens the Study Panel when a verse or a tagged word is clicked in a reader. With this off, only an already-open panel follows the selection.',
+        control: { type: 'toggle', key: 'revealPanelOnSelection' },
+      },
       this.#translationsPage(view),
       this.#strongsGroup(view),
       this.#readerGroup(),
@@ -156,6 +162,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.languageFilter
       case 'derivedRedLetter':
         return settings.derivedRedLetter
+      case 'revealPanelOnSelection':
+        return settings.revealPanelOnSelection
       case 'strongsEnabled':
         return view.strongsInstalled
       case 'readerDetailsDefault':
@@ -191,6 +199,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return this.#update((settings) => ({
           ...settings,
           derivedRedLetter: value === true,
+        }))
+      case 'revealPanelOnSelection':
+        return this.#update((settings) => ({
+          ...settings,
+          revealPanelOnSelection: value === true,
         }))
       case 'strongsEnabled':
         return this.model.setStrongsEnabled(value === true)

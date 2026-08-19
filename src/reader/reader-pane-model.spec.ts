@@ -2311,6 +2311,50 @@ describe('the study material contract', () => {
     expect(source.studyMaterial.collection).toBe(null)
   })
 
+  it('announces a picked verse and a tapped word on the selection feed', async () => {
+    const model = modelWith(
+      { passages: passageSourceOver(bsbTexts()), ...strongsDeps() },
+      { ...DEFAULT_TOGGLES, strongs: 'on' },
+      'bsb',
+    )
+    await model.openPosition({ book: 43, chapter: 15 })
+    let selections = 0
+    sourceOf(model).onSelection(() => selections++)
+
+    await model.selectVerse(verse4)
+    expect(selections).toBe(1)
+
+    await model.selectWord(verse4, ['G3306'])
+    expect(selections).toBe(2)
+  })
+
+  it('keeps material changes that are not selections off the feed', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+    await model.selectVerse(verse2)
+    const source = sourceOf(model)
+    let selections = 0
+    source.onSelection(() => selections++)
+
+    model.extendSelectionTo(verse4)
+    source.startCollecting()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(selections).toBe(0)
+  })
+
+  it('stops announcing selections once the listener unsubscribes', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+    let selections = 0
+    const unsubscribe = sourceOf(model).onSelection(() => selections++)
+
+    unsubscribe()
+    await model.selectVerse(verse2)
+
+    expect(selections).toBe(0)
+  })
+
   it('answers the annotation reference covering the selected span', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
