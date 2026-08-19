@@ -16,7 +16,7 @@
   import type { VerseSegment } from '../rendering'
   import CollectionStrip from '../study-material/CollectionStrip.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
-  import type { StudyMaterialHost } from '../study-material'
+  import type { StudyMaterialHost, StudySubTab } from '../study-material'
   import VerseDetails from '../study-material/VerseDetails.svelte'
   import TranslationMenu from './TranslationMenu.svelte'
   import OptionsMenu from './OptionsMenu.svelte'
@@ -53,6 +53,9 @@
       material = studySource.studyMaterial
     }),
   )
+
+  // This pane's own side region: one pane, one sub-tab choice.
+  let subTab = $state<StudySubTab>('translations')
 
   // What the shared study-material surfaces need from the workspace around
   // this pane; everything else they do goes through the study source above.
@@ -413,7 +416,13 @@
 
     {#if view.toggles.details === 'side-panel'}
       <div class="bsr-side">
-        <StudyMaterialView {material} source={studySource} {host} />
+        <StudyMaterialView
+          {material}
+          source={studySource}
+          {host}
+          tab={subTab}
+          selectTab={(tab) => (subTab = tab)}
+        />
       </div>
     {/if}
   </div>

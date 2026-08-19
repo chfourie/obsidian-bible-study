@@ -17,7 +17,9 @@ import {
   type Reference,
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
+import type { StudySubTab } from '../study-material'
 import type { ExtractedOccurrence } from '../vault-index'
+import { freshTabState, type StudyTabState } from './tab-memory'
 
 export type ReferenceEntryVerse = { label: string | null; text: string }
 
@@ -51,6 +53,10 @@ export type StudyPanelViewState = {
   // study material, and the note fields above describe the note it will fall
   // back to when a note is focused again.
   studyMaterial: StudyMaterial | null
+  // The followed tab's own state: which details sub-tab it shows, and which
+  // passage entries it has folded away.
+  subTab: StudySubTab
+  folded: ReadonlySet<string>
 }
 
 export type StudyPanelCrossReferences = {
@@ -127,6 +133,7 @@ export class StudyPanelModel {
   #loadToken = 0
   #studySource: StudyMaterialSource | null = null
   #unsubscribeStudySource: (() => void) | null = null
+  #tabState: StudyTabState = freshTabState()
   readonly #listeners = new Set<() => void>()
 
   constructor(
@@ -148,11 +155,33 @@ export class StudyPanelModel {
       entries: this.#entries,
       crossReferences: this.#crossReferences,
       studyMaterial: this.#studySource?.studyMaterial ?? null,
+      subTab: this.#tabState.subTab,
+      folded: this.#tabState.folded,
     }
   }
 
+  // The state of the tab now being followed, or null while none is: state the
+  // panel writes lands in the tab's own memory, so refocusing it restores it.
+  useTabState(state: StudyTabState | null): void {
+    this.#tabState = state ?? freshTabState()
+    this.#notify()
+  }
+
+  selectSubTab(subTab: StudySubTab): void {
+    if (this.#tabState.subTab === subTab) return
+    this.#tabState.subTab = subTab
+    this.#notify()
+  }
+
+  toggleFold(key: string): void {
+    const folded = new Set(this.#tabState.folded)
+    if (!folded.delete(key)) folded.add(key)
+    this.#tabState.folded = folded
+    this.#notify()
+  }
+
   // The focused reader tab itself, for the actions the panel invokes on it
-  // (sub-tab selection is the panel's own state; everything else lives here).
+  // (the sub-tab choice is the panel's own per-tab state; the rest lives here).
   get studySource(): StudyMaterialSource | null {
     return this.#studySource
   }

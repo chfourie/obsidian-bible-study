@@ -40,8 +40,6 @@ opens the reference in the reader with the entry's translation.
     }),
   )
 
-  let folded = $state(new Set<string>())
-
   function icon(node: HTMLElement, name: string) {
     setIcon(node, name)
     return {
@@ -50,12 +48,6 @@ opens the reference in the reader with the entry's translation.
         setIcon(node, next)
       },
     }
-  }
-
-  function toggleFold(entry: ReferenceEntryView) {
-    const next = new Set(folded)
-    if (!next.delete(entry.key)) next.add(entry.key)
-    folded = next
   }
 
   function open(entry: ReferenceEntryView, event: MouseEvent | KeyboardEvent) {
@@ -78,7 +70,13 @@ opens the reference in the reader with the entry's translation.
         source={model.studySource}
       />
     {/if}
-    <StudyMaterialView {material} source={model.studySource} {host} />
+    <StudyMaterialView
+      {material}
+      source={model.studySource}
+      {host}
+      tab={view.subTab}
+      selectTab={(tab) => model.selectSubTab(tab)}
+    />
   </div>
 {:else}
   <div class="bsp-panel">
@@ -131,14 +129,14 @@ opens the reference in the reader with the entry's translation.
                 role="button"
                 tabindex="0"
                 class="bsp-entry-title"
-                aria-expanded={!folded.has(entry.key)}
-                onclick={() => toggleFold(entry)}
-                onkeydown={activate(() => toggleFold(entry))}
+                aria-expanded={!view.folded.has(entry.key)}
+                onclick={() => model.toggleFold(entry.key)}
+                onkeydown={activate(() => model.toggleFold(entry.key))}
               >
                 <span
                   class="bsp-fold-icon"
                   aria-hidden="true"
-                  use:icon={folded.has(entry.key)
+                  use:icon={view.folded.has(entry.key)
                     ? 'chevron-right'
                     : 'chevron-down'}
                 ></span>
@@ -158,7 +156,7 @@ opens the reference in the reader with the entry's translation.
                 onkeydown={activate((event) => open(entry, event))}
               ></span>
             </div>
-            {#if !folded.has(entry.key)}
+            {#if !view.folded.has(entry.key)}
               {#if entry.status === 'loading'}
                 <p class="bsp-entry-state">Loading…</p>
               {:else if entry.status === 'unavailable'}

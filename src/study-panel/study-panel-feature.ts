@@ -23,6 +23,7 @@ import {
 import { extractOccurrences } from '../vault-index'
 import { StudyPanelModel, type ActiveNote } from './study-panel-model'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelView } from './study-panel-view'
+import { TabMemory, type StudyTabState } from './tab-memory'
 
 export { STUDY_PANEL_VIEW_TYPE } from './study-panel-view'
 
@@ -50,6 +51,9 @@ export class StudyPanelFeature extends PluginFeature {
   readonly #studyMaterial: StudyMaterialProvider
   // The reader tab the panel mirrors, or null while a note holds focus.
   #material: StudyMaterialSource | null = null
+  // The tab the panel follows, and the state every tab it has followed holds.
+  #followed: WorkspaceLeaf | null = null
+  readonly #tabs = new TabMemory<WorkspaceLeaf>()
   #unsubscribeCrossReferences: (() => void) | null = null
 
   constructor(
@@ -89,6 +93,11 @@ export class StudyPanelFeature extends PluginFeature {
     // Reader tabs carry no file, so following them takes the leaf itself.
     this.plugin.registerEvent(
       workspace.on('active-leaf-change', (leaf) => this.#focusLeaf(leaf)),
+    )
+    // Closing a tab is the only way its state ends: nothing outlives the tab,
+    // and the panel has to let go of a tab it was following.
+    this.plugin.registerEvent(
+      workspace.on('layout-change', () => this.#layoutChanged()),
     )
     this.plugin.registerEvent(
       this.plugin.app.metadataCache.on('changed', (file, content) =>
@@ -140,12 +149,14 @@ export class StudyPanelFeature extends PluginFeature {
     )
     this.#models.add(model)
     model.showStudyMaterial(this.#material)
+    model.useTabState(this.#followedState())
     void model.setActiveNote(this.#active)
     return model
   }
 
   releaseModel(model: StudyPanelModel): void {
     model.showStudyMaterial(null)
+    model.useTabState(null)
     this.#models.delete(model)
   }
 
@@ -195,16 +206,42 @@ export class StudyPanelFeature extends PluginFeature {
   }
 
   // Readers take the panel over; notes take it back; every other leaf — the
-  // panel itself included — leaves the last view standing.
-  #focusLeaf(leaf: WorkspaceLeaf | null): void {
+  // panel itself included — leaves the last view standing, which is what a
+  // false return reports.
+  #focusLeaf(leaf: WorkspaceLeaf | null): boolean {
     const material = this.#studyMaterial.studyMaterialFor(leaf?.view ?? null)
     if (material !== null) {
+      this.#followed = leaf
       this.#material = material
-      this.#models.forEach((model) => model.showStudyMaterial(material))
-      return
+      this.#models.forEach((model) => {
+        model.showStudyMaterial(material)
+        model.useTabState(this.#followedState())
+      })
+      return true
     }
     const file = focusedNote(leaf)
-    if (file !== null) void this.#showFile(file)
+    if (file === null) return false
+    this.#followed = leaf
+    void this.#showFile(file)
+    return true
+  }
+
+  // Tabs that have closed take their state with them; the panel then follows
+  // whichever tab is now most recent, or shows its empty state if none is.
+  #layoutChanged(): void {
+    const workspace = this.plugin.app.workspace
+    const live = new Set<WorkspaceLeaf>()
+    workspace.iterateAllLeaves((leaf) => live.add(leaf))
+    this.#tabs.retain(live)
+    if (this.#followed === null || live.has(this.#followed)) return
+    this.#followed = null
+    this.#material = null
+    if (!this.#focusLeaf(workspace.getMostRecentLeaf()))
+      void this.#showFile(null)
+  }
+
+  #followedState(): StudyTabState | null {
+    return this.#followed === null ? null : this.#tabs.stateFor(this.#followed)
   }
 
   async #showFile(file: TFile | null): Promise<void> {
@@ -228,6 +265,7 @@ export class StudyPanelFeature extends PluginFeature {
   #fanOut(): void {
     this.#models.forEach((model) => {
       model.showStudyMaterial(this.#material)
+      model.useTabState(this.#followedState())
       void model.setActiveNote(this.#active)
     })
   }

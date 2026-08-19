@@ -7,20 +7,23 @@ own side region, or the Study Panel following that tab.
 <script lang="ts">
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
   import CrossReferenceList from './CrossReferenceList.svelte'
-  import type { StudyMaterialHost } from './study-material-host'
+  import type { StudyMaterialHost, StudySubTab } from './study-material-host'
   import VerseDetails from './VerseDetails.svelte'
 
   let {
     material,
     source,
     host,
+    tab,
+    selectTab,
   }: {
     material: StudyMaterial
     source: StudyMaterialSource
     host: StudyMaterialHost
+    // The sub-tab belongs to the tab being surfaced, so the surface owns it.
+    tab: StudySubTab
+    selectTab: (tab: StudySubTab) => void
   } = $props()
-
-  let tab: 'translations' | 'notes' = $state('translations')
 </script>
 
 <div class="bsm-view">
@@ -29,13 +32,13 @@ own side region, or the Study Panel following that tab.
       type="button"
       class="bsm-tab"
       class:bsm-on={tab === 'translations'}
-      onclick={() => (tab = 'translations')}
+      onclick={() => selectTab('translations')}
     >Translations</button>
     <button
       type="button"
       class="bsm-tab"
       class:bsm-on={tab === 'notes'}
-      onclick={() => (tab = 'notes')}
+      onclick={() => selectTab('notes')}
     >Notes</button>
   </div>
   <div class="bsm-body">

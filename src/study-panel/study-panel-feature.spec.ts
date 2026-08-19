@@ -71,6 +71,22 @@ const fakeStudyMaterial = () => {
       material = { ...material, selectedVerseId: verseId }
       listeners.forEach((listener) => listener())
     },
+    collect: () => {
+      material = {
+        ...material,
+        collection: {
+          members: [],
+          canAddSelection: false,
+          canSave: false,
+          error: null,
+          editing: false,
+          confirmingDelete: false,
+          description: '',
+          typedMember: '',
+        },
+      }
+      listeners.forEach((listener) => listener())
+    },
   }
 }
 
@@ -95,6 +111,8 @@ const harness = (notes: Record<string, string> = {}) => {
     }
     return leaf
   }
+  // The main-area tabs, in focus order with the most recent last.
+  const tabs: WorkspaceLeaf[] = []
   const workspace = {
     on,
     getActiveFile: () => activeFile,
@@ -104,6 +122,10 @@ const harness = (notes: Record<string, string> = {}) => {
         : [],
     getRightLeaf: vi.fn(() => makeLeaf()),
     revealLeaf,
+    getMostRecentLeaf: () => tabs[tabs.length - 1] ?? null,
+    iterateAllLeaves: (callback: (leaf: WorkspaceLeaf) => void) => {
+      ;[...leaves, ...tabs].forEach(callback)
+    },
   }
   const metadataCache = { on }
   const vault = {
@@ -137,23 +159,40 @@ const harness = (notes: Record<string, string> = {}) => {
   }
   const feature = new StudyPanelFeature(plugin, fakeStore(), { studyMaterial })
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
-  const focusLeaf = (view: View | null) => {
+  const announceFocus = (leaf: WorkspaceLeaf | null) => {
     handlers['active-leaf-change']?.forEach((handler) =>
-      (handler as (leaf: WorkspaceLeaf | null) => void)(
-        view === null ? null : ({ view } as unknown as WorkspaceLeaf),
-      ),
+      (handler as (leaf: WorkspaceLeaf | null) => void)(leaf),
     )
+  }
+  const focusTab = (leaf: WorkspaceLeaf) => {
+    const index = tabs.indexOf(leaf)
+    if (index >= 0) tabs.splice(index, 1)
+    tabs.push(leaf)
+    const file = (leaf.view as { file?: unknown }).file
+    if (file instanceof TFile) activeFile = file
+    announceFocus(leaf)
+  }
+  const focusLeaf = (view: View | null) => {
+    if (view === null) {
+      announceFocus(null)
+      return null
+    }
+    const leaf = { view } as unknown as WorkspaceLeaf
+    focusTab(leaf)
+    return leaf
   }
   const focusReader = () => {
     const reader = fakeStudyMaterial()
     const view = {} as View
     readers.set(view, reader.source)
-    focusLeaf(view)
-    return reader
+    return { ...reader, leaf: focusLeaf(view) as WorkspaceLeaf }
   }
-  const focusNote = (path: string) => {
-    activeFile = note(path)
-    focusLeaf({ file: note(path) } as unknown as View)
+  const focusNote = (path: string) =>
+    focusLeaf({ file: note(path) } as unknown as View) as WorkspaceLeaf
+  const closeTab = (leaf: WorkspaceLeaf) => {
+    const index = tabs.indexOf(leaf)
+    if (index >= 0) tabs.splice(index, 1)
+    handlers['layout-change']?.forEach((handler) => handler())
   }
   const openFile = (file: TFile | null) => {
     activeFile = file
@@ -176,6 +215,8 @@ const harness = (notes: Record<string, string> = {}) => {
     workspace,
     openFile,
     focusLeaf,
+    focusTab,
+    closeTab,
     focusReader,
     focusNote,
     editNote,
@@ -517,6 +558,146 @@ describe('StudyPanelFeature entry points', () => {
     feature.releaseModel(panelView(leaves[0]).model)
 
     expect(reader.subscriptions()).toBe(0)
+  })
+
+  it('restores each reader tab’s sub-tab choice as focus moves between them', async () => {
+    const { feature, commands, leaves, focusReader, focusTab } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const first = focusReader()
+    panelView(leaves[0]).model.selectSubTab('notes')
+    const second = focusReader()
+
+    expect(panelView(leaves[0]).model.view.subTab).toBe('translations')
+
+    focusTab(first.leaf)
+    expect(panelView(leaves[0]).model.view.subTab).toBe('notes')
+
+    focusTab(second.leaf)
+    expect(panelView(leaves[0]).model.view.subTab).toBe('translations')
+  })
+
+  it('restores each note tab’s fold state as focus moves between them', async () => {
+    const { feature, commands, leaves, focusNote, focusTab } = harness({
+      'a.md': '{John 15:1}',
+      'b.md': '{Genesis 1:1}',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const first = focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    view.model.toggleFold(view.model.view.entries[0].key)
+    const second = focusNote('b.md')
+    await flushAsync()
+
+    expect([...view.model.view.folded]).toEqual([])
+
+    focusTab(first)
+    await flushAsync()
+    expect([...view.model.view.folded]).toEqual(['|John 15:1'])
+
+    focusTab(second)
+    await flushAsync()
+    expect([...view.model.view.folded]).toEqual([])
+  })
+
+  it('keeps two tabs on the same note independent', async () => {
+    const { feature, commands, leaves, focusNote, focusTab } = harness({
+      'a.md': '{John 15:1}',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const first = focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    view.model.toggleFold(view.model.view.entries[0].key)
+
+    const second = focusNote('a.md')
+    await flushAsync()
+    expect([...view.model.view.folded]).toEqual([])
+
+    focusTab(first)
+    await flushAsync()
+    expect([...view.model.view.folded]).toEqual(['|John 15:1'])
+
+    focusTab(second)
+    await flushAsync()
+    expect([...view.model.view.folded]).toEqual([])
+  })
+
+  it('forgets a tab’s state once it closes', async () => {
+    const { feature, commands, leaves, focusNote, closeTab } = harness({
+      'a.md': '{John 15:1}',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const tab = focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    view.model.toggleFold(view.model.view.entries[0].key)
+
+    closeTab(tab)
+    focusNote('a.md')
+    await flushAsync()
+
+    expect([...view.model.view.folded]).toEqual([])
+  })
+
+  it('falls back to the most recent tab when the mirrored tab closes', async () => {
+    const { feature, commands, leaves, focusNote, focusReader, closeTab } =
+      harness({ 'a.md': '{John 15:1}' })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    focusNote('a.md')
+    await flushAsync()
+    const reader = focusReader()
+
+    closeTab(reader.leaf)
+    await flushAsync()
+
+    const view = panelView(leaves[0])
+    expect(view.model.view.studyMaterial).toBe(null)
+    expect(view.model.view.file).toBe('a.md')
+  })
+
+  it('falls back to the empty state when the last tab closes', async () => {
+    const { feature, commands, leaves, focusNote, closeTab } = harness({
+      'a.md': '{John 15:1}',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const tab = focusNote('a.md')
+    await flushAsync()
+
+    closeTab(tab)
+    await flushAsync()
+
+    expect(panelView(leaves[0]).model.view.status).toBe('no-note')
+  })
+
+  it('shows a reader tab’s collect strip again when it regains focus', async () => {
+    const { feature, commands, leaves, focusReader, focusTab } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const collecting = focusReader()
+    collecting.collect()
+    focusReader()
+
+    expect(panelView(leaves[0]).model.view.studyMaterial?.collection).toBe(null)
+
+    focusTab(collecting.leaf)
+
+    expect(
+      panelView(leaves[0]).model.view.studyMaterial?.collection,
+    ).not.toBe(null)
   })
 
   it('routes annotations through the injected annotator', async () => {

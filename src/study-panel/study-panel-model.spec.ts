@@ -14,6 +14,7 @@ import {
   type StudyPanelCrossReferences,
   type StudyPanelDeps,
 } from './study-panel-model'
+import { freshTabState } from './tab-memory'
 
 type PassageRequest = { reference: Reference; translationId: string }
 
@@ -123,6 +124,8 @@ describe('StudyPanelModel', () => {
       entries: [],
       crossReferences: [],
       studyMaterial: null,
+      subTab: 'translations',
+      folded: new Set(),
     })
   })
 
@@ -347,6 +350,8 @@ describe('StudyPanelModel', () => {
       entries: [],
       crossReferences: [],
       studyMaterial: null,
+      subTab: 'translations',
+      folded: new Set(),
     })
   })
 
@@ -759,6 +764,84 @@ describe('cross-references in the Study Panel', () => {
       panel.showStudyMaterial(reader.source)
 
       expect(reader.subscriptions()).toBe(1)
+    })
+  })
+
+  describe('followed tab state', () => {
+    it('writes the sub-tab choice into the followed tab’s state', () => {
+      const panel = model(fakeSource().source)
+      const state = freshTabState()
+      panel.useTabState(state)
+
+      panel.selectSubTab('notes')
+
+      expect(panel.view.subTab).toBe('notes')
+      expect(state.subTab).toBe('notes')
+    })
+
+    it('writes folds into the followed tab’s state', () => {
+      const panel = model(fakeSource().source)
+      const state = freshTabState()
+      panel.useTabState(state)
+
+      panel.toggleFold('|John 15:1')
+
+      expect([...panel.view.folded]).toEqual(['|John 15:1'])
+      expect([...state.folded]).toEqual(['|John 15:1'])
+    })
+
+    it('unfolds an entry it folded before', () => {
+      const panel = model(fakeSource().source)
+      panel.toggleFold('|John 15:1')
+
+      panel.toggleFold('|John 15:1')
+
+      expect([...panel.view.folded]).toEqual([])
+    })
+
+    it('shows the state of the tab it is handed', () => {
+      const panel = model(fakeSource().source)
+      const first = freshTabState()
+      const second = freshTabState()
+      panel.useTabState(first)
+      panel.selectSubTab('notes')
+      panel.toggleFold('|John 15:1')
+
+      panel.useTabState(second)
+
+      expect(panel.view.subTab).toBe('translations')
+      expect([...panel.view.folded]).toEqual([])
+
+      panel.useTabState(first)
+      expect(panel.view.subTab).toBe('notes')
+      expect([...panel.view.folded]).toEqual(['|John 15:1'])
+    })
+
+    it('falls back to a fresh state when it follows no tab', () => {
+      const panel = model(fakeSource().source)
+      const state = freshTabState()
+      panel.useTabState(state)
+      panel.selectSubTab('notes')
+
+      panel.useTabState(null)
+      panel.selectSubTab('notes')
+
+      expect(state.subTab).toBe('notes')
+      expect(panel.view.subTab).toBe('notes')
+    })
+
+    it('tells its listeners when the followed state changes', () => {
+      const panel = model(fakeSource().source)
+      let notifications = 0
+      panel.subscribe(() => {
+        notifications += 1
+      })
+
+      panel.useTabState(freshTabState())
+      panel.selectSubTab('notes')
+      panel.toggleFold('|John 15:1')
+
+      expect(notifications).toBe(3)
     })
   })
 })
