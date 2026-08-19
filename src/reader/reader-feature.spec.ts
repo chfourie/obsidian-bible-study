@@ -125,6 +125,65 @@ describe('ReaderFeature entry points', () => {
     expect(revealLeaf).toHaveBeenCalled()
   })
 
+  it('edits a cross-reference in a second reader leaf when asked for a new pane', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    const entry = {
+      id: 'xr-vine',
+      members: [ref('John 15:1'), ref('Genesis 1:1')],
+      description: 'The vine',
+    }
+
+    feature.editCrossReference(entry, 'web')
+    await flushAsync()
+    feature.editCrossReference(entry, 'web', { newPane: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    const second = (leaves[1].view as ReaderView).model.view
+    expect(second.collection?.editing).toBe(true)
+    expect(second.collection?.members).toHaveLength(2)
+    expect(second.position).toEqual({ book: 43, chapter: 15 })
+  })
+
+  it('titles the reader tab with the chapter on screen', async () => {
+    // updateHeader is runtime-only API the obsidian typings omit.
+    const headers = WorkspaceLeaf.prototype as unknown as {
+      updateHeader: () => void
+    }
+    const updateHeader = vi.spyOn(headers, 'updateHeader')
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    const view = leaves[0].view as ReaderView
+    expect(view.getDisplayText()).toBe('John 15')
+    expect(updateHeader).toHaveBeenCalled()
+    updateHeader.mockRestore()
+  })
+
+  it('opens a second reader leaf when the navigation asks for a new pane', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    feature.openReference(ref('Genesis 1:1'), null, { newPane: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: 1,
+      chapter: 1,
+    })
+  })
+
   it('reuses an already-open reader leaf for later navigations', async () => {
     const { feature, leaves } = harness()
     await feature.load()

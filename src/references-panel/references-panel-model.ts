@@ -1,3 +1,4 @@
+import type { NavigationOptions } from '../contracts'
 import {
   crossReferenceView,
   orderCrossReferences,
@@ -54,7 +55,10 @@ export type ReferencesPanelDeps = {
   crossReferences: ReferencesPanelCrossReferences
   // The panel surfaces cross-references but never edits them in place: editing
   // happens in the reader's strip, which lives outside the panel.
-  editCrossReference: (entry: CrossReference) => void
+  editCrossReference: (
+    entry: CrossReference,
+    options?: NavigationOptions,
+  ) => void
 }
 
 export type ReferencesPanelConfig = { translationId: string | null }
@@ -180,14 +184,17 @@ export class ReferencesPanelModel {
     return orderCrossReferences([...seen.values()], references)
   }
 
-  editCrossReference(id: string): void {
+  editCrossReference(id: string, options?: NavigationOptions): void {
     const entry = this.#crossReferences.find((candidate) => candidate.id === id)
     if (entry === undefined) return
-    this.deps.editCrossReference({
-      id,
-      members: entry.allMembers,
-      description: entry.description,
-    })
+    this.deps.editCrossReference(
+      {
+        id,
+        members: entry.allMembers,
+        description: entry.description,
+      },
+      options,
+    )
   }
 
   async setTranslation(translationId: string | null): Promise<void> {

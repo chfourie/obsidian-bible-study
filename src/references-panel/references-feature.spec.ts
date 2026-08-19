@@ -317,20 +317,20 @@ describe('ReferencesFeature entry points', () => {
 
   it('routes reference opens through the injected navigator', async () => {
     const { feature } = harness()
-    const opened: [Reference, string | null][] = []
+    const opened: [Reference, string | null, boolean | undefined][] = []
     feature.useNavigator({
-      openReference: (reference, translationId) =>
-        opened.push([reference, translationId]),
+      openReference: (reference, translationId, options) =>
+        opened.push([reference, translationId, options?.newPane]),
       openNote: () => {},
       editCrossReference: () => {},
     })
 
     feature.openReference(ref('John 15:1'), 'kjv')
-    feature.openReference(ref('John 15:1'), null)
+    feature.openReference(ref('John 15:1'), null, { newPane: true })
 
     expect(opened).toEqual([
-      [ref('John 15:1'), 'kjv'],
-      [ref('John 15:1'), null],
+      [ref('John 15:1'), 'kjv', undefined],
+      [ref('John 15:1'), null, true],
     ])
   })
 

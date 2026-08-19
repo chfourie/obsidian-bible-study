@@ -1,7 +1,8 @@
 <script lang="ts">
   import { setIcon } from 'obsidian'
   import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
-  import type { CrossReferenceView } from '../cross-references'
+  import type { NavigationOptions } from '../contracts'
+  import type { CrossReference, CrossReferenceView } from '../cross-references'
   import {
     paragraphsOf,
     type ReaderPaneModel,
@@ -10,6 +11,7 @@
     type VerseRowView,
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
+  import { opensInNewPane } from '../ui'
   import TranslationMenu from './TranslationMenu.svelte'
   import OptionsMenu from './OptionsMenu.svelte'
 
@@ -17,12 +19,14 @@
     model,
     openNote,
     openReference,
+    editCrossReferenceInNewPane,
     onAnnotate,
     renderMarkdown,
   }: {
     model: ReaderPaneModel
     openNote: (file: string) => void
-    openReference: (reference: Reference) => void
+    openReference: (reference: Reference, options?: NavigationOptions) => void
+    editCrossReferenceInNewPane: (entry: CrossReference) => void
     onAnnotate: (reference: Reference) => void
     renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) => void
   } = $props()
@@ -133,12 +137,17 @@
     setIcon(node, name)
   }
 
-  const editCrossReference = (entry: CrossReferenceView): void => {
-    model.startEditingCrossReference({
+  const editCrossReference = (
+    entry: CrossReferenceView,
+    event: MouseEvent,
+  ): void => {
+    const edited: CrossReference = {
       id: entry.id,
       members: entry.allMembers,
       description: entry.description,
-    })
+    }
+    if (opensInNewPane(event)) editCrossReferenceInNewPane(edited)
+    else model.startEditingCrossReference(edited)
   }
 
   const saveCrossReference = (): void => {
@@ -162,7 +171,7 @@
       class="bsr-xref-edit"
       aria-label="Edit cross-reference in the reader"
       disabled={view.collection !== null}
-      onclick={() => editCrossReference(entry)}
+      onclick={(event) => editCrossReference(entry, event)}
     >✎</button>
     {#if entry.description !== null}
       <div class="bsr-xref-description">{entry.description}</div>
@@ -172,7 +181,8 @@
         <button
           type="button"
           class="bsr-xref-member"
-          onclick={() => openReference(member.reference)}
+          onclick={(event) =>
+            openReference(member.reference, { newPane: opensInNewPane(event) })}
         >{member.label}</button>
       {/each}
     </div>

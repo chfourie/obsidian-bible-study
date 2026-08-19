@@ -5,6 +5,8 @@ import {
   type ViewStateResult,
 } from 'obsidian'
 import { mount, unmount } from 'svelte'
+import type { NavigationOptions } from '../contracts'
+import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 import ReaderPane from './ReaderPane.svelte'
 import type { ReaderFeature } from './reader-feature'
@@ -18,9 +20,15 @@ type ReaderViewState = {
   redLetter?: 'off' | 'on'
 }
 
+// Obsidian re-reads the tab title on a header refresh only, and updateHeader
+// is runtime-only API the typings omit.
+type HeaderRefreshingLeaf = WorkspaceLeaf & { updateHeader?: () => void }
+
 export class ReaderView extends ItemView {
   readonly model: ReaderPaneModel
   #component: Record<string, unknown> | null = null
+  #unsubscribeTitle: (() => void) | null = null
+  #title: string
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -28,6 +36,8 @@ export class ReaderView extends ItemView {
   ) {
     super(leaf)
     this.model = feature.createModel()
+    this.#title = this.model.view.title
+    this.#unsubscribeTitle = this.model.subscribe(() => this.#retitle())
   }
 
   getViewType(): string {
@@ -35,7 +45,7 @@ export class ReaderView extends ItemView {
   }
 
   getDisplayText(): string {
-    return 'Scripture Study reader'
+    return this.#title
   }
 
   override getIcon(): string {
@@ -48,8 +58,10 @@ export class ReaderView extends ItemView {
       props: {
         model: this.model,
         openNote: (file: string) => this.feature.openNote(file),
-        openReference: (reference: Reference) =>
-          this.feature.openReference(reference, null),
+        openReference: (reference: Reference, options?: NavigationOptions) =>
+          this.feature.openReference(reference, null, options),
+        editCrossReferenceInNewPane: (entry: CrossReference) =>
+          this.feature.editCrossReference(entry, null, { newPane: true }),
         onAnnotate: (reference: Reference) =>
           this.feature.annotateReference(reference),
         renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) =>
@@ -85,7 +97,16 @@ export class ReaderView extends ItemView {
     }
   }
 
+  #retitle(): void {
+    const title = this.model.view.title
+    if (title === this.#title) return
+    this.#title = title
+    ;(this.leaf as HeaderRefreshingLeaf).updateHeader?.()
+  }
+
   override async onClose(): Promise<void> {
+    this.#unsubscribeTitle?.()
+    this.#unsubscribeTitle = null
     this.feature.releaseModel(this.model)
     if (this.#component !== null) await unmount(this.#component)
     this.#component = null

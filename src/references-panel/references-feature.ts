@@ -1,6 +1,7 @@
 import { TFile, WorkspaceLeaf, type Plugin } from 'obsidian'
 import {
   NOOP_REFERENCE_NAVIGATOR,
+  type NavigationOptions,
   type ReferenceNavigator,
 } from '../contracts'
 import {
@@ -106,10 +107,11 @@ export class ReferencesFeature extends PluginFeature {
               .knownTranslationIds,
           }),
         crossReferences: this.#crossReferences,
-        editCrossReference: (entry) =>
+        editCrossReference: (entry, options) =>
           this.#navigator.editCrossReference(
             entry,
             this.settings.defaultTranslationId,
+            options,
           ),
       },
       { translationId: this.settings.defaultTranslationId },
@@ -127,8 +129,12 @@ export class ReferencesFeature extends PluginFeature {
     this.#navigator = navigator
   }
 
-  openReference(reference: Reference, translationId: string | null): void {
-    this.#navigator.openReference(reference, translationId)
+  openReference(
+    reference: Reference,
+    translationId: string | null,
+    options?: NavigationOptions,
+  ): void {
+    this.#navigator.openReference(reference, translationId, options)
   }
 
   async openPanel(): Promise<void> {

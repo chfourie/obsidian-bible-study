@@ -11,6 +11,7 @@ import { extractOccurrences } from '../vault-index'
 import {
   ReferencesPanelModel,
   type ReferencesPanelCrossReferences,
+  type ReferencesPanelDeps,
 } from './references-panel-model'
 
 type PassageRequest = { reference: Reference; translationId: string }
@@ -68,7 +69,7 @@ const model = (
   source: PassageSource,
   translationId: string | null = 'web',
   crossReferences: ReferencesPanelCrossReferences = noCrossReferences,
-  editCrossReference: (entry: CrossReference) => void = () => {},
+  editCrossReference: ReferencesPanelDeps['editCrossReference'] = () => {},
 ): ReferencesPanelModel =>
   new ReferencesPanelModel(
     {
@@ -585,6 +586,26 @@ describe('cross-references in the References panel', () => {
           description: vineCrossReference.description,
         },
       ])
+    })
+
+    it('passes the new-pane request on to the editor', async () => {
+      const store = fakeCrossReferenceStore()
+      store.setEntries([vineCrossReference])
+      const requested: (boolean | undefined)[] = []
+      const panel = model(
+        fakeSource().source,
+        'web',
+        store.deps,
+        (_entry, options) => {
+          requested.push(options?.newPane)
+        },
+      )
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+
+      panel.editCrossReference('xr-vine')
+      panel.editCrossReference('xr-vine', { newPane: true })
+
+      expect(requested).toEqual([undefined, true])
     })
 
     it('ignores editing an id that is not currently surfaced', async () => {

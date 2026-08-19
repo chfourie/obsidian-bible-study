@@ -5,8 +5,9 @@ reference in the reader with the entry's translation.
 -->
 <script lang="ts">
   import { setIcon } from 'obsidian'
+  import type { NavigationOptions } from '../contracts'
   import type { Reference } from '../reference'
-  import { activate } from '../ui'
+  import { activate, opensInNewPane } from '../ui'
   import type {
     ReferenceEntryView,
     ReferencesPanelModel,
@@ -17,7 +18,11 @@ reference in the reader with the entry's translation.
     openReference,
   }: {
     model: ReferencesPanelModel
-    openReference: (reference: Reference, translationId: string | null) => void
+    openReference: (
+      reference: Reference,
+      translationId: string | null,
+      options?: NavigationOptions,
+    ) => void
   } = $props()
 
   // Initial snapshot only — the model subscription below keeps it fresh.
@@ -47,12 +52,14 @@ reference in the reader with the entry's translation.
     folded = next
   }
 
-  function open(entry: ReferenceEntryView) {
-    openReference(entry.reference, entry.translation)
+  function open(entry: ReferenceEntryView, event: MouseEvent | KeyboardEvent) {
+    openReference(entry.reference, entry.translation, {
+      newPane: opensInNewPane(event),
+    })
   }
 
-  const editCrossReference = (id: string): void => {
-    model.editCrossReference(id)
+  const editCrossReference = (id: string, event: MouseEvent): void => {
+    model.editCrossReference(id, { newPane: opensInNewPane(event) })
   }
 </script>
 
@@ -77,7 +84,7 @@ reference in the reader with the entry's translation.
               type="button"
               class="bsp-xref-edit"
               aria-label="Edit cross-reference in the reader"
-              onclick={() => editCrossReference(entry.id)}
+              onclick={(event) => editCrossReference(entry.id, event)}
             >✎</button>
             {#if entry.description !== null}
               <div class="bsp-xref-description">{entry.description}</div>
@@ -87,7 +94,10 @@ reference in the reader with the entry's translation.
                 <button
                   type="button"
                   class="bsp-xref-member"
-                  onclick={() => openReference(member.reference, null)}
+                  onclick={(event) =>
+                    openReference(member.reference, null, {
+                      newPane: opensInNewPane(event),
+                    })}
                 >{member.label}</button>
               {/each}
             </div>
@@ -126,8 +136,8 @@ reference in the reader with the entry's translation.
               aria-label="Open in reader"
               title="Open in reader"
               use:icon={'book-open-text'}
-              onclick={() => open(entry)}
-              onkeydown={activate(() => open(entry))}
+              onclick={(event) => open(entry, event)}
+              onkeydown={activate((event) => open(entry, event))}
             ></span>
           </div>
           {#if !folded.has(entry.key)}

@@ -170,6 +170,8 @@ export class MarkdownView {
 export class WorkspaceLeaf {
   view: unknown = null
 
+  updateHeader(): void {}
+
   async setViewState(_state: unknown): Promise<void> {}
 
   async loadIfDeferred(): Promise<void> {}

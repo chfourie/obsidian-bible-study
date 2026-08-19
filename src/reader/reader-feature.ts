@@ -1,5 +1,5 @@
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
-import type { ReferenceNavigator } from '../contracts'
+import type { NavigationOptions, ReferenceNavigator } from '../contracts'
 import {
   INERT_CROSS_REFERENCE_CATALOG,
   type CrossReferenceCatalog,
@@ -219,16 +219,27 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
     void this.plugin.app.workspace.openLinkText(file, '', 'split')
   }
 
-  openReference(reference: Reference, translationId: string | null): void {
-    void this.#withReaderView((view) => view.model.openAt(reference, translationId))
+  openReference(
+    reference: Reference,
+    translationId: string | null,
+    options: NavigationOptions = {},
+  ): void {
+    void this.#withReaderView(
+      (view) => view.model.openAt(reference, translationId),
+      options,
+    )
   }
 
-  editCrossReference(entry: CrossReference, translationId: string | null): void {
+  editCrossReference(
+    entry: CrossReference,
+    translationId: string | null,
+    options: NavigationOptions = {},
+  ): void {
     if (entry.members.length === 0) return
     void this.#withReaderView(async (view) => {
       await view.model.openAt(entry.members[0], translationId)
       view.model.startEditingCrossReference(entry)
-    })
+    }, options)
   }
 
   async openReader(): Promise<void> {
@@ -244,9 +255,12 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
 
   async #withReaderView(
     action: (view: ReaderView) => Promise<void>,
+    options: NavigationOptions = {},
   ): Promise<void> {
     const workspace = this.plugin.app.workspace
-    let leaf = workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
+    let leaf = options.newPane
+      ? undefined
+      : workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
     if (!leaf) {
       leaf = workspace.getLeaf('tab')
       await leaf.setViewState({ type: READER_VIEW_TYPE, active: true })

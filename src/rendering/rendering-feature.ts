@@ -64,8 +64,8 @@ export class RenderingFeature extends PluginFeature {
     )
     this.#deps = {
       passages: this.#repository,
-      openReference: (model) =>
-        navigator.openReference(model.reference, model.translationId),
+      openReference: (model, options) =>
+        navigator.openReference(model.reference, model.translationId, options),
       intersections: index && {
         intersecting: (reference) => index.intersectingOccurrences(reference),
         openNote: (file) => navigator.openNote(file),

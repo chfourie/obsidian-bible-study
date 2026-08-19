@@ -53,7 +53,20 @@ describe('renderReference chip', () => {
     chip?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(openReference).toHaveBeenCalledWith(
       expect.objectContaining({ referenceText: 'John 15:4-6,9' }),
+      { newPane: false },
     )
+  })
+
+  it('asks for a new reader pane when the chip is Cmd/Ctrl-clicked', async () => {
+    const { parent, deps, openReference } = setup()
+
+    await renderReference(parent, model('John 15:4'), deps)
+
+    const chip = parent.querySelector('.scripture-study-chip')
+    chip?.dispatchEvent(new MouseEvent('click', { bubbles: true, metaKey: true }))
+    expect(openReference).toHaveBeenCalledWith(expect.anything(), {
+      newPane: true,
+    })
   })
 
   it('shows a translation label only when explicitly specified', async () => {
@@ -708,6 +721,7 @@ describe('renderReference block', () => {
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     expect(openReference).toHaveBeenCalledWith(
       expect.objectContaining({ referenceText: 'John 15:4' }),
+      { newPane: false },
     )
   })
 

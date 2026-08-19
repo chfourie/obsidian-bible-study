@@ -1,5 +1,6 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian'
 import { mount, unmount } from 'svelte'
+import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
 import ReferencesPanel from './ReferencesPanel.svelte'
 import type { ReferencesFeature } from './references-feature'
@@ -36,8 +37,11 @@ export class ReferencesView extends ItemView {
       target: this.contentEl,
       props: {
         model: this.model,
-        openReference: (reference: Reference, translationId: string | null) =>
-          this.feature.openReference(reference, translationId),
+        openReference: (
+          reference: Reference,
+          translationId: string | null,
+          options?: NavigationOptions,
+        ) => this.feature.openReference(reference, translationId, options),
       },
     }) as Record<string, unknown>
   }

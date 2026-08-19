@@ -1,5 +1,7 @@
 import { setIcon } from 'obsidian'
+import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
+import { opensInNewPane } from '../ui'
 import type { OccurrenceGroup } from '../vault-index'
 import type { Passage, PassageSource } from './module-passage-source'
 import {
@@ -22,17 +24,23 @@ export type FirstRunInstallDeps = {
 
 export type ReferenceRenderDeps = {
   passages: PassageSource
-  openReference: (model: ReferenceRenderModel) => void
+  openReference: (
+    model: ReferenceRenderModel,
+    options: NavigationOptions,
+  ) => void
   intersections?: NoteIntersectionSource
   firstRun?: FirstRunInstallDeps
 }
 
-const activateAsButton = (element: HTMLElement, action: () => void): void => {
+const activateAsButton = (
+  element: HTMLElement,
+  action: (event: MouseEvent | KeyboardEvent) => void,
+): void => {
   element.addEventListener('click', action)
   element.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
     event.preventDefault()
-    action()
+    action(event)
   })
 }
 
@@ -54,7 +62,9 @@ const renderChip = (
   }
   const icon = chip.createSpan({ cls: 'scripture-study-chip-icon' })
   setIcon(icon, 'book-open')
-  activateAsButton(chip, () => deps.openReference(model))
+  activateAsButton(chip, (event) =>
+    deps.openReference(model, { newPane: opensInNewPane(event) }),
+  )
 }
 
 const noteTitle = (file: string): string => {
