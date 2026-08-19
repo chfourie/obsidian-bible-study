@@ -35,13 +35,9 @@
     }),
   )
 
-  let openBook: number | null = $state(null)
-
   const books = Array.from({ length: BOOK_COUNT }, (_, index) => index + 1)
   const chaptersOf = (book: number): number[] =>
     Array.from({ length: chapterCount(book) }, (_, index) => index + 1)
-
-  const treeBook = $derived(openBook ?? view.position.book)
 
   const setToggle = (key: keyof ReaderToggles, value: string): void => {
     model.setToggle(key, value as ReaderToggles[typeof key])
@@ -227,9 +223,9 @@
             type="button"
             class="bsr-tree-book"
             class:bsr-on={book === view.position.book}
-            onclick={() => (openBook = openBook === book ? null : book)}
-          >{treeBook === book ? '▾' : '▸'} {bookName(book)}</button>
-          {#if treeBook === book}
+            onclick={() => model.browseBook(book)}
+          >{view.treeBook === book ? '▾' : '▸'} {bookName(book)}</button>
+          {#if view.treeBook === book}
             <div class="bsr-tree-chapters">
               {#each chaptersOf(book) as chapter (chapter)}
                 <button

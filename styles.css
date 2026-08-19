@@ -355,3 +355,14 @@ body {
   color: var(--text-error);
   font-size: var(--font-ui-small);
 }
+
+/* ---- Reader view header ------------------------------------------------ */
+
+/* The chapter is already named by the tab title and the heading above the
+   text, so the reader's view header drops its third copy of it. Only the
+   title container goes: the back and forward arrows live in
+   .view-header-left and the view actions in .view-actions. */
+.workspace-leaf-content[data-type='scripture-study-reader']
+  .view-header-title-container {
+  display: none;
+}

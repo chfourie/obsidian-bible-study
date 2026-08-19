@@ -152,6 +152,9 @@ export type ReaderPaneView = {
   rows: VerseRowView[]
   translations: TranslationPill[]
   toggles: ReaderToggles
+  // The book the nav tree shows expanded: the reader's own book unless
+  // another one is being browsed.
+  treeBook: number
   hasPreviousChapter: boolean
   hasNextChapter: boolean
   fontScalePercent: number
@@ -213,6 +216,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
     // a brand new one.
     editing: string | null
   } | null = null
+  // The book the user expanded in the nav tree to browse, or null while the
+  // tree simply follows the reader.
+  #browsedBook: number | null = null
   #redLetterOverridden = false
   #navigate: ReaderNavigation = OPEN_DIRECTLY
   #loadToken = 0
@@ -333,6 +339,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
         active: translation.id === this.#translationId,
       })),
       toggles: this.#toggles,
+      treeBook: this.#browsedBook ?? this.#position.book,
       fontScalePercent: this.#fontScalePercent,
       hasPreviousChapter: this.#hasPreviousChapter(),
       hasNextChapter: this.#hasNextChapter(),
@@ -382,7 +389,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   ): Promise<void> {
     const { book, chapter } = decodeVerseId(reference.ranges[0].startId)
     await this.#navigate({ book, chapter }, async () => {
-      this.#position = { book, chapter }
+      this.#moveTo({ book, chapter })
       if (translationId !== null) this.#translationId = translationId
       this.#entry = reference
       this.#bannerDismissed = false
@@ -394,10 +401,22 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // Opens without touching the pane's history — the shell applies restored
   // and replayed positions through here.
   async openPosition(position: ReaderPosition): Promise<void> {
-    this.#position = { ...position }
+    this.#moveTo(position)
     this.#entry = null
     this.#resetSelection()
     await this.#loadChapter()
+  }
+
+  // A book browsed in the tree outlives chapter moves inside the reader's own
+  // book, but the tree follows the reader the moment its book changes.
+  #moveTo(position: ReaderPosition): void {
+    if (position.book !== this.#position.book) this.#browsedBook = null
+    this.#position = { ...position }
+  }
+
+  browseBook(book: number): void {
+    this.#browsedBook = this.#browsedBook === book ? null : book
+    this.#notify()
   }
 
   async installSuggestedTranslation(): Promise<void> {

@@ -12,20 +12,12 @@ type ReaderViewState = {
   redLetter?: 'off' | 'on'
 }
 
-// Obsidian re-reads the tab title on a header refresh only, and updateHeader
-// is runtime-only API the typings omit.
-type HeaderRefreshingLeaf = WorkspaceLeaf & { updateHeader?: () => void }
-
 export class ReaderView extends ItemView {
   // Chapter moves are recorded in the pane's history, so its back and forward
   // arrows walk them.
   override navigation = true
   readonly model: ReaderPaneModel
   #component: Record<string, unknown> | null = null
-  #unsubscribeTitle: (() => void) | null = null
-  // The title the header was last nudged for: only bookkeeping for the nudge,
-  // never the answer getDisplayText gives.
-  #nudgedTitle: string
   // The open that this pane's own setViewState is waiting to apply. Set only
   // while Obsidian echoes a chapter move back through setState, so state
   // arriving from a layout restore or the arrows is told apart from the
@@ -38,8 +30,6 @@ export class ReaderView extends ItemView {
   ) {
     super(leaf)
     this.model = feature.createModel()
-    this.#nudgedTitle = this.model.view.title
-    this.#unsubscribeTitle = this.model.subscribe(() => this.#nudgeHeader())
     this.model.useNavigation((position, open) => this.#navigate(position, open))
   }
 
@@ -116,18 +106,7 @@ export class ReaderView extends ItemView {
     }
   }
 
-  // Best effort: the header repaints promptly where the runtime offers the
-  // call, and getDisplayText stays right where it does not.
-  #nudgeHeader(): void {
-    const title = this.model.view.title
-    if (title === this.#nudgedTitle) return
-    this.#nudgedTitle = title
-    ;(this.leaf as HeaderRefreshingLeaf).updateHeader?.()
-  }
-
   override async onClose(): Promise<void> {
-    this.#unsubscribeTitle?.()
-    this.#unsubscribeTitle = null
     this.feature.releaseModel(this.model)
     if (this.#component !== null) await unmount(this.#component)
     this.#component = null

@@ -356,6 +356,76 @@ describe('chapter navigation', () => {
   })
 })
 
+describe('book tree expansion', () => {
+  const openJohn15 = async (): Promise<ReaderPaneModel> => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:4'), 'web')
+    return model
+  }
+
+  it("expands the reader's own book until one is browsed", async () => {
+    const model = await openJohn15()
+
+    expect(model.view.treeBook).toBe(43)
+  })
+
+  it('keeps a browsed book expanded while the reader stays in its own book', async () => {
+    const model = await openJohn15()
+
+    model.browseBook(10)
+    await model.nextChapter()
+
+    expect(model.view.treeBook).toBe(10)
+  })
+
+  it("follows the reader as soon as the reader's book changes", async () => {
+    const model = await openJohn15()
+
+    model.browseBook(10)
+    await model.goTo(43, 21)
+    await model.nextChapter()
+
+    expect(model.view.treeBook).toBe(44)
+  })
+
+  it('follows a position replayed from history or a layout restore', async () => {
+    const model = await openJohn15()
+
+    model.browseBook(10)
+    await model.openPosition({ book: 1, chapter: 1 })
+
+    expect(model.view.treeBook).toBe(1)
+  })
+
+  it('follows a reference opened into the pane', async () => {
+    const model = await openJohn15()
+
+    model.browseBook(10)
+    await model.openAt(ref('Genesis 1:1'), 'web')
+
+    expect(model.view.treeBook).toBe(1)
+  })
+
+  it('collapses a browsed book when it is picked again', async () => {
+    const model = await openJohn15()
+
+    model.browseBook(10)
+    model.browseBook(10)
+
+    expect(model.view.treeBook).toBe(43)
+  })
+
+  it('notifies subscribers when the browsed book changes', async () => {
+    const model = await openJohn15()
+    let notified = 0
+    model.subscribe(() => notified++)
+
+    model.browseBook(10)
+
+    expect(notified).toBe(1)
+  })
+})
+
 describe('overlapping loads', () => {
   it('ignores a stale chapter load that resolves after a newer one', async () => {
     let releaseChapter15 = (): void => {}

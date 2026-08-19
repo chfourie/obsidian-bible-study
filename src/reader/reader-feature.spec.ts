@@ -29,12 +29,10 @@ const fakeStore = (): ModuleStore =>
         : {},
   }) as unknown as ModuleStore
 
-// The header refresh is runtime-only API the obsidian typings omit; the
-// navigation history is real runtime state the typings omit too, modelled by
-// the mock leaf so specs can drive the back and forward arrows.
+// The navigation history is real runtime state the obsidian typings omit,
+// modelled by the mock leaf so specs can drive the back and forward arrows.
 type FakeLeaf = WorkspaceLeaf & {
   detached?: boolean
-  updateHeader?: () => void
   canGoBack: boolean
   canGoForward: boolean
   back: () => Promise<void>
@@ -43,7 +41,7 @@ type FakeLeaf = WorkspaceLeaf & {
 
 type FakeNote = { content: string; ctime: number }
 
-type HarnessOptions = { store?: ModuleStore; headerRefresh?: boolean }
+type HarnessOptions = { store?: ModuleStore }
 
 const harness = (
   notes: Record<string, FakeNote> = {},
@@ -59,8 +57,6 @@ const harness = (
       type === READER_VIEW_TYPE ? leaves.filter((leaf) => !leaf.detached) : [],
     getLeaf: () => {
       const leaf = new WorkspaceLeaf() as unknown as FakeLeaf
-      // A leaf without the refresh call is a shape the reader has to cope with.
-      if (options.headerRefresh === false) leaf.updateHeader = undefined
       const applyViewState = leaf.setViewState.bind(leaf)
       leaf.setViewState = async (state) => {
         if (leaf.view !== null) return applyViewState(state)
@@ -161,25 +157,7 @@ describe('ReaderFeature entry points', () => {
   })
 
   it('titles the reader tab with the chapter on screen', async () => {
-    // updateHeader is runtime-only API the obsidian typings omit.
-    const headers = WorkspaceLeaf.prototype as unknown as {
-      updateHeader: () => void
-    }
-    const updateHeader = vi.spyOn(headers, 'updateHeader')
     const { feature, leaves } = harness()
-    await feature.load()
-
-    feature.openReference(ref('John 15:1'), 'web')
-    await flushAsync()
-
-    const view = leaves[0].view as ReaderView
-    expect(view.getDisplayText()).toBe('John 15')
-    expect(updateHeader).toHaveBeenCalled()
-    updateHeader.mockRestore()
-  })
-
-  it('titles the reader tab from the chapter on screen when the leaf cannot refresh its header', async () => {
-    const { feature, leaves } = harness({}, { headerRefresh: false })
     await feature.load()
 
     feature.openReference(ref('John 15:1'), 'web')
