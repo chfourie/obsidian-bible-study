@@ -20,4 +20,6 @@ and per-document memory of the panel's last state (switch away and back to verif
 
 ## Verdict
 
-_(pending — fill in the winning variant / stolen bits before deleting this folder)_
+**B — Stacked sections** wins: one scroll of collapsible sections with counts, own
+cross-references demarcated above the tinted margin-references zone. Delete this folder
+once the real panel implements it.
