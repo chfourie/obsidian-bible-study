@@ -1,27 +1,34 @@
 import type { HighlightCue } from '../reference'
 
+export type HighlightRange = {
+  startVerseId: number
+  startChar: number
+  endVerseId: number
+  endChar: number
+}
+
 export type HighlightSpan = {
   start: number
   end: number
   slot: number
 }
 
-const cueSpanInVerse = (
-  cue: HighlightCue,
+export const rangeWithinVerse = (
+  range: HighlightRange,
   verseId: number,
   textLength: number,
-): HighlightSpan | null => {
-  if (verseId < cue.startVerseId || verseId > cue.endVerseId) return null
-  const start = verseId === cue.startVerseId ? cue.startChar : 0
-  const end = verseId === cue.endVerseId ? cue.endChar : textLength
+): { start: number; end: number } | null => {
+  if (verseId < range.startVerseId || verseId > range.endVerseId) return null
+  const start = verseId === range.startVerseId ? range.startChar : 0
+  const end = verseId === range.endVerseId ? range.endChar : textLength
   const clampedStart = Math.min(start, textLength)
   const clampedEnd = Math.min(end, textLength)
   return clampedEnd > clampedStart
-    ? { start: clampedStart, end: clampedEnd, slot: cue.slot }
+    ? { start: clampedStart, end: clampedEnd }
     : null
 }
 
-const runsOf = (slots: (number | null)[]): HighlightSpan[] => {
+export const slotRuns = (slots: readonly (number | null)[]): HighlightSpan[] => {
   const spans: HighlightSpan[] = []
   slots.forEach((slot, index) => {
     if (slot === null) return
@@ -37,21 +44,27 @@ const runsOf = (slots: (number | null)[]): HighlightSpan[] => {
 
 // Later cues paint over earlier ones: a stroke always claims the whole
 // selection it covers, the way a physical highlighter pass does.
-export const highlightSpans = (
+export const paintedSlots = (
   cues: readonly HighlightCue[],
   verseId: number,
   textLength: number,
-): HighlightSpan[] => {
+): (number | null)[] => {
   const slots: (number | null)[] = Array.from(
     { length: textLength },
     () => null,
   )
   for (const cue of cues) {
-    const span = cueSpanInVerse(cue, verseId, textLength)
+    const span = rangeWithinVerse(cue, verseId, textLength)
     if (span === null) continue
     for (let index = span.start; index < span.end; index++) {
-      slots[index] = span.slot
+      slots[index] = cue.slot
     }
   }
-  return runsOf(slots)
+  return slots
 }
+
+export const highlightSpans = (
+  cues: readonly HighlightCue[],
+  verseId: number,
+  textLength: number,
+): HighlightSpan[] => slotRuns(paintedSlots(cues, verseId, textLength))

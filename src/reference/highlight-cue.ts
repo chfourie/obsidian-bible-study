@@ -79,6 +79,29 @@ export const parseHighlightCue = (
   return { slot, startVerseId, startChar, endVerseId, endChar }
 }
 
+const endpointText = (
+  verseId: number,
+  char: number,
+  inherited: number,
+): string => {
+  const { chapter, verse } = decodeVerseId(verseId)
+  const verseText = chapter === inherited ? `${verse}` : `${chapter}:${verse}`
+  return `${verseText}.${char}`
+}
+
+export const formatHighlightCue = (
+  cue: HighlightCue,
+  reference: Reference,
+): string => {
+  const inherited = inheritedChapter(reference)
+  const start = endpointText(cue.startVerseId, cue.startChar, inherited)
+  const end = endpointText(cue.endVerseId, cue.endChar, inherited)
+  return `h${cue.slot}/${start}-${end}`
+}
+
+export const isHighlightCueToken = (text: string): boolean =>
+  /^h\d+\//i.test(text)
+
 export const sameHighlightCue = (a: HighlightCue, b: HighlightCue): boolean =>
   a.slot === b.slot &&
   a.startVerseId === b.startVerseId &&
