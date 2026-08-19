@@ -213,6 +213,9 @@ export class StudyPanelFeature extends PluginFeature {
   #focusLeaf(leaf: WorkspaceLeaf | null): boolean {
     const material = this.#studyMaterial.studyMaterialFor(leaf?.view ?? null)
     if (material !== null) {
+      // A note's read may still be in flight; taking the panel over cancels
+      // it, or its completion would put the note back over this reader.
+      this.#showToken += 1
       this.#followed = leaf
       this.#followMaterial(material)
       this.#models.forEach((model) => {
@@ -235,11 +238,17 @@ export class StudyPanelFeature extends PluginFeature {
     const live = new Set<WorkspaceLeaf>()
     workspace.iterateAllLeaves((leaf) => live.add(leaf))
     this.#tabs.retain(live)
-    if (this.#followed === null || live.has(this.#followed)) return
-    this.#followed = null
-    this.#followMaterial(null)
-    if (!this.#focusLeaf(workspace.getMostRecentLeaf()))
-      void this.#showFile(null)
+    const recent = workspace.getMostRecentLeaf()
+    if (this.#followed !== null && !live.has(this.#followed)) {
+      this.#followed = null
+      this.#followMaterial(null)
+      if (!this.#focusLeaf(recent)) void this.#showFile(null)
+      return
+    }
+    // A reader that took focus before its view was in place looked like a
+    // leaf the panel ignores; the layout settling is when it can be seen for
+    // what it is.
+    if (recent !== this.#followed && recent !== null) this.#focusLeaf(recent)
   }
 
   // The panel mirrors one reader tab at a time, and listens for deliberate

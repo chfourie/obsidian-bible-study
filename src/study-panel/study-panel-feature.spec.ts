@@ -204,6 +204,24 @@ const harness = (
   }
   const focusNote = (path: string) =>
     focusLeaf({ file: note(path) } as unknown as View) as WorkspaceLeaf
+  // A reader tab whose view is not yet resolvable as study material, as on a
+  // cold start where the leaf takes focus before its view is in place.
+  const focusPendingReader = () => {
+    const view = {} as View
+    const leaf = { view } as unknown as WorkspaceLeaf
+    focusTab(leaf)
+    return {
+      leaf,
+      attach: () => {
+        const reader = fakeStudyMaterial()
+        readers.set(view, reader.source)
+        return reader
+      },
+    }
+  }
+  const layoutChanged = () => {
+    handlers['layout-change']?.forEach((handler) => handler())
+  }
   const closeTab = (leaf: WorkspaceLeaf) => {
     const index = tabs.indexOf(leaf)
     if (index >= 0) tabs.splice(index, 1)
@@ -233,6 +251,8 @@ const harness = (
     focusTab,
     closeTab,
     focusReader,
+    focusPendingReader,
+    layoutChanged,
     focusNote,
     editNote,
     readGates,
@@ -492,6 +512,42 @@ describe('StudyPanelFeature entry points', () => {
     const view = panelView(leaves[0])
     expect(view.model.studySource).toBe(reader.source)
     expect(view.model.view.studyMaterial).toEqual(reader.source.studyMaterial)
+  })
+
+  it('keeps the reader when a note read outruns the reader gaining focus', async () => {
+    const { feature, commands, leaves, focusNote, focusReader, readGates } =
+      harness({ 'slow.md': '{John 15:1}' })
+    let releaseSlow: () => void = () => {}
+    readGates['slow.md'] = new Promise((resolve) => {
+      releaseSlow = resolve
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+
+    focusNote('slow.md')
+    const reader = focusReader()
+    releaseSlow()
+    await flushAsync()
+
+    const view = panelView(leaves[0])
+    expect(view.model.studySource).toBe(reader.source)
+    expect(view.model.view.studyMaterial).toEqual(reader.source.studyMaterial)
+  })
+
+  it('adopts a reader whose view lands after the tab took focus', async () => {
+    const { feature, commands, leaves, focusPendingReader, layoutChanged } =
+      harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+
+    const pending = focusPendingReader()
+    const reader = pending.attach()
+    layoutChanged()
+
+    const view = panelView(leaves[0])
+    expect(view.model.studySource).toBe(reader.source)
   })
 
   it('follows the mirrored reader as its selection changes', async () => {
