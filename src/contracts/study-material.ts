@@ -37,7 +37,6 @@ export type VerseDetailsView = {
   translations: TranslationRowView[]
   annotations: AnnotationBlockView[]
   mentions: NoteCardView[]
-  crossReferences: CrossReferenceView[]
   strongs: StrongsEntryView[]
   strongsAttribution: string | null
 }

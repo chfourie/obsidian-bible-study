@@ -535,7 +535,6 @@ describe('verse details', () => {
         },
       ],
       mentions: [{ file: 'Sermons/Fruitfulness.md' }],
-      crossReferences: [],
       strongs: [],
       strongsAttribution: null,
     })
@@ -1379,107 +1378,6 @@ describe("Strong's word lookup", () => {
   })
 })
 
-describe('cross-references in verse details', () => {
-  const verse4 = makeVerseId(43, 15, 4)
-  const vineCrossReference: CrossReference = {
-    id: 'xr-vine',
-    members: [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')],
-    description: 'Vine and vineyard imagery for Israel',
-  }
-  const storeOf = (...entries: CrossReference[]): CrossReferenceEditing =>
-    crossReferencesOf({
-      intersecting: (reference) =>
-        entries.filter((entry) =>
-          entry.members.some((member) => referencesIntersect(member, reference)),
-        ),
-    })
-  const psalmTexts = (): MockTexts => ({
-    web: {
-      ...john15Texts().web,
-      [makeVerseId(19, 80, 8)]: 'You brought a vine out of Egypt.',
-    },
-    kjv: {
-      ...john15Texts().web,
-      [makeVerseId(19, 80, 8)]: 'Thou hast brought a vine out of Egypt.',
-    },
-  })
-
-  it('lists an intersecting cross-reference with only the other members and its description', async () => {
-    const model = modelWith({ crossReferences: storeOf(vineCrossReference) })
-    await model.openAt(ref('John 15:4'), 'web')
-
-    await model.selectVerse(verse4)
-
-    expect(detailsOf(model).crossReferences).toEqual([
-      {
-        id: 'xr-vine',
-        description: 'Vine and vineyard imagery for Israel',
-        members: [
-          { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
-          { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
-        ],
-        allMembers: vineCrossReference.members,
-      },
-    ])
-  })
-
-  it('leaves non-intersecting cross-references out of the details', async () => {
-    const elsewhere: CrossReference = {
-      id: 'xr-elsewhere',
-      members: [ref('John 15:9'), ref('Psalm 23:1')],
-      description: null,
-    }
-    const model = modelWith({
-      crossReferences: storeOf(vineCrossReference, elsewhere),
-    })
-    await model.openAt(ref('John 15:4'), 'web')
-
-    await model.selectVerse(verse4)
-
-    expect(
-      detailsOf(model).crossReferences.map((entry) => entry.id),
-    ).toEqual(['xr-vine'])
-  })
-
-  it('resurfaces the cross-reference after navigating to a listed member', async () => {
-    const model = modelWith({
-      passages: passageSourceOver(psalmTexts()),
-      crossReferences: storeOf(vineCrossReference),
-    })
-    await model.openAt(ref('John 15:4'), 'web')
-    await model.selectVerse(verse4)
-    const member = detailsOf(model).crossReferences[0].members[0]
-
-    await model.openAt(member.reference, null)
-    await model.selectVerse(makeVerseId(19, 80, 8))
-
-    expect(model.view.position).toEqual({ book: 19, chapter: 80 })
-    const details = detailsOf(model)
-    expect(details.crossReferences.map((entry) => entry.id)).toEqual(['xr-vine'])
-    expect(details.crossReferences[0].members.map((m) => m.label)).toEqual([
-      'John 15:1-8',
-      'Romans 11:17-24',
-    ])
-  })
-
-  it('surfaces identically in any viewed translation', async () => {
-    const model = modelWith({
-      passages: passageSourceOver(psalmTexts()),
-      availableTranslations: async () => [translation('web'), translation('kjv')],
-      crossReferences: storeOf(vineCrossReference),
-    })
-    await model.openAt(ref('John 15:4'), 'web')
-    await model.selectVerse(verse4)
-    const surfacedInWeb = detailsOf(model).crossReferences
-
-    await model.setTranslation('kjv')
-    await model.selectVerse(verse4)
-
-    expect(detailsOf(model).crossReferences).toEqual(surfacedInWeb)
-    expect(surfacedInWeb.map((entry) => entry.id)).toEqual(['xr-vine'])
-  })
-})
-
 describe('cross-references intersecting the viewed chapter', () => {
   const vineCrossReference: CrossReference = {
     id: 'xr-vine',
@@ -1961,7 +1859,7 @@ describe('collecting a cross-reference', () => {
     expect(model.studyMaterial.collection?.members).toHaveLength(1)
   })
 
-  it('surfaces the created cross-reference in open details at once', async () => {
+  it('surfaces the created cross-reference in the chapter list at once', async () => {
     const stored: CrossReference[] = []
     const model = await collectingModel({
       intersecting: (reference) =>
@@ -1976,15 +1874,16 @@ describe('collecting a cross-reference', () => {
     model.addSelectionToCollection()
     addTyped(model, 'Psalm 80:8-16')
     await model.selectVerse(verse4)
-    expect(detailsOf(model).crossReferences).toEqual([])
+    expect(model.studyMaterial.chapterCrossReferences).toEqual([])
 
     await model.saveCrossReference()
 
-    expect(detailsOf(model).crossReferences).toEqual([
+    expect(model.studyMaterial.chapterCrossReferences).toEqual([
       {
         id: 'xr-created',
         description: null,
         members: [
+          { label: 'John 15:4', reference: ref('John 15:4'), index: 0 },
           { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
         ],
         allMembers: [ref('John 15:4'), ref('Psalm 80:8-16')],

@@ -766,7 +766,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
       mentions: groups
         .filter((occurrence) => !occurrence.annotation)
         .map((occurrence) => ({ file: occurrence.file })),
-      crossReferences: this.#crossReferenceViews(reference, [reference]),
       strongs,
       strongsAttribution:
         strongs.length > 0 ? this.deps.strongs.attribution : null,
@@ -778,17 +777,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // reader can see which verses of it a cross-reference touches — and the
   // ordering leads with those, so the passage on screen anchors the row.
   #chapterCrossReferences(): CrossReferenceView[] {
-    return this.#crossReferenceViews(chapterReference(this.#position), [])
-  }
-
-  #crossReferenceViews(
-    reference: Reference,
-    viewed: Reference[],
-  ): CrossReferenceView[] {
+    const reference = chapterReference(this.#position)
     return orderCrossReferences(
       this.deps.crossReferences
         .intersecting(reference)
-        .map((entry) => crossReferenceView(entry, viewed)),
+        .map((entry) => crossReferenceView(entry, [])),
       [reference],
     )
   }
