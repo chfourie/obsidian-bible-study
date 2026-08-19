@@ -84,7 +84,7 @@ opens the reference in the reader with the entry's translation.
     />
   </div>
 {:else}
-  <div class="bsp-panel">
+  <div class="bsp-panel" class:bsp-panel-untitled={view.title === null}>
     {#if view.title !== null}
       {@render panelTitle(view.title)}
     {/if}
@@ -199,6 +199,13 @@ opens the reference in the reader with the entry's translation.
     flex-direction: column;
     gap: 0.5rem;
     padding: 0 0 0.25rem;
+  }
+
+  /* The title stands in for the leaf's file header, so the view content is
+     flush with the top of the pane. With no title to head it, the content
+     takes that spacing back. */
+  .bsp-panel-untitled {
+    padding-top: var(--size-4-4);
   }
 
   /* The mirrored reader fills the sidebar: its details region scrolls on its
