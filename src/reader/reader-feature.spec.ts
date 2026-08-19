@@ -29,11 +29,21 @@ const fakeStore = (): ModuleStore =>
         : {},
   }) as unknown as ModuleStore
 
-type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
+// The header refresh is runtime-only API the obsidian typings omit; the
+// navigation history is real runtime state the typings omit too, modelled by
+// the mock leaf so specs can drive the back and forward arrows.
+type FakeLeaf = WorkspaceLeaf & {
+  detached?: boolean
+  updateHeader?: () => void
+  canGoBack: boolean
+  canGoForward: boolean
+  back: () => Promise<void>
+  forward: () => Promise<void>
+}
 
 type FakeNote = { content: string; ctime: number }
 
-type HarnessOptions = { store?: ModuleStore }
+type HarnessOptions = { store?: ModuleStore; headerRefresh?: boolean }
 
 const harness = (
   notes: Record<string, FakeNote> = {},
@@ -48,8 +58,12 @@ const harness = (
     getLeavesOfType: (type: string) =>
       type === READER_VIEW_TYPE ? leaves.filter((leaf) => !leaf.detached) : [],
     getLeaf: () => {
-      const leaf = new WorkspaceLeaf() as FakeLeaf
-      leaf.setViewState = async () => {
+      const leaf = new WorkspaceLeaf() as unknown as FakeLeaf
+      // A leaf without the refresh call is a shape the reader has to cope with.
+      if (options.headerRefresh === false) leaf.updateHeader = undefined
+      const applyViewState = leaf.setViewState.bind(leaf)
+      leaf.setViewState = async (state) => {
+        if (leaf.view !== null) return applyViewState(state)
         if (factory) leaf.view = factory(leaf) as WorkspaceLeaf['view']
         leaves.push(leaf)
       }
@@ -162,6 +176,116 @@ describe('ReaderFeature entry points', () => {
     expect(view.getDisplayText()).toBe('John 15')
     expect(updateHeader).toHaveBeenCalled()
     updateHeader.mockRestore()
+  })
+
+  it('titles the reader tab from the chapter on screen when the leaf cannot refresh its header', async () => {
+    const { feature, leaves } = harness({}, { headerRefresh: false })
+    await feature.load()
+
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    expect((leaves[0].view as ReaderView).getDisplayText()).toBe('John 15')
+  })
+
+  it('walks the chapters a pane has visited with its back and forward arrows', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const leaf = leaves[0]
+    const view = leaf.view as ReaderView
+
+    // The pane's first chapter starts its history rather than joining it.
+    expect(leaf.canGoBack).toBe(false)
+    await view.model.nextChapter()
+    await flushAsync()
+    expect(view.model.view.position).toEqual({ book: 43, chapter: 16 })
+
+    await leaf.back()
+    await flushAsync()
+    expect(view.model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(view.getDisplayText()).toBe('John 15')
+    expect(leaf.canGoBack).toBe(false)
+
+    await leaf.forward()
+    await flushAsync()
+    expect(view.model.view.position).toEqual({ book: 43, chapter: 16 })
+    expect(view.getDisplayText()).toBe('John 16')
+    // Replaying a recorded chapter never records it again.
+    expect(leaf.canGoForward).toBe(false)
+    expect(leaf.canGoBack).toBe(true)
+  })
+
+  it('records a reference opened into an already-open pane in its history', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    feature.openReference(ref('Genesis 1:1'), null)
+    await flushAsync()
+    const leaf = leaves[0]
+    const view = leaf.view as ReaderView
+    expect(view.model.view.banner).toBe('Opened at Genesis 1:1')
+
+    await leaf.back()
+    await flushAsync()
+
+    expect(view.model.view.position).toEqual({ book: 43, chapter: 15 })
+  })
+
+  it('keeps selection, translation and toggle changes out of the pane history', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const leaf = leaves[0]
+    const view = leaf.view as ReaderView
+
+    await view.model.selectVerse(makeVerseId(43, 15, 1))
+    await view.model.setTranslation('web')
+    view.model.setToggle('redLetter', 'on')
+    view.model.increaseFontScale()
+    await flushAsync()
+
+    expect(leaf.canGoBack).toBe(false)
+  })
+
+  it('gives each reader pane its own chapter history', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    feature.openReference(ref('Genesis 1:1'), null, { newPane: true })
+    await flushAsync()
+    const second = leaves[1].view as ReaderView
+
+    await second.model.nextChapter()
+    await flushAsync()
+
+    expect(leaves[0].canGoBack).toBe(false)
+    await leaves[1].back()
+    await flushAsync()
+    expect(second.model.view.position).toEqual({ book: 1, chapter: 1 })
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+  })
+
+  it('restores a saved chapter without recording it in the pane history', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    const result = { history: true }
+
+    await view.setState({ book: 43, chapter: 16 }, result)
+    await flushAsync()
+
+    expect(result.history).toBe(false)
+    expect(view.model.view.position).toEqual({ book: 43, chapter: 16 })
   })
 
   it('opens a second reader leaf when the navigation asks for a new pane', async () => {

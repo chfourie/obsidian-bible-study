@@ -165,14 +165,72 @@ export class MarkdownView {
   previewMode: { rerender: (full?: boolean) => void } = { rerender: () => {} }
 }
 
+export type ViewState = {
+  type: string
+  state?: Record<string, unknown>
+  active?: boolean
+}
+
 // Just enough of WorkspaceLeaf/ItemView for the reader pane: real classes so
-// `instanceof` and subclassing work; specs drive `setViewState` themselves.
+// `instanceof` and subclassing work; specs create the view themselves by
+// overriding `setViewState` (the mock has no view registry to build one from).
+//
+// Once a leaf holds a view, `setViewState` mirrors the runtime: a state of the
+// same type is applied through `setState`, and the state it replaced is
+// recorded in the leaf's navigation history when the view flags the change
+// with `result.history`. `back`/`forward` are mock-only handles on that
+// history — the real arrows live in Obsidian's own chrome.
 export class WorkspaceLeaf {
   view: unknown = null
+  #back: ViewState[] = []
+  #forward: ViewState[] = []
 
   updateHeader(): void {}
 
-  async setViewState(_state: unknown): Promise<void> {}
+  getViewState(): ViewState {
+    const view = this.view as ItemView
+    return { type: view.getViewType(), state: view.getState() }
+  }
+
+  async setViewState(state: ViewState): Promise<void> {
+    const view = this.view as ItemView | null
+    if (view === null || view.getViewType() !== state.type) return
+    const replaced = this.getViewState()
+    const result = { history: false }
+    await view.setState(state.state ?? {}, result)
+    if (!result.history) return
+    this.#back.push(replaced)
+    this.#forward = []
+  }
+
+  get canGoBack(): boolean {
+    return this.#back.length > 0
+  }
+
+  get canGoForward(): boolean {
+    return this.#forward.length > 0
+  }
+
+  async back(): Promise<void> {
+    const previous = this.#back.pop()
+    if (previous === undefined) return
+    this.#forward.push(this.getViewState())
+    await this.#replay(previous)
+  }
+
+  async forward(): Promise<void> {
+    const next = this.#forward.pop()
+    if (next === undefined) return
+    this.#back.push(this.getViewState())
+    await this.#replay(next)
+  }
+
+  // Replaying a recorded state never re-records it, however the view flags it.
+  async #replay(state: ViewState): Promise<void> {
+    await (this.view as ItemView).setState(state.state ?? {}, {
+      history: false,
+    })
+  }
 
   async loadIfDeferred(): Promise<void> {}
 }

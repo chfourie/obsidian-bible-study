@@ -54,6 +54,16 @@ export type ReaderStrongsDeps = {
 
 export type ReaderPosition = { book: number; chapter: number }
 
+// How a chapter move reaches the screen. The pane's shell routes user
+// navigation through Obsidian's per-pane history and calls `open` back when
+// the new position arrives; a model without a shell opens straight away.
+export type ReaderNavigation = (
+  position: ReaderPosition,
+  open: () => Promise<void>,
+) => Promise<void>
+
+const OPEN_DIRECTLY: ReaderNavigation = (_position, open) => open()
+
 export type AnnotationOrdering = 'created-oldest-first' | 'path-a-z'
 
 export type AnnotationDetails = {
@@ -204,6 +214,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     editing: string | null
   } | null = null
   #redLetterOverridden = false
+  #navigate: ReaderNavigation = OPEN_DIRECTLY
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
   readonly #selectionListeners = new Set<() => void>()
@@ -355,19 +366,33 @@ export class ReaderPaneModel implements StudyMaterialSource {
     }
   }
 
+  useNavigation(navigate: ReaderNavigation): void {
+    this.#navigate = navigate
+  }
+
+  // Whether this pane has opened a chapter yet: a pane still showing its
+  // construction-time default has no position worth stepping back to.
+  get opened(): boolean {
+    return this.#loadToken > 0
+  }
+
   async openAt(
     reference: Reference,
     translationId: string | null,
   ): Promise<void> {
     const { book, chapter } = decodeVerseId(reference.ranges[0].startId)
-    this.#position = { book, chapter }
-    if (translationId !== null) this.#translationId = translationId
-    this.#entry = reference
-    this.#bannerDismissed = false
-    this.#resetSelection()
-    await this.#loadChapter()
+    await this.#navigate({ book, chapter }, async () => {
+      this.#position = { book, chapter }
+      if (translationId !== null) this.#translationId = translationId
+      this.#entry = reference
+      this.#bannerDismissed = false
+      this.#resetSelection()
+      await this.#loadChapter()
+    })
   }
 
+  // Opens without touching the pane's history — the shell applies restored
+  // and replayed positions through here.
   async openPosition(position: ReaderPosition): Promise<void> {
     this.#position = { ...position }
     this.#entry = null
@@ -399,11 +424,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#notify()
   }
 
+  // The user's own chapter move: unlike openPosition it walks the pane's
+  // navigation history.
   async goTo(book: number, chapter: number): Promise<void> {
-    this.#position = { book, chapter }
-    this.#entry = null
-    this.#resetSelection()
-    await this.#loadChapter()
+    await this.#navigate({ book, chapter }, () =>
+      this.openPosition({ book, chapter }),
+    )
   }
 
   #hasNextChapter(): boolean {
