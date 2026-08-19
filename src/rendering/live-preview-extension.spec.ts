@@ -11,6 +11,7 @@ import { attachHighlightEditing } from './highlight-editing'
 import {
   createLivePreviewExtension,
   ReferenceWidget,
+  verifiedTokenStart,
 } from './live-preview-extension'
 import {
   buildReferenceRenderModel,
@@ -136,7 +137,7 @@ describe('highlight editing in Live Preview', () => {
     openReference: vi.fn(),
   }
 
-  const editorOver = async (doc: string): Promise<HTMLElement> => {
+  const editorOverAll = async (doc: string): Promise<HTMLElement[]> => {
     view = new EditorView({
       state: EditorState.create({
         doc,
@@ -151,12 +152,18 @@ describe('highlight editing in Live Preview', () => {
       }),
       parent: document.body,
     })
+    const expected = [...doc.matchAll(/\{/g)].length
     return await vi.waitFor(() => {
-      const host = view.contentDOM.querySelector<HTMLElement>('[data-verse-id]')
-      if (!host) throw new Error('passage not rendered')
-      return host
+      const hosts = [
+        ...view.contentDOM.querySelectorAll<HTMLElement>('[data-verse-id]'),
+      ]
+      if (hosts.length < expected) throw new Error('passage not rendered')
+      return hosts
     })
   }
+
+  const editorOver = async (doc: string): Promise<HTMLElement> =>
+    (await editorOverAll(doc))[0]
 
   const paint = (verseText: HTMLElement, swatch: number): void => {
     const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
@@ -198,5 +205,29 @@ describe('highlight editing in Live Preview', () => {
     paint(verseText, 5)
 
     expect(view.state.doc.toString()).toBe('note {John 15:4 web inline}')
+  })
+
+  it('rewrites the occurrence the stroke was made in, not its twin', async () => {
+    const hosts = await editorOverAll(
+      'note {John 15:4 web inline} and {John 15:4 web inline}',
+    )
+
+    paint(hosts[1], 0)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4 web inline} and {John 15:4 web inline h1/4.0-4.6}',
+    )
+  })
+})
+
+describe('verifiedTokenStart', () => {
+  const doc = 'a {John 15:4} b {John 15:4}'
+
+  it('takes a position that spells out the token', () => {
+    expect(verifiedTokenStart(doc, 16, '{John 15:4}')).toBe(16)
+  })
+
+  it('refuses to look elsewhere for an identical token', () => {
+    expect(verifiedTokenStart(doc, 15, '{John 15:4}')).toBeNull()
   })
 })

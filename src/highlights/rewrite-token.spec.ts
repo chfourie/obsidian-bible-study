@@ -87,6 +87,10 @@ describe('rewriteHighlightToken — minimal diff', () => {
     )
   })
 
+  it('preserves trailing space when there is no cue tail to append', () => {
+    expect(rewrite('John 15:1-16 ', [])).toBe('John 15:1-16 ')
+  })
+
   it('leaves an unparseable reference untouched', () => {
     expect(rewrite('Nowhere 5:1', [cue(1, 5, 4, 5, 25)])).toBe('Nowhere 5:1')
   })

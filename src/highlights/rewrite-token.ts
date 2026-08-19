@@ -76,5 +76,6 @@ export const rewriteHighlightToken = (
   const pinned =
     needsPin && pin ? withTranslationAfterSpec(body, tokens, pin) : body
   const tail = cueTail(cues, parsed.reference)
-  return tail === '' ? pinned.trimEnd() : `${pinned.trimEnd()} ${tail}`
+  // Everything outside the cue tail is the user's text, trailing spaces and all.
+  return tail === '' ? pinned : `${pinned.trimEnd()} ${tail}`
 }

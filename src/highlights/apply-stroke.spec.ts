@@ -167,6 +167,27 @@ describe('applyHighlightStroke — passage bounds', () => {
   })
 })
 
+describe('applyHighlightStroke — text the translation does not serve', () => {
+  it('leaves a cue on an unserved verse where the user wrote it', () => {
+    expect(
+      applyHighlightStroke([cue(1, 20, 0, 20, 5)], stroke(2, 5, 0, 5, 10), passage),
+    ).toEqual([cue(2, 5, 0, 5, 10), cue(1, 20, 0, 20, 5)])
+  })
+
+  it('keeps offsets that outrun the served text of an untouched cue', () => {
+    expect(
+      applyHighlightStroke([cue(1, 9, 0, 9, 900)], stroke(2, 5, 0, 5, 10), passage),
+    ).toEqual([cue(2, 5, 0, 5, 10), cue(1, 9, 0, 9, 900)])
+  })
+
+  it('keeps the part of a cue that covers a gap in the passage', () => {
+    const gapped = [...versesOf(15, 4, 3), ...versesOf(15, 9, 1)]
+    expect(
+      applyHighlightStroke([cue(1, 4, 2, 9, 4)], stroke(null, 4, 0, 6, 40), gapped),
+    ).toEqual([cue(1, 6, 40, 9, 4)])
+  })
+})
+
 describe('canonicalHighlightCues', () => {
   it('sorts cues by verse and start offset', () => {
     expect(
@@ -180,15 +201,16 @@ describe('canonicalHighlightCues', () => {
     ).toEqual([cue(1, 5, 0, 5, 5), cue(2, 5, 5, 5, 15)])
   })
 
-  it('drops cues addressing verses outside the passage', () => {
-    expect(canonicalHighlightCues([cue(1, 20, 0, 20, 5)], passage)).toEqual([])
+  it('keeps cues addressing verses outside the passage', () => {
+    expect(canonicalHighlightCues([cue(1, 20, 0, 20, 5)], passage)).toEqual([
+      cue(1, 20, 0, 20, 5),
+    ])
   })
 
-  it('splits a cue spanning a gap in the passage', () => {
+  it('keeps a cue spanning a gap in the passage whole', () => {
     const gapped = [...versesOf(15, 4, 3), ...versesOf(15, 9, 1)]
     expect(canonicalHighlightCues([cue(1, 4, 2, 9, 4)], gapped)).toEqual([
-      cue(1, 4, 2, 6, 40),
-      cue(1, 9, 0, 9, 4),
+      cue(1, 4, 2, 9, 4),
     ])
   })
 })

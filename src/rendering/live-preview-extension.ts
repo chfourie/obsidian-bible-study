@@ -41,19 +41,22 @@ type WidgetHighlightEditing = {
   translationIds: () => readonly string[]
 }
 
+// Cues belong to the one occurrence the widget replaced. A position that does
+// not spell the token out is abandoned rather than searched around: an
+// identical token elsewhere in the note is a different occurrence.
+export const verifiedTokenStart = (
+  doc: string,
+  position: number,
+  source: string,
+): number | null =>
+  doc.slice(position, position + source.length) === source ? position : null
+
 const tokenStart = (
   view: EditorView,
   holder: HTMLElement,
   source: string,
-): number | null => {
-  const position = view.posAtDOM(holder)
-  if (view.state.sliceDoc(position, position + source.length) === source)
-    return position
-  const found = view.state.doc
-    .toString()
-    .indexOf(source, Math.max(0, position - source.length))
-  return found === -1 ? null : found
-}
+): number | null =>
+  verifiedTokenStart(view.state.doc.toString(), view.posAtDOM(holder), source)
 
 export class ReferenceWidget extends WidgetType {
   #detachEditing: (() => void) | null = null
