@@ -166,6 +166,24 @@ describe('ReaderFeature entry points', () => {
     expect((leaves[0].view as ReaderView).getDisplayText()).toBe('John 15')
   })
 
+  it('refreshes the tab header when the chapter on screen changes', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('Genesis 1:1'), 'web')
+    await flushAsync()
+    const leaf = leaves[0]
+    const updateHeader = vi.spyOn(
+      leaf as unknown as { updateHeader: () => void },
+      'updateHeader',
+    )
+
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    expect((leaf.view as ReaderView).getDisplayText()).toBe('John 15')
+    expect(updateHeader).toHaveBeenCalled()
+  })
+
   it('walks the chapters a pane has visited with its back and forward arrows', async () => {
     const { feature, leaves } = harness()
     await feature.load()

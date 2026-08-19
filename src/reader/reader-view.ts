@@ -6,6 +6,9 @@ import type { ReaderPaneModel, ReaderPosition } from './reader-pane-model'
 
 export const READER_VIEW_TYPE = 'scripture-study-reader'
 
+// Redrawing a tab's own header is Obsidian's, and undeclared in its typings.
+type HeaderedLeaf = WorkspaceLeaf & { updateHeader?: () => void }
+
 type ReaderViewState = {
   book?: number
   chapter?: number
@@ -23,6 +26,8 @@ export class ReaderView extends ItemView {
   // arriving from a layout restore or the arrows is told apart from the
   // pane's own navigation and never loops back into setViewState.
   #pendingOpen: (() => Promise<void>) | null = null
+  #unsubscribe: (() => void) | null = null
+  #titled: string | null = null
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -31,6 +36,8 @@ export class ReaderView extends ItemView {
     super(leaf)
     this.model = feature.createModel()
     this.model.useNavigation((position, open) => this.#navigate(position, open))
+    this.#titled = this.model.view.title
+    this.#unsubscribe = this.model.subscribe(() => this.#retitle())
   }
 
   getViewType(): string {
@@ -50,6 +57,16 @@ export class ReaderView extends ItemView {
       target: this.contentEl,
       props: { model: this.model },
     }) as Record<string, unknown>
+  }
+
+  // A chapter opened straight on the model — the ribbon, a reference from the
+  // panel — never passes through the leaf, so the tab keeps the title it was
+  // opened with until the header is asked to read it again.
+  #retitle(): void {
+    const title = this.model.view.title
+    if (title === this.#titled) return
+    this.#titled = title
+    ;(this.leaf as HeaderedLeaf).updateHeader?.()
   }
 
   // Routes a chapter move through the leaf so Obsidian records it, and opens
@@ -107,6 +124,8 @@ export class ReaderView extends ItemView {
   }
 
   override async onClose(): Promise<void> {
+    this.#unsubscribe?.()
+    this.#unsubscribe = null
     this.feature.releaseModel(this.model)
     if (this.#component !== null) await unmount(this.#component)
     this.#component = null
