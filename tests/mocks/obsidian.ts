@@ -17,6 +17,14 @@ export class Vault {
   getMarkdownFiles(): TFile[] {
     return []
   }
+
+  getFileByPath(_path: string): TFile | null {
+    return null
+  }
+
+  getFolderByPath(_path: string): TFolder | null {
+    return null
+  }
 }
 
 export class TAbstractFile {

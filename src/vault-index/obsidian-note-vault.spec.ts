@@ -66,6 +66,22 @@ describe('ObsidianNoteVault renames', () => {
     expect(deletions).toEqual([])
   })
 
+  it('ignores the cross-references data file despite its .md extension', () => {
+    const { noteVault, fireRename } = setup()
+    const renames: string[] = []
+    const deletions: string[] = []
+    noteVault.onNoteRenamed((path) => renames.push(path))
+    noteVault.onNoteDeleted((path) => deletions.push(path))
+
+    fireRename(
+      fileAt('Study/scripture-study-cross-references.md', 'md'),
+      'scripture-study-cross-references.md',
+    )
+
+    expect(renames).toEqual([])
+    expect(deletions).toEqual([])
+  })
+
   it('ignores folder renames', () => {
     const { noteVault, fireRename } = setup()
     const renames: string[] = []

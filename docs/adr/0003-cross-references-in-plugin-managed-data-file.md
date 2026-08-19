@@ -11,6 +11,18 @@ Annotations set a vault-notes-as-truth pattern: one note per item, reference in 
 
 All cross-references live in one plugin-managed data file inside the vault. It syncs and backs up with the vault, imposes no per-item filenames or titles, and identity is an internal id. Serialization is deterministic — stable ordering, one entry per line — so sync-tool merges usually succeed; residual concurrent-edit clobbering is accepted as last-write-wins for a single-user plugin.
 
+## Amendment (2026-08-19): markdown extension, configurable folder
+
+The file is `scripture-study-cross-references.md` — still JSON lines, but with
+a `.md` extension so vault sync tools carry it without extension
+allowlisting. It is explicitly excluded from the plugin's own vault index (it
+is not a note); appearing in Obsidian search and the quick switcher is an
+accepted cost. Its folder is a setting (default: vault root); the plugin
+moves the file when the setting changes and migrates a pre-amendment
+`scripture-study-cross-references.jsonl` from the vault root on load. If the
+configured path is already occupied, the occupant wins and no move happens —
+existing data is never overwritten.
+
 ## Consequences
 
 - Cross-references get no free occurrence indexing and no markdown body; surfacing is wired explicitly through the store, and the rationale is a plain description field edited via plugin UI.

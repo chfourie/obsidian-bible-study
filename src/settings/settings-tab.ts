@@ -49,6 +49,7 @@ type SettingsControlKey =
   | 'annotationsFolder'
   | 'annotationTemplatePath'
   | 'annotationOrdering'
+  | 'crossReferencesFolder'
 
 type ReaderDefaultKey = Extract<SettingsControlKey, `reader${string}`>
 
@@ -111,6 +112,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       this.#readerGroup(),
       this.#highlightsGroup(view),
       this.#annotationsGroup(),
+      this.#crossReferencesGroup(),
     ]
   }
 
@@ -176,6 +178,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.annotationTemplatePath ?? ''
       case 'annotationOrdering':
         return settings.annotationOrdering
+      case 'crossReferencesFolder':
+        return settings.crossReferencesFolder
     }
   }
 
@@ -224,6 +228,13 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return this.#update((settings) => ({
           ...settings,
           annotationOrdering: value as AnnotationOrdering,
+        }))
+      case 'crossReferencesFolder':
+        return this.#update((settings) => ({
+          ...settings,
+          crossReferencesFolder: (value as string)
+            .trim()
+            .replace(/^\/+|\/+$/g, ''),
         }))
     }
   }
@@ -612,6 +623,24 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
               'created-oldest-first': 'Creation date, oldest first',
               'path-a-z': 'File path, A to Z',
             },
+          },
+        },
+      ],
+    }
+  }
+
+  #crossReferencesGroup(): SettingDefinitionGroup<SettingsControlKey> {
+    return {
+      type: 'group',
+      heading: 'Cross-references',
+      items: [
+        {
+          name: 'Data file folder',
+          desc: 'Where the cross-references data file lives; the file moves when this changes. Empty keeps it in the vault root.',
+          control: {
+            type: 'folder',
+            key: 'crossReferencesFolder',
+            placeholder: 'Vault root',
           },
         },
       ],

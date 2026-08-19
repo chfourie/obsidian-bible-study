@@ -46,6 +46,7 @@ export type ScriptureStudySettings = {
   readerFontScalePercent: number
   revealPanelOnSelection: boolean
   annotationsFolder: string
+  crossReferencesFolder: string
   annotationTemplatePath: string | null
   annotationOrdering: AnnotationOrdering
   highlightPalette: HighlightPalette
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   readerFontScalePercent: FONT_SCALE_DEFAULT,
   revealPanelOnSelection: true,
   annotationsFolder: 'Annotations',
+  crossReferencesFolder: '',
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',
   highlightPalette: defaultHighlightPalette(),

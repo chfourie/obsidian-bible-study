@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { makeVerseId, type Reference } from '../reference'
 import {
-  CROSS_REFERENCES_FILE_PATH,
+  CROSS_REFERENCES_FILE_NAME,
+  crossReferencesFilePath,
   CrossReferenceStore,
   serializeCrossReference,
   type CrossReference,
@@ -34,11 +35,15 @@ const vaultWith = (files: Record<string, string>): CrossReferenceVault => ({
   write: async (path, content) => {
     files[path] = content
   },
+  rename: async (from, to) => {
+    files[to] = files[from]
+    delete files[from]
+  },
 })
 
 const storeOver = async (content: string): Promise<CrossReferenceStore> => {
   const store = new CrossReferenceStore(
-    vaultWith({ [CROSS_REFERENCES_FILE_PATH]: content }),
+    vaultWith({ [CROSS_REFERENCES_FILE_NAME]: content }),
   )
   await store.load()
   return store
@@ -46,7 +51,7 @@ const storeOver = async (content: string): Promise<CrossReferenceStore> => {
 
 const storeOverFiles = async (
   files: Record<string, string>,
-  options: { newId?: () => string } = {},
+  options: { newId?: () => string; filePath?: () => string } = {},
 ): Promise<CrossReferenceStore> => {
   const store = new CrossReferenceStore(vaultWith(files), options)
   await store.load()
@@ -223,7 +228,7 @@ describe('creating a cross-reference', () => {
       description: 'Vine imagery',
     })
     expect(store.all()).toEqual([created])
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
       `${serializeCrossReference(created)}\n`,
     )
   })
@@ -235,21 +240,21 @@ describe('creating a cross-reference', () => {
     await store.create([john15Vine, psalm80Vine], null)
 
     expect(store.all()[0].description).toBe(null)
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
       `${JSON.stringify({ id: 'xr-bare', members: [john15Vine, psalm80Vine] })}\n`,
     )
   })
 
   it('keeps existing entries in order and writes one entry per line', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     const store = await storeOverFiles(files, { newId: () => 'xr-second' })
 
     await store.create([reference(19, [[23, 1], [23, 6]]), john15Vine], null)
 
     expect(store.all().map(({ id }) => id)).toEqual(['xr-vine', 'xr-second'])
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
       store
         .all()
         .map((entry) => `${serializeCrossReference(entry)}\n`)
@@ -293,7 +298,7 @@ describe('creating a cross-reference', () => {
 describe('updating members and description together', () => {
   it('replaces the member list and persists', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     const store = await storeOverFiles(files)
     const grown = [john15Vine, psalm80Vine, romans11Olive, reference(19, [[23, 1], [23, 6]])]
@@ -301,14 +306,14 @@ describe('updating members and description together', () => {
     await store.update('xr-vine', grown, vineCrossReference.description)
 
     expect(store.all()[0].members).toEqual(grown)
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
       `${serializeCrossReference({ ...vineCrossReference, members: grown })}\n`,
     )
   })
 
   it('replaces the description alongside the members', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     const store = await storeOverFiles(files)
 
@@ -323,12 +328,12 @@ describe('updating members and description together', () => {
 
   it('writes and notifies once', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     let writes = 0
     const vault = vaultWith(files)
     const store = new CrossReferenceStore({
-      read: async (path) => await vault.read(path),
+      ...vault,
       write: async (path, content) => {
         writes++
         await vault.write(path, content)
@@ -351,7 +356,7 @@ describe('updating members and description together', () => {
       description: null,
     }
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: [vineCrossReference, other]
+      [CROSS_REFERENCES_FILE_NAME]: [vineCrossReference, other]
         .map(serializeCrossReference)
         .join('\n')
         .concat('\n'),
@@ -370,7 +375,7 @@ describe('updating members and description together', () => {
       members: [john15Vine, romans11Olive],
       description: 'Vine and vineyard imagery for Israel',
     })
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
       store
         .all()
         .map((entry) => `${serializeCrossReference(entry)}\n`)
@@ -380,7 +385,7 @@ describe('updating members and description together', () => {
 
   it('does nothing for an unknown id', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     const store = await storeOverFiles(files)
 
@@ -391,7 +396,7 @@ describe('updating members and description together', () => {
 
   it('notifies change listeners', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     const store = await storeOverFiles(files)
     let notified = 0
@@ -411,7 +416,7 @@ describe('deleting a cross-reference', () => {
       description: null,
     }
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: [vineCrossReference, other]
+      [CROSS_REFERENCES_FILE_NAME]: [vineCrossReference, other]
         .map(serializeCrossReference)
         .join('\n')
         .concat('\n'),
@@ -421,14 +426,14 @@ describe('deleting a cross-reference', () => {
     await store.delete('xr-vine')
 
     expect(store.all()).toEqual([other])
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
       `${serializeCrossReference(other)}\n`,
     )
   })
 
   it('does nothing for an unknown id', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     const store = await storeOverFiles(files)
 
@@ -439,7 +444,7 @@ describe('deleting a cross-reference', () => {
 
   it('notifies change listeners on a successful delete', async () => {
     const files = {
-      [CROSS_REFERENCES_FILE_PATH]: `${serializeCrossReference(vineCrossReference)}\n`,
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(vineCrossReference)}\n`,
     }
     const store = await storeOverFiles(files)
     let notified = 0
@@ -462,12 +467,12 @@ describe('round-trip determinism', () => {
       .map(serializeCrossReference)
       .join('\n')
       .concat('\n')
-    const files = { [CROSS_REFERENCES_FILE_PATH]: original }
+    const files = { [CROSS_REFERENCES_FILE_NAME]: original }
     const store = await storeOverFiles(files)
 
     await store.save()
 
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe(original)
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(original)
   })
 
   it('writes an empty file when there is nothing to store', async () => {
@@ -476,6 +481,53 @@ describe('round-trip determinism', () => {
 
     await store.save()
 
-    expect(files[CROSS_REFERENCES_FILE_PATH]).toBe('')
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe('')
+  })
+})
+
+describe('configurable file path', () => {
+  it('builds the path from the configured folder', () => {
+    expect(crossReferencesFilePath('')).toBe(CROSS_REFERENCES_FILE_NAME)
+    expect(crossReferencesFilePath('Study/Data')).toBe(
+      `Study/Data/${CROSS_REFERENCES_FILE_NAME}`,
+    )
+  })
+
+  it('reads and writes through the provided path', async () => {
+    const path = `Study/Data/${CROSS_REFERENCES_FILE_NAME}`
+    const files: Record<string, string> = {
+      [path]: serializeCrossReference(vineCrossReference),
+    }
+    const store = await storeOverFiles(files, {
+      newId: () => 'xr-new',
+      filePath: () => path,
+    })
+
+    expect(store.all()).toEqual([vineCrossReference])
+
+    await store.create([john15Vine, psalm80Vine], null)
+    expect(files[path].split('\n').filter((line) => line !== '')).toHaveLength(2)
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBeUndefined()
+  })
+
+  it('follows a path change on the next load and save', async () => {
+    let path = CROSS_REFERENCES_FILE_NAME
+    const moved = `Study/${CROSS_REFERENCES_FILE_NAME}`
+    const files = {
+      [CROSS_REFERENCES_FILE_NAME]: serializeCrossReference(vineCrossReference),
+      [moved]: '',
+    }
+    const store = await storeOverFiles(files, { filePath: () => path })
+    expect(store.all()).toEqual([vineCrossReference])
+
+    path = moved
+    await store.load()
+    expect(store.all()).toEqual([])
+
+    await store.save()
+    expect(files[moved]).toBe('')
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
+      serializeCrossReference(vineCrossReference),
+    )
   })
 })

@@ -776,6 +776,22 @@ describe('ScriptureStudySettingTab annotations section', () => {
   })
 })
 
+describe('ScriptureStudySettingTab cross-references section', () => {
+  it('persists a trimmed folder, falling back to the vault root when blanked', async () => {
+    const { container, settingsStore } = await setup()
+
+    changeInput(settingNamed(container, 'Data file folder'), ' /Study/Data/ ')
+    await flushAsync()
+    expect((await settingsStore.loadSettings()).crossReferencesFolder).toBe(
+      'Study/Data',
+    )
+
+    changeInput(settingNamed(container, 'Data file folder'), '   ')
+    await flushAsync()
+    expect((await settingsStore.loadSettings()).crossReferencesFolder).toBe('')
+  })
+})
+
 describe('ScriptureStudySettingTab highlights palette', () => {
   const colorPickersOf = (setting: HTMLElement): HTMLInputElement[] => [
     ...setting.querySelectorAll<HTMLInputElement>('input[type="color"]'),

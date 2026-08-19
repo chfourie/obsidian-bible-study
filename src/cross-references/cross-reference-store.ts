@@ -1,7 +1,14 @@
 import { referencesIntersect, type Reference, type VerseRange } from '../reference'
 import type { CrossReferenceVault } from './cross-reference-vault'
 
-export const CROSS_REFERENCES_FILE_PATH = 'scripture-study-cross-references.jsonl'
+// The data lives as JSON lines inside a Markdown file so vault sync tools
+// carry it without extension allowlisting; the parser skips anything else.
+export const CROSS_REFERENCES_FILE_NAME = 'scripture-study-cross-references.md'
+export const LEGACY_CROSS_REFERENCES_FILE_PATH =
+  'scripture-study-cross-references.jsonl'
+
+export const crossReferencesFilePath = (folder: string): string =>
+  folder === '' ? CROSS_REFERENCES_FILE_NAME : `${folder}/${CROSS_REFERENCES_FILE_NAME}`
 
 export type CrossReference = {
   id: string
@@ -70,18 +77,21 @@ export const CROSS_REFERENCE_MINIMUM_MEMBERS = 2
 
 export type CrossReferenceStoreOptions = {
   newId?: () => string
+  filePath?: () => string
 }
 
 export class CrossReferenceStore {
   #entries: CrossReference[] = []
   readonly #listeners = new Set<() => void>()
   readonly #newId: () => string
+  readonly #filePath: () => string
 
   constructor(
     private readonly vault: CrossReferenceVault,
     options: CrossReferenceStoreOptions = {},
   ) {
     this.#newId = options.newId ?? generateId
+    this.#filePath = options.filePath ?? ((): string => CROSS_REFERENCES_FILE_NAME)
   }
 
   onChanged(listener: () => void): () => void {
@@ -94,7 +104,7 @@ export class CrossReferenceStore {
   }
 
   async load(): Promise<void> {
-    const content = await this.vault.read(CROSS_REFERENCES_FILE_PATH)
+    const content = await this.vault.read(this.#filePath())
     this.#entries =
       content === null
         ? []
@@ -149,7 +159,7 @@ export class CrossReferenceStore {
   // changed nothing rewrites the file byte for byte.
   async save(): Promise<void> {
     await this.vault.write(
-      CROSS_REFERENCES_FILE_PATH,
+      this.#filePath(),
       this.#entries.map((entry) => `${serializeCrossReference(entry)}\n`).join(''),
     )
     this.#notify()
