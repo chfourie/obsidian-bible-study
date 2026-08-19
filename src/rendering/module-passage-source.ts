@@ -27,6 +27,7 @@ export type VerseSegment = {
   lineStart?: boolean
   indent?: number
   psalmHeading?: boolean
+  highlightSlot?: number
 }
 
 export type PassageVerse = {

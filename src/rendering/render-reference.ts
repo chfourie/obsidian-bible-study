@@ -179,6 +179,12 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
     if (segment.lineBreakBefore) parent.createEl('br')
     const indented = segment.lineStart === true && segment.indent !== undefined
     const classes = [
+      ...(segment.highlightSlot === undefined
+        ? []
+        : [
+            'scripture-study-highlight',
+            `scripture-study-highlight-${segment.highlightSlot}`,
+          ]),
       ...(segment.redLetter ? ['scripture-study-red-letter'] : []),
       ...(segment.supplied ? ['scripture-study-supplied'] : []),
       ...(segment.psalmHeading ? ['scripture-study-psalm-heading'] : []),

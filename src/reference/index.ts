@@ -1,5 +1,6 @@
 export * from './books'
 export * from './format-reference'
+export * from './highlight-cue'
 export * from './parse-reference'
 export * from './red-letter-cues'
 export * from './scan-references'

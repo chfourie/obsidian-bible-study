@@ -1,4 +1,9 @@
 import { bookIdForName } from './books'
+import {
+  parseHighlightCue,
+  sameHighlightCue,
+  type HighlightCue,
+} from './highlight-cue'
 import { makeVerseId } from './verse-id'
 import { chapterCount, verseCount } from './versification'
 import { mergeRanges, type Reference, type VerseRange } from './verse-range'
@@ -16,6 +21,7 @@ export type ParsedReference = {
   translation: string | null
   display: DisplayMode | null
   invalidTokens: ReferenceToken[]
+  highlights: HighlightCue[]
 }
 
 export const matchBook = (
@@ -108,25 +114,33 @@ export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'block']
 const classifyOptionTokens = (
   tokens: ReferenceToken[],
   translationIds: readonly string[],
-): Pick<ParsedReference, 'translation' | 'display' | 'invalidTokens'> => {
+  reference: Reference,
+): Omit<ParsedReference, 'reference'> => {
   let translation: string | null = null
   let display: DisplayMode | null = null
   const invalidTokens: ReferenceToken[] = []
+  const highlights: HighlightCue[] = []
   for (const token of tokens) {
     const lowered = token.text.toLowerCase()
     const displayMode = DISPLAY_MODES.find((mode) => mode === lowered)
     const translationId = translationIds.find(
       (id) => id.toLowerCase() === lowered,
     )
+    const cue = parseHighlightCue(token.text, reference)
     if (displayMode && display === null) {
       display = displayMode
     } else if (translationId !== undefined && translation === null) {
       translation = translationId
+    } else if (
+      cue !== null &&
+      !highlights.some((existing) => sameHighlightCue(existing, cue))
+    ) {
+      highlights.push(cue)
     } else {
       invalidTokens.push(token)
     }
   }
-  return { translation, display, invalidTokens }
+  return { translation, display, invalidTokens, highlights }
 }
 
 export const parseReference = (
@@ -145,6 +159,7 @@ export const parseReference = (
     ...classifyOptionTokens(
       tokens.slice(bookMatch.wordsUsed + 1),
       options.translationIds ?? [],
+      reference,
     ),
   }
 }

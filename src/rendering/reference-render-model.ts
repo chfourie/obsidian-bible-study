@@ -1,6 +1,8 @@
 import {
   formatReference,
   parseReference,
+  sameHighlightCue,
+  type HighlightCue,
   type ParsedReference,
   type Reference,
 } from '../reference'
@@ -19,6 +21,7 @@ export type ReferenceRenderModel = {
   chipLabel: string | null
   display: RenderDisplay
   invalidTokens: string[]
+  highlights: HighlightCue[]
 }
 
 export const modelFromParsed = (
@@ -31,6 +34,7 @@ export const modelFromParsed = (
   chipLabel: parsed.translation?.toUpperCase() ?? null,
   display: parsed.display ?? 'chip',
   invalidTokens: parsed.invalidTokens.map((token) => token.text),
+  highlights: parsed.highlights,
 })
 
 export const sameRenderModel = (
@@ -42,7 +46,9 @@ export const sameRenderModel = (
   a.chipLabel === b.chipLabel &&
   a.display === b.display &&
   a.invalidTokens.length === b.invalidTokens.length &&
-  a.invalidTokens.every((token, index) => token === b.invalidTokens[index])
+  a.invalidTokens.every((token, index) => token === b.invalidTokens[index]) &&
+  a.highlights.length === b.highlights.length &&
+  a.highlights.every((cue, index) => sameHighlightCue(cue, b.highlights[index]))
 
 export const buildReferenceRenderModel = (
   text: string,

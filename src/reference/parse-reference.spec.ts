@@ -14,6 +14,7 @@ describe('parseReference — single verse', () => {
       translation: null,
       display: null,
       invalidTokens: [],
+      highlights: [],
     })
   })
 
@@ -246,6 +247,120 @@ describe('parseReference — option tokens', () => {
     expect(parsed?.translation).toBeNull()
     expect(parsed?.invalidTokens).toEqual([
       { text: 'nkjv', start: 10, end: 14 },
+    ])
+  })
+})
+
+describe('parseReference — highlight cues', () => {
+  const options = { translationIds: ['nkjv', 'web'] }
+
+  const cue = (
+    slot: number,
+    startVerseId: number,
+    startChar: number,
+    endVerseId: number,
+    endChar: number,
+  ) => ({ slot, startVerseId, startChar, endVerseId, endChar })
+
+  it('parses a canonical cue alongside the other option tokens', () => {
+    const parsed = parseReference('John 15:1-16 nkjv block h1/5.4-5.25', options)
+
+    expect(parsed?.translation).toBe('nkjv')
+    expect(parsed?.display).toBe('block')
+    expect(parsed?.highlights).toEqual([cue(1, john(15, 5), 4, john(15, 5), 25)])
+    expect(parsed?.invalidTokens).toEqual([])
+  })
+
+  it('reads shorthand end offsets as the start verse', () => {
+    expect(parseReference('John 15:1-16 h1/5.4-25')?.highlights).toEqual([
+      cue(1, john(15, 5), 4, john(15, 5), 25),
+    ])
+  })
+
+  it('parses a cue spanning several verses', () => {
+    expect(parseReference('John 15:1-16 h2/7.0-9.12')?.highlights).toEqual([
+      cue(2, john(15, 7), 0, john(15, 9), 12),
+    ])
+  })
+
+  it('inherits the chapter from the reference', () => {
+    expect(parseReference('John 16:1-6 h3/2.0-2.9')?.highlights).toEqual([
+      cue(3, john(16, 2), 0, john(16, 2), 9),
+    ])
+  })
+
+  it('parses chapter-qualified cues in cross-chapter references', () => {
+    expect(
+      parseReference('John 15:26-16:4 h1/16:2.10-16:2.20')?.highlights,
+    ).toEqual([cue(1, john(16, 2), 10, john(16, 2), 20)])
+  })
+
+  it('keeps several cues in written order', () => {
+    expect(parseReference('John 15:1-16 h2/7.0-9.12 h1/5.4-5.25')?.highlights)
+      .toEqual([
+        cue(2, john(15, 7), 0, john(15, 9), 12),
+        cue(1, john(15, 5), 4, john(15, 5), 25),
+      ])
+  })
+
+  it('matches the slot marker case-insensitively', () => {
+    expect(parseReference('John 15:1-16 H5/5.4-25')?.highlights).toEqual([
+      cue(5, john(15, 5), 4, john(15, 5), 25),
+    ])
+  })
+
+  it('flags malformed cues as invalid tokens and keeps the reference valid', () => {
+    const malformed = [
+      'h0/5.4-25',
+      'h6/5.4-25',
+      'h1/5.4',
+      'h1/5.25-5.4',
+      'h1/5.4-5.4',
+      'h1/five.4-25',
+      'h1/9.4-5.25',
+      'h1/5.4-25-30',
+      'h1',
+    ]
+
+    for (const token of malformed) {
+      const parsed = parseReference(`John 15:1-16 ${token}`)
+      expect(parsed?.reference.book, token).toBe(43)
+      expect(parsed?.highlights, token).toEqual([])
+      expect(parsed?.invalidTokens.map((invalid) => invalid.text), token).toEqual(
+        [token],
+      )
+    }
+  })
+
+  it('flags a repeated cue as an invalid token', () => {
+    const parsed = parseReference('John 15:1-16 h1/5.4-25 h1/5.4-5.25')
+
+    expect(parsed?.highlights).toEqual([cue(1, john(15, 5), 4, john(15, 5), 25)])
+    expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
+      'h1/5.4-5.25',
+    ])
+  })
+
+  it('flags cues addressing verses outside the reference', () => {
+    const parsed = parseReference('John 15:4-6 h1/9.0-9.5')
+
+    expect(parsed?.highlights).toEqual([])
+    expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
+      'h1/9.0-9.5',
+    ])
+  })
+
+  it('accepts a cue spanning a gap between the reference ranges', () => {
+    expect(parseReference('John 15:4-6,9 h1/5.2-9.4')?.highlights).toEqual([
+      cue(1, john(15, 5), 2, john(15, 9), 4),
+    ])
+  })
+
+  it('flags cues addressing verses off the canonical grid', () => {
+    const parsed = parseReference('John 15:1-16 h1/99.0-99.5')
+
+    expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
+      'h1/99.0-99.5',
     ])
   })
 })

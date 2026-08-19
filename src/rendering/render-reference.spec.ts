@@ -877,3 +877,81 @@ describe('renderReference block', () => {
     ).not.toBeNull()
   })
 })
+
+describe('renderReference highlights', () => {
+  const remain = (): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: [
+      {
+        verseId: 43015004,
+        segments: [{ text: 'Remain in me.', redLetter: false }],
+      },
+    ],
+  })
+
+  it('tints the cued span in an inline passage', async () => {
+    const { parent, deps } = setup(remain())
+
+    await renderReference(parent, model('John 15:4 inline h1/4.0-6'), deps)
+
+    const highlight = parent.querySelector('.scripture-study-highlight-1')
+    expect(highlight?.textContent).toBe('Remain')
+    expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
+      'Remain in me.',
+    )
+  })
+
+  it('tints the cued span in a block passage', async () => {
+    const { parent, deps } = setup(remain())
+
+    await renderReference(parent, model('John 15:4 block h4/4.7-13'), deps)
+
+    expect(
+      parent.querySelector('.scripture-study-highlight-4')?.textContent,
+    ).toBe('in me.')
+  })
+
+  it('keeps red-letter text red under a highlight', async () => {
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 43015004,
+          segments: [{ text: 'Remain in me.', redLetter: true }],
+        },
+      ],
+    })
+
+    await renderReference(parent, model('John 15:4 inline h2/4.0-6'), deps)
+
+    const highlight = parent.querySelector('.scripture-study-highlight-2')
+    expect(highlight?.classList.contains('scripture-study-red-letter')).toBe(
+      true,
+    )
+  })
+
+  it('renders no highlights on a fallback-served passage', async () => {
+    const { parent, deps } = setup({
+      ...remain(),
+      fallback: { requested: 'nkjv', served: 'web' },
+    } as Passage)
+
+    await renderReference(parent, model('John 15:4 nkjv inline h1/4.0-6'), deps)
+
+    expect(parent.querySelector('.scripture-study-highlight-1')).toBeNull()
+    expect(
+      parent.querySelector('.scripture-study-passage')?.textContent,
+    ).toContain('Remain in me.')
+  })
+
+  it('renders no passage text for a chip carrying cues', async () => {
+    const { parent, deps } = setup(remain())
+
+    await renderReference(parent, model('John 15:4 h1/4.0-6'), deps)
+
+    expect(parent.querySelector('.scripture-study-passage')).toBeNull()
+    expect(parent.querySelector('.scripture-study-invalid-token')).toBeNull()
+  })
+})

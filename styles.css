@@ -108,6 +108,53 @@ body {
   color: var(--text-muted);
 }
 
+/* ---- Highlights (highlights spec) -------------------------------------- */
+
+/* Default palette for the five Highlight Slots. Settings overrides and theme
+   snippets replace these variables; the cue only ever stores the slot. */
+.theme-light {
+  --ss-hl-1: rgba(255, 214, 82, 0.45);
+  --ss-hl-2: rgba(126, 217, 138, 0.42);
+  --ss-hl-3: rgba(125, 190, 255, 0.42);
+  --ss-hl-4: rgba(255, 150, 190, 0.4);
+  --ss-hl-5: rgba(255, 176, 102, 0.45);
+}
+
+.theme-dark {
+  --ss-hl-1: rgba(255, 214, 82, 0.26);
+  --ss-hl-2: rgba(126, 217, 138, 0.24);
+  --ss-hl-3: rgba(125, 190, 255, 0.26);
+  --ss-hl-4: rgba(255, 150, 190, 0.24);
+  --ss-hl-5: rgba(255, 176, 102, 0.26);
+}
+
+/* Background tint only — text color (red letters included) stays as rendered. */
+.scripture-study-highlight {
+  border-radius: 0.15em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.scripture-study-highlight-1 {
+  background-color: var(--ss-hl-1);
+}
+
+.scripture-study-highlight-2 {
+  background-color: var(--ss-hl-2);
+}
+
+.scripture-study-highlight-3 {
+  background-color: var(--ss-hl-3);
+}
+
+.scripture-study-highlight-4 {
+  background-color: var(--ss-hl-4);
+}
+
+.scripture-study-highlight-5 {
+  background-color: var(--ss-hl-5);
+}
+
 /* ---- Async states (spec §3.5) ------------------------------------------ */
 
 .scripture-study-loading {

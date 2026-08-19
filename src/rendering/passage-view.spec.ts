@@ -260,3 +260,118 @@ describe('async state text', () => {
     )
   })
 })
+
+describe('buildPassageView — highlights', () => {
+  it('splits a verse segment at the highlight boundaries', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.0-6'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain', redLetter: false, highlightSlot: 1 },
+      { text: ' in me.', redLetter: false },
+    ])
+  })
+
+  it('tints red-letter text without dropping its red-letter flag', () => {
+    const view = buildPassageView(
+      model('John 15:4 block h2/4.0-6'),
+      passage([
+        {
+          verseId: makeVerseId(43, 15, 4),
+          segments: [{ text: 'Remain in me.', redLetter: true }],
+        },
+      ]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain', redLetter: true, highlightSlot: 2 },
+      { text: ' in me.', redLetter: true },
+    ])
+  })
+
+  it('carries a highlight across neighbouring segments', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline h3/4.3-10'),
+      passage([
+        {
+          verseId: makeVerseId(43, 15, 4),
+          segments: [
+            { text: 'Remain ', redLetter: false },
+            { text: 'in me.', redLetter: false, supplied: true },
+          ],
+        },
+      ]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Rem', redLetter: false },
+      { text: 'ain ', redLetter: false, highlightSlot: 3 },
+      { text: 'in ', redLetter: false, supplied: true, highlightSlot: 3 },
+      { text: 'me.', redLetter: false, supplied: true },
+    ])
+  })
+
+  it('clamps offsets past the end of the stored verse text', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.7-400'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain ', redLetter: false },
+      { text: 'in me.', redLetter: false, highlightSlot: 1 },
+    ])
+  })
+
+  it('paints only the verses the reference contains across a gap', () => {
+    const view = buildPassageView(
+      model('John 15:4,9 block h1/4.7-9.6'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 9, 'Remain in my love.')]),
+    )
+
+    expect(view.verses.map((block) => block.segments)).toEqual([
+      [
+        { text: 'Remain ', redLetter: false },
+        { text: 'in me.', redLetter: false, highlightSlot: 1 },
+      ],
+      [
+        { text: 'Remain', redLetter: false, highlightSlot: 1 },
+        { text: ' in my love.', redLetter: false },
+      ],
+    ])
+  })
+
+  it('paints nothing where the translation has a content gap', () => {
+    const view = buildPassageView(
+      model('John 15:4-5 block h1/5.0-5.6'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain in me.', redLetter: false },
+    ])
+  })
+
+  it('suppresses highlights on a fallback-served passage', () => {
+    const view = buildPassageView(model('John 15:4 nkjv inline h1/4.0-6'), {
+      ...passage([verse(15, 4, 'Remain in me.')]),
+      fallback: { requested: 'nkjv', served: 'web' },
+    })
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain in me.', redLetter: false },
+    ])
+  })
+
+  it('leaves segments untouched when the reference carries no cues', () => {
+    const segments = [{ text: 'Remain in me.', redLetter: false }]
+    const view = buildPassageView(
+      model('John 15:4 inline'),
+      passage([{ verseId: makeVerseId(43, 15, 4), segments }]),
+    )
+
+    expect(view.verses[0].segments).toBe(segments)
+  })
+})
