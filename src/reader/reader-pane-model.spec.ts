@@ -2113,12 +2113,22 @@ describe('the study material contract', () => {
     await model.openAt(ref('John 15:1'), 'web')
 
     expect(sourceOf(model).studyMaterial).toEqual({
+      title: 'John 15',
       selectedVerseId: null,
       selectionEndId: null,
       details: null,
       chapterCrossReferences: [],
       collection: null,
     })
+  })
+
+  it('titles the material with the book and chapter on screen', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.nextChapter()
+
+    expect(sourceOf(model).studyMaterial.title).toBe('John 16')
   })
 
   it('projects the selected verse, the span it extends over and its details', async () => {

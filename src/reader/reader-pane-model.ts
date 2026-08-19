@@ -329,7 +329,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   get view(): ReaderPaneView {
     return {
       status: this.#status,
-      title: `${bookName(this.#position.book)} ${this.#position.chapter}`,
+      title: this.#title(),
       position: this.#position,
       rows: this.#rows,
       translations: this.#available.map((translation) => ({
@@ -365,12 +365,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // Study Panel renders from.
   get studyMaterial(): StudyMaterial {
     return {
+      title: this.#title(),
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
       chapterCrossReferences: this.#chapterCrossReferences(),
       collection: this.#collectionView(),
     }
+  }
+
+  #title(): string {
+    return `${bookName(this.#position.book)} ${this.#position.chapter}`
   }
 
   useNavigation(navigate: ReaderNavigation): void {

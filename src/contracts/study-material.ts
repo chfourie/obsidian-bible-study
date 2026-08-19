@@ -63,6 +63,8 @@ export type CollectionView = {
 // verse selection and its details, the cross-references touching the chapter
 // on screen, and the collect-a-cross-reference strip.
 export type StudyMaterial = {
+  // Names the tab this material comes from — the reader's book and chapter.
+  title: string
   selectedVerseId: number | null
   selectionEndId: number | null
   // The selected verse's details, or null when nothing is selected or the

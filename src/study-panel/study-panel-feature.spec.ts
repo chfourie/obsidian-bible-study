@@ -50,6 +50,7 @@ const fakeStudyMaterial = () => {
   const listeners = new Set<() => void>()
   const selectionListeners = new Set<() => void>()
   let material: StudyMaterial = {
+    title: 'John 15',
     selectedVerseId: null,
     selectionEndId: null,
     details: null,

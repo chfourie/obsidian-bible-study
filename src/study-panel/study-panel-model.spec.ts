@@ -72,6 +72,7 @@ const fakeCrossReferenceStore = () => {
 const fakeStudyMaterial = () => {
   const listeners = new Set<() => void>()
   let material: StudyMaterial = {
+    title: 'John 15',
     selectedVerseId: null,
     selectionEndId: null,
     details: null,
@@ -120,6 +121,7 @@ describe('StudyPanelModel', () => {
 
     expect(panel.view).toEqual({
       file: null,
+      title: null,
       status: 'no-note',
       entries: [],
       crossReferences: [],
@@ -127,6 +129,17 @@ describe('StudyPanelModel', () => {
       subTab: 'translations',
       folded: new Set(),
     })
+  })
+
+  it('titles the view with the note name, without folder or extension', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({
+      file: 'Sermons/Vine.md',
+      content: 'On {John 15:1}.',
+    })
+
+    expect(panel.view.title).toBe('Vine')
   })
 
   it('lists unique references in order of appearance with passage text', async () => {
@@ -346,6 +359,7 @@ describe('StudyPanelModel', () => {
 
     expect(panel.view).toEqual({
       file: null,
+      title: null,
       status: 'no-note',
       entries: [],
       crossReferences: [],
@@ -676,6 +690,19 @@ describe('cross-references in the Study Panel', () => {
 
       expect(panel.view.studyMaterial).toEqual(reader.source.studyMaterial)
       expect(panel.studySource).toBe(reader.source)
+    })
+
+    it('titles the view with the followed reader’s title over the note’s', async () => {
+      const panel = model(fakeSource().source)
+      await panel.setActiveNote({ file: 'Sermons/Vine.md', content: 'x' })
+      const reader = fakeStudyMaterial()
+
+      panel.showStudyMaterial(reader.source)
+
+      expect(panel.view.title).toBe('John 15')
+
+      panel.showStudyMaterial(null)
+      expect(panel.view.title).toBe('Vine')
     })
 
     it('notifies subscribers when the shown tab changes', () => {

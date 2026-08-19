@@ -64,6 +64,7 @@ opens the reference in the reader with the entry's translation.
 {#if view.studyMaterial !== null && model.studySource !== null}
   {@const material = view.studyMaterial}
   <div class="bsp-reader">
+    <div class="bsp-title">{view.title}</div>
     {#if material.collection !== null}
       <CollectionStrip
         collection={material.collection}
@@ -80,6 +81,9 @@ opens the reference in the reader with the entry's translation.
   </div>
 {:else}
   <div class="bsp-panel">
+    {#if view.title !== null}
+      <div class="bsp-title">{view.title}</div>
+    {/if}
     {#if view.status === 'no-note'}
       <p class="bsp-empty">Open a note to see its scripture references.</p>
     {:else if view.status === 'no-references'}
@@ -200,6 +204,12 @@ opens the reference in the reader with the entry's translation.
     flex-direction: column;
     height: 100%;
     min-height: 0;
+  }
+
+  .bsp-title {
+    font-size: var(--font-ui-medium);
+    font-weight: 600;
+    color: var(--text-normal);
   }
 
   .bsp-empty {

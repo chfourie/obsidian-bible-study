@@ -46,6 +46,9 @@ export type StudyPanelStatus =
 
 export type StudyPanelViewState = {
   file: string | null
+  // Names what the panel shows: the followed reader's title while one is
+  // shown, otherwise the note's name; null when neither is present.
+  title: string | null
   status: StudyPanelStatus
   entries: ReferenceEntryView[]
   crossReferences: CrossReferenceView[]
@@ -90,6 +93,11 @@ const verseLabels = (verses: PassageVerse[]): (string | null)[] => {
   return locations.map((location) =>
     multiChapter ? `${location.chapter}:${location.verse}` : `${location.verse}`,
   )
+}
+
+const noteName = (file: string): string => {
+  const base = file.split('/').pop() ?? file
+  return base.replace(/\.[^.]+$/, '')
 }
 
 type PanelReference = { reference: Reference; translation: string | null }
@@ -151,6 +159,7 @@ export class StudyPanelModel {
   get view(): StudyPanelViewState {
     return {
       file: this.#file,
+      title: this.#title(),
       status: this.#status(),
       entries: this.#entries,
       crossReferences: this.#crossReferences,
@@ -195,6 +204,12 @@ export class StudyPanelModel {
     this.#unsubscribeStudySource =
       source === null ? null : source.subscribe(() => this.#notify())
     this.#notify()
+  }
+
+  #title(): string | null {
+    if (this.#studySource !== null) return this.#studySource.studyMaterial.title
+    if (this.#file === null) return null
+    return noteName(this.#file)
   }
 
   #status(): StudyPanelStatus {
