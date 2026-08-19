@@ -206,10 +206,14 @@ opens the reference in the reader with the entry's translation.
     min-height: 0;
   }
 
+  /* Titled like a note's own header: centered over a dashed rule. */
   .bsp-title {
     font-size: var(--font-ui-medium);
     font-weight: 600;
-    color: var(--text-normal);
+    color: var(--text-accent);
+    text-align: center;
+    padding-bottom: var(--size-4-2);
+    border-bottom: var(--divider-width) dashed var(--divider-color);
   }
 
   .bsp-empty {
