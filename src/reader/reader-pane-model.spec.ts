@@ -13,6 +13,7 @@ import type {
   CrossReferenceEditing,
 } from '../cross-references'
 import type { OccurrenceGroup } from '../vault-index'
+import type { StudyMaterialSource } from '../contracts'
 import {
   paragraphsOf,
   ReaderPaneModel,
@@ -511,7 +512,7 @@ describe('verse details', () => {
     await model.selectVerse(verse4)
     await model.selectVerse(verse4)
 
-    expect(model.view.selectedVerseId).toBe(verse4)
+    expect(model.studyMaterial.selectedVerseId).toBe(verse4)
     expect(model.view.rows[3].expanded).toBe(false)
     expect(model.view.details[verse4]?.translations).toHaveLength(2)
   })
@@ -642,7 +643,7 @@ describe('annotate selection', () => {
     model.extendSelectionTo(verse2)
 
     expect(model.selectionReference()).toEqual(ref('John 15:2-4'))
-    expect(model.view.selectionEndId).toBe(verse2)
+    expect(model.studyMaterial.selectionEndId).toBe(verse2)
   })
 
   it('clears the extended selection when a new verse is selected', async () => {
@@ -1471,8 +1472,8 @@ describe('cross-references intersecting the viewed chapter', () => {
 
     await model.openAt(ref('John 15:4'), 'web')
 
-    expect(model.view.selectedVerseId).toBe(null)
-    expect(model.view.chapterCrossReferences).toEqual([
+    expect(model.studyMaterial.selectedVerseId).toBe(null)
+    expect(model.studyMaterial.chapterCrossReferences).toEqual([
       {
         id: 'xr-vine',
         description: 'Vine and vineyard imagery for Israel',
@@ -1497,7 +1498,7 @@ describe('cross-references intersecting the viewed chapter', () => {
     await model.openAt(ref('John 15:4'), 'web')
 
     expect(
-      model.view.chapterCrossReferences[0].members.map((member) => member.label),
+      model.studyMaterial.chapterCrossReferences[0].members.map((member) => member.label),
     ).toEqual(['John 15:7-8', 'John 8:31-32'])
   })
 
@@ -1512,7 +1513,7 @@ describe('cross-references intersecting the viewed chapter', () => {
     await model.openAt(ref('John 15:4'), 'web')
 
     expect(
-      model.view.chapterCrossReferences[0].members.map((member) => ({
+      model.studyMaterial.chapterCrossReferences[0].members.map((member) => ({
         label: member.label,
         index: member.index,
       })),
@@ -1538,7 +1539,7 @@ describe('cross-references intersecting the viewed chapter', () => {
     await model.openAt(ref('John 15:4'), 'web')
 
     expect(
-      model.view.chapterCrossReferences[0].members.map((member) => member.label),
+      model.studyMaterial.chapterCrossReferences[0].members.map((member) => member.label),
     ).toEqual(['John 15:1-8', 'Psalms 80:8-16', 'Romans 11:17-24'])
   })
 
@@ -1564,7 +1565,7 @@ describe('cross-references intersecting the viewed chapter', () => {
 
     await model.openAt(ref('John 15:4'), 'web')
 
-    expect(model.view.chapterCrossReferences.map((entry) => entry.id)).toEqual([
+    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.id)).toEqual([
       'xr-away',
       'xr-earlier',
       'xr-later',
@@ -1583,7 +1584,7 @@ describe('cross-references intersecting the viewed chapter', () => {
 
     await model.openAt(ref('John 15:4'), 'web')
 
-    expect(model.view.chapterCrossReferences.map((entry) => entry.id)).toEqual([
+    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.id)).toEqual([
       'xr-vine',
     ])
   })
@@ -1601,7 +1602,7 @@ describe('cross-references intersecting the viewed chapter', () => {
 
     await model.nextChapter()
 
-    expect(model.view.chapterCrossReferences).toEqual([
+    expect(model.studyMaterial.chapterCrossReferences).toEqual([
       {
         id: 'xr-next',
         description: null,
@@ -1618,7 +1619,7 @@ describe('cross-references intersecting the viewed chapter', () => {
     let entries: CrossReference[] = []
     const model = modelWith({ crossReferences: storeOver(() => entries) })
     await model.openAt(ref('John 15:4'), 'web')
-    expect(model.view.chapterCrossReferences).toEqual([])
+    expect(model.studyMaterial.chapterCrossReferences).toEqual([])
     let notified = 0
     model.subscribe(() => {
       notified += 1
@@ -1627,7 +1628,7 @@ describe('cross-references intersecting the viewed chapter', () => {
     entries = [vineCrossReference]
     await model.refreshOccurrences()
 
-    expect(model.view.chapterCrossReferences.map((entry) => entry.id)).toEqual([
+    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.id)).toEqual([
       'xr-vine',
     ])
     expect(notified).toBeGreaterThan(0)
@@ -1702,19 +1703,19 @@ describe('collecting a cross-reference', () => {
   }
 
   const gathered = (model: ReaderPaneModel): string[] =>
-    model.view.collection?.members.map((member) => member.label) ?? []
+    model.studyMaterial.collection?.members.map((member) => member.label) ?? []
 
   it('starts idle with no basket', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
 
-    expect(model.view.collection).toBe(null)
+    expect(model.studyMaterial.collection).toBe(null)
   })
 
   it('opens an empty basket when collection starts', async () => {
     const model = await collectingModel()
 
-    expect(model.view.collection).toEqual({
+    expect(model.studyMaterial.collection).toEqual({
       members: [],
       canAddSelection: false,
       canSave: false,
@@ -1729,16 +1730,16 @@ describe('collecting a cross-reference', () => {
   it('adds the current verse selection as a member and clears the selection', async () => {
     const model = await collectingModel()
     await model.selectVerse(verse4)
-    expect(model.view.collection?.canAddSelection).toBe(true)
+    expect(model.studyMaterial.collection?.canAddSelection).toBe(true)
 
     model.addSelectionToCollection()
 
-    expect(model.view.collection?.members).toEqual([
+    expect(model.studyMaterial.collection?.members).toEqual([
       { label: 'John 15:4', reference: ref('John 15:4'), index: 0 },
     ])
-    expect(model.view.selectedVerseId).toBe(null)
+    expect(model.studyMaterial.selectedVerseId).toBe(null)
     expect(model.selectionReference()).toBe(null)
-    expect(model.view.collection?.canAddSelection).toBe(false)
+    expect(model.studyMaterial.collection?.canAddSelection).toBe(false)
   })
 
   it('adds an extended selection span as one member', async () => {
@@ -1764,10 +1765,10 @@ describe('collecting a cross-reference', () => {
 
     addTyped(model, 'Psalm 80:8-16')
 
-    expect(model.view.collection?.members).toEqual([
+    expect(model.studyMaterial.collection?.members).toEqual([
       { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 0 },
     ])
-    expect(model.view.collection?.error).toBe(null)
+    expect(model.studyMaterial.collection?.error).toBe(null)
   })
 
   it('clears the typed draft once its reference lands in the basket', async () => {
@@ -1776,7 +1777,7 @@ describe('collecting a cross-reference', () => {
 
     model.addTypedReferenceToCollection()
 
-    expect(model.view.collection?.typedMember).toBe('')
+    expect(model.studyMaterial.collection?.typedMember).toBe('')
   })
 
   it('keeps a rejected typed draft so it can be corrected', async () => {
@@ -1785,7 +1786,7 @@ describe('collecting a cross-reference', () => {
 
     model.addTypedReferenceToCollection()
 
-    expect(model.view.collection?.typedMember).toBe('Hezekiah 4:12')
+    expect(model.studyMaterial.collection?.typedMember).toBe('Hezekiah 4:12')
   })
 
   it('keeps a blank draft out of the basket', async () => {
@@ -1795,7 +1796,7 @@ describe('collecting a cross-reference', () => {
     model.addTypedReferenceToCollection()
 
     expect(gathered(model)).toEqual([])
-    expect(model.view.collection?.error).toBe(null)
+    expect(model.studyMaterial.collection?.error).toBe(null)
   })
 
   it('starts a fresh basket with an empty typed draft', async () => {
@@ -1805,7 +1806,7 @@ describe('collecting a cross-reference', () => {
 
     model.startCollecting()
 
-    expect(model.view.collection?.typedMember).toBe('')
+    expect(model.studyMaterial.collection?.typedMember).toBe('')
   })
 
   it('rejects unparseable typed input visibly and leaves the basket untouched', async () => {
@@ -1815,7 +1816,7 @@ describe('collecting a cross-reference', () => {
     addTyped(model, 'Hezekiah 4:12')
 
     expect(gathered(model)).toEqual(['Psalms 80:8-16'])
-    expect(model.view.collection?.error).toBe(
+    expect(model.studyMaterial.collection?.error).toBe(
       'Hezekiah 4:12 is not a reference.',
     )
   })
@@ -1826,7 +1827,7 @@ describe('collecting a cross-reference', () => {
 
     addTyped(model, 'Psalm 80:8-16')
 
-    expect(model.view.collection?.error).toBe(null)
+    expect(model.studyMaterial.collection?.error).toBe(null)
   })
 
   it('removes a gathered member', async () => {
@@ -1864,17 +1865,17 @@ describe('collecting a cross-reference', () => {
 
     model.cancelCollecting()
 
-    expect(model.view.collection).toBe(null)
+    expect(model.studyMaterial.collection).toBe(null)
   })
 
   it('gates saving below two members', async () => {
     const model = await collectingModel()
     addTyped(model, 'Psalm 80:8-16')
-    expect(model.view.collection?.canSave).toBe(false)
+    expect(model.studyMaterial.collection?.canSave).toBe(false)
 
     addTyped(model, 'Romans 11:17-24')
 
-    expect(model.view.collection?.canSave).toBe(true)
+    expect(model.studyMaterial.collection?.canSave).toBe(true)
   })
 
   it('persists the gathered members with the description in one step', async () => {
@@ -1897,7 +1898,7 @@ describe('collecting a cross-reference', () => {
         description: 'Vine imagery',
       },
     ])
-    expect(model.view.collection).toBe(null)
+    expect(model.studyMaterial.collection).toBe(null)
   })
 
   it('persists a blank description as none', async () => {
@@ -1928,7 +1929,7 @@ describe('collecting a cross-reference', () => {
     await model.saveCrossReference()
 
     expect(creates).toBe(0)
-    expect(model.view.collection?.members).toHaveLength(1)
+    expect(model.studyMaterial.collection?.members).toHaveLength(1)
   })
 
   it('surfaces the created cross-reference in open details at once', async () => {
@@ -1971,7 +1972,7 @@ describe('editing an existing cross-reference in the strip', () => {
   }
 
   const gathered = (model: ReaderPaneModel): string[] =>
-    model.view.collection?.members.map((member) => member.label) ?? []
+    model.studyMaterial.collection?.members.map((member) => member.label) ?? []
 
   const editingModel = async (
     crossReferences: Partial<CrossReferenceEditing> = {},
@@ -1987,7 +1988,7 @@ describe('editing an existing cross-reference in the strip', () => {
   it('opens the strip pre-loaded with the entry\'s members and description', async () => {
     const model = await editingModel()
 
-    expect(model.view.collection).toEqual({
+    expect(model.studyMaterial.collection).toEqual({
       members: [
         { label: 'John 15:1-8', reference: ref('John 15:1-8'), index: 0 },
         { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
@@ -2041,7 +2042,7 @@ describe('editing an existing cross-reference in the strip', () => {
         description: 'Vine and vineyard imagery for Israel',
       },
     ])
-    expect(model.view.collection).toBe(null)
+    expect(model.studyMaterial.collection).toBe(null)
   })
 
   it('saves an edited description over the existing one', async () => {
@@ -2067,7 +2068,7 @@ describe('editing an existing cross-reference in the strip', () => {
     model.startEditingCrossReference(vine)
 
     expect(gathered(model)).toEqual(['Psalms 23:1'])
-    expect(model.view.collection?.editing).toBe(false)
+    expect(model.studyMaterial.collection?.editing).toBe(false)
   })
 
   it('does not touch the store on cancel', async () => {
@@ -2082,7 +2083,7 @@ describe('editing an existing cross-reference in the strip', () => {
 
     model.cancelCollecting()
 
-    expect(model.view.collection).toBe(null)
+    expect(model.studyMaterial.collection).toBe(null)
     expect(updates).toBe(0)
   })
 
@@ -2092,7 +2093,7 @@ describe('editing an existing cross-reference in the strip', () => {
     model.removeCollectionMember(2)
     model.removeCollectionMember(1)
 
-    expect(model.view.collection?.canSave).toBe(false)
+    expect(model.studyMaterial.collection?.canSave).toBe(false)
 
     let updates = 0
     const guarded = modelWith({
@@ -2115,17 +2116,17 @@ describe('editing an existing cross-reference in the strip', () => {
 
     model.startCollecting()
 
-    expect(model.view.collection?.editing).toBe(false)
+    expect(model.studyMaterial.collection?.editing).toBe(false)
   })
 
   it('asks for confirmation before deleting, and cancel backs out', async () => {
     const model = await editingModel()
 
     model.confirmDeleteCrossReference()
-    expect(model.view.collection?.confirmingDelete).toBe(true)
+    expect(model.studyMaterial.collection?.confirmingDelete).toBe(true)
 
     model.cancelDeleteCrossReference()
-    expect(model.view.collection?.confirmingDelete).toBe(false)
+    expect(model.studyMaterial.collection?.confirmingDelete).toBe(false)
   })
 
   it('deletes the edited cross-reference and closes the strip', async () => {
@@ -2146,8 +2147,8 @@ describe('editing an existing cross-reference in the strip', () => {
     await model.deleteCrossReference()
 
     expect(deleted).toEqual(['xr-vine'])
-    expect(model.view.collection).toBe(null)
-    expect(model.view.chapterCrossReferences).toEqual([])
+    expect(model.studyMaterial.collection).toBe(null)
+    expect(model.studyMaterial.chapterCrossReferences).toEqual([])
   })
 
   it('ignores delete while creating a new cross-reference', async () => {
@@ -2166,6 +2167,158 @@ describe('editing an existing cross-reference in the strip', () => {
     await model.deleteCrossReference()
 
     expect(deletes).toBe(0)
-    expect(model.view.collection).not.toBe(null)
+    expect(model.studyMaterial.collection).not.toBe(null)
+  })
+})
+
+describe('the study material contract', () => {
+  const verse2 = makeVerseId(43, 15, 2)
+  const verse4 = makeVerseId(43, 15, 4)
+  const verse5 = makeVerseId(43, 15, 5)
+
+  // The pane is consumed as the contract alone — nothing below reaches for a
+  // reader-only member.
+  const sourceOf = (model: ReaderPaneModel): StudyMaterialSource => model
+
+  it('offers no selection, details or collection before a verse is picked', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(sourceOf(model).studyMaterial).toEqual({
+      selectedVerseId: null,
+      selectionEndId: null,
+      details: null,
+      chapterCrossReferences: [],
+      collection: null,
+    })
+  })
+
+  it('projects the selected verse, the span it extends over and its details', async () => {
+    const model = modelWith({ intersecting: () => [group('Vine.md', false)] })
+    await model.openAt(ref('John 15:1'), 'web')
+    await model.selectVerse(verse2)
+    model.extendSelectionTo(verse4)
+
+    const material = sourceOf(model).studyMaterial
+    expect(material.selectedVerseId).toBe(verse2)
+    expect(material.selectionEndId).toBe(verse4)
+    expect(material.details?.title).toBe('John 15:2')
+    expect(material.details?.translations.map((row) => row.id)).toEqual(['web'])
+    expect(material.details?.mentions).toEqual([{ file: 'Vine.md' }])
+  })
+
+  it('withholds the details of a verse whose load is still in flight', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    const selecting = model.selectVerse(verse4)
+
+    expect(sourceOf(model).studyMaterial.selectedVerseId).toBe(verse4)
+    expect(sourceOf(model).studyMaterial.details).toBe(null)
+    await selecting
+    expect(sourceOf(model).studyMaterial.details?.verseId).toBe(verse4)
+  })
+
+  it('lists the chapter cross-references with no verse selected', async () => {
+    const vine: CrossReference = {
+      id: 'xr-vine',
+      members: [ref('John 15:1-8'), ref('Psalm 80:8-16')],
+      description: 'Vine imagery',
+    }
+    const model = modelWith({
+      crossReferences: crossReferencesOf({
+        intersecting: (reference) =>
+          [vine].filter((entry) =>
+            entry.members.some((member) =>
+              referencesIntersect(member, reference),
+            ),
+          ),
+      }),
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+
+    const material = sourceOf(model).studyMaterial
+    expect(material.selectedVerseId).toBe(null)
+    expect(material.chapterCrossReferences.map((entry) => entry.id)).toEqual([
+      'xr-vine',
+    ])
+  })
+
+  it('collects and saves a cross-reference through the contract, notifying observers', async () => {
+    const created: { members: Reference[]; description: string | null }[] = []
+    const model = modelWith({
+      crossReferences: crossReferencesOf({
+        create: async (members, description) => {
+          created.push({ members, description })
+        },
+      }),
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+    await model.selectVerse(verse5)
+    const source = sourceOf(model)
+    let notifications = 0
+    const unsubscribe = source.subscribe(() => {
+      notifications += 1
+    })
+
+    source.startCollecting()
+    source.addSelectionToCollection()
+    source.typeMember('Psalm 80:8')
+    source.addTypedReferenceToCollection()
+    source.describeCollection('Vine imagery')
+    expect(
+      source.studyMaterial.collection?.members.map((member) => member.label),
+    ).toEqual(['John 15:5', 'Psalms 80:8'])
+    expect(source.studyMaterial.collection?.canSave).toBe(true)
+    await source.saveCrossReference()
+
+    expect(created).toEqual([
+      {
+        members: [ref('John 15:5'), ref('Psalm 80:8')],
+        description: 'Vine imagery',
+      },
+    ])
+    expect(source.studyMaterial.collection).toBe(null)
+    expect(notifications).toBeGreaterThan(0)
+    unsubscribe()
+  })
+
+  it('opens the strip on an existing cross-reference and deletes it through the contract', async () => {
+    const vine: CrossReference = {
+      id: 'xr-vine',
+      members: [ref('John 15:1'), ref('Psalm 80:8')],
+      description: 'Vine imagery',
+    }
+    const deleted: string[] = []
+    const model = modelWith({
+      crossReferences: crossReferencesOf({
+        delete: async (id) => {
+          deleted.push(id)
+        },
+      }),
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+    const source = sourceOf(model)
+
+    source.startEditingCrossReference(vine)
+    expect(source.studyMaterial.collection?.editing).toBe(true)
+    expect(source.studyMaterial.collection?.description).toBe('Vine imagery')
+    source.confirmDeleteCrossReference()
+    expect(source.studyMaterial.collection?.confirmingDelete).toBe(true)
+    await source.deleteCrossReference()
+
+    expect(deleted).toEqual(['xr-vine'])
+    expect(source.studyMaterial.collection).toBe(null)
+  })
+
+  it('answers the annotation reference covering the selected span', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+    await model.selectVerse(verse2)
+    model.extendSelectionTo(verse4)
+    const source = sourceOf(model)
+
+    expect(source.annotationReference(verse4)).toEqual(ref('John 15:2-4'))
+    expect(source.annotationReference(verse5)).toEqual(ref('John 15:5'))
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { WorkspaceLeaf, type Plugin } from 'obsidian'
+import { WorkspaceLeaf, type Plugin, type View } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
@@ -140,10 +140,10 @@ describe('ReaderFeature entry points', () => {
     await flushAsync()
 
     expect(leaves).toHaveLength(2)
-    const second = (leaves[1].view as ReaderView).model.view
-    expect(second.collection?.editing).toBe(true)
-    expect(second.collection?.members).toHaveLength(2)
-    expect(second.position).toEqual({ book: 43, chapter: 15 })
+    const second = (leaves[1].view as ReaderView).model
+    expect(second.studyMaterial.collection?.editing).toBe(true)
+    expect(second.studyMaterial.collection?.members).toHaveLength(2)
+    expect(second.view.position).toEqual({ book: 43, chapter: 15 })
   })
 
   it('titles the reader tab with the chapter on screen', async () => {
@@ -686,5 +686,32 @@ describe('ReaderFeature available translations', () => {
     expect(view.model.view.translations.map((pill) => pill.id)).toEqual([
       'web',
     ])
+  })
+})
+
+describe('ReaderFeature study material', () => {
+  it('resolves a reader tab to the study material of its pane', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    const source = feature.studyMaterialFor(leaves[0].view)
+
+    expect(source).not.toBe(null)
+    source?.startCollecting()
+    expect(source?.studyMaterial.collection?.members).toEqual([])
+    expect(
+      (leaves[0].view as ReaderView).model.studyMaterial.collection,
+    ).not.toBe(null)
+  })
+
+  it('resolves anything that is not a reader tab to no study material', async () => {
+    const { feature } = harness()
+    await feature.load()
+
+    expect(feature.studyMaterialFor(null)).toBe(null)
+    const markdownView = { getViewType: () => 'markdown' } as unknown as View
+    expect(feature.studyMaterialFor(markdownView)).toBe(null)
   })
 })

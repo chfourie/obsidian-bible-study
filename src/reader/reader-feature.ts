@@ -1,5 +1,10 @@
-import { WorkspaceLeaf, type Plugin } from 'obsidian'
-import type { NavigationOptions, ReferenceNavigator } from '../contracts'
+import { WorkspaceLeaf, type Plugin, type View } from 'obsidian'
+import type {
+  NavigationOptions,
+  ReferenceNavigator,
+  StudyMaterialProvider,
+  StudyMaterialSource,
+} from '../contracts'
 import {
   INERT_CROSS_REFERENCE_CATALOG,
   type CrossReferenceCatalog,
@@ -40,7 +45,10 @@ const INERT_STRONGS: ReaderStrongsDeps = {
   attribution: '',
 }
 
-export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
+export class ReaderFeature
+  extends PluginFeature
+  implements ReferenceNavigator, StudyMaterialProvider
+{
   readonly #repositories: Record<'plain' | 'red', PassageRepository>
   readonly #models = new Set<ReaderPaneModel>()
   readonly #indexRefreshDebounceMs: number
@@ -185,6 +193,10 @@ export class ReaderFeature extends PluginFeature implements ReferenceNavigator {
 
   releaseModel(model: ReaderPaneModel): void {
     this.#models.delete(model)
+  }
+
+  studyMaterialFor(view: View | null): StudyMaterialSource | null {
+    return view instanceof ReaderView ? view.model : null
   }
 
   async #annotationDetails(

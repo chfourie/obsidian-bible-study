@@ -1,13 +1,17 @@
 <script lang="ts">
   import { setIcon } from 'obsidian'
   import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
-  import type { NavigationOptions } from '../contracts'
+  import type {
+    NavigationOptions,
+    StudyMaterial,
+    StudyMaterialSource,
+    VerseDetailsView,
+  } from '../contracts'
   import type { CrossReference, CrossReferenceView } from '../cross-references'
   import {
     paragraphsOf,
     type ReaderPaneModel,
     type ReaderToggles,
-    type VerseDetailsView,
     type VerseRowView,
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
@@ -31,12 +35,20 @@
     renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) => void
   } = $props()
 
-  // Initial snapshot only — the model subscription below keeps it fresh.
+  // The details surfaces read the pane through the study material contract —
+  // the same seam the Study Panel consumes — never through reader-only state.
+  // svelte-ignore state_referenced_locally
+  const studySource: StudyMaterialSource = model
+
+  // Initial snapshots only — the subscription below keeps them fresh.
   // svelte-ignore state_referenced_locally
   let view = $state.raw(model.view)
+  // svelte-ignore state_referenced_locally
+  let material = $state.raw<StudyMaterial>(studySource.studyMaterial)
   $effect(() =>
-    model.subscribe(() => {
+    studySource.subscribe(() => {
       view = model.view
+      material = studySource.studyMaterial
     }),
   )
 
@@ -48,11 +60,6 @@
     Array.from({ length: chapterCount(book) }, (_, index) => index + 1)
 
   const treeBook = $derived(openBook ?? view.position.book)
-  const selectedDetails = $derived(
-    view.selectedVerseId === null
-      ? null
-      : (view.details[view.selectedVerseId] ?? null),
-  )
 
   const setToggle = (key: keyof ReaderToggles, value: string): void => {
     model.setToggle(key, value as ReaderToggles[typeof key])
@@ -109,18 +116,20 @@
   }
 
   const inSelectionSpan = (verseId: number): boolean => {
-    if (view.selectedVerseId === null || view.selectionEndId === null) return false
-    const low = Math.min(view.selectedVerseId, view.selectionEndId)
-    const high = Math.max(view.selectedVerseId, view.selectionEndId)
+    if (material.selectedVerseId === null || material.selectionEndId === null)
+      return false
+    const low = Math.min(material.selectedVerseId, material.selectionEndId)
+    const high = Math.max(material.selectedVerseId, material.selectionEndId)
     return verseId >= low && verseId <= high
   }
 
   const verseSelected = (verseId: number): boolean =>
     inSelectionSpan(verseId) ||
-    (view.toggles.details === 'side-panel' && view.selectedVerseId === verseId)
+    (view.toggles.details === 'side-panel' &&
+      material.selectedVerseId === verseId)
 
   const annotateVerseBlock = (verseId: number): void => {
-    onAnnotate(model.annotationReference(verseId))
+    onAnnotate(studySource.annotationReference(verseId))
   }
 
   type MarkdownBody = { text: string; path: string }
@@ -147,11 +156,11 @@
       description: entry.description,
     }
     if (opensInNewPane(event)) editCrossReferenceInNewPane(edited)
-    else model.startEditingCrossReference(edited)
+    else studySource.startEditingCrossReference(edited)
   }
 
   const saveCrossReference = (): void => {
-    void model.saveCrossReference()
+    void studySource.saveCrossReference()
   }
 
   const onBookPicked = (event: Event): void => {
@@ -170,7 +179,7 @@
       type="button"
       class="bsr-xref-edit"
       aria-label="Edit cross-reference in the reader"
-      disabled={view.collection !== null}
+      disabled={material.collection !== null}
       onclick={(event) => editCrossReference(entry, event)}
     >✎</button>
     {#if entry.description !== null}
@@ -212,8 +221,8 @@
   {@render sectionHeading(
     'Cross-references',
     'Collect a cross-reference',
-    () => model.startCollecting(),
-    view.collection !== null,
+    () => studySource.startCollecting(),
+    material.collection !== null,
   )}
 {/snippet}
 
@@ -391,8 +400,8 @@
     </span>
   </div>
 
-  {#if view.collection !== null}
-    {@const collection = view.collection}
+  {#if material.collection !== null}
+    {@const collection = material.collection}
     <div class="bsr-basket">
       <span class="bsr-group-label">Cross-reference</span>
       {#each collection.members as member, index (index)}
@@ -402,7 +411,7 @@
             type="button"
             class="bsr-chip-remove"
             aria-label="Remove {member.label}"
-            onclick={() => model.removeCollectionMember(index)}
+            onclick={() => studySource.removeCollectionMember(index)}
           >✕</button>
         </span>
       {/each}
@@ -410,32 +419,33 @@
         type="button"
         class="bsr-basket-action"
         disabled={!collection.canAddSelection}
-        onclick={() => model.addSelectionToCollection()}
+        onclick={() => studySource.addSelectionToCollection()}
       >Add selection</button>
       <input
         class="bsr-basket-input"
         type="text"
         placeholder="Type a reference"
         value={collection.typedMember}
-        oninput={(event) => model.typeMember(event.currentTarget.value)}
+        oninput={(event) => studySource.typeMember(event.currentTarget.value)}
         onkeydown={(event) => {
           if (event.key === 'Enter') {
             event.preventDefault()
-            model.addTypedReferenceToCollection()
+            studySource.addTypedReferenceToCollection()
           }
         }}
       />
       <button
         type="button"
         class="bsr-basket-action"
-        onclick={() => model.addTypedReferenceToCollection()}
+        onclick={() => studySource.addTypedReferenceToCollection()}
       >Add</button>
       <input
         class="bsr-basket-input bsr-basket-description"
         type="text"
         placeholder="Why do these belong together? (optional)"
         value={collection.description}
-        oninput={(event) => model.describeCollection(event.currentTarget.value)}
+        oninput={(event) =>
+          studySource.describeCollection(event.currentTarget.value)}
         onkeydown={(event) => {
           if (event.key === 'Enter') {
             event.preventDefault()
@@ -452,7 +462,7 @@
       <button
         type="button"
         class="bsr-basket-action"
-        onclick={() => model.cancelCollecting()}
+        onclick={() => studySource.cancelCollecting()}
       >Cancel</button>
       {#if collection.editing}
         {#if collection.confirmingDelete}
@@ -460,18 +470,18 @@
           <button
             type="button"
             class="bsr-basket-action"
-            onclick={() => void model.deleteCrossReference()}
+            onclick={() => void studySource.deleteCrossReference()}
           >Delete</button>
           <button
             type="button"
             class="bsr-basket-action"
-            onclick={() => model.cancelDeleteCrossReference()}
+            onclick={() => studySource.cancelDeleteCrossReference()}
           >Keep</button>
         {:else}
           <button
             type="button"
             class="bsr-basket-action bsr-basket-delete"
-            onclick={() => model.confirmDeleteCrossReference()}
+            onclick={() => studySource.confirmDeleteCrossReference()}
           >Delete</button>
         {/if}
       {/if}
@@ -659,23 +669,24 @@
           >Notes</button>
         </div>
         <div class="bsr-side-body">
-          {#if view.selectedVerseId === null}
+          {#if material.selectedVerseId === null}
             <div class="bsr-details-empty">Select a verse to see details.</div>
-          {:else if selectedDetails === null}
+          {:else if material.details === null}
             <div class="bsr-details-empty">Loading…</div>
           {:else}
-            <div class="bsr-details-title">{selectedDetails.title}</div>
-            {@render strongsBlock(selectedDetails)}
+            {@const details = material.details}
+            <div class="bsr-details-title">{details.title}</div>
+            {@render strongsBlock(details)}
             {#if sideTab === 'translations'}
-              {@render translationsTable(selectedDetails)}
+              {@render translationsTable(details)}
             {:else}
-              {@render notesBlock(selectedDetails, false)}
+              {@render notesBlock(details, false)}
             {/if}
           {/if}
         </div>
         <div class="bsr-side-xrefs">
           {@render crossReferencesHeading()}
-          {#each view.chapterCrossReferences as entry, index (entry.id)}
+          {#each material.chapterCrossReferences as entry, index (entry.id)}
             {#if index > 0}<hr class="bsr-xref-sep" />{/if}
             {@render crossReferenceRow(entry)}
           {/each}

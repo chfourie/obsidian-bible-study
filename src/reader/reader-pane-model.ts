@@ -16,9 +16,17 @@ import {
   orderCrossReferences,
   type CrossReference,
   type CrossReferenceEditing,
-  type CrossReferenceMemberView,
   type CrossReferenceView,
 } from '../cross-references'
+import type {
+  AnnotationBlockView,
+  CollectionView,
+  StrongsEntryView,
+  StudyMaterial,
+  StudyMaterialSource,
+  TranslationRowView,
+  VerseDetailsView,
+} from '../contracts'
 import {
   FONT_SCALE_DEFAULT,
   FONT_SCALE_MAX,
@@ -37,14 +45,6 @@ export type ReaderToggles = {
   layout: 'verse-per-line' | 'continuous'
   strongs: 'off' | 'on'
   redLetter: 'off' | 'on'
-}
-
-export type StrongsEntryView = {
-  strongs: string
-  lemma: string
-  transliteration: string
-  gloss: string
-  definition: string
 }
 
 export type ReaderStrongsDeps = {
@@ -120,51 +120,6 @@ export const paragraphsOf = (rows: VerseRowView[]): VerseRowView[][] => {
   return paragraphs
 }
 
-export type TranslationRowView = {
-  id: string
-  label: string
-  name: string
-  segments: VerseSegment[] | null
-}
-
-export type NoteCardView = {
-  file: string
-}
-
-export type AnnotationBlockView = {
-  file: string
-  body: string
-}
-
-// The strip that builds a cross-reference: members, description and the
-// actions over them, whether it is creating one or editing one that exists.
-export type CollectionView = {
-  members: CrossReferenceMemberView[]
-  canAddSelection: boolean
-  canSave: boolean
-  error: string | null
-  // True when this strip edits an existing cross-reference rather than
-  // building a new one — saving writes back to the same id.
-  editing: boolean
-  // Deleting the edited cross-reference takes a second press to go through.
-  confirmingDelete: boolean
-  // Seeded from the cross-reference being edited, so saving an untouched
-  // strip keeps the description it already had.
-  description: string
-  typedMember: string
-}
-
-export type VerseDetailsView = {
-  verseId: number
-  title: string
-  translations: TranslationRowView[]
-  annotations: AnnotationBlockView[]
-  mentions: NoteCardView[]
-  crossReferences: CrossReferenceView[]
-  strongs: StrongsEntryView[]
-  strongsAttribution: string | null
-}
-
 const singleVerseReference = (book: number, verseId: number): Reference => ({
   book,
   ranges: [{ startId: verseId, endId: verseId }],
@@ -200,13 +155,10 @@ export type ReaderPaneView = {
   hasPreviousChapter: boolean
   hasNextChapter: boolean
   fontScalePercent: number
-  selectedVerseId: number | null
-  selectionEndId: number | null
+  // Every verse whose details are loaded, keyed by verse id — the inline
+  // expansion renders several at once. The study material contract projects
+  // the selected verse's entry out of this same store.
   details: Record<number, VerseDetailsView>
-  // Every cross-reference touching the chapter on screen, independent of any
-  // verse selection — the reader surfaces these as a chapter-wide list.
-  chapterCrossReferences: CrossReferenceView[]
-  collection: CollectionView | null
   attribution: string | null
   banner: string | null
   strongsAvailable: boolean
@@ -232,7 +184,7 @@ const chapterReference = (position: ReaderPosition): Reference => ({
   ],
 })
 
-export class ReaderPaneModel {
+export class ReaderPaneModel implements StudyMaterialSource {
   #position: ReaderPosition = { book: 1, chapter: 1 }
   #translationId: string | null
   #entry: Reference | null = null
@@ -386,11 +338,7 @@ export class ReaderPaneModel {
       fontScalePercent: this.#fontScalePercent,
       hasPreviousChapter: this.#hasPreviousChapter(),
       hasNextChapter: this.#hasNextChapter(),
-      selectedVerseId: this.#selectedVerseId,
-      selectionEndId: this.#selectionEnd,
       details: this.#details,
-      chapterCrossReferences: this.#chapterCrossReferences(),
-      collection: this.#collectionView(),
       attribution: this.#attribution,
       strongsAvailable: this.#strongsAvailable,
       strongsMode: this.#strongsAvailable && this.#toggles.strongs === 'on',
@@ -406,6 +354,21 @@ export class ReaderPaneModel {
         this.#entry === null || this.#bannerDismissed
           ? null
           : `Opened at ${formatReference(this.#entry)}`,
+    }
+  }
+
+  // What this tab offers for study beside its text — the one source the
+  // reader's own details surfaces and the Study Panel both render from.
+  get studyMaterial(): StudyMaterial {
+    return {
+      selectedVerseId: this.#selectedVerseId,
+      selectionEndId: this.#selectionEnd,
+      details:
+        this.#selectedVerseId === null
+          ? null
+          : (this.#details[this.#selectedVerseId] ?? null),
+      chapterCrossReferences: this.#chapterCrossReferences(),
+      collection: this.#collectionView(),
     }
   }
 
