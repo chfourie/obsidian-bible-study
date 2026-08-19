@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>PROTOTYPE — Side-panel workbench</title>
+<style>
+  :root {
+    --bg0: #1e1e1e; --bg1: #262626; --bg2: #2d2d2d; --bg3: #363636;
+    --border: #3f3f3f; --text: #dadada; --muted: #9a9a9a; --faint: #6f6f6f;
+    --accent: #7f6df2; --accent-dim: rgba(127, 109, 242, 0.15);
+    --amber: #e0a83c; --blue: #6ea8fe; --green: #7bc47f;
+    --margin-tint: rgba(110, 168, 254, 0.07);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg0); color: var(--text);
+    font: 14px/1.45 -apple-system, "Segoe UI", sans-serif; height: 100vh;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* ---------- fake workspace chrome ---------- */
+  .doc-tabs { display: flex; gap: 2px; background: var(--bg1); padding: 6px 8px 0; border-bottom: 1px solid var(--border); }
+  .doc-tab {
+    padding: 6px 14px; border-radius: 6px 6px 0 0; background: var(--bg0);
+    color: var(--muted); cursor: pointer; border: 1px solid transparent; border-bottom: none; font-size: 13px;
+  }
+  .doc-tab.on { background: var(--bg2); color: var(--text); border-color: var(--border); }
+  .doc-tab .kind { font-size: 10px; color: var(--faint); margin-right: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  .workspace { flex: 1; display: flex; min-height: 0; }
+  .main { flex: 1; overflow-y: auto; padding: 28px 36px; min-width: 0; }
+  .main h1 { font-size: 20px; margin: 0 0 14px; }
+  .verse { margin: 3px 0; padding: 2px 6px; border-radius: 4px; cursor: pointer; }
+  .verse:hover { background: var(--bg2); }
+  .verse.sel { background: var(--accent-dim); outline: 1px solid var(--accent); }
+  .vnum { color: var(--accent); font-size: 11px; margin-right: 6px; vertical-align: super; }
+  .note-body { max-width: 620px; color: var(--muted); }
+  .note-body .ref { color: var(--blue); }
+  .hint { color: var(--faint); font-size: 12px; margin-top: 18px; }
+
+  /* ---------- panel shell ---------- */
+  .panel {
+    width: 340px; border-left: 1px solid var(--border); background: var(--bg1);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .panel-ctx {
+    padding: 7px 12px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border);
+    background: var(--bg2); display: flex; gap: 6px; align-items: center;
+  }
+  .panel-ctx .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .panel-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+
+  /* ---------- shared content blocks ---------- */
+  .blk { padding: 10px 12px; }
+  .blk + .blk { border-top: 1px solid var(--border); }
+  .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); margin-bottom: 6px; }
+  .tr-row { display: grid; grid-template-columns: 42px 1fr; gap: 8px; margin: 6px 0; font-size: 13px; }
+  .tr-tag { color: var(--accent); font-weight: 600; font-size: 11px; padding-top: 2px; }
+  .tr-text { color: var(--text); }
+  .note-item { margin: 6px 0; font-size: 13px; }
+  .note-item .mark { margin-right: 6px; }
+  .mark.anno { color: var(--amber); } .mark.ment { color: var(--blue); }
+  .xref { margin: 8px 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg2); }
+  .xref .desc { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .xref .pencil { float: right; color: var(--faint); cursor: pointer; }
+  .member { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 8px; border-radius: 10px;
+    background: var(--bg3); color: var(--blue); font-size: 12px; cursor: pointer; }
+  .member:hover { background: var(--accent-dim); }
+  .collect { margin-top: 8px; font-size: 12px; color: var(--accent); cursor: pointer; background: none; border: 1px dashed var(--accent); border-radius: 6px; padding: 4px 10px; }
+  .mrg-group { margin: 8px 0; }
+  .mrg-origin { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .mrg-src { font-size: 10px; color: var(--faint); margin-left: 6px; font-weight: 400; }
+  .margin-zone { background: var(--margin-tint); }
+  .passage { margin: 10px 0; }
+  .passage .p-head { font-size: 12px; font-weight: 600; color: var(--text); display: flex; justify-content: space-between; }
+  .passage .p-trans { color: var(--faint); font-weight: 400; font-size: 11px; }
+  .passage .p-text { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .empty { color: var(--faint); font-size: 12px; padding: 14px 12px; }
+
+  /* ---------- variant A: tab strip ---------- */
+  .a-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg1); }
+  .a-tab { flex: 1; padding: 8px 4px; text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+  .a-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+  .a-tab .cnt { color: var(--faint); font-size: 10px; margin-left: 3px; }
+
+  /* ---------- variant B: stacked sections ---------- */
+  .b-sec-head {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer;
+    background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 600; position: sticky; top: 0; z-index: 1;
+  }
+  .b-sec-head:first-child { border-top: none; }
+  .b-sec-head .chev { color: var(--faint); font-size: 10px; width: 10px; }
+  .b-sec-head .cnt { margin-left: auto; color: var(--faint); font-weight: 400; font-size: 11px; }
+
+  /* ---------- variant C: icon rail ---------- */
+  .c-shell { display: flex; flex: 1; min-height: 0; }
+  .c-rail { width: 40px; border-right: 1px solid var(--border); background: var(--bg2); display: flex; flex-direction: column; align-items: center; padding-top: 6px; gap: 2px; }
+  .c-icon { width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 15px; }
+  .c-icon.on { background: var(--accent-dim); color: var(--accent); }
+  .c-body { flex: 1; overflow-y: auto; min-height: 0; }
+  .c-head { padding: 9px 12px; font-size: 13px; font-weight: 600; border-bottom: 1px solid var(--border); }
+
+  /* ---------- floating switcher ---------- */
+  .switcher {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: #111; border: 1px solid #555; border-radius: 999px; padding: 6px 10px;
+    display: flex; gap: 10px; align-items: center; box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+    font-size: 13px; z-index: 50;
+  }
+  .switcher button { background: none; border: none; color: #eee; cursor: pointer; font-size: 15px; }
+  .switcher .vname { min-width: 190px; text-align: center; color: #eee; }
+</style>
+</head>
+<body>
+<div class="doc-tabs" id="docTabs"></div>
+<div class="workspace">
+  <div class="main" id="main"></div>
+  <div class="panel">
+    <div class="panel-ctx"><span class="dot"></span><span id="ctxLabel"></span></div>
+    <div class="panel-scroll" id="panelRoot" style="display:flex;flex-direction:column;min-height:0;"></div>
+  </div>
+</div>
+<div class="switcher">
+  <button id="prev">←</button>
+  <span class="vname" id="vname"></span>
+  <button id="next">→</button>
+</div>
+
+<script>
+/* =================== mock data =================== */
+const VERSES = {
+  1: 'I am the true vine, and my Father is the farmer.',
+  2: 'Every branch in me that doesn’t bear fruit, he takes away. Every branch that bears fruit, he prunes, that it may bear more fruit.',
+  3: 'You are already pruned clean because of the word which I have spoken to you.',
+  4: 'Remain in me, and I in you. As the branch can’t bear fruit by itself unless it remains in the vine, so neither can you, unless you remain in me.',
+  5: 'I am the vine. You are the branches. He who remains in me and I in him bears much fruit, for apart from me you can do nothing.',
+  6: 'If a man doesn’t remain in me, he is thrown out as a branch and is withered; and they gather them, throw them into the fire, and they are burned.',
+  7: 'If you remain in me, and my words remain in you, you will ask whatever you desire, and it will be done for you.',
+  8: 'In this my Father is glorified, that you bear much fruit; and so you will be my disciples.',
+};
+
+const USER_XREFS = [
+  { id: 'xr1', desc: 'Vineyard imagery', members: ['John 15:1-8', 'Isaiah 5:1-7', 'Psalm 80:8-16'] },
+  { id: 'xr2', desc: 'Prayer according to his will', members: ['John 15:7', '1 John 5:14'] },
+];
+
+const MARGIN = [
+  { origin: 'John 15:1', src: 'TSK', targets: ['Psalm 80:8-9', 'Isaiah 5:1-7', 'Jeremiah 2:21'] },
+  { origin: 'John 15:2', src: 'TSK', targets: ['Matthew 15:13', 'Hebrews 12:15'] },
+  { origin: 'John 15:4', src: 'TSK', targets: ['John 6:56', '1 John 2:6', 'Colossians 1:23'] },
+  { origin: 'John 15:5', src: 'TSK', targets: ['Philippians 4:13', 'Hosea 14:8', '2 Corinthians 3:5'] },
+  { origin: 'John 15:7', src: 'TSK', targets: ['John 14:13-14', 'Job 22:26-28', 'Proverbs 10:24'] },
+];
+
+const DETAILS = {
+  title: 'John 15:4',
+  translations: [
+    ['WEB', VERSES[4]],
+    ['KJV', 'Abide in me, and I in you. As the branch cannot bear fruit of itself, except it abide in the vine; no more can ye, except ye abide in me.'],
+    ['BSB', 'Remain in Me, and I will remain in you. Just as no branch can bear fruit by itself unless it remains in the vine, neither can you bear fruit unless you remain in Me.'],
+  ],
+  notes: [
+    { mark: 'anno', label: '● Annotation — Abiding = ongoing dependence, not a single decision.' },
+    { mark: 'ment', label: '◆ Vine and Branches.md — mentions John 15:4-7' },
+    { mark: 'ment', label: '◆ Abiding Prayer.md — mentions John 15:7' },
+  ],
+};
+
+const DOCS = [
+  { id: 'reader', kind: 'reader', title: 'John 15', tab: 'Reader' },
+  {
+    id: 'note1', kind: 'note', title: 'Vine and Branches.md', tab: 'Note',
+    refs: [
+      { label: 'John 15:1-8', trans: 'WEB', text: Object.values(VERSES).slice(0, 8).join(' ') },
+      { label: 'Psalm 80:8-9', trans: 'WEB', text: 'You brought a vine out of Egypt. You drove out the nations, and planted it. You cleared the ground for it. It took deep root, and filled the land.' },
+    ],
+    xrefs: [USER_XREFS[0], USER_XREFS[1]],
+    margin: MARGIN,
+  },
+  {
+    id: 'note2', kind: 'note', title: 'Abiding Prayer.md', tab: 'Note',
+    refs: [{ label: 'John 15:7', trans: 'KJV', text: 'If ye abide in me, and my words abide in you, ye shall ask what ye will, and it shall be done unto you.' }],
+    xrefs: [USER_XREFS[1]],
+    margin: [MARGIN[4]],
+  },
+];
+
+/* =================== state =================== */
+const VARIANTS = [
+  ['A', 'Tab strip'],
+  ['B', 'Stacked sections'],
+  ['C', 'Icon rail'],
+];
+let variant = new URLSearchParams(location.search).get('variant') || 'A';
+if (!VARIANTS.some(([k]) => k === variant)) variant = 'A';
+let focusedDoc = 'reader';
+let selectedVerse = 4;
+// per-document panel memory: { [docId]: { aTab, bOpen:{}, cTool } }
+const memory = {};
+const mem = (id) => (memory[id] ??= {
+  aTab: null,
+  bOpen: { details: true, xrefs: true, margin: true, passages: true },
+  cTool: null,
+});
+
+/* =================== helpers =================== */
+const el = (tag, cls, html) => {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (html !== undefined) node.innerHTML = html;
+  return node;
+};
+
+const membersHtml = (members) => members.map((m) => `<span class="member">${m}</span>`).join('');
+
+const xrefBlock = (entries, withCollect) => {
+  const wrap = el('div', 'blk');
+  if (entries.length === 0) wrap.append(el('div', 'empty', 'No cross-references yet.'));
+  for (const x of entries) {
+    wrap.append(el('div', 'xref',
+      `<span class="pencil" title="Edit">✎</span><div class="desc">${x.desc}</div>${membersHtml(x.members)}`));
+  }
+  if (withCollect) {
+    const btn = el('button', 'collect', '+ Collect a cross-reference');
+    wrap.append(btn);
+  }
+  return wrap;
+};
+
+const marginBlock = (groups) => {
+  const wrap = el('div', 'blk margin-zone');
+  for (const g of groups) {
+    const grp = el('div', 'mrg-group');
+    grp.append(el('div', 'mrg-origin', `${g.origin}<span class="mrg-src">${g.src}</span>`));
+    grp.append(el('div', '', membersHtml(g.targets)));
+    wrap.append(grp);
+  }
+  return wrap;
+};
+
+const detailsBlockNode = () => {
+  const wrap = el('div', 'blk');
+  wrap.append(el('div', 'lbl', `Verse details — ${DETAILS.title}`));
+  const tr = el('div');
+  for (const [tag, text] of DETAILS.translations)
+    tr.append(el('div', 'tr-row', `<span class="tr-tag">${tag}</span><span class="tr-text">${text}</span>`));
+  wrap.append(tr);
+  const notes = el('div', '', '<div class="lbl" style="margin-top:10px">Notes</div>');
+  for (const n of DETAILS.notes)
+    notes.append(el('div', 'note-item', `<span class="mark ${n.mark}">${n.label}</span>`));
+  wrap.append(notes);
+  return wrap;
+};
+
+const passagesBlock = (doc) => {
+  const wrap = el('div', 'blk');
+  for (const r of doc.refs) {
+    wrap.append(el('div', 'passage',
+      `<div class="p-head"><span>${r.label}</span><span class="p-trans">${r.trans}</span></div><div class="p-text">${r.text}</div>`));
+  }
+  return wrap;
+};
+
+/* tools available per context; each returns a content node */
+const toolsFor = (doc) => {
+  if (doc.kind === 'reader') {
+    return [
+      { key: 'details', name: 'Verse', icon: '¶', count: null, node: () => detailsBlockNode() },
+      { key: 'xrefs', name: 'Cross-refs', icon: '↔', count: USER_XREFS.length, node: () => xrefBlock(USER_XREFS, true) },
+      { key: 'margin', name: 'Margin', icon: '║', count: MARGIN.length, node: () => marginBlock(MARGIN) },
+    ];
+  }
+  return [
+    { key: 'passages', name: 'Passages', icon: '📖', count: doc.refs.length, node: () => passagesBlock(doc) },
+    { key: 'xrefs', name: 'Cross-refs', icon: '↔', count: doc.xrefs.length, node: () => xrefBlock(doc.xrefs, false) },
+    { key: 'margin', name: 'Margin', icon: '║', count: doc.margin.length, node: () => marginBlock(doc.margin) },
+  ];
+};
+
+/* =================== variant renderers =================== */
+function renderA(root, doc) {
+  const tools = toolsFor(doc);
+  const m = mem(doc.id);
+  if (!tools.some((t) => t.key === m.aTab)) m.aTab = tools[0].key;
+  const tabs = el('div', 'a-tabs');
+  for (const t of tools) {
+    const tab = el('div', 'a-tab' + (m.aTab === t.key ? ' on' : ''),
+      `${t.name}${t.count !== null ? `<span class="cnt">${t.count}</span>` : ''}`);
+    tab.onclick = () => { m.aTab = t.key; render(); };
+    tabs.append(tab);
+  }
+  root.append(tabs);
+  const body = el('div', '', '');
+  body.style.cssText = 'flex:1;overflow-y:auto;';
+  body.append(tools.find((t) => t.key === m.aTab).node());
+  root.append(body);
+}
+
+function renderB(root, doc) {
+  const tools = toolsFor(doc);
+  const m = mem(doc.id);
+  const scroll = el('div');
+  scroll.style.cssText = 'flex:1;overflow-y:auto;';
+  for (const t of tools) {
+    const open = m.bOpen[t.key] !== false;
+    const head = el('div', 'b-sec-head',
+      `<span class="chev">${open ? '▼' : '▶'}</span><span>${t.name === 'Verse' ? 'Verse details' : t.name === 'Margin' ? 'Margin references' : t.name === 'Cross-refs' ? 'Your cross-references' : 'Passages in this note'}</span>` +
+      (t.count !== null ? `<span class="cnt">${t.count}</span>` : '<span class="cnt"></span>'));
+    head.onclick = () => { m.bOpen[t.key] = !open; render(); };
+    scroll.append(head);
+    if (open) scroll.append(t.node());
+  }
+  root.append(scroll);
+}
+
+function renderC(root, doc) {
+  const tools = toolsFor(doc);
+  const m = mem(doc.id);
+  if (!tools.some((t) => t.key === m.cTool)) m.cTool = tools[0].key;
+  const shell = el('div', 'c-shell');
+  const rail = el('div', 'c-rail');
+  for (const t of tools) {
+    const icon = el('div', 'c-icon' + (m.cTool === t.key ? ' on' : ''), t.icon);
+    icon.title = t.name;
+    icon.onclick = () => { m.cTool = t.key; render(); };
+    rail.append(icon);
+  }
+  shell.append(rail);
+  const body = el('div', 'c-body');
+  const active = tools.find((t) => t.key === m.cTool);
+  body.append(el('div', 'c-head', active.name === 'Verse' ? 'Verse details' : active.name === 'Margin' ? 'Margin references' : active.name === 'Cross-refs' ? 'Cross-references' : 'Passages'));
+  body.append(active.node());
+  shell.append(body);
+  root.append(shell);
+}
+
+/* =================== workspace =================== */
+function renderDocTabs() {
+  const bar = document.getElementById('docTabs');
+  bar.innerHTML = '';
+  for (const d of DOCS) {
+    const tab = el('div', 'doc-tab' + (focusedDoc === d.id ? ' on' : ''),
+      `<span class="kind">${d.tab}</span>${d.title}`);
+    tab.onclick = () => { focusedDoc = d.id; render(); };
+    bar.append(tab);
+  }
+}
+
+function renderMain(doc) {
+  const main = document.getElementById('main');
+  main.innerHTML = '';
+  if (doc.kind === 'reader') {
+    main.append(el('h1', '', 'John 15 — WEB'));
+    for (const [num, text] of Object.entries(VERSES)) {
+      const v = el('div', 'verse' + (Number(num) === selectedVerse ? ' sel' : ''),
+        `<span class="vnum">${num}</span>${text}`);
+      v.onclick = () => { selectedVerse = Number(num); render(); };
+      main.append(v);
+    }
+    main.append(el('div', 'hint', 'Click a verse to select it. The panel’s verse tool follows the selection (mocked: details always show John 15:4).'));
+  } else {
+    main.append(el('h1', '', doc.title));
+    const body = el('div', 'note-body');
+    body.append(el('p', '', `Some study notes referencing ${doc.refs.map((r) => `<span class="ref">{${r.label}${r.trans !== 'WEB' ? ' ' + r.trans.toLowerCase() : ''}}</span>`).join(' and ')}. The panel derives its content from these references.`));
+    main.append(body);
+    main.append(el('div', 'hint', 'Switch back and forth between documents — the panel remembers its state per document.'));
+  }
+}
+
+function render() {
+  renderDocTabs();
+  const doc = DOCS.find((d) => d.id === focusedDoc);
+  renderMain(doc);
+  document.getElementById('ctxLabel').textContent =
+    doc.kind === 'reader' ? `Following: Reader — ${doc.title}` : `Following: ${doc.title}`;
+  const root = document.getElementById('panelRoot');
+  root.innerHTML = '';
+  ({ A: renderA, B: renderB, C: renderC })[variant](root, doc);
+  const name = VARIANTS.find(([k]) => k === variant)[1];
+  document.getElementById('vname').textContent = `${variant} — ${name}`;
+}
+
+/* =================== switcher =================== */
+function cycle(step) {
+  const index = VARIANTS.findIndex(([k]) => k === variant);
+  variant = VARIANTS[(index + step + VARIANTS.length) % VARIANTS.length][0];
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set('variant', variant);
+    history.replaceState(null, '', url);
+  } catch { /* data:/file: contexts may forbid history updates */ }
+  render();
+}
+document.getElementById('prev').onclick = () => cycle(-1);
+document.getElementById('next').onclick = () => cycle(1);
+document.addEventListener('keydown', (event) => {
+  if (/^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable) return;
+  if (event.key === 'ArrowLeft') cycle(-1);
+  if (event.key === 'ArrowRight') cycle(1);
+});
+
+render();
+</script>
+</body>
+</html>

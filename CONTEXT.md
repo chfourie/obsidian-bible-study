@@ -38,6 +38,9 @@ The single user-configured translation (restricted to installed modules) served 
 ### Cross-Reference
 A symmetric connection between two or more References that belong together in study (e.g. a shared theme or allusion). All members are mutually connected — there is no direction and no primary member. Not a note: cross-references live in a single plugin-managed data file inside the vault, so they sync and back up with the vault without imposing per-item filenames. Distinct from a Reference: a Reference is an address; a Cross-Reference is an edge between addresses.
 
+### Margin Reference
+A read-only, directional link from an origin verse to a target Reference, drawn from a shipped dataset compiled from public-domain sources (Treasury of Scripture Knowledge as the backbone), with per-link provenance. The kind of reference a printed Bible carries in its margin. Distinct from a Cross-Reference: a Cross-Reference is user-authored, symmetric, and editable; a Margin Reference is mass-produced, directional, and immutable.
+
 ### Occurrence
 One appearance of a reference at a position in a vault note (in the body or in annotation frontmatter). The unit the vault index stores; intersection queries return occurrences.
 
