@@ -9,10 +9,10 @@ import {
 import type { Passage, PassageSource } from '../rendering'
 import { extractOccurrences } from '../vault-index'
 import {
-  ReferencesPanelModel,
-  type ReferencesPanelCrossReferences,
-  type ReferencesPanelDeps,
-} from './references-panel-model'
+  StudyPanelModel,
+  type StudyPanelCrossReferences,
+  type StudyPanelDeps,
+} from './study-panel-model'
 
 type PassageRequest = { reference: Reference; translationId: string }
 
@@ -45,13 +45,13 @@ const fakeSource = () => {
   }
 }
 
-const noCrossReferences: ReferencesPanelCrossReferences = {
+const noCrossReferences: StudyPanelCrossReferences = {
   intersecting: () => [],
 }
 
 const fakeCrossReferenceStore = () => {
   let entries: CrossReference[] = []
-  const deps: ReferencesPanelCrossReferences = {
+  const deps: StudyPanelCrossReferences = {
     intersecting: (reference) =>
       entries.filter((entry) =>
         entry.members.some((member) => referencesIntersect(member, reference)),
@@ -68,10 +68,10 @@ const fakeCrossReferenceStore = () => {
 const model = (
   source: PassageSource,
   translationId: string | null = 'web',
-  crossReferences: ReferencesPanelCrossReferences = noCrossReferences,
-  editCrossReference: ReferencesPanelDeps['editCrossReference'] = () => {},
-): ReferencesPanelModel =>
-  new ReferencesPanelModel(
+  crossReferences: StudyPanelCrossReferences = noCrossReferences,
+  editCrossReference: StudyPanelDeps['editCrossReference'] = () => {},
+): StudyPanelModel =>
+  new StudyPanelModel(
     {
       passages: source,
       extract: (content) =>
@@ -82,7 +82,7 @@ const model = (
     { translationId },
   )
 
-describe('ReferencesPanelModel', () => {
+describe('StudyPanelModel', () => {
   it('starts with no note', () => {
     const panel = model(fakeSource().source)
 
@@ -381,7 +381,7 @@ describe('ReferencesPanelModel', () => {
   })
 })
 
-describe('cross-references in the References panel', () => {
+describe('cross-references in the Study Panel', () => {
   const reference = (
     book: number,
     ...ranges: [start: number[], end: number[]][]

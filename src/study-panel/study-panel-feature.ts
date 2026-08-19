@@ -17,18 +17,18 @@ import {
   renderContextFromSettings,
 } from '../rendering'
 import { extractOccurrences } from '../vault-index'
-import { ReferencesPanelModel, type ActiveNote } from './references-panel-model'
-import { REFERENCES_VIEW_TYPE, ReferencesView } from './references-view'
+import { StudyPanelModel, type ActiveNote } from './study-panel-model'
+import { STUDY_PANEL_VIEW_TYPE, StudyPanelView } from './study-panel-view'
 
-export { REFERENCES_VIEW_TYPE } from './references-view'
+export { STUDY_PANEL_VIEW_TYPE } from './study-panel-view'
 
-export type ReferencesFeatureOptions = {
+export type StudyPanelFeatureOptions = {
   crossReferences?: CrossReferenceCatalog
 }
 
-export class ReferencesFeature extends PluginFeature {
+export class StudyPanelFeature extends PluginFeature {
   readonly #repository: PassageRepository
-  readonly #models = new Set<ReferencesPanelModel>()
+  readonly #models = new Set<StudyPanelModel>()
   #active: ActiveNote | null = null
   #showToken = 0
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
@@ -38,7 +38,7 @@ export class ReferencesFeature extends PluginFeature {
   constructor(
     plugin: Plugin,
     store: ModuleStore,
-    options: ReferencesFeatureOptions = {},
+    options: StudyPanelFeatureOptions = {},
   ) {
     super(plugin)
     this.#repository = new PassageRepository(
@@ -52,12 +52,12 @@ export class ReferencesFeature extends PluginFeature {
 
   override async load(): Promise<void> {
     this.plugin.registerView(
-      REFERENCES_VIEW_TYPE,
-      (leaf: WorkspaceLeaf) => new ReferencesView(leaf, this),
+      STUDY_PANEL_VIEW_TYPE,
+      (leaf: WorkspaceLeaf) => new StudyPanelView(leaf, this),
     )
     this.plugin.addCommand({
-      id: 'open-references-panel',
-      name: 'Open references panel',
+      id: 'open-study-panel',
+      name: 'Open study panel',
       callback: () => void this.openPanel(),
     })
     const workspace = this.plugin.app.workspace
@@ -97,8 +97,8 @@ export class ReferencesFeature extends PluginFeature {
     this.#fanOut()
   }
 
-  createModel(): ReferencesPanelModel {
-    const model = new ReferencesPanelModel(
+  createModel(): StudyPanelModel {
+    const model = new StudyPanelModel(
       {
         passages: this.#repository,
         extract: (content) =>
@@ -121,7 +121,7 @@ export class ReferencesFeature extends PluginFeature {
     return model
   }
 
-  releaseModel(model: ReferencesPanelModel): void {
+  releaseModel(model: StudyPanelModel): void {
     this.#models.delete(model)
   }
 
@@ -139,14 +139,14 @@ export class ReferencesFeature extends PluginFeature {
 
   async openPanel(): Promise<void> {
     const workspace = this.plugin.app.workspace
-    const existing = workspace.getLeavesOfType(REFERENCES_VIEW_TYPE)[0]
+    const existing = workspace.getLeavesOfType(STUDY_PANEL_VIEW_TYPE)[0]
     if (existing) {
       await workspace.revealLeaf(existing)
       return
     }
     const leaf = workspace.getRightLeaf(false)
     if (leaf === null) return
-    await leaf.setViewState({ type: REFERENCES_VIEW_TYPE, active: true })
+    await leaf.setViewState({ type: STUDY_PANEL_VIEW_TYPE, active: true })
     await workspace.revealLeaf(leaf)
   }
 

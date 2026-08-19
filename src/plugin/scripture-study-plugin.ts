@@ -8,7 +8,7 @@ import {
   SUGGESTED_FIRST_TRANSLATION,
 } from '../modules'
 import { ReaderFeature } from '../reader'
-import { ReferencesFeature } from '../references-panel'
+import { StudyPanelFeature } from '../study-panel'
 import { RenderingFeature } from '../rendering'
 import { RibbonMenuFeature } from '../ribbon-menu'
 import { SettingsFeature } from '../settings'
@@ -69,7 +69,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     this.#firstRun,
   )
-  readonly referencesPanel = new ReferencesFeature(this, this.modules.store, {
+  readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
     crossReferences: this.crossReferences.store,
   })
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
@@ -81,7 +81,7 @@ export default class ScriptureStudyPlugin extends Plugin {
   )
   readonly ribbonMenu = new RibbonMenuFeature(this, {
     openReader: () => this.reader.openReader(),
-    openReferencesPanel: () => this.referencesPanel.openPanel(),
+    openStudyPanel: () => this.studyPanel.openPanel(),
   })
 
   constructor(app: App, manifest: PluginManifest) {
@@ -90,12 +90,12 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.reader.useAnnotator(
       (reference) => void this.annotations.annotate(reference),
     )
-    this.referencesPanel.useNavigator(this.reader)
+    this.studyPanel.useNavigator(this.reader)
     this.#features.addFeature(this.vaultIndex)
     this.#features.addFeature(this.modules)
     this.#features.addFeature(this.crossReferences)
     this.#features.addFeature(this.reader)
-    this.#features.addFeature(this.referencesPanel)
+    this.#features.addFeature(this.studyPanel)
     this.#features.addFeature(this.rendering)
     this.#features.addFeature(this.annotations)
     this.#features.addFeature(this.settingsTab)

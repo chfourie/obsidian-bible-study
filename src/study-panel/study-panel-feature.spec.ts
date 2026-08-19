@@ -3,8 +3,8 @@ import { TFile, WorkspaceLeaf, type Plugin } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
-import { REFERENCES_VIEW_TYPE, ReferencesFeature } from './references-feature'
-import { ReferencesView } from './references-view'
+import { STUDY_PANEL_VIEW_TYPE, StudyPanelFeature } from './study-panel-feature'
+import { StudyPanelView } from './study-panel-view'
 
 const manifest = (id: string): ModuleManifest => ({
   id,
@@ -36,12 +36,14 @@ const note = (path: string): TFile => {
 
 type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 
+type FakeCommand = { id: string; name: string; callback: () => void }
+
 const harness = (notes: Record<string, string> = {}) => {
   const readGates: Record<string, Promise<void>> = {}
   const leaves: FakeLeaf[] = []
   let factory: ((leaf: WorkspaceLeaf) => unknown) | null = null
   const revealLeaf = vi.fn(async () => {})
-  const commands: { id: string; callback: () => void }[] = []
+  const commands: FakeCommand[] = []
   const ribbons: unknown[] = []
   const handlers: Record<string, ((...args: never[]) => void)[]> = {}
   const on = (name: string, callback: (...args: never[]) => void) => {
@@ -61,7 +63,7 @@ const harness = (notes: Record<string, string> = {}) => {
     on,
     getActiveFile: () => activeFile,
     getLeavesOfType: (type: string) =>
-      type === REFERENCES_VIEW_TYPE
+      type === STUDY_PANEL_VIEW_TYPE
         ? leaves.filter((leaf) => !leaf.detached)
         : [],
     getRightLeaf: vi.fn(() => makeLeaf()),
@@ -83,7 +85,7 @@ const harness = (notes: Record<string, string> = {}) => {
     ) => {
       factory = viewFactory
     },
-    addCommand: (command: { id: string; callback: () => void }) => {
+    addCommand: (command: FakeCommand) => {
       commands.push(command)
       return command
     },
@@ -93,7 +95,7 @@ const harness = (notes: Record<string, string> = {}) => {
     },
     registerEvent: () => {},
   } as unknown as Plugin
-  const feature = new ReferencesFeature(plugin, fakeStore())
+  const feature = new StudyPanelFeature(plugin, fakeStore())
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
   const openFile = (file: TFile | null) => {
     activeFile = file
@@ -133,22 +135,34 @@ const flushAsync = async (): Promise<void> => {
   await new Promise((resolve) => window.setTimeout(resolve, 0))
 }
 
-const panelView = (leaf: FakeLeaf): ReferencesView => {
-  const view = leaf.view as unknown as ReferencesView
-  expect(view).toBeInstanceOf(ReferencesView)
+const panelView = (leaf: FakeLeaf): StudyPanelView => {
+  const view = leaf.view as unknown as StudyPanelView
+  expect(view).toBeInstanceOf(StudyPanelView)
   return view
 }
 
-describe('ReferencesFeature entry points', () => {
+describe('StudyPanelFeature entry points', () => {
   it('registers the view and a command but no ribbon icon', async () => {
     const { feature, commands, ribbons } = harness()
 
     await feature.load()
 
-    expect(commands.map((command) => command.id)).toEqual([
-      'open-references-panel',
+    expect(commands.map((command) => [command.id, command.name])).toEqual([
+      ['open-study-panel', 'Open study panel'],
     ])
     expect(ribbons).toEqual([])
+  })
+
+  it('names the view the study panel', async () => {
+    const { feature, commands, leaves } = harness()
+    await feature.load()
+
+    commands[0].callback()
+    await flushAsync()
+
+    const view = panelView(leaves[0])
+    expect(view.getViewType()).toBe(STUDY_PANEL_VIEW_TYPE)
+    expect(view.getDisplayText()).toBe('Study panel')
   })
 
   it('opens the panel in the right sidebar and reveals it', async () => {
@@ -160,7 +174,7 @@ describe('ReferencesFeature entry points', () => {
 
     expect(workspace.getRightLeaf).toHaveBeenCalledWith(false)
     expect(leaves).toHaveLength(1)
-    expect(panelView(leaves[0])).toBeInstanceOf(ReferencesView)
+    expect(panelView(leaves[0])).toBeInstanceOf(StudyPanelView)
     expect(revealLeaf).toHaveBeenCalled()
   })
 

@@ -2,7 +2,7 @@
 // features.
 export type RibbonMenuActions = {
   openReader: () => void | Promise<void>
-  openReferencesPanel: () => void | Promise<void>
+  openStudyPanel: () => void | Promise<void>
 }
 
 export type RibbonMenuItem = {
@@ -20,8 +20,8 @@ export const buildRibbonMenuItems = (
     onClick: () => void actions.openReader(),
   },
   {
-    title: 'Open references panel',
+    title: 'Open study panel',
     icon: 'book-marked',
-    onClick: () => void actions.openReferencesPanel(),
+    onClick: () => void actions.openStudyPanel(),
   },
 ]

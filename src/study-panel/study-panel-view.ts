@@ -2,30 +2,30 @@ import { ItemView, WorkspaceLeaf } from 'obsidian'
 import { mount, unmount } from 'svelte'
 import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
-import ReferencesPanel from './ReferencesPanel.svelte'
-import type { ReferencesFeature } from './references-feature'
-import type { ReferencesPanelModel } from './references-panel-model'
+import StudyPanel from './StudyPanel.svelte'
+import type { StudyPanelFeature } from './study-panel-feature'
+import type { StudyPanelModel } from './study-panel-model'
 
-export const REFERENCES_VIEW_TYPE = 'scripture-study-references'
+export const STUDY_PANEL_VIEW_TYPE = 'scripture-study-panel'
 
-export class ReferencesView extends ItemView {
-  readonly model: ReferencesPanelModel
+export class StudyPanelView extends ItemView {
+  readonly model: StudyPanelModel
   #component: Record<string, unknown> | null = null
 
   constructor(
     leaf: WorkspaceLeaf,
-    private readonly feature: ReferencesFeature,
+    private readonly feature: StudyPanelFeature,
   ) {
     super(leaf)
     this.model = feature.createModel()
   }
 
   getViewType(): string {
-    return REFERENCES_VIEW_TYPE
+    return STUDY_PANEL_VIEW_TYPE
   }
 
   getDisplayText(): string {
-    return 'Scripture references'
+    return 'Study panel'
   }
 
   override getIcon(): string {
@@ -33,7 +33,7 @@ export class ReferencesView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
-    this.#component = mount(ReferencesPanel, {
+    this.#component = mount(StudyPanel, {
       target: this.contentEl,
       props: {
         model: this.model,

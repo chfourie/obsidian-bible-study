@@ -10,14 +10,14 @@ reference in the reader with the entry's translation.
   import { activate, opensInNewPane } from '../ui'
   import type {
     ReferenceEntryView,
-    ReferencesPanelModel,
-  } from './references-panel-model'
+    StudyPanelModel,
+  } from './study-panel-model'
 
   let {
     model,
     openReference,
   }: {
-    model: ReferencesPanelModel
+    model: StudyPanelModel
     openReference: (
       reference: Reference,
       translationId: string | null,

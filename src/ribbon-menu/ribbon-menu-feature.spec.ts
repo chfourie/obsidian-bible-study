@@ -17,7 +17,7 @@ const harness = () => {
   } as unknown as Plugin
   const actions = {
     openReader: vi.fn(),
-    openReferencesPanel: vi.fn(),
+    openStudyPanel: vi.fn(),
   }
   return { feature: new RibbonMenuFeature(plugin, actions), commands, ribbons }
 }

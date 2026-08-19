@@ -32,27 +32,27 @@ export type ReferenceEntryView = {
   attribution: string | null
 }
 
-export type ReferencesPanelStatus =
+export type StudyPanelStatus =
   | 'no-note'
   | 'no-references'
   | 'no-translation'
   | 'ok'
 
-export type ReferencesPanelView = {
+export type StudyPanelViewState = {
   file: string | null
-  status: ReferencesPanelStatus
+  status: StudyPanelStatus
   entries: ReferenceEntryView[]
   crossReferences: CrossReferenceView[]
 }
 
-export type ReferencesPanelCrossReferences = {
+export type StudyPanelCrossReferences = {
   intersecting: (reference: Reference) => CrossReference[]
 }
 
-export type ReferencesPanelDeps = {
+export type StudyPanelDeps = {
   passages: PassageSource
   extract: (content: string) => ExtractedOccurrence[]
-  crossReferences: ReferencesPanelCrossReferences
+  crossReferences: StudyPanelCrossReferences
   // The panel surfaces cross-references but never edits them in place: editing
   // happens in the reader's strip, which lives outside the panel.
   editCrossReference: (
@@ -61,7 +61,7 @@ export type ReferencesPanelDeps = {
   ) => void
 }
 
-export type ReferencesPanelConfig = { translationId: string | null }
+export type StudyPanelConfig = { translationId: string | null }
 
 export type ActiveNote = { file: string; content: string }
 
@@ -111,7 +111,7 @@ const combineIntersecting = (references: PanelReference[]): PanelReference[] => 
   return combined
 }
 
-export class ReferencesPanelModel {
+export class StudyPanelModel {
   #file: string | null = null
   #entries: ReferenceEntryView[] = []
   #crossReferences: CrossReferenceView[] = []
@@ -120,8 +120,8 @@ export class ReferencesPanelModel {
   readonly #listeners = new Set<() => void>()
 
   constructor(
-    private readonly deps: ReferencesPanelDeps,
-    config: ReferencesPanelConfig,
+    private readonly deps: StudyPanelDeps,
+    config: StudyPanelConfig,
   ) {
     this.#translationId = config.translationId
   }
@@ -131,7 +131,7 @@ export class ReferencesPanelModel {
     return () => this.#listeners.delete(listener)
   }
 
-  get view(): ReferencesPanelView {
+  get view(): StudyPanelViewState {
     return {
       file: this.#file,
       status: this.#status(),
@@ -140,7 +140,7 @@ export class ReferencesPanelModel {
     }
   }
 
-  #status(): ReferencesPanelStatus {
+  #status(): StudyPanelStatus {
     if (this.#file === null) return 'no-note'
     if (this.#entries.length === 0) return 'no-references'
     const someLoadable = this.#entries.some(
