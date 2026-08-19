@@ -7,6 +7,7 @@ import {
 import { editorLivePreviewField } from 'obsidian'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { setLivePreview } from '../../tests/mocks/obsidian'
+import { attachHighlightEditing } from './highlight-editing'
 import {
   createLivePreviewExtension,
   ReferenceWidget,
@@ -111,5 +112,91 @@ describe('editor mode switching', () => {
 
     view.dispatch({ effects: setLivePreview.of(true) })
     expect(decorationCount()).toBe(1)
+  })
+})
+
+describe('highlight editing in Live Preview', () => {
+  let view: EditorView
+
+  afterEach(() => {
+    view.destroy()
+    document.body.replaceChildren()
+  })
+
+  const renderingDeps: ReferenceRenderDeps = {
+    passages: {
+      passage: async () => ({
+        status: 'ok',
+        attribution: null,
+        verses: [
+          { verseId: 43015004, segments: [{ text: 'Remain in me', redLetter: false }] },
+        ],
+      }),
+    },
+    openReference: vi.fn(),
+  }
+
+  const editorOver = async (doc: string): Promise<HTMLElement> => {
+    view = new EditorView({
+      state: EditorState.create({
+        doc,
+        extensions: [
+          editorLivePreviewField,
+          createLivePreviewExtension(
+            () => webDefault,
+            renderingDeps,
+            attachHighlightEditing,
+          ),
+        ],
+      }),
+      parent: document.body,
+    })
+    return await vi.waitFor(() => {
+      const host = view.contentDOM.querySelector<HTMLElement>('[data-verse-id]')
+      if (!host) throw new Error('passage not rendered')
+      return host
+    })
+  }
+
+  const paint = (verseText: HTMLElement, swatch: number): void => {
+    const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
+      .nextNode() as Text
+    const range = document.createRange()
+    range.setStart(text, 0)
+    range.setEnd(text, 6)
+    const selection = document.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+    const swatches = document.querySelectorAll(
+      '.scripture-study-highlight-swatch',
+    )
+    swatches[swatch].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+
+  it('writes the cue and pins the effective translation on the first stroke', async () => {
+    const verseText = await editorOver('before {John 15:4 inline} after')
+
+    paint(verseText, 0)
+
+    expect(view.state.doc.toString()).toBe(
+      'before {John 15:4 web inline h1/4.0-4.6} after',
+    )
+  })
+
+  it('leaves an already-explicit translation alone', async () => {
+    const verseText = await editorOver('note {John 15:4 web inline}')
+
+    paint(verseText, 1)
+
+    expect(view.state.doc.toString()).toBe('note {John 15:4 web inline h2/4.0-4.6}')
+  })
+
+  it('erases a cue back out of the token, keeping the pin', async () => {
+    const verseText = await editorOver('note {John 15:4 web inline h1/4.0-4.6}')
+
+    paint(verseText, 5)
+
+    expect(view.state.doc.toString()).toBe('note {John 15:4 web inline}')
   })
 })

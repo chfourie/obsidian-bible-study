@@ -157,6 +157,48 @@ body {
   background-color: var(--ss-hl-5);
 }
 
+/* The selection popover (Live Preview, desktop): five slots plus an eraser. */
+.scripture-study-highlight-editable {
+  cursor: text;
+}
+
+.scripture-study-highlight-popover {
+  position: fixed;
+  z-index: var(--layer-menu);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background-color: var(--background-secondary);
+  box-shadow: var(--shadow-s);
+}
+
+.scripture-study-highlight-swatch {
+  width: 1.4em;
+  height: 1.4em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.scripture-study-highlight-swatch:hover,
+.scripture-study-highlight-swatch:focus-visible {
+  border-color: var(--interactive-accent);
+}
+
+.scripture-study-highlight-eraser {
+  color: var(--text-muted);
+}
+
+.scripture-study-highlight-eraser .svg-icon {
+  width: 0.9em;
+  height: 0.9em;
+}
+
 /* ---- Async states (spec §3.5) ------------------------------------------ */
 
 .scripture-study-loading {

@@ -47,6 +47,7 @@ describe('buildPassageView', () => {
 
     expect(view.verses).toEqual([
       {
+        verseId: makeVerseId(43, 15, 4),
         label: null,
         segments: [{ text: 'Remain in me.', redLetter: false }],
         startsNewLine: false,

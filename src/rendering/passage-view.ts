@@ -4,6 +4,7 @@ import type { Passage, PassageVerse, VerseSegment } from './module-passage-sourc
 import type { ReferenceRenderModel } from './reference-render-model'
 
 export type VerseBlock = {
+  verseId: number
   label: string | null
   segments: VerseSegment[]
   startsNewLine: boolean
@@ -116,6 +117,7 @@ export const buildPassageView = (
   const cues = passage.fallback === undefined ? model.highlights : []
   return {
     verses: passage.verses.map((verse, index) => ({
+      verseId: verse.verseId,
       label: numbered ? labels[index] : null,
       segments: highlightedSegments(verse, cues),
       startsNewLine:

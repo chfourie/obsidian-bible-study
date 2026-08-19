@@ -1,6 +1,7 @@
 import type { EditorView } from '@codemirror/view'
 import {
   MarkdownView,
+  Platform,
   type Editor,
   type MarkdownPostProcessorContext,
   type Plugin,
@@ -15,6 +16,7 @@ import {
   FallbackPassageSource,
   resolveFallbackTranslationId,
 } from './fallback-passage-source'
+import { attachHighlightEditing } from './highlight-editing'
 import {
   createLivePreviewExtension,
   refreshRenderedReferences,
@@ -88,6 +90,9 @@ export class RenderingFeature extends PluginFeature {
       createLivePreviewExtension(
         () => renderContextFromSettings(this.settings),
         this.#deps,
+        // Editing highlights is a Live Preview gesture on desktop; the reading
+        // and mobile surfaces get the same passage without the popover.
+        Platform.isMobile ? undefined : attachHighlightEditing,
       ),
     )
     this.plugin.registerEditorSuggest(

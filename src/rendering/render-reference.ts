@@ -3,7 +3,9 @@ import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
 import { opensInNewPane } from '../ui'
 import type { OccurrenceGroup } from '../vault-index'
+import type { HighlightEditContext } from './highlight-editing'
 import type { Passage, PassageSource } from './module-passage-source'
+import { VERSE_TEXT_CLASS } from './passage-selection'
 import {
   buildPassageView,
   loadingText,
@@ -22,6 +24,13 @@ export type FirstRunInstallDeps = {
   install: () => Promise<void>
 }
 
+// Present only where highlights are editable (Live Preview on desktop);
+// Reading mode, embeds, and mobile render the same passage without it.
+export type HighlightEditAttach = (
+  host: HTMLElement,
+  context: HighlightEditContext,
+) => void
+
 export type ReferenceRenderDeps = {
   passages: PassageSource
   openReference: (
@@ -30,6 +39,7 @@ export type ReferenceRenderDeps = {
   ) => void
   intersections?: NoteIntersectionSource
   firstRun?: FirstRunInstallDeps
+  editHighlights?: HighlightEditAttach
 }
 
 const activateAsButton = (
@@ -175,8 +185,14 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
       text: block.label,
     })
   }
+  // The verse text lives in its own holder so a drag can be mapped back to
+  // character offsets in this verse, with the number and chrome left out.
+  const holder = parent.createSpan({
+    cls: VERSE_TEXT_CLASS,
+    attr: { 'data-verse-id': block.verseId },
+  })
   for (const segment of block.segments) {
-    if (segment.lineBreakBefore) parent.createEl('br')
+    if (segment.lineBreakBefore) holder.createEl('br')
     const indented = segment.lineStart === true && segment.indent !== undefined
     const classes = [
       ...(segment.highlightSlot === undefined
@@ -191,9 +207,9 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
       ...(indented ? [`scripture-study-indent-${segment.indent}`] : []),
     ]
     if (classes.length > 0) {
-      parent.createSpan({ cls: classes.join(' '), text: segment.text })
+      holder.createSpan({ cls: classes.join(' '), text: segment.text })
     } else {
-      parent.appendChild(parent.ownerDocument.createTextNode(segment.text))
+      holder.appendChild(holder.ownerDocument.createTextNode(segment.text))
     }
   }
 }
@@ -282,6 +298,17 @@ const mountPassage = async (
     return
   }
   renderPassage(host, buildPassageView(model, passage))
+  // Offsets index the requested translation's text, so a substituted passage
+  // stays read-only.
+  if (deps.editHighlights && passage.fallback === undefined) {
+    deps.editHighlights(host, {
+      cues: model.highlights,
+      verses: passage.verses.map((verse) => ({
+        verseId: verse.verseId,
+        text: verse.segments.map((segment) => segment.text).join(''),
+      })),
+    })
+  }
 }
 
 const renderAttribution = (host: HTMLElement, view: PassageView): void => {

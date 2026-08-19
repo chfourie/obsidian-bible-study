@@ -1,5 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
-import { MarkdownView, type MarkdownPostProcessorContext, type Plugin } from 'obsidian'
+import { EditorState, type Extension } from '@codemirror/state'
+import { EditorView } from '@codemirror/view'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  MarkdownView,
+  Platform,
+  editorLivePreviewField,
+  type MarkdownPostProcessorContext,
+  type Plugin,
+} from 'obsidian'
 import { NOOP_REFERENCE_NAVIGATOR } from '../contracts'
 import { DEFAULT_SETTINGS } from '../data-access'
 import type { ModuleStore } from '../modules'
@@ -112,6 +120,112 @@ describe('RenderingFeature derived red letter', () => {
 
     const red = element.querySelector('.scripture-study-red-letter')
     expect(red?.textContent).toBe('Remain in me, and I in you.')
+  })
+})
+
+describe('RenderingFeature highlight editing surfaces', () => {
+  type Registrations = {
+    postProcessor: (
+      element: HTMLElement,
+      context: MarkdownPostProcessorContext,
+    ) => Promise<void>
+    editorExtension: Extension
+  }
+
+  const passageStore = {
+    manifest: async () => ({
+      id: 'web',
+      name: 'World English Bible',
+      language: 'English',
+      license: 'Public Domain',
+      source: 'test',
+      sourceChecksum: '',
+      formatVersion: 1,
+      capabilities: { strongsTagged: false },
+    }),
+    bookContent: async () => ({ [43015004]: 'Remain in me' }),
+  } as unknown as ModuleStore
+
+  const loadFeature = async (): Promise<Registrations> => {
+    const registrations = {} as Registrations
+    const plugin = {
+      registerMarkdownPostProcessor: (processor: Registrations['postProcessor']) => {
+        registrations.postProcessor = processor
+      },
+      registerEditorExtension: (extension: Extension) => {
+        registrations.editorExtension = extension
+      },
+      registerEditorSuggest: () => {},
+    } as unknown as Plugin
+    const feature = new RenderingFeature(plugin, passageStore)
+    feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
+    await feature.load()
+    return registrations
+  }
+
+  let view: EditorView | null = null
+
+  const livePreviewPassage = async (
+    extension: Extension,
+  ): Promise<HTMLElement> => {
+    view = new EditorView({
+      state: EditorState.create({
+        doc: 'note {John 15:4 web inline}',
+        extensions: [editorLivePreviewField, extension],
+      }),
+      parent: document.body,
+    })
+    const editor = view
+    return await vi.waitFor(() => {
+      const host = editor.contentDOM.querySelector<HTMLElement>(
+        '.scripture-study-passage',
+      )
+      if (!host?.querySelector('[data-verse-id]')) {
+        throw new Error('passage not rendered')
+      }
+      return host
+    })
+  }
+
+  afterEach(() => {
+    view?.destroy()
+    view = null
+    Platform.isMobile = false
+    document.body.replaceChildren()
+  })
+
+  it('makes Live Preview passages editable on desktop', async () => {
+    const { editorExtension } = await loadFeature()
+
+    const passage = await livePreviewPassage(editorExtension)
+
+    expect(passage.classList).toContain('scripture-study-highlight-editable')
+  })
+
+  it('leaves Live Preview passages read-only on mobile', async () => {
+    Platform.isMobile = true
+    const { editorExtension } = await loadFeature()
+
+    const passage = await livePreviewPassage(editorExtension)
+
+    expect(passage.classList).not.toContain('scripture-study-highlight-editable')
+  })
+
+  it('leaves Reading-mode passages read-only', async () => {
+    const { postProcessor } = await loadFeature()
+    const element = document.createElement('div')
+    element.createEl('p').setText('{John 15:4 web inline}')
+
+    await postProcessor(element, {
+      sourcePath: 'note.md',
+      getSectionInfo: () => null,
+    } as unknown as MarkdownPostProcessorContext)
+
+    const passage = element.querySelector('.scripture-study-passage')
+    expect(passage?.querySelector('[data-verse-id]')).not.toBeNull()
+    expect(passage?.classList).not.toContain(
+      'scripture-study-highlight-editable',
+    )
   })
 })
 

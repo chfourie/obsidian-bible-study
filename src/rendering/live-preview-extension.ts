@@ -8,6 +8,12 @@ import {
   type ViewUpdate,
 } from '@codemirror/view'
 import { editorInfoField, editorLivePreviewField } from 'obsidian'
+import { rewriteHighlightToken } from '../highlights'
+import type { HighlightCue } from '../reference'
+import type {
+  HighlightCueWriter,
+  HighlightEditContext,
+} from './highlight-editing'
 import { liveDecorationSpecs } from './live-decoration-specs'
 import {
   sameRenderModel,
@@ -21,12 +27,43 @@ export const renderContextChangedEffect = StateEffect.define<null>()
 export const refreshRenderedReferences = (view: EditorView): void =>
   view.dispatch({ effects: renderContextChangedEffect.of(null) })
 
+// Editing highlights needs the document position of the token the widget
+// replaced; the widget owns that, so it hands the popover a writer that turns
+// a fresh cue set back into note text.
+export type HighlightEditingSupport = (
+  host: HTMLElement,
+  context: HighlightEditContext,
+  write: HighlightCueWriter,
+) => () => void
+
+type WidgetHighlightEditing = {
+  attach: HighlightEditingSupport
+  translationIds: () => readonly string[]
+}
+
+const tokenStart = (
+  view: EditorView,
+  holder: HTMLElement,
+  source: string,
+): number | null => {
+  const position = view.posAtDOM(holder)
+  if (view.state.sliceDoc(position, position + source.length) === source)
+    return position
+  const found = view.state.doc
+    .toString()
+    .indexOf(source, Math.max(0, position - source.length))
+  return found === -1 ? null : found
+}
+
 export class ReferenceWidget extends WidgetType {
+  #detachEditing: (() => void) | null = null
+
   constructor(
     private readonly source: string,
     private readonly model: ReferenceRenderModel,
     private readonly deps: ReferenceRenderDeps,
     private readonly sourcePath: string | null = null,
+    private readonly editing: WidgetHighlightEditing | null = null,
   ) {
     super()
   }
@@ -39,10 +76,56 @@ export class ReferenceWidget extends WidgetType {
     )
   }
 
-  override toDOM(): HTMLElement {
+  override toDOM(view: EditorView): HTMLElement {
     const holder = createSpan({ cls: 'scripture-study-reference' })
-    void renderReference(holder, this.model, this.deps, this.sourcePath)
+    void renderReference(
+      holder,
+      this.model,
+      this.#renderDeps(view, holder),
+      this.sourcePath,
+    )
     return holder
+  }
+
+  override destroy(): void {
+    this.#detachEditing?.()
+    this.#detachEditing = null
+  }
+
+  #renderDeps(view: EditorView, holder: HTMLElement): ReferenceRenderDeps {
+    const editing = this.editing
+    if (editing === null) return this.deps
+    return {
+      ...this.deps,
+      editHighlights: (host, context) => {
+        this.#detachEditing?.()
+        this.#detachEditing = editing.attach(host, context, (cues) =>
+          this.#writeCues(view, holder, cues, editing.translationIds()),
+        )
+      },
+    }
+  }
+
+  #writeCues(
+    view: EditorView,
+    holder: HTMLElement,
+    cues: readonly HighlightCue[],
+    translationIds: readonly string[],
+  ): void {
+    const start = tokenStart(view, holder, this.source)
+    if (start === null) return
+    const rewritten = rewriteHighlightToken(
+      this.source.slice(1, -1),
+      cues,
+      { translation: this.model.translationId, translationIds },
+    )
+    view.dispatch({
+      changes: {
+        from: start,
+        to: start + this.source.length,
+        insert: `{${rewritten}}`,
+      },
+    })
   }
 }
 
@@ -60,7 +143,15 @@ const livePreviewToggled = (update: ViewUpdate): boolean =>
 export const createLivePreviewExtension = (
   contextProvider: () => RenderContext,
   deps: ReferenceRenderDeps,
+  highlightEditing?: HighlightEditingSupport,
 ): Extension => {
+  const editing: WidgetHighlightEditing | null =
+    highlightEditing === undefined
+      ? null
+      : {
+          attach: highlightEditing,
+          translationIds: () => contextProvider().knownTranslationIds,
+        }
   const buildDecorations = (view: EditorView): DecorationSet => {
     if (!view.state.field(editorLivePreviewField)) return Decoration.none
     const selections = view.state.selection.ranges.map((range) => ({
@@ -83,6 +174,7 @@ export const createLivePreviewExtension = (
             spec.model,
             deps,
             sourcePath,
+            editing,
           ),
         }).range(spec.start, spec.end),
       ),

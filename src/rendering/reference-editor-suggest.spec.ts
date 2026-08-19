@@ -67,6 +67,19 @@ describe('ReferenceEditorSuggest', () => {
     expect(suggestions.map((suggestion) => suggestion.label)).toEqual(['nkjv'])
   })
 
+  it('never offers highlight cue tokens, which only the plugin writes', () => {
+    const { suggest } = suggestOver('')
+
+    const queries = ['John 15:4 h', 'John 15:4 h1/', 'John 15:4 nkjv ']
+    const offered = queries.flatMap((query) =>
+      suggest
+        .getSuggestions({ query } as EditorSuggestContext)
+        .map((suggestion) => suggestion.insert),
+    )
+
+    expect(offered.some((insert) => /^h\d/.test(insert))).toBe(false)
+  })
+
   it('replaces only the partial token and moves the cursor after it', () => {
     const { suggest, editor } = suggestOver('see {John 15:4 c')
     suggest.context = {
