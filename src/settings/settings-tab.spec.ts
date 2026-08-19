@@ -7,7 +7,11 @@ import {
   TFile,
   TFolder,
 } from '../../tests/mocks/obsidian'
-import { SettingsStore, type ScriptureStudySettings } from '../data-access'
+import {
+  DEFAULT_HIGHLIGHT_PALETTE,
+  SettingsStore,
+  type ScriptureStudySettings,
+} from '../data-access'
 import { MODULE_FORMAT_VERSION, type ModuleManifest } from '../modules'
 import { ScriptureStudySettingTab } from './settings-tab'
 import { SettingsTabModel, type SettingsTabDeps } from './settings-tab-model'
@@ -190,6 +194,8 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Folder',
         'Template file',
         'Display ordering',
+        'Slot 1',
+        'Reset colors',
       ]),
     )
   })
@@ -750,6 +756,90 @@ describe('ScriptureStudySettingTab annotations section', () => {
 
     expect((await settingsStore.loadSettings()).annotationTemplatePath).toBe(
       'Templates/annotation.md',
+    )
+  })
+})
+
+describe('ScriptureStudySettingTab highlights palette', () => {
+  const colorPickersOf = (setting: HTMLElement): HTMLInputElement[] => [
+    ...setting.querySelectorAll<HTMLInputElement>('input[type="color"]'),
+  ]
+
+  const slotRow = (container: HTMLElement, slot: number): HTMLElement =>
+    settingNamed(container, `Slot ${slot}`)
+
+  it('shows a row per Highlight Slot with a light and a dark picker', async () => {
+    const { container } = await setup()
+
+    for (const slot of [1, 2, 3, 4, 5]) {
+      const pickers = colorPickersOf(slotRow(container, slot))
+      expect(pickers).toHaveLength(2)
+      expect(pickers[0]?.value).toBe(DEFAULT_HIGHLIGHT_PALETTE.light[slot - 1])
+      expect(pickers[1]?.value).toBe(DEFAULT_HIGHLIGHT_PALETTE.dark[slot - 1])
+    }
+    expect(hasSettingNamed(container, 'Slot 6')).toBe(false)
+  })
+
+  it('persists a light-mode slot color', async () => {
+    const { container, settingsStore } = await setup()
+
+    const picker = colorPickersOf(slotRow(container, 2))[0]
+    if (picker === undefined) throw new Error('no light picker')
+    picker.value = '#123456'
+    picker.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    const { highlightPalette } = await settingsStore.loadSettings()
+    expect(highlightPalette.light[1]).toBe('#123456')
+    expect(highlightPalette.dark).toEqual(DEFAULT_HIGHLIGHT_PALETTE.dark)
+    expect(highlightPalette.light[0]).toBe(DEFAULT_HIGHLIGHT_PALETTE.light[0])
+  })
+
+  it('persists a dark-mode slot color', async () => {
+    const { container, settingsStore } = await setup()
+
+    const picker = colorPickersOf(slotRow(container, 5))[1]
+    if (picker === undefined) throw new Error('no dark picker')
+    picker.value = '#654321'
+    picker.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    const { highlightPalette } = await settingsStore.loadSettings()
+    expect(highlightPalette.dark[4]).toBe('#654321')
+    expect(highlightPalette.light).toEqual(DEFAULT_HIGHLIGHT_PALETTE.light)
+  })
+
+  it('restores the shipped defaults and re-renders the pickers on reset', async () => {
+    const { container, settingsStore } = await setup({
+      storedSettings: {
+        highlightPalette: {
+          light: ['#111111', '#222222', '#333333', '#444444', '#555555'],
+          dark: ['#666666', '#777777', '#888888', '#999999', '#aaaaaa'],
+        },
+      },
+    })
+    expect(colorPickersOf(slotRow(container, 1))[0]?.value).toBe('#111111')
+
+    const reset = settingNamed(container, 'Reset colors').querySelector('button')
+    if (!(reset instanceof HTMLButtonElement)) throw new Error('no reset button')
+    reset.click()
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).highlightPalette).toEqual(
+      DEFAULT_HIGHLIGHT_PALETTE,
+    )
+    expect(colorPickersOf(slotRow(container, 1))[0]?.value).toBe(
+      DEFAULT_HIGHLIGHT_PALETTE.light[0],
+    )
+  })
+
+  it('falls back to the shipped color for a malformed stored slot', async () => {
+    const { container } = await setup({
+      storedSettings: { highlightPalette: { light: ['nonsense'] } as never },
+    })
+
+    expect(colorPickersOf(slotRow(container, 1))[0]?.value).toBe(
+      DEFAULT_HIGHLIGHT_PALETTE.light[0],
     )
   })
 })

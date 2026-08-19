@@ -2,6 +2,10 @@ import type { Plugin } from 'obsidian'
 import { PluginFeature, type SettingsStore } from '../data-access'
 import type { ModulesFeature } from '../modules'
 import type { StrongsDictionaries } from '../strongs'
+import {
+  applyHighlightPaletteVariables,
+  removeHighlightPaletteVariables,
+} from './highlight-palette-style'
 import { settingsCatalog } from './settings-catalog'
 import { ScriptureStudySettingTab } from './settings-tab'
 import { SettingsTabModel } from './settings-tab-model'
@@ -33,5 +37,18 @@ export class SettingsFeature extends PluginFeature {
 
   override async load(): Promise<void> {
     this.plugin.addSettingTab(new ScriptureStudySettingTab(this.plugin, this.model))
+    this.#emitHighlightPalette()
+  }
+
+  override onSettingsChanged(): void {
+    this.#emitHighlightPalette()
+  }
+
+  override unload(): void {
+    removeHighlightPaletteVariables(document.body)
+  }
+
+  #emitHighlightPalette(): void {
+    applyHighlightPaletteVariables(document.body, this.settings.highlightPalette)
   }
 }

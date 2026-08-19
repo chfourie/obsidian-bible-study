@@ -110,22 +110,24 @@ body {
 
 /* ---- Highlights (highlights spec) -------------------------------------- */
 
-/* Default palette for the five Highlight Slots. Settings overrides and theme
-   snippets replace these variables; the cue only ever stores the slot. */
+/* Palette for the five Highlight Slots. Settings publishes the configured
+   colors as --ss-hl-light-N / --ss-hl-dark-N on `body`; the fallbacks below
+   are the shipped defaults, and theme snippets may override either level. The
+   cue only ever stores the slot. */
 .theme-light {
-  --ss-hl-1: rgba(255, 214, 82, 0.45);
-  --ss-hl-2: rgba(126, 217, 138, 0.42);
-  --ss-hl-3: rgba(125, 190, 255, 0.42);
-  --ss-hl-4: rgba(255, 150, 190, 0.4);
-  --ss-hl-5: rgba(255, 176, 102, 0.45);
+  --ss-hl-1: var(--ss-hl-light-1, rgba(255, 214, 82, 0.45));
+  --ss-hl-2: var(--ss-hl-light-2, rgba(126, 217, 138, 0.45));
+  --ss-hl-3: var(--ss-hl-light-3, rgba(125, 190, 255, 0.45));
+  --ss-hl-4: var(--ss-hl-light-4, rgba(255, 150, 190, 0.45));
+  --ss-hl-5: var(--ss-hl-light-5, rgba(255, 176, 102, 0.45));
 }
 
 .theme-dark {
-  --ss-hl-1: rgba(255, 214, 82, 0.26);
-  --ss-hl-2: rgba(126, 217, 138, 0.24);
-  --ss-hl-3: rgba(125, 190, 255, 0.26);
-  --ss-hl-4: rgba(255, 150, 190, 0.24);
-  --ss-hl-5: rgba(255, 176, 102, 0.26);
+  --ss-hl-1: var(--ss-hl-dark-1, rgba(255, 214, 82, 0.26));
+  --ss-hl-2: var(--ss-hl-dark-2, rgba(126, 217, 138, 0.26));
+  --ss-hl-3: var(--ss-hl-dark-3, rgba(125, 190, 255, 0.26));
+  --ss-hl-4: var(--ss-hl-dark-4, rgba(255, 150, 190, 0.26));
+  --ss-hl-5: var(--ss-hl-dark-5, rgba(255, 176, 102, 0.26));
 }
 
 /* Background tint only — text color (red letters included) stays as rendered. */

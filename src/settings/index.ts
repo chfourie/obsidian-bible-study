@@ -1,3 +1,5 @@
+export * from './highlight-palette'
+export * from './highlight-palette-style'
 export * from './settings-catalog'
 export * from './settings-feature'
 export * from './settings-tab'

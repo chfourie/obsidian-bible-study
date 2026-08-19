@@ -236,6 +236,34 @@ class SettingTextComponent {
   }
 }
 
+class SettingColorComponent {
+  inputEl: HTMLInputElement
+
+  constructor(parent: HTMLElement) {
+    this.inputEl = parent.createEl('input')
+    this.inputEl.type = 'color'
+  }
+
+  setValue(value: string): this {
+    this.inputEl.value = value
+    return this
+  }
+
+  getValue(): string {
+    return this.inputEl.value
+  }
+
+  setDisabled(disabled: boolean): this {
+    this.inputEl.disabled = disabled
+    return this
+  }
+
+  onChange(handler: (value: string) => unknown): this {
+    this.inputEl.addEventListener('change', () => void handler(this.inputEl.value))
+    return this
+  }
+}
+
 class SettingDropdownComponent {
   selectEl: HTMLSelectElement
 
@@ -399,6 +427,11 @@ export class Setting {
 
   addToggle(configure: (toggle: SettingToggleComponent) => unknown): this {
     configure(new SettingToggleComponent(this.controlEl))
+    return this
+  }
+
+  addColorPicker(configure: (picker: SettingColorComponent) => unknown): this {
+    configure(new SettingColorComponent(this.controlEl))
     return this
   }
 

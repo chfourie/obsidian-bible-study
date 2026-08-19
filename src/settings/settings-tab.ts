@@ -9,13 +9,19 @@ import {
   type TFile,
 } from 'obsidian'
 import {
+  DEFAULT_HIGHLIGHT_PALETTE,
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
   FONT_SCALE_STEP,
+  HIGHLIGHT_SLOTS,
   type AnnotationOrdering,
+  type HighlightPalette,
+  type HighlightSlot,
+  type HighlightThemeMode,
   type ScriptureStudySettings,
 } from '../data-access'
 import { STRONGS_ATTRIBUTION } from '../strongs'
+import { resolveHighlightPalette } from './highlight-palette'
 import type {
   SettingsTabModel,
   SettingsTabView,
@@ -98,6 +104,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       this.#translationsPage(view),
       this.#strongsGroup(view),
       this.#readerGroup(),
+      this.#highlightsGroup(view),
       this.#annotationsGroup(),
     ]
   }
@@ -241,12 +248,15 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
 
   // Everything that shapes the rendered tree except the per-control values:
   // rows, option lists, languages, Strong's state — plus the language filter,
-  // which feeds its own dropdown's option list.
+  // which feeds its own dropdown's option list, and the highlight palette,
+  // whose imperatively rendered pickers hold no key of their own to refresh
+  // (reset changes all ten at once).
   #structureSignature(): string {
     const { settings, ...structure } = this.model.view
     return JSON.stringify({
       ...structure,
       languageFilter: settings.languageFilter,
+      highlightPalette: settings.highlightPalette,
     })
   }
 
@@ -494,6 +504,72 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       desc: READER_DEFAULT_DESC,
       control: { type: 'dropdown', key, options: labels },
     }
+  }
+
+  #highlightsGroup(
+    view: SettingsTabView,
+  ): SettingDefinitionGroup<SettingsControlKey> {
+    const palette = resolveHighlightPalette(view.settings.highlightPalette)
+    return {
+      type: 'group',
+      heading: 'Highlights',
+      items: [
+        ...HIGHLIGHT_SLOTS.map((slot) => ({
+          name: `Slot ${slot}`,
+          desc: 'Light mode color, then dark mode color.',
+          render: (setting: Setting) =>
+            this.#renderHighlightSlot(setting, palette, slot),
+        })),
+        {
+          name: 'Reset colors',
+          desc: 'Restores the shipped palette.',
+          render: (setting: Setting) =>
+            void setting.addButton((button) =>
+              button
+                .setButtonText('Reset')
+                .onClick(() =>
+                  this.#update((settings) => ({
+                    ...settings,
+                    highlightPalette: DEFAULT_HIGHLIGHT_PALETTE,
+                  })),
+                ),
+            ),
+        },
+      ],
+    }
+  }
+
+  #renderHighlightSlot(
+    setting: Setting,
+    palette: HighlightPalette,
+    slot: HighlightSlot,
+  ): void {
+    const modes: HighlightThemeMode[] = ['light', 'dark']
+    for (const mode of modes) {
+      setting.addColorPicker((picker) => {
+        picker.setValue(palette[mode][slot - 1] ?? '')
+        picker.onChange((color) => {
+          this.#setHighlightColor(palette, mode, slot, color)
+        })
+      })
+    }
+  }
+
+  #setHighlightColor(
+    palette: HighlightPalette,
+    mode: HighlightThemeMode,
+    slot: HighlightSlot,
+    color: string,
+  ): void {
+    this.#update((settings) => ({
+      ...settings,
+      highlightPalette: {
+        ...palette,
+        [mode]: palette[mode].map((current, index) =>
+          index === slot - 1 ? color : current,
+        ),
+      },
+    }))
   }
 
   #annotationsGroup(): SettingDefinitionGroup<SettingsControlKey> {
