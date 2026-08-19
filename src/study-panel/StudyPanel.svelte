@@ -62,11 +62,7 @@ opens the reference in the reader with the entry's translation.
 </script>
 
 {#snippet panelTitle(title: string | null)}
-  <div class="view-header bsp-title">
-    <div class="view-header-title-container">
-      <div class="view-header-title">{title}</div>
-    </div>
-  </div>
+  <div class="bsp-title">{title}</div>
 {/snippet}
 
 {#if view.studyMaterial !== null && model.studySource !== null}
@@ -214,20 +210,21 @@ opens the reference in the reader with the entry's translation.
     min-height: 0;
   }
 
-  /* The title wears Obsidian's own file-header classes, so its height, rule,
-     and type come from whatever the active theme gives a note header. Only
-     the centering and the accent color are the panel's own. */
+  /* Heads the panel like a note's file header, off the same variables the
+     theme styles that header with — the header's own classes can't be
+     reused, as themes hang leaf-level behavior (autohiding, scroll
+     transforms) off them. Centering and the accent color are the panel's
+     own deliberate departures from a note header. */
   .bsp-title {
+    display: flex;
     flex-shrink: 0;
+    align-items: center;
     justify-content: center;
-  }
-
-  .bsp-title .view-header-title-container {
-    justify-content: center;
-    text-align: center;
-  }
-
-  .bsp-title .view-header-title {
+    height: var(--header-height);
+    border-bottom: var(--file-header-border);
+    font-family: var(--file-header-font);
+    font-size: var(--font-ui-medium);
+    font-weight: 600;
     color: var(--text-accent);
   }
 
