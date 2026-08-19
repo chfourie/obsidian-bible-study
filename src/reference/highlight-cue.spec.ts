@@ -4,6 +4,7 @@ import {
   isHighlightCueToken,
   parseHighlightCue,
   type HighlightCue,
+  type HighlightSlot,
 } from './highlight-cue'
 import { parseReference } from './parse-reference'
 import { makeVerseId } from './verse-id'
@@ -17,7 +18,7 @@ const referenceOf = (text: string) => {
 }
 
 const cue = (
-  slot: number,
+  slot: HighlightSlot,
   startVerseId: number,
   startChar: number,
   endVerseId: number,

@@ -2,7 +2,7 @@ import {
   applyHighlightStroke,
   highlightSelectionRange,
   type HighlightRange,
-  type PassageVerse,
+  type VerseText,
 } from '../highlights'
 import type { HighlightCue } from '../reference'
 import type { AnchorRect } from '../ui'
@@ -15,7 +15,7 @@ import { passageSelectionRange } from './passage-selection'
 
 export type HighlightEditContext = {
   cues: readonly HighlightCue[]
-  verses: readonly PassageVerse[]
+  verses: readonly VerseText[]
 }
 
 export type HighlightCueWriter = (cues: readonly HighlightCue[]) => void

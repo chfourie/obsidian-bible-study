@@ -71,10 +71,11 @@ export const rewriteHighlightToken = (
 
   const tokens = tokensOf(tokenText)
   const body = withoutCueTokens(tokenText, tokens)
-  const pin = options.translation
-  const needsPin = cues.length > 0 && parsed.translation === null && !!pin
-  const pinned =
-    needsPin && pin ? withTranslationAfterSpec(body, tokens, pin) : body
+  // A cue's offsets index one translation's text, so the first cue pins the
+  // translation the reader was looking at.
+  const pin =
+    cues.length > 0 && parsed.translation === null ? options.translation : null
+  const pinned = pin ? withTranslationAfterSpec(body, tokens, pin) : body
   const tail = cueTail(cues, parsed.reference)
   // Everything outside the cue tail is the user's text, trailing spaces and all.
   return tail === '' ? pinned : `${pinned.trimEnd()} ${tail}`

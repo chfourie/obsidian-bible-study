@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_HIGHLIGHT_PALETTE } from '../data-access'
+import { defaultHighlightPalette } from '../data-access'
 import {
   highlightPaletteVariables,
   resolveHighlightPalette,
@@ -22,9 +22,9 @@ describe('resolveHighlightPalette', () => {
     })
 
     expect(resolved.light[0]).toBe('#112233')
-    expect(resolved.light[1]).toBe(DEFAULT_HIGHLIGHT_PALETTE.light[1])
+    expect(resolved.light[1]).toBe(defaultHighlightPalette().light[1])
     expect(resolved.light).toHaveLength(5)
-    expect(resolved.dark).toEqual(DEFAULT_HIGHLIGHT_PALETTE.dark)
+    expect(resolved.dark).toEqual(defaultHighlightPalette().dark)
   })
 
   it('lowercases and accepts shorthand hex', () => {
@@ -34,7 +34,7 @@ describe('resolveHighlightPalette', () => {
   })
 
   it('resolves undefined to the shipped defaults', () => {
-    expect(resolveHighlightPalette(undefined)).toEqual(DEFAULT_HIGHLIGHT_PALETTE)
+    expect(resolveHighlightPalette(undefined)).toEqual(defaultHighlightPalette())
   })
 })
 
@@ -56,7 +56,7 @@ describe('highlightPaletteVariables', () => {
 
     expect(variables['--ss-hl-light-1']).toBe('rgba(255, 0, 0, 0.45)')
     expect(variables['--ss-hl-light-2']).toBe(
-      highlightPaletteVariables(DEFAULT_HIGHLIGHT_PALETTE)['--ss-hl-light-2'],
+      highlightPaletteVariables(defaultHighlightPalette())['--ss-hl-light-2'],
     )
     expect(Object.keys(variables)).toHaveLength(10)
   })

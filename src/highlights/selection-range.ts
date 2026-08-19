@@ -1,4 +1,4 @@
-import type { PassageVerse } from './apply-stroke'
+import type { VerseText } from './apply-stroke'
 import type { HighlightRange } from './highlight-spans'
 
 const WORD_CHARACTER = /[\p{L}\p{N}\p{M}]/u
@@ -33,7 +33,7 @@ const clamp = (value: number, limit: number): number =>
 
 export const highlightSelectionRange = (
   selection: HighlightRange,
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): HighlightRange | null => {
   const startIndex = verses.findIndex(
     (verse) => verse.verseId >= selection.startVerseId,

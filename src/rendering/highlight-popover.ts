@@ -1,9 +1,9 @@
 import { setIcon } from 'obsidian'
-import { HIGHLIGHT_SLOTS } from '../data-access'
+import { HIGHLIGHT_SLOTS, type HighlightSlot } from '../data-access'
 import { activate, computeMenuPanelPosition, type AnchorRect } from '../ui'
 
 // A null slot is the eraser — the sixth position in the popover.
-export type HighlightChoice = number | null
+export type HighlightChoice = HighlightSlot | null
 
 export type HighlightPopover = {
   element: HTMLElement

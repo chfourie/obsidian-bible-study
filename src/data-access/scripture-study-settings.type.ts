@@ -1,3 +1,5 @@
+export { HIGHLIGHT_SLOTS, type HighlightSlot } from '../reference'
+
 // Fields land with the features that need them; the settings ticket on the
 // wayfinder map enumerates the v1 surface.
 export type AnnotationOrdering = 'created-oldest-first' | 'path-a-z'
@@ -7,8 +9,6 @@ export const FONT_SCALE_MAX = 200
 export const FONT_SCALE_STEP = 10
 export const FONT_SCALE_DEFAULT = 100
 
-export const HIGHLIGHT_SLOTS = [1, 2, 3, 4, 5] as const
-export type HighlightSlot = (typeof HIGHLIGHT_SLOTS)[number]
 export type HighlightThemeMode = 'light' | 'dark'
 export type HighlightPalette = Record<HighlightThemeMode, string[]>
 
@@ -27,10 +27,12 @@ const SHIPPED_HIGHLIGHT_HUES = [
   '#ffb066',
 ]
 
-export const DEFAULT_HIGHLIGHT_PALETTE: HighlightPalette = {
+// Handed out as a fresh copy so editing a palette can never reach the hues
+// the plugin ships with.
+export const defaultHighlightPalette = (): HighlightPalette => ({
   light: [...SHIPPED_HIGHLIGHT_HUES],
   dark: [...SHIPPED_HIGHLIGHT_HUES],
-}
+})
 
 export type ScriptureStudySettings = {
   installedModuleIds: string[]
@@ -63,5 +65,5 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   annotationsFolder: 'Annotations',
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',
-  highlightPalette: DEFAULT_HIGHLIGHT_PALETTE,
+  highlightPalette: defaultHighlightPalette(),
 }

@@ -1,4 +1,4 @@
-import type { HighlightCue } from '../reference'
+import type { HighlightCue, HighlightSlot } from '../reference'
 
 export type HighlightRange = {
   startVerseId: number
@@ -10,7 +10,7 @@ export type HighlightRange = {
 export type HighlightSpan = {
   start: number
   end: number
-  slot: number
+  slot: HighlightSlot
 }
 
 export const rangeWithinVerse = (
@@ -28,7 +28,9 @@ export const rangeWithinVerse = (
     : null
 }
 
-export const slotRuns = (slots: readonly (number | null)[]): HighlightSpan[] => {
+export const slotRuns = (
+  slots: readonly (HighlightSlot | null)[],
+): HighlightSpan[] => {
   const spans: HighlightSpan[] = []
   slots.forEach((slot, index) => {
     if (slot === null) return
@@ -48,8 +50,8 @@ export const paintedSlots = (
   cues: readonly HighlightCue[],
   verseId: number,
   textLength: number,
-): (number | null)[] => {
-  const slots: (number | null)[] = Array.from(
+): (HighlightSlot | null)[] => {
+  const slots: (HighlightSlot | null)[] = Array.from(
     { length: textLength },
     () => null,
   )

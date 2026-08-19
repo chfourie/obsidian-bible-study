@@ -1,6 +1,7 @@
 import type { Plugin } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
+  defaultHighlightPalette,
   type ScriptureStudySettings,
 } from './scripture-study-settings.type'
 import { applyTranslationBootstrap } from './bootstrap-translations'
@@ -29,7 +30,11 @@ export class SettingsStore {
     const stored = (await this.plugin.loadData()) as
       | Partial<ScriptureStudySettings>
       | null
-    const settings = { ...DEFAULT_SETTINGS, ...stored } as ScriptureStudySettings &
+    const settings = {
+      ...DEFAULT_SETTINGS,
+      highlightPalette: defaultHighlightPalette(),
+      ...stored,
+    } as ScriptureStudySettings &
       Partial<Record<(typeof REMOVED_SETTINGS_KEYS)[number], unknown>>
     for (const key of REMOVED_SETTINGS_KEYS) delete settings[key]
     return applyTranslationBootstrap(settings)

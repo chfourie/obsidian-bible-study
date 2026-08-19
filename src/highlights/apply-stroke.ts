@@ -1,4 +1,8 @@
-import { nextVerse, type HighlightCue } from '../reference'
+import {
+  nextVerse,
+  type HighlightCue,
+  type HighlightSlot,
+} from '../reference'
 import {
   paintedSlots,
   rangeWithinVerse,
@@ -6,14 +10,14 @@ import {
   type HighlightRange,
 } from './highlight-spans'
 
-export type PassageVerse = {
+export type VerseText = {
   verseId: number
   text: string
 }
 
 // A null slot erases: the eraser is a stroke like any other.
 export type HighlightStroke = HighlightRange & {
-  slot: number | null
+  slot: HighlightSlot | null
 }
 
 // A place in the passage: the character boundary before `char` of `verseId`.
@@ -23,7 +27,7 @@ type Position = {
 }
 
 type Portion = {
-  slot: number
+  slot: HighlightSlot
   start: Position
   end: Position
 }
@@ -56,17 +60,17 @@ const cueOf = (portion: Portion): HighlightCue => ({
 })
 
 const servedVerse = (
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
   verseId: number | null,
-): PassageVerse | undefined =>
+): VerseText | undefined =>
   verses.find((verse) => verse.verseId === verseId)
 
 const runsOn = (
-  verses: readonly PassageVerse[],
-  spanOf: (verse: PassageVerse) => { start: number; end: number } | null,
+  verses: readonly VerseText[],
+  spanOf: (verse: VerseText) => { start: number; end: number } | null,
 ): Region[] => {
   const regions: Region[] = []
-  let previous: PassageVerse | null = null
+  let previous: VerseText | null = null
   for (const verse of verses) {
     const span = spanOf(verse)
     if (span !== null) {
@@ -97,7 +101,7 @@ const runsOn = (
 // reach the cues written over them.
 const servedRegions = (
   range: HighlightRange,
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): Region[] =>
   runsOn(verses, (verse) =>
     rangeWithinVerse(range, verse.verseId, verse.text.length),
@@ -129,7 +133,7 @@ const outsideRegions = (
 // pulled onto the text they cover so equal cues read equal.
 const tightenedStart = (
   start: Position,
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): Position => {
   let place = start
   for (;;) {
@@ -143,7 +147,7 @@ const tightenedStart = (
 
 const tightenedEnd = (
   end: Position,
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): Position => {
   let place = end
   for (;;) {
@@ -159,7 +163,7 @@ const tightenedEnd = (
 
 const tightened = (
   portions: readonly Portion[],
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): Portion[] =>
   portions
     .map((portion) => ({
@@ -172,7 +176,7 @@ const tightened = (
 const adjoins = (
   end: Position,
   start: Position,
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): boolean => {
   if (samePlace(end, start) || before(start, end)) return true
   const verse = servedVerse(verses, end.verseId)
@@ -186,7 +190,7 @@ const adjoins = (
 
 const joined = (
   portions: readonly Portion[],
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): Portion[] => {
   const merged: Portion[] = []
   for (const portion of portions) {
@@ -206,7 +210,7 @@ const joined = (
 
 const settled = (
   portions: readonly Portion[],
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): HighlightCue[] =>
   joined(
     [...tightened(portions, verses)].sort(
@@ -220,7 +224,7 @@ const settled = (
 
 const paintedPortions = (
   cues: readonly HighlightCue[],
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): Portion[] =>
   verses.flatMap((verse) =>
     slotRuns(paintedSlots(cues, verse.verseId, verse.text.length)).map(
@@ -235,7 +239,7 @@ const paintedPortions = (
 export const applyHighlightStroke = (
   cues: readonly HighlightCue[],
   stroke: HighlightStroke,
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): HighlightCue[] => {
   const stroked = servedRegions(stroke, verses)
   const slot = stroke.slot
@@ -249,7 +253,7 @@ export const applyHighlightStroke = (
 
 export const canonicalHighlightCues = (
   cues: readonly HighlightCue[],
-  verses: readonly PassageVerse[],
+  verses: readonly VerseText[],
 ): HighlightCue[] => {
   const unserved = cues.flatMap((cue) =>
     outsideRegions([portionOf(cue)], servedRegions(cue, verses)),

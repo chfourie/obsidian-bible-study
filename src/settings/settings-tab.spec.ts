@@ -8,7 +8,7 @@ import {
   TFolder,
 } from '../../tests/mocks/obsidian'
 import {
-  DEFAULT_HIGHLIGHT_PALETTE,
+  defaultHighlightPalette,
   SettingsStore,
   type ScriptureStudySettings,
 } from '../data-access'
@@ -774,8 +774,8 @@ describe('ScriptureStudySettingTab highlights palette', () => {
     for (const slot of [1, 2, 3, 4, 5]) {
       const pickers = colorPickersOf(slotRow(container, slot))
       expect(pickers).toHaveLength(2)
-      expect(pickers[0]?.value).toBe(DEFAULT_HIGHLIGHT_PALETTE.light[slot - 1])
-      expect(pickers[1]?.value).toBe(DEFAULT_HIGHLIGHT_PALETTE.dark[slot - 1])
+      expect(pickers[0]?.value).toBe(defaultHighlightPalette().light[slot - 1])
+      expect(pickers[1]?.value).toBe(defaultHighlightPalette().dark[slot - 1])
     }
     expect(hasSettingNamed(container, 'Slot 6')).toBe(false)
   })
@@ -791,8 +791,8 @@ describe('ScriptureStudySettingTab highlights palette', () => {
 
     const { highlightPalette } = await settingsStore.loadSettings()
     expect(highlightPalette.light[1]).toBe('#123456')
-    expect(highlightPalette.dark).toEqual(DEFAULT_HIGHLIGHT_PALETTE.dark)
-    expect(highlightPalette.light[0]).toBe(DEFAULT_HIGHLIGHT_PALETTE.light[0])
+    expect(highlightPalette.dark).toEqual(defaultHighlightPalette().dark)
+    expect(highlightPalette.light[0]).toBe(defaultHighlightPalette().light[0])
   })
 
   it('persists a dark-mode slot color', async () => {
@@ -806,7 +806,7 @@ describe('ScriptureStudySettingTab highlights palette', () => {
 
     const { highlightPalette } = await settingsStore.loadSettings()
     expect(highlightPalette.dark[4]).toBe('#654321')
-    expect(highlightPalette.light).toEqual(DEFAULT_HIGHLIGHT_PALETTE.light)
+    expect(highlightPalette.light).toEqual(defaultHighlightPalette().light)
   })
 
   it('restores the shipped defaults and re-renders the pickers on reset', async () => {
@@ -826,10 +826,10 @@ describe('ScriptureStudySettingTab highlights palette', () => {
     await flushAsync()
 
     expect((await settingsStore.loadSettings()).highlightPalette).toEqual(
-      DEFAULT_HIGHLIGHT_PALETTE,
+      defaultHighlightPalette(),
     )
     expect(colorPickersOf(slotRow(container, 1))[0]?.value).toBe(
-      DEFAULT_HIGHLIGHT_PALETTE.light[0],
+      defaultHighlightPalette().light[0],
     )
   })
 
@@ -839,7 +839,7 @@ describe('ScriptureStudySettingTab highlights palette', () => {
     })
 
     expect(colorPickersOf(slotRow(container, 1))[0]?.value).toBe(
-      DEFAULT_HIGHLIGHT_PALETTE.light[0],
+      defaultHighlightPalette().light[0],
     )
   })
 })

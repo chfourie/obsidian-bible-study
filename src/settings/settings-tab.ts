@@ -9,7 +9,7 @@ import {
   type TFile,
 } from 'obsidian'
 import {
-  DEFAULT_HIGHLIGHT_PALETTE,
+  defaultHighlightPalette,
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
   FONT_SCALE_STEP,
@@ -530,7 +530,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
                 .onClick(() =>
                   this.#update((settings) => ({
                     ...settings,
-                    highlightPalette: DEFAULT_HIGHLIGHT_PALETTE,
+                    highlightPalette: defaultHighlightPalette(),
                   })),
                 ),
             ),

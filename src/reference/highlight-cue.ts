@@ -2,15 +2,20 @@ import { decodeVerseId, makeVerseId } from './verse-id'
 import { verseCount } from './versification'
 import { rangeContains, type Reference } from './verse-range'
 
+export const HIGHLIGHT_SLOTS = [1, 2, 3, 4, 5] as const
+
+export type HighlightSlot = (typeof HIGHLIGHT_SLOTS)[number]
+
+export const isHighlightSlot = (value: number): value is HighlightSlot =>
+  HIGHLIGHT_SLOTS.some((slot) => slot === value)
+
 export type HighlightCue = {
-  slot: number
+  slot: HighlightSlot
   startVerseId: number
   startChar: number
   endVerseId: number
   endChar: number
 }
-
-export const HIGHLIGHT_SLOTS: readonly number[] = [1, 2, 3, 4, 5]
 
 const CUE_PATTERN =
   /^h(\d+)\/(?:(\d+):)?(\d+)\.(\d+)-(?:(?:(\d+):)?(\d+)\.)?(\d+)$/i
@@ -48,7 +53,7 @@ export const parseHighlightCue = (
   ] = match
 
   const slot = Number(rawSlot)
-  if (!HIGHLIGHT_SLOTS.includes(slot)) return null
+  if (!isHighlightSlot(slot)) return null
 
   const chapter = inheritedChapter(reference)
   const startVerseId = verseIdIn(

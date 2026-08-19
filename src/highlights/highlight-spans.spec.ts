@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { makeVerseId, type HighlightCue } from '../reference'
+import {
+  makeVerseId,
+  type HighlightCue,
+  type HighlightSlot,
+} from '../reference'
 import { highlightSpans } from './highlight-spans'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
 const cue = (
-  slot: number,
+  slot: HighlightSlot,
   startVerse: number,
   startChar: number,
   endVerse: number,

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { makeVerseId, type HighlightCue } from '../reference'
+import {
+  makeVerseId,
+  type HighlightCue,
+  type HighlightSlot,
+} from '../reference'
 import {
   applyHighlightStroke,
   canonicalHighlightCues,
   type HighlightStroke,
-  type PassageVerse,
+  type VerseText,
 } from './apply-stroke'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
@@ -14,14 +18,14 @@ const versesOf = (
   firstVerse: number,
   count: number,
   length = 40,
-): PassageVerse[] =>
+): VerseText[] =>
   Array.from({ length: count }, (_, index) => ({
     verseId: john(chapter, firstVerse + index),
     text: 'x'.repeat(length),
   }))
 
 const cue = (
-  slot: number,
+  slot: HighlightSlot,
   startVerse: number,
   startChar: number,
   endVerse: number,
@@ -35,7 +39,7 @@ const cue = (
 })
 
 const stroke = (
-  slot: number | null,
+  slot: HighlightSlot | null,
   startVerse: number,
   startChar: number,
   endVerse: number,
@@ -162,7 +166,7 @@ describe('applyHighlightStroke — passage bounds', () => {
   })
 
   it('has nothing to paint on an empty verse text', () => {
-    const empty: PassageVerse[] = [{ verseId: john(15, 5), text: '' }]
+    const empty: VerseText[] = [{ verseId: john(15, 5), text: '' }]
     expect(applyHighlightStroke([], stroke(1, 5, 0, 5, 10), empty)).toEqual([])
   })
 })

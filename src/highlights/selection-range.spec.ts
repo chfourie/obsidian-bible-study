@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
-import type { PassageVerse } from './apply-stroke'
+import type { VerseText } from './apply-stroke'
 import { highlightSelectionRange } from './selection-range'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
-const verse = (number: number, text: string): PassageVerse => ({
+const verse = (number: number, text: string): VerseText => ({
   verseId: john(15, number),
   text,
 })

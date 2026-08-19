@@ -1,5 +1,5 @@
 import {
-  DEFAULT_HIGHLIGHT_PALETTE,
+  defaultHighlightPalette,
   HIGHLIGHT_SLOTS,
   HIGHLIGHT_TINT_ALPHA,
   type HighlightPalette,
@@ -24,7 +24,7 @@ const resolveMode = (
   mode: HighlightThemeMode,
 ): string[] => {
   const colors = Array.isArray(stored) ? stored : []
-  return DEFAULT_HIGHLIGHT_PALETTE[mode].map((fallback, index) =>
+  return defaultHighlightPalette()[mode].map((fallback, index) =>
     resolveColor(colors[index], fallback),
   )
 }
