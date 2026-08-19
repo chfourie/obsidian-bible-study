@@ -38,8 +38,8 @@ The single user-configured translation (restricted to installed modules) served 
 ### Cross-Reference
 A symmetric connection between two or more References that belong together in study (e.g. a shared theme or allusion). All members are mutually connected — there is no direction and no primary member. Not a note: cross-references live in a single plugin-managed data file inside the vault, so they sync and back up with the vault without imposing per-item filenames. Distinct from a Reference: a Reference is an address; a Cross-Reference is an edge between addresses.
 
-### Margin Reference
-A read-only, directional link from an origin verse to a target Reference, drawn from a shipped dataset compiled from public-domain sources (Treasury of Scripture Knowledge as the backbone), with per-link provenance. The kind of reference a printed Bible carries in its margin. Distinct from a Cross-Reference: a Cross-Reference is user-authored, symmetric, and editable; a Margin Reference is mass-produced, directional, and immutable.
+### Study Panel
+The single right-sidebar surface that follows the last-focused note or reader tab: for a note, the passages it references and intersecting Cross-References; for a reader, the selected verse's details and the chapter's Cross-References. Remembers its state per tab (in memory, for the tab's lifetime). The reader itself shows only scripture text — all companion material lives here.
 
 ### Occurrence
 One appearance of a reference at a position in a vault note (in the body or in annotation frontmatter). The unit the vault index stores; intersection queries return occurrences.
@@ -54,7 +54,7 @@ A translation whose module carries word-level Strong's tag spans beside each ver
 The shared dictionary module (STEPBible TBESH/TBESG, CC BY 4.0) mapping Strong's numbers to lemma, transliteration, gloss, and definition. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
 
 ### Strong's Mode
-A reader-toolbar toggle (visible only when the viewed translation is tagged and the Strong's Dictionaries are installed) that makes tagged words tappable. Tapping renders the word's dictionary entries in the reader details surface, with CC BY attribution.
+A reader-toolbar toggle (visible only when the viewed translation is tagged and the Strong's Dictionaries are installed) that makes tagged words tappable. Tapping renders the word's dictionary entries in the Study Panel, with CC BY attribution.
 
 ### Highlight
 A colored span over part of one occurrence's rendered passage, anchored as character offsets into one translation's stored verse text (verse id + start/end chars, end-exclusive). Belongs to that single occurrence — never a vault-wide property of the verse. Exists only while the occurrence displays its requested translation; a substituted (fallback) passage renders none.
