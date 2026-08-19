@@ -366,3 +366,12 @@ body {
   .view-header-title-container {
   display: none;
 }
+
+/* ---- Study Panel header ------------------------------------------------ */
+
+/* The panel's title stands in for the leaf's file header — same classes, so
+   the theme rules it the same way — and a header sits flush against the top
+   of the content it heads. */
+.workspace-leaf-content[data-type='scripture-study-panel'] .view-content {
+  padding-top: 0;
+}

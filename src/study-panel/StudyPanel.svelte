@@ -61,10 +61,18 @@ opens the reference in the reader with the entry's translation.
   }
 </script>
 
+{#snippet panelTitle(title: string | null)}
+  <div class="view-header bsp-title">
+    <div class="view-header-title-container">
+      <div class="view-header-title">{title}</div>
+    </div>
+  </div>
+{/snippet}
+
 {#if view.studyMaterial !== null && model.studySource !== null}
   {@const material = view.studyMaterial}
   <div class="bsp-reader">
-    <div class="bsp-title">{view.title}</div>
+    {@render panelTitle(view.title)}
     {#if material.collection !== null}
       <CollectionStrip
         collection={material.collection}
@@ -82,7 +90,7 @@ opens the reference in the reader with the entry's translation.
 {:else}
   <div class="bsp-panel">
     {#if view.title !== null}
-      <div class="bsp-title">{view.title}</div>
+      {@render panelTitle(view.title)}
     {/if}
     {#if view.status === 'no-note'}
       <p class="bsp-empty">Open a note to see its scripture references.</p>
@@ -194,7 +202,7 @@ opens the reference in the reader with the entry's translation.
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 0.25rem 0;
+    padding: 0 0 0.25rem;
   }
 
   /* The mirrored reader fills the sidebar: its details region scrolls on its
@@ -206,16 +214,21 @@ opens the reference in the reader with the entry's translation.
     min-height: 0;
   }
 
-  /* Titled like a note's own header, down to the rule beneath it: the
-     border variable is the one Obsidian hands its file header, so a theme
-     styling that rule styles this one identically. */
+  /* The title wears Obsidian's own file-header classes, so its height, rule,
+     and type come from whatever the active theme gives a note header. Only
+     the centering and the accent color are the panel's own. */
   .bsp-title {
-    font-size: var(--font-ui-medium);
-    font-weight: 600;
-    color: var(--text-accent);
+    flex-shrink: 0;
+    justify-content: center;
+  }
+
+  .bsp-title .view-header-title-container {
+    justify-content: center;
     text-align: center;
-    padding-bottom: var(--size-4-2);
-    border-bottom: var(--file-header-border);
+  }
+
+  .bsp-title .view-header-title {
+    color: var(--text-accent);
   }
 
   .bsp-empty {
