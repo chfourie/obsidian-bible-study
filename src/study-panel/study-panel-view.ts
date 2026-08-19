@@ -1,7 +1,8 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian'
+import { ItemView, MarkdownRenderer, WorkspaceLeaf } from 'obsidian'
 import { mount, unmount } from 'svelte'
 import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
+import type { StudyMaterialHost } from '../study-material'
 import StudyPanel from './StudyPanel.svelte'
 import type { StudyPanelFeature } from './study-panel-feature'
 import type { StudyPanelModel } from './study-panel-model'
@@ -33,6 +34,18 @@ export class StudyPanelView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
+    const host: StudyMaterialHost = {
+      openNote: (file) => this.feature.openNote(file),
+      // A reference surfaced by the mirrored reader carries no translation of
+      // its own: it opens in whichever one that reader is showing.
+      openReference: (reference, options) =>
+        this.feature.openReference(reference, null, options),
+      editCrossReferenceInNewPane: (entry) =>
+        this.feature.editCrossReferenceInNewPane(entry),
+      annotate: (reference) => this.feature.annotateReference(reference),
+      renderMarkdown: (el, markdown, sourcePath) =>
+        void MarkdownRenderer.render(this.app, markdown, el, sourcePath, this),
+    }
     this.#component = mount(StudyPanel, {
       target: this.contentEl,
       props: {
@@ -42,6 +55,7 @@ export class StudyPanelView extends ItemView {
           translationId: string | null,
           options?: NavigationOptions,
         ) => this.feature.openReference(reference, translationId, options),
+        host,
       },
     }) as Record<string, unknown>
   }

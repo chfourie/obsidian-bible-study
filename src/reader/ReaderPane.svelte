@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { setIcon } from 'obsidian'
   import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
   import type {
     NavigationOptions,
@@ -7,7 +6,7 @@
     StudyMaterialSource,
     VerseDetailsView,
   } from '../contracts'
-  import type { CrossReference, CrossReferenceView } from '../cross-references'
+  import type { CrossReference } from '../cross-references'
   import {
     paragraphsOf,
     type ReaderPaneModel,
@@ -15,7 +14,10 @@
     type VerseRowView,
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
-  import { opensInNewPane } from '../ui'
+  import CollectionStrip from '../study-material/CollectionStrip.svelte'
+  import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
+  import type { StudyMaterialHost } from '../study-material'
+  import VerseDetails from '../study-material/VerseDetails.svelte'
   import TranslationMenu from './TranslationMenu.svelte'
   import OptionsMenu from './OptionsMenu.svelte'
 
@@ -52,8 +54,18 @@
     }),
   )
 
+  // What the shared study-material surfaces need from the workspace around
+  // this pane; everything else they do goes through the study source above.
+  const host: StudyMaterialHost = {
+    openNote: (file) => openNote(file),
+    openReference: (reference, options) => openReference(reference, options),
+    editCrossReferenceInNewPane: (entry) => editCrossReferenceInNewPane(entry),
+    annotate: (reference) => onAnnotate(reference),
+    renderMarkdown: (el, markdown, sourcePath) =>
+      renderMarkdown(el, markdown, sourcePath),
+  }
+
   let openBook: number | null = $state(null)
-  let sideTab: 'translations' | 'notes' = $state('translations')
 
   const books = Array.from({ length: BOOK_COUNT }, (_, index) => index + 1)
   const chaptersOf = (book: number): number[] =>
@@ -128,41 +140,6 @@
     (view.toggles.details === 'side-panel' &&
       material.selectedVerseId === verseId)
 
-  const annotateVerseBlock = (verseId: number): void => {
-    onAnnotate(studySource.annotationReference(verseId))
-  }
-
-  type MarkdownBody = { text: string; path: string }
-  const markdown = (el: HTMLElement, body: MarkdownBody) => {
-    const render = (value: MarkdownBody): void => {
-      el.replaceChildren()
-      renderMarkdown(el, value.text, value.path)
-    }
-    render(body)
-    return { update: render }
-  }
-
-  const icon = (node: HTMLElement, name: string) => {
-    setIcon(node, name)
-  }
-
-  const editCrossReference = (
-    entry: CrossReferenceView,
-    event: MouseEvent,
-  ): void => {
-    const edited: CrossReference = {
-      id: entry.id,
-      members: entry.allMembers,
-      description: entry.description,
-    }
-    if (opensInNewPane(event)) editCrossReferenceInNewPane(edited)
-    else studySource.startEditingCrossReference(edited)
-  }
-
-  const saveCrossReference = (): void => {
-    void studySource.saveCrossReference()
-  }
-
   const onBookPicked = (event: Event): void => {
     const book = Number((event.target as HTMLSelectElement).value)
     void model.goTo(book, 1)
@@ -173,158 +150,27 @@
   }
 </script>
 
-{#snippet crossReferenceRow(entry: CrossReferenceView)}
-  <div class="bsr-xref-block">
-    <button
-      type="button"
-      class="bsr-xref-edit"
-      aria-label="Edit cross-reference in the reader"
-      disabled={material.collection !== null}
-      onclick={(event) => editCrossReference(entry, event)}
-    >✎</button>
-    {#if entry.description !== null}
-      <div class="bsr-xref-description">{entry.description}</div>
-    {/if}
-    <div class="bsr-xref-members">
-      {#each entry.members as member (member.index)}
-        <button
-          type="button"
-          class="bsr-xref-member"
-          onclick={(event) =>
-            openReference(member.reference, { newPane: opensInNewPane(event) })}
-        >{member.label}</button>
-      {/each}
-    </div>
-  </div>
-{/snippet}
-
-{#snippet sectionHeading(
-  label: string,
-  action: string,
-  onAdd: () => void,
-  disabled = false,
-)}
-  <div class="bsr-section-head">
-    <span class="bsr-group-label">{label}</span>
-    <button
-      type="button"
-      class="bsr-section-add"
-      aria-label={action}
-      title={action}
-      {disabled}
-      onclick={onAdd}
-    ><span class="bsr-section-add-icon" use:icon={'circle-plus'}></span></button>
-  </div>
-{/snippet}
-
-{#snippet crossReferencesHeading()}
-  {@render sectionHeading(
-    'Cross-references',
-    'Collect a cross-reference',
-    () => studySource.startCollecting(),
-    material.collection !== null,
-  )}
-{/snippet}
-
-{#snippet notesBlock(details: VerseDetailsView, withCrossReferences: boolean)}
-  {@render sectionHeading('Annotations', 'Annotate this verse', () =>
-    annotateVerseBlock(details.verseId),
-  )}
-  {#if details.annotations.length === 0}
-    <div class="bsr-details-empty">No annotations.</div>
-  {:else}
-    {#each details.annotations as block, index (block.file)}
-      {#if index > 0}<hr class="bsr-anno-sep" />{/if}
-      <div class="bsr-anno-block">
-        <button
-          type="button"
-          class="bsr-anno-edit"
-          aria-label="Open annotation in editor"
-          onclick={() => openNote(block.file)}
-        >✎</button>
-        <div class="bsr-anno-body" use:markdown={{ text: block.body, path: block.file }}></div>
-      </div>
-    {/each}
-  {/if}
-  {#if withCrossReferences}
-    {@render crossReferencesHeading()}
-    {#each details.crossReferences as entry, index (entry.id)}
-      {#if index > 0}<hr class="bsr-xref-sep" />{/if}
-      {@render crossReferenceRow(entry)}
-    {/each}
-  {/if}
-  <div class="bsr-group-label bsr-section-label">Mentions</div>
-  {#if details.mentions.length === 0}
-    <div class="bsr-details-empty">No intersecting notes.</div>
-  {:else}
-    <ul class="bsr-mention-list">
-      {#each details.mentions as note (note.file)}
-        <li class="bsr-mention-item">
-          <button
-            type="button"
-            class="bsr-mention-link"
-            onclick={() => openNote(note.file)}
-          >{note.file}</button>
-        </li>
-      {/each}
-    </ul>
-  {/if}
-{/snippet}
-
-{#snippet strongsBlock(details: VerseDetailsView)}
-  {#if details.strongs.length > 0}
-    <div class="bsr-group-label">Strong's</div>
-    {#each details.strongs as entry (entry.strongs)}
-      <div class="bsr-strongs-entry">
-        <div class="bsr-strongs-head">
-          <span class="bsr-strongs-number">{entry.strongs}</span>
-          <span class="bsr-strongs-lemma">{entry.lemma}</span>
-          <span class="bsr-strongs-translit">{entry.transliteration}</span>
-        </div>
-        <div class="bsr-strongs-gloss">{entry.gloss}</div>
-        <div class="bsr-strongs-definition">{entry.definition}</div>
-      </div>
-    {/each}
-    {#if details.strongsAttribution !== null}
-      <div class="bsr-strongs-attribution">{details.strongsAttribution}</div>
-    {/if}
-  {/if}
-{/snippet}
-
 {#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.psalmHeading}<span
       class:scripture-study-red-letter={segment.redLetter}
       class:scripture-study-supplied={segment.supplied}
       class:scripture-study-psalm-heading={segment.psalmHeading}
     >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
 
-{#snippet detailsBlock(details: VerseDetailsView | null)}
-  {#if details === null}
-    <div class="bsr-details-empty">Loading…</div>
-  {:else}
-    <div class="bsr-details-title">{details.title}</div>
-    {@render strongsBlock(details)}
-    {@render translationsTable(details)}
-    {@render notesBlock(details, true)}
-  {/if}
-{/snippet}
-
-{#snippet translationsTable(details: VerseDetailsView)}
-  <table class="bsr-trans-table">
-    <tbody>
-      {#each details.translations as row (row.id)}
-        <tr>
-          <td class="bsr-trans-id" title={row.name}>{row.label}</td>
-          <td class="bsr-trans-text">
-            {#if row.segments === null}
-              <span class="bsr-unavailable">Unavailable</span>
-            {:else}
-              {#each row.segments as segment, index (index)}{@render formattedText(segment)}{/each}
-            {/if}
-          </td>
-        </tr>
-      {/each}
-    </tbody>
-  </table>
+{#snippet inlineDetails(row: VerseRowView)}
+  {@const details = detailsFor(row)}
+  <div class="bsr-expand">
+    {#if details === null}
+      <div class="bsr-details-empty">Loading…</div>
+    {:else}
+      <VerseDetails
+        {details}
+        source={studySource}
+        {host}
+        collecting={material.collection !== null}
+        tab={null}
+      />
+    {/if}
+  </div>
 {/snippet}
 
 {#snippet segmentText(row: VerseRowView, segment: VerseSegment)}{#if view.strongsMode && segment.strongs !== undefined}<span
@@ -401,94 +247,7 @@
   </div>
 
   {#if material.collection !== null}
-    {@const collection = material.collection}
-    <div class="bsr-basket">
-      <span class="bsr-group-label">Cross-reference</span>
-      {#each collection.members as member, index (index)}
-        <span class="bsr-chip">
-          {member.label}
-          <button
-            type="button"
-            class="bsr-chip-remove"
-            aria-label="Remove {member.label}"
-            onclick={() => studySource.removeCollectionMember(index)}
-          >✕</button>
-        </span>
-      {/each}
-      <button
-        type="button"
-        class="bsr-basket-action"
-        disabled={!collection.canAddSelection}
-        onclick={() => studySource.addSelectionToCollection()}
-      >Add selection</button>
-      <input
-        class="bsr-basket-input"
-        type="text"
-        placeholder="Type a reference"
-        value={collection.typedMember}
-        oninput={(event) => studySource.typeMember(event.currentTarget.value)}
-        onkeydown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            studySource.addTypedReferenceToCollection()
-          }
-        }}
-      />
-      <button
-        type="button"
-        class="bsr-basket-action"
-        onclick={() => studySource.addTypedReferenceToCollection()}
-      >Add</button>
-      <input
-        class="bsr-basket-input bsr-basket-description"
-        type="text"
-        placeholder="Why do these belong together? (optional)"
-        value={collection.description}
-        oninput={(event) =>
-          studySource.describeCollection(event.currentTarget.value)}
-        onkeydown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault()
-            saveCrossReference()
-          }
-        }}
-      />
-      <button
-        type="button"
-        class="bsr-basket-action mod-cta"
-        disabled={!collection.canSave}
-        onclick={saveCrossReference}
-      >{collection.editing ? 'Save' : 'Create'}</button>
-      <button
-        type="button"
-        class="bsr-basket-action"
-        onclick={() => studySource.cancelCollecting()}
-      >Cancel</button>
-      {#if collection.editing}
-        {#if collection.confirmingDelete}
-          <span class="bsr-basket-confirm">Delete this cross-reference?</span>
-          <button
-            type="button"
-            class="bsr-basket-action"
-            onclick={() => void studySource.deleteCrossReference()}
-          >Delete</button>
-          <button
-            type="button"
-            class="bsr-basket-action"
-            onclick={() => studySource.cancelDeleteCrossReference()}
-          >Keep</button>
-        {:else}
-          <button
-            type="button"
-            class="bsr-basket-action bsr-basket-delete"
-            onclick={() => studySource.confirmDeleteCrossReference()}
-          >Delete</button>
-        {/if}
-      {/if}
-      {#if collection.error !== null}
-        <div class="bsr-basket-error">{collection.error}</div>
-      {/if}
-    </div>
+    <CollectionStrip collection={material.collection} source={studySource} />
   {/if}
 
   {#if view.toggles.nav === 'breadcrumb'}
@@ -606,7 +365,7 @@
                 {@render verseText(row)}
               </div>
               {#if view.toggles.details === 'inline' && row.expanded}
-                <div class="bsr-expand">{@render detailsBlock(detailsFor(row))}</div>
+                {@render inlineDetails(row)}
               {/if}
             {/each}
           {:else}
@@ -633,7 +392,7 @@
             {/each}
             {#if view.toggles.details === 'inline'}
               {#each view.rows.filter((row) => row.expanded) as row (row.verseId)}
-                <div class="bsr-expand">{@render detailsBlock(detailsFor(row))}</div>
+                {@render inlineDetails(row)}
               {/each}
             {/if}
           {/if}
@@ -654,43 +413,7 @@
 
     {#if view.toggles.details === 'side-panel'}
       <div class="bsr-side">
-        <div class="bsr-side-tabs">
-          <button
-            type="button"
-            class="bsr-side-tab"
-            class:bsr-on={sideTab === 'translations'}
-            onclick={() => (sideTab = 'translations')}
-          >Translations</button>
-          <button
-            type="button"
-            class="bsr-side-tab"
-            class:bsr-on={sideTab === 'notes'}
-            onclick={() => (sideTab = 'notes')}
-          >Notes</button>
-        </div>
-        <div class="bsr-side-body">
-          {#if material.selectedVerseId === null}
-            <div class="bsr-details-empty">Select a verse to see details.</div>
-          {:else if material.details === null}
-            <div class="bsr-details-empty">Loading…</div>
-          {:else}
-            {@const details = material.details}
-            <div class="bsr-details-title">{details.title}</div>
-            {@render strongsBlock(details)}
-            {#if sideTab === 'translations'}
-              {@render translationsTable(details)}
-            {:else}
-              {@render notesBlock(details, false)}
-            {/if}
-          {/if}
-        </div>
-        <div class="bsr-side-xrefs">
-          {@render crossReferencesHeading()}
-          {#each material.chapterCrossReferences as entry, index (entry.id)}
-            {#if index > 0}<hr class="bsr-xref-sep" />{/if}
-            {@render crossReferenceRow(entry)}
-          {/each}
-        </div>
+        <StudyMaterialView {material} source={studySource} {host} />
       </div>
     {/if}
   </div>
@@ -774,84 +497,6 @@
     display: flex;
     gap: 10px;
     white-space: nowrap;
-  }
-
-  .bsr-basket {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 6px 12px;
-    background: hsla(var(--interactive-accent-hsl), 0.08);
-    border-bottom: 1px solid var(--background-modifier-border);
-  }
-
-  .bsr-basket .bsr-group-label {
-    margin-top: 0;
-  }
-
-  .bsr-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: var(--background-secondary);
-    border: 1px solid var(--background-modifier-border);
-    border-radius: 999px;
-    padding: 1px 4px 1px 10px;
-    font-size: var(--font-ui-smaller);
-    color: var(--text-normal);
-  }
-
-  .bsr-chip-remove {
-    background: none;
-    border: none;
-    box-shadow: none;
-    padding: 0 4px;
-    font-size: var(--font-smallest);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsr-chip-remove:hover {
-    color: var(--text-error);
-    background: none;
-  }
-
-  .bsr-basket-action {
-    padding: 2px 10px;
-    border-radius: var(--radius-s);
-    font-size: var(--font-ui-smaller);
-    cursor: pointer;
-  }
-
-  .bsr-basket-action:disabled {
-    color: var(--text-faint);
-    cursor: default;
-  }
-
-  .bsr-basket-input {
-    width: 160px;
-    font-size: var(--font-ui-smaller);
-  }
-
-  .bsr-basket-description {
-    flex: 1;
-    min-width: 160px;
-  }
-
-  .bsr-basket-confirm {
-    font-size: var(--font-ui-smaller);
-    color: var(--text-error);
-  }
-
-  .bsr-basket-delete:hover {
-    color: var(--text-error);
-  }
-
-  .bsr-basket-error {
-    flex-basis: 100%;
-    color: var(--text-error);
-    font-size: var(--font-smallest);
   }
 
   .bsr-crumb {
@@ -1093,275 +738,10 @@
     font-size: var(--font-ui-small);
   }
 
-  .bsr-details-title {
-    font-size: var(--font-smallest);
-    color: var(--text-faint);
-    margin-bottom: 6px;
-  }
-
   .bsr-details-empty {
     color: var(--text-faint);
     font-size: var(--font-ui-small);
     margin: 6px 0;
-  }
-
-  .bsr-trans-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 6px;
-  }
-
-  .bsr-trans-table td {
-    padding: 4px 8px;
-    vertical-align: top;
-    border-top: 1px solid var(--background-modifier-border);
-  }
-
-  .bsr-trans-table tr:first-child td {
-    border-top: none;
-  }
-
-  .bsr-trans-id {
-    color: var(--text-accent);
-    font-weight: 600;
-    width: 52px;
-  }
-
-  .bsr-unavailable {
-    color: var(--text-faint);
-    font-style: italic;
-  }
-
-  .bsr-mention-list {
-    margin: 4px 0;
-    padding-left: 1.2em;
-    font-size: var(--font-ui-small);
-  }
-
-  .bsr-mention-item::marker {
-    color: var(--text-faint);
-  }
-
-  .bsr-mention-link {
-    display: inline;
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-    height: auto;
-    font-size: inherit;
-    text-align: left;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsr-mention-link:hover {
-    color: var(--text-accent);
-    background: none;
-    box-shadow: none;
-  }
-
-  /* The whole block is one hover target: anywhere over the description or its
-     members reveals the single edit icon anchored to the block. */
-  .bsr-xref-block {
-    position: relative;
-    margin: 2px -4px;
-    padding: 2px 24px 2px 4px;
-    border-radius: 4px;
-    font-size: var(--font-ui-small);
-  }
-
-  .bsr-xref-block:hover {
-    background: var(--background-modifier-hover);
-  }
-
-  /* The add action stays out of the way until the heading line is hovered. */
-  .bsr-section-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .bsr-section-add {
-    display: inline-flex;
-    align-items: center;
-    opacity: 0;
-    background: none;
-    border: none;
-    box-shadow: none;
-    padding: 0 2px;
-    height: auto;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsr-section-head:hover .bsr-section-add:not(:disabled),
-  .bsr-section-add:focus-visible {
-    opacity: 1;
-  }
-
-  .bsr-section-add:hover {
-    color: var(--text-accent);
-    background: none;
-    box-shadow: none;
-  }
-
-  .bsr-section-add-icon {
-    display: inline-flex;
-    align-items: center;
-  }
-
-  .bsr-section-add-icon :global(svg) {
-    width: var(--icon-s);
-    height: var(--icon-s);
-  }
-
-  /* Item-level divider: deliberately subordinate to the section labels, which
-     alone delimit the sections. */
-  .bsr-xref-sep,
-  .bsr-anno-sep {
-    width: 2.5rem;
-    margin: 8px 0;
-    border: none;
-    border-top: 1px solid var(--background-modifier-border);
-  }
-
-  .bsr-section-head,
-  .bsr-section-label {
-    margin-top: 16px;
-  }
-
-  .bsr-xref-description {
-    color: var(--text-muted);
-  }
-
-  .bsr-xref-edit {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    display: flex;
-    align-items: flex-start;
-    opacity: 0;
-    background: none;
-    border: none;
-    box-shadow: none;
-    width: auto;
-    height: auto;
-    min-height: 0;
-    padding: 0;
-    line-height: 1;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsr-xref-block:hover .bsr-xref-edit,
-  .bsr-xref-edit:focus-visible {
-    opacity: 1;
-  }
-
-  .bsr-xref-edit:hover:not(:disabled) {
-    color: var(--text-accent);
-  }
-
-  .bsr-xref-edit:disabled {
-    color: var(--text-faint);
-    cursor: default;
-  }
-
-  .bsr-xref-members {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-    margin-top: 2px;
-  }
-
-  .bsr-xref-member {
-    display: inline;
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-    height: auto;
-    font-size: inherit;
-    text-align: left;
-    color: var(--text-accent);
-    cursor: pointer;
-  }
-
-  .bsr-xref-member:hover {
-    text-decoration: underline;
-    background: none;
-    box-shadow: none;
-  }
-
-  .bsr-group-label {
-    display: block;
-    margin-top: 8px;
-    font-size: var(--font-smallest);
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .bsr-anno-block {
-    position: relative;
-    margin: 4px -4px 8px;
-    padding: 2px 24px 2px 4px;
-    border-radius: 4px;
-    font-size: var(--font-ui-small);
-  }
-
-  .bsr-anno-block:hover {
-    background: var(--background-modifier-hover);
-  }
-
-  /* Rendered markdown brings its own paragraph margins; trimming the outer
-     ones keeps the block spaced like the mention list beside it. */
-  .bsr-anno-body :global(> :first-child) {
-    margin-top: 0;
-  }
-
-  .bsr-anno-body :global(> :last-child) {
-    margin-bottom: 0;
-  }
-
-  .bsr-anno-edit {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    display: flex;
-    align-items: flex-start;
-    opacity: 0;
-    background: none;
-    border: none;
-    box-shadow: none;
-    width: auto;
-    height: auto;
-    min-height: 0;
-    padding: 0;
-    line-height: 1;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsr-anno-block:hover .bsr-anno-edit,
-  .bsr-anno-edit:focus-visible {
-    opacity: 1;
-  }
-
-  .bsr-anno-edit:hover {
-    color: var(--text-accent);
-  }
-
-  .bsr-anno-body {
-    max-height: 240px;
-    overflow-y: auto;
-    user-select: text;
   }
 
   .bsr-nudge {
@@ -1390,109 +770,11 @@
     border-radius: 2px;
   }
 
-  .bsr-strongs-entry {
-    border: 1px solid var(--background-modifier-border);
-    border-left: 3px solid var(--text-accent);
-    border-radius: var(--radius-m);
-    background: var(--background-secondary);
-    margin: 6px 0;
-    padding: 6px 10px;
-    font-size: var(--font-ui-small);
-  }
-
-  .bsr-strongs-head {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-
-  .bsr-strongs-number {
-    color: var(--text-accent);
-    font-weight: 600;
-    font-size: var(--font-ui-smaller);
-  }
-
-  .bsr-strongs-lemma {
-    font-size: 1.1em;
-  }
-
-  .bsr-strongs-translit {
-    color: var(--text-muted);
-    font-style: italic;
-  }
-
-  .bsr-strongs-gloss {
-    font-weight: 600;
-    margin-top: 2px;
-  }
-
-  .bsr-strongs-definition {
-    margin-top: 4px;
-    color: var(--text-muted);
-    white-space: pre-line;
-    max-height: 200px;
-    overflow-y: auto;
-    user-select: text;
-  }
-
-  .bsr-strongs-attribution {
-    color: var(--text-faint);
-    font-size: var(--font-smallest);
-    margin: 4px 0 8px;
-  }
-
   .bsr-side {
     width: 300px;
     flex-shrink: 0;
     border-left: 1px solid var(--background-modifier-border);
     display: flex;
     flex-direction: column;
-  }
-
-  .bsr-side-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--background-modifier-border);
-  }
-
-  .bsr-side-tab {
-    flex: 1;
-    background: none;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
-    padding: 8px;
-    font-size: var(--font-ui-small);
-    color: var(--text-muted);
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
-  }
-
-  .bsr-side-tab.bsr-on {
-    color: var(--text-accent);
-    border-bottom-color: var(--text-accent);
-  }
-
-  .bsr-side-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px 12px 40px;
-  }
-
-  /* Chapter-scoped, so it sits apart from the selected verse's details above
-     and takes only the height its rows need, up to its own scroll. */
-  .bsr-side-xrefs {
-    flex: 0 0 auto;
-    max-height: 40%;
-    overflow-y: auto;
-    border-top: 1px solid var(--background-modifier-border);
-    padding: 4px 12px 10px;
-  }
-
-  .bsr-side-xrefs .bsr-group-label {
-    margin-top: 4px;
-  }
-
-  .bsr-side-xrefs .bsr-section-head {
-    margin-top: 0;
   }
 </style>

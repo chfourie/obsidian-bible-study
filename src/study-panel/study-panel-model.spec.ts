@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import type { StudyMaterial, StudyMaterialSource } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import {
   enumerateVerseIds,
@@ -65,6 +66,36 @@ const fakeCrossReferenceStore = () => {
   }
 }
 
+// A reader tab seen through the study-material contract: the panel never
+// touches anything else about it.
+const fakeStudyMaterial = () => {
+  const listeners = new Set<() => void>()
+  let material: StudyMaterial = {
+    selectedVerseId: null,
+    selectionEndId: null,
+    details: null,
+    chapterCrossReferences: [],
+    collection: null,
+  }
+  const source = {
+    get studyMaterial(): StudyMaterial {
+      return material
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+  } as unknown as StudyMaterialSource
+  return {
+    source,
+    subscriptions: () => listeners.size,
+    select: (verseId: number) => {
+      material = { ...material, selectedVerseId: verseId }
+      listeners.forEach((listener) => listener())
+    },
+  }
+}
+
 const model = (
   source: PassageSource,
   translationId: string | null = 'web',
@@ -91,6 +122,7 @@ describe('StudyPanelModel', () => {
       status: 'no-note',
       entries: [],
       crossReferences: [],
+      studyMaterial: null,
     })
   })
 
@@ -314,6 +346,7 @@ describe('StudyPanelModel', () => {
       status: 'no-note',
       entries: [],
       crossReferences: [],
+      studyMaterial: null,
     })
   })
 
@@ -619,6 +652,113 @@ describe('cross-references in the Study Panel', () => {
       panel.editCrossReference('xr-unknown')
 
       expect(edited).toBe(0)
+    })
+  })
+
+  describe('mirroring a focused reader tab', () => {
+    it('starts with no study material', () => {
+      const panel = model(fakeSource().source)
+
+      expect(panel.view.studyMaterial).toBe(null)
+      expect(panel.studySource).toBe(null)
+    })
+
+    it('shows the study material of the focused reader tab', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+
+      panel.showStudyMaterial(reader.source)
+
+      expect(panel.view.studyMaterial).toEqual(reader.source.studyMaterial)
+      expect(panel.studySource).toBe(reader.source)
+    })
+
+    it('notifies subscribers when the shown tab changes', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      let notified = 0
+      panel.subscribe(() => {
+        notified += 1
+      })
+
+      panel.showStudyMaterial(reader.source)
+
+      expect(notified).toBe(1)
+    })
+
+    it('follows the tab as its selection changes', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+      let notified = 0
+      panel.subscribe(() => {
+        notified += 1
+      })
+
+      reader.select(makeVerseId(43, 15, 1))
+
+      expect(notified).toBe(1)
+      expect(panel.view.studyMaterial?.selectedVerseId).toBe(
+        makeVerseId(43, 15, 1),
+      )
+    })
+
+    it('keeps the focused note behind the reader view', async () => {
+      const panel = model(fakeSource().source)
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
+      const reader = fakeStudyMaterial()
+
+      panel.showStudyMaterial(reader.source)
+
+      expect(panel.view.file).toBe('note.md')
+      expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+        'John 15:1',
+      ])
+    })
+
+    it('returns to the note view when no reader is focused', async () => {
+      const panel = model(fakeSource().source)
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+
+      panel.showStudyMaterial(null)
+
+      expect(panel.view.studyMaterial).toBe(null)
+      expect(panel.view.status).toBe('ok')
+    })
+
+    it('stops following a tab it no longer shows', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+
+      panel.showStudyMaterial(null)
+
+      expect(reader.subscriptions()).toBe(0)
+    })
+
+    it('follows only the tab shown last', () => {
+      const panel = model(fakeSource().source)
+      const first = fakeStudyMaterial()
+      const second = fakeStudyMaterial()
+      panel.showStudyMaterial(first.source)
+
+      panel.showStudyMaterial(second.source)
+
+      expect(first.subscriptions()).toBe(0)
+      expect(second.subscriptions()).toBe(1)
+      expect(panel.studySource).toBe(second.source)
+    })
+
+    it('ignores being shown the tab it already follows', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+
+      panel.showStudyMaterial(reader.source)
+
+      expect(reader.subscriptions()).toBe(1)
     })
   })
 })

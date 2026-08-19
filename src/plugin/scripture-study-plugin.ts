@@ -71,6 +71,7 @@ export default class ScriptureStudyPlugin extends Plugin {
   )
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
     crossReferences: this.crossReferences.store,
+    studyMaterial: this.reader,
   })
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(
@@ -91,6 +92,9 @@ export default class ScriptureStudyPlugin extends Plugin {
       (reference) => void this.annotations.annotate(reference),
     )
     this.studyPanel.useNavigator(this.reader)
+    this.studyPanel.useAnnotator(
+      (reference) => void this.annotations.annotate(reference),
+    )
     this.#features.addFeature(this.vaultIndex)
     this.#features.addFeature(this.modules)
     this.#features.addFeature(this.crossReferences)

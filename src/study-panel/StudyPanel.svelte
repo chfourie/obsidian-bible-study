@@ -1,12 +1,16 @@
 <!--
-Side-panel listing every scripture referenced by the active note, with the
-passage text inline. Headings fold their passage; the book icon opens the
-reference in the reader with the entry's translation.
+Side-panel following the last-focused tab. For a reader tab it mirrors that
+tab's study material; for a note it lists every scripture the note references,
+with the passage text inline — headings fold their passage, and the book icon
+opens the reference in the reader with the entry's translation.
 -->
 <script lang="ts">
   import { setIcon } from 'obsidian'
   import type { NavigationOptions } from '../contracts'
   import type { Reference } from '../reference'
+  import CollectionStrip from '../study-material/CollectionStrip.svelte'
+  import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
+  import type { StudyMaterialHost } from '../study-material'
   import { activate, opensInNewPane } from '../ui'
   import type {
     ReferenceEntryView,
@@ -16,6 +20,7 @@ reference in the reader with the entry's translation.
   let {
     model,
     openReference,
+    host,
   }: {
     model: StudyPanelModel
     openReference: (
@@ -23,6 +28,7 @@ reference in the reader with the entry's translation.
       translationId: string | null,
       options?: NavigationOptions,
     ) => void
+    host: StudyMaterialHost
   } = $props()
 
   // Initial snapshot only — the model subscription below keeps it fresh.
@@ -63,110 +69,123 @@ reference in the reader with the entry's translation.
   }
 </script>
 
-<div class="bsp-panel">
-  {#if view.status === 'no-note'}
-    <p class="bsp-empty">Open a note to see its scripture references.</p>
-  {:else if view.status === 'no-references'}
-    <p class="bsp-empty">No scripture references in this note.</p>
-  {:else}
-    {#if view.status === 'no-translation'}
-      <p class="bsp-empty">No translation installed.</p>
+{#if view.studyMaterial !== null && model.studySource !== null}
+  {@const material = view.studyMaterial}
+  <div class="bsp-reader">
+    {#if material.collection !== null}
+      <CollectionStrip
+        collection={material.collection}
+        source={model.studySource}
+      />
     {/if}
-    {#if view.crossReferences.length > 0}
-      <div class="bsp-xrefs">
-        <div class="bsp-group-label">Cross-references</div>
-        {#each view.crossReferences as entry, index (entry.id)}
-          {#if index > 0}
-            <hr class="bsp-xref-divider" />
-          {/if}
-          <div class="bsp-xref-block">
-            <button
-              type="button"
-              class="bsp-xref-edit"
-              aria-label="Edit cross-reference in the reader"
-              onclick={(event) => editCrossReference(entry.id, event)}
-            >✎</button>
-            {#if entry.description !== null}
-              <div class="bsp-xref-description">{entry.description}</div>
+    <StudyMaterialView {material} source={model.studySource} {host} />
+  </div>
+{:else}
+  <div class="bsp-panel">
+    {#if view.status === 'no-note'}
+      <p class="bsp-empty">Open a note to see its scripture references.</p>
+    {:else if view.status === 'no-references'}
+      <p class="bsp-empty">No scripture references in this note.</p>
+    {:else}
+      {#if view.status === 'no-translation'}
+        <p class="bsp-empty">No translation installed.</p>
+      {/if}
+      {#if view.crossReferences.length > 0}
+        <div class="bsp-xrefs">
+          <div class="bsp-group-label">Cross-references</div>
+          {#each view.crossReferences as entry, index (entry.id)}
+            {#if index > 0}
+              <hr class="bsp-xref-divider" />
             {/if}
-            <div class="bsp-xref-members">
-              {#each entry.members as member (member.index)}
-                <button
-                  type="button"
-                  class="bsp-xref-member"
-                  onclick={(event) =>
-                    openReference(member.reference, null, {
-                      newPane: opensInNewPane(event),
-                    })}
-                >{member.label}</button>
-              {/each}
+            <div class="bsp-xref-block">
+              <button
+                type="button"
+                class="bsp-xref-edit"
+                aria-label="Edit cross-reference in the reader"
+                onclick={(event) => editCrossReference(entry.id, event)}
+              >✎</button>
+              {#if entry.description !== null}
+                <div class="bsp-xref-description">{entry.description}</div>
+              {/if}
+              <div class="bsp-xref-members">
+                {#each entry.members as member (member.index)}
+                  <button
+                    type="button"
+                    class="bsp-xref-member"
+                    onclick={(event) =>
+                      openReference(member.reference, null, {
+                        newPane: opensInNewPane(event),
+                      })}
+                  >{member.label}</button>
+                {/each}
+              </div>
             </div>
-          </div>
+          {/each}
+        </div>
+      {/if}
+      <div class="bsp-entries">
+        {#each view.entries as entry (entry.key)}
+          <section class="bsp-entry">
+            <div class="bsp-entry-head">
+              <span
+                role="button"
+                tabindex="0"
+                class="bsp-entry-title"
+                aria-expanded={!folded.has(entry.key)}
+                onclick={() => toggleFold(entry)}
+                onkeydown={activate(() => toggleFold(entry))}
+              >
+                <span
+                  class="bsp-fold-icon"
+                  aria-hidden="true"
+                  use:icon={folded.has(entry.key)
+                    ? 'chevron-right'
+                    : 'chevron-down'}
+                ></span>
+                {entry.label}
+                {#if entry.translationLabel !== null}
+                  <span class="bsp-translation">· {entry.translationLabel}</span>
+                {/if}
+              </span>
+              <span
+                role="button"
+                tabindex="0"
+                class="bsp-open-reader"
+                aria-label="Open in reader"
+                title="Open in reader"
+                use:icon={'book-open-text'}
+                onclick={(event) => open(entry, event)}
+                onkeydown={activate((event) => open(entry, event))}
+              ></span>
+            </div>
+            {#if !folded.has(entry.key)}
+              {#if entry.status === 'loading'}
+                <p class="bsp-entry-state">Loading…</p>
+              {:else if entry.status === 'unavailable'}
+                {#if view.status !== 'no-translation'}
+                  <p class="bsp-entry-state">Unavailable offline</p>
+                {/if}
+              {:else}
+                <div class="bsp-verses">
+                  {#each entry.verses as verse, index (index)}
+                    <p class="bsp-verse">
+                      {#if verse.label !== null}
+                        <span class="bsp-verse-number">{verse.label}</span>
+                      {/if}{verse.text}
+                    </p>
+                  {/each}
+                </div>
+                {#if entry.attribution !== null}
+                  <p class="bsp-attribution">{entry.attribution}</p>
+                {/if}
+              {/if}
+            {/if}
+          </section>
         {/each}
       </div>
     {/if}
-    <div class="bsp-entries">
-      {#each view.entries as entry (entry.key)}
-        <section class="bsp-entry">
-          <div class="bsp-entry-head">
-            <span
-              role="button"
-              tabindex="0"
-              class="bsp-entry-title"
-              aria-expanded={!folded.has(entry.key)}
-              onclick={() => toggleFold(entry)}
-              onkeydown={activate(() => toggleFold(entry))}
-            >
-              <span
-                class="bsp-fold-icon"
-                aria-hidden="true"
-                use:icon={folded.has(entry.key)
-                  ? 'chevron-right'
-                  : 'chevron-down'}
-              ></span>
-              {entry.label}
-              {#if entry.translationLabel !== null}
-                <span class="bsp-translation">· {entry.translationLabel}</span>
-              {/if}
-            </span>
-            <span
-              role="button"
-              tabindex="0"
-              class="bsp-open-reader"
-              aria-label="Open in reader"
-              title="Open in reader"
-              use:icon={'book-open-text'}
-              onclick={(event) => open(entry, event)}
-              onkeydown={activate((event) => open(entry, event))}
-            ></span>
-          </div>
-          {#if !folded.has(entry.key)}
-            {#if entry.status === 'loading'}
-              <p class="bsp-entry-state">Loading…</p>
-            {:else if entry.status === 'unavailable'}
-              {#if view.status !== 'no-translation'}
-                <p class="bsp-entry-state">Unavailable offline</p>
-              {/if}
-            {:else}
-              <div class="bsp-verses">
-                {#each entry.verses as verse, index (index)}
-                  <p class="bsp-verse">
-                    {#if verse.label !== null}
-                      <span class="bsp-verse-number">{verse.label}</span>
-                    {/if}{verse.text}
-                  </p>
-                {/each}
-              </div>
-              {#if entry.attribution !== null}
-                <p class="bsp-attribution">{entry.attribution}</p>
-              {/if}
-            {/if}
-          {/if}
-        </section>
-      {/each}
-    </div>
-  {/if}
-</div>
+  </div>
+{/if}
 
 <style>
   .bsp-panel {
@@ -174,6 +193,15 @@ reference in the reader with the entry's translation.
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.25rem 0;
+  }
+
+  /* The mirrored reader fills the sidebar: its details region scrolls on its
+     own, with the chapter's cross-references anchored below. */
+  .bsp-reader {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
   }
 
   .bsp-empty {

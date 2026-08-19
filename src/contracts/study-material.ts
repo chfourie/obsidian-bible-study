@@ -104,3 +104,9 @@ export interface StudyMaterialSource {
 export interface StudyMaterialProvider {
   studyMaterialFor(view: View | null): StudyMaterialSource | null
 }
+
+// Stands in until the reader feature is wired up: no tab ever carries study
+// material, so surfaces holding one keep their non-reader view.
+export const NO_STUDY_MATERIAL: StudyMaterialProvider = {
+  studyMaterialFor: () => null,
+}

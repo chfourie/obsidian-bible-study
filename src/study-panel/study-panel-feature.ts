@@ -1,11 +1,15 @@
 import { TFile, WorkspaceLeaf, type Plugin } from 'obsidian'
 import {
+  NO_STUDY_MATERIAL,
   NOOP_REFERENCE_NAVIGATOR,
   type NavigationOptions,
   type ReferenceNavigator,
+  type StudyMaterialProvider,
+  type StudyMaterialSource,
 } from '../contracts'
 import {
   INERT_CROSS_REFERENCE_CATALOG,
+  type CrossReference,
   type CrossReferenceCatalog,
 } from '../cross-references'
 import { PluginFeature } from '../data-access'
@@ -24,6 +28,15 @@ export { STUDY_PANEL_VIEW_TYPE } from './study-panel-view'
 
 export type StudyPanelFeatureOptions = {
   crossReferences?: CrossReferenceCatalog
+  studyMaterial?: StudyMaterialProvider
+}
+
+// The focused leaf's note, when it shows one. Reader tabs are not file views,
+// so anything without a file is either a reader (resolved through the study
+// material provider) or a leaf the panel ignores.
+const focusedNote = (leaf: WorkspaceLeaf | null): TFile | null => {
+  const file = (leaf?.view as { file?: unknown } | undefined)?.file
+  return file instanceof TFile ? file : null
 }
 
 export class StudyPanelFeature extends PluginFeature {
@@ -32,7 +45,11 @@ export class StudyPanelFeature extends PluginFeature {
   #active: ActiveNote | null = null
   #showToken = 0
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
+  #annotator: (reference: Reference) => void = () => {}
   readonly #crossReferences: CrossReferenceCatalog
+  readonly #studyMaterial: StudyMaterialProvider
+  // The reader tab the panel mirrors, or null while a note holds focus.
+  #material: StudyMaterialSource | null = null
   #unsubscribeCrossReferences: (() => void) | null = null
 
   constructor(
@@ -41,6 +58,7 @@ export class StudyPanelFeature extends PluginFeature {
     options: StudyPanelFeatureOptions = {},
   ) {
     super(plugin)
+    this.#studyMaterial = options.studyMaterial ?? NO_STUDY_MATERIAL
     this.#repository = new PassageRepository(
       new ModulePassageSource(store, {
         derivedRedLetter: () => this.settings.derivedRedLetter,
@@ -67,6 +85,10 @@ export class StudyPanelFeature extends PluginFeature {
       workspace.on('file-open', (file) => {
         if (file !== null) void this.#showFile(file)
       }),
+    )
+    // Reader tabs carry no file, so following them takes the leaf itself.
+    this.plugin.registerEvent(
+      workspace.on('active-leaf-change', (leaf) => this.#focusLeaf(leaf)),
     )
     this.plugin.registerEvent(
       this.plugin.app.metadataCache.on('changed', (file, content) =>
@@ -117,16 +139,38 @@ export class StudyPanelFeature extends PluginFeature {
       { translationId: this.settings.defaultTranslationId },
     )
     this.#models.add(model)
+    model.showStudyMaterial(this.#material)
     void model.setActiveNote(this.#active)
     return model
   }
 
   releaseModel(model: StudyPanelModel): void {
+    model.showStudyMaterial(null)
     this.#models.delete(model)
   }
 
   useNavigator(navigator: ReferenceNavigator): void {
     this.#navigator = navigator
+  }
+
+  useAnnotator(annotator: (reference: Reference) => void): void {
+    this.#annotator = annotator
+  }
+
+  annotateReference(reference: Reference): void {
+    this.#annotator(reference)
+  }
+
+  openNote(file: string): void {
+    this.#navigator.openNote(file)
+  }
+
+  editCrossReferenceInNewPane(entry: CrossReference): void {
+    this.#navigator.editCrossReference(
+      entry,
+      this.settings.defaultTranslationId,
+      { newPane: true },
+    )
   }
 
   openReference(
@@ -150,6 +194,19 @@ export class StudyPanelFeature extends PluginFeature {
     await workspace.revealLeaf(leaf)
   }
 
+  // Readers take the panel over; notes take it back; every other leaf — the
+  // panel itself included — leaves the last view standing.
+  #focusLeaf(leaf: WorkspaceLeaf | null): void {
+    const material = this.#studyMaterial.studyMaterialFor(leaf?.view ?? null)
+    if (material !== null) {
+      this.#material = material
+      this.#models.forEach((model) => model.showStudyMaterial(material))
+      return
+    }
+    const file = focusedNote(leaf)
+    if (file !== null) void this.#showFile(file)
+  }
+
   async #showFile(file: TFile | null): Promise<void> {
     const token = ++this.#showToken
     const active =
@@ -158,6 +215,7 @@ export class StudyPanelFeature extends PluginFeature {
         : { file: file.path, content: await this.plugin.app.vault.cachedRead(file) }
     if (token !== this.#showToken) return
     this.#active = active
+    this.#material = null
     this.#fanOut()
   }
 
@@ -168,7 +226,10 @@ export class StudyPanelFeature extends PluginFeature {
   }
 
   #fanOut(): void {
-    this.#models.forEach((model) => void model.setActiveNote(this.#active))
+    this.#models.forEach((model) => {
+      model.showStudyMaterial(this.#material)
+      void model.setActiveNote(this.#active)
+    })
   }
 
   #refreshCrossReferences(): void {

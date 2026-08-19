@@ -1,4 +1,8 @@
-import type { NavigationOptions } from '../contracts'
+import type {
+  NavigationOptions,
+  StudyMaterial,
+  StudyMaterialSource,
+} from '../contracts'
 import {
   crossReferenceView,
   orderCrossReferences,
@@ -43,6 +47,10 @@ export type StudyPanelViewState = {
   status: StudyPanelStatus
   entries: ReferenceEntryView[]
   crossReferences: CrossReferenceView[]
+  // Non-null while a reader tab holds focus: the panel then mirrors that tab's
+  // study material, and the note fields above describe the note it will fall
+  // back to when a note is focused again.
+  studyMaterial: StudyMaterial | null
 }
 
 export type StudyPanelCrossReferences = {
@@ -117,6 +125,8 @@ export class StudyPanelModel {
   #crossReferences: CrossReferenceView[] = []
   #translationId: string | null
   #loadToken = 0
+  #studySource: StudyMaterialSource | null = null
+  #unsubscribeStudySource: (() => void) | null = null
   readonly #listeners = new Set<() => void>()
 
   constructor(
@@ -137,7 +147,25 @@ export class StudyPanelModel {
       status: this.#status(),
       entries: this.#entries,
       crossReferences: this.#crossReferences,
+      studyMaterial: this.#studySource?.studyMaterial ?? null,
     }
+  }
+
+  // The focused reader tab itself, for the actions the panel invokes on it
+  // (sub-tab selection is the panel's own state; everything else lives here).
+  get studySource(): StudyMaterialSource | null {
+    return this.#studySource
+  }
+
+  // Mirrors the given reader tab until another one is shown, or null to fall
+  // back to the note view.
+  showStudyMaterial(source: StudyMaterialSource | null): void {
+    if (source === this.#studySource) return
+    this.#unsubscribeStudySource?.()
+    this.#studySource = source
+    this.#unsubscribeStudySource =
+      source === null ? null : source.subscribe(() => this.#notify())
+    this.#notify()
   }
 
   #status(): StudyPanelStatus {

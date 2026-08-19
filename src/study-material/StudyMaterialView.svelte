@@ -1,0 +1,124 @@
+<!--
+One reader tab's study material as a region: the selected verse's details
+under Translations/Notes sub-tabs, and the cross-references of the chapter on
+screen below them. Rendered wherever the material is surfaced — the reader's
+own side region, or the Study Panel following that tab.
+-->
+<script lang="ts">
+  import type { StudyMaterial, StudyMaterialSource } from '../contracts'
+  import CrossReferenceList from './CrossReferenceList.svelte'
+  import type { StudyMaterialHost } from './study-material-host'
+  import VerseDetails from './VerseDetails.svelte'
+
+  let {
+    material,
+    source,
+    host,
+  }: {
+    material: StudyMaterial
+    source: StudyMaterialSource
+    host: StudyMaterialHost
+  } = $props()
+
+  let tab: 'translations' | 'notes' = $state('translations')
+</script>
+
+<div class="bsm-view">
+  <div class="bsm-tabs">
+    <button
+      type="button"
+      class="bsm-tab"
+      class:bsm-on={tab === 'translations'}
+      onclick={() => (tab = 'translations')}
+    >Translations</button>
+    <button
+      type="button"
+      class="bsm-tab"
+      class:bsm-on={tab === 'notes'}
+      onclick={() => (tab = 'notes')}
+    >Notes</button>
+  </div>
+  <div class="bsm-body">
+    {#if material.selectedVerseId === null}
+      <div class="bsm-empty">Select a verse to see details.</div>
+    {:else if material.details === null}
+      <div class="bsm-empty">Loading…</div>
+    {:else}
+      <VerseDetails
+        details={material.details}
+        {source}
+        {host}
+        collecting={material.collection !== null}
+        {tab}
+      />
+    {/if}
+  </div>
+  <div class="bsm-xrefs">
+    <CrossReferenceList
+      entries={material.chapterCrossReferences}
+      {source}
+      {host}
+      collecting={material.collection !== null}
+    />
+  </div>
+</div>
+
+<style>
+  .bsm-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .bsm-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--background-modifier-border);
+  }
+
+  .bsm-tab {
+    flex: 1;
+    background: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 8px;
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .bsm-tab.bsm-on {
+    color: var(--text-accent);
+    border-bottom-color: var(--text-accent);
+  }
+
+  .bsm-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px 40px;
+  }
+
+  .bsm-empty {
+    color: var(--text-faint);
+    font-size: var(--font-ui-small);
+    margin: 6px 0;
+  }
+
+  /* Chapter-scoped, so it sits apart from the selected verse's details above
+     and takes only the height its rows need, up to its own scroll. */
+  .bsm-xrefs {
+    flex: 0 0 auto;
+    max-height: 40%;
+    overflow-y: auto;
+    border-top: 1px solid var(--background-modifier-border);
+    padding: 4px 12px 10px;
+  }
+
+  /* The section already sits under its own border, so it needs no lead-in. */
+  .bsm-xrefs :global(.bsm-section-head) {
+    margin-top: 0;
+  }
+</style>

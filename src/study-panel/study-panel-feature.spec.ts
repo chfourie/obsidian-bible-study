@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { TFile, WorkspaceLeaf, type Plugin } from 'obsidian'
+import { TFile, WorkspaceLeaf, type Plugin, type View } from 'obsidian'
+import type {
+  StudyMaterial,
+  StudyMaterialProvider,
+  StudyMaterialSource,
+} from '../contracts'
+import type { CrossReference } from '../cross-references'
 import { DEFAULT_SETTINGS } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
@@ -37,6 +43,36 @@ const note = (path: string): TFile => {
 type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 
 type FakeCommand = { id: string; name: string; callback: () => void }
+
+// A reader tab seen through the study-material contract: the panel never
+// touches anything else about it.
+const fakeStudyMaterial = () => {
+  const listeners = new Set<() => void>()
+  let material: StudyMaterial = {
+    selectedVerseId: null,
+    selectionEndId: null,
+    details: null,
+    chapterCrossReferences: [],
+    collection: null,
+  }
+  const source = {
+    get studyMaterial(): StudyMaterial {
+      return material
+    },
+    subscribe: (listener: () => void) => {
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+  } as unknown as StudyMaterialSource
+  return {
+    source,
+    subscriptions: () => listeners.size,
+    select: (verseId: number) => {
+      material = { ...material, selectedVerseId: verseId }
+      listeners.forEach((listener) => listener())
+    },
+  }
+}
 
 const harness = (notes: Record<string, string> = {}) => {
   const readGates: Record<string, Promise<void>> = {}
@@ -95,8 +131,30 @@ const harness = (notes: Record<string, string> = {}) => {
     },
     registerEvent: () => {},
   } as unknown as Plugin
-  const feature = new StudyPanelFeature(plugin, fakeStore())
+  const readers = new Map<View, StudyMaterialSource>()
+  const studyMaterial: StudyMaterialProvider = {
+    studyMaterialFor: (view) => (view === null ? null : readers.get(view) ?? null),
+  }
+  const feature = new StudyPanelFeature(plugin, fakeStore(), { studyMaterial })
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
+  const focusLeaf = (view: View | null) => {
+    handlers['active-leaf-change']?.forEach((handler) =>
+      (handler as (leaf: WorkspaceLeaf | null) => void)(
+        view === null ? null : ({ view } as unknown as WorkspaceLeaf),
+      ),
+    )
+  }
+  const focusReader = () => {
+    const reader = fakeStudyMaterial()
+    const view = {} as View
+    readers.set(view, reader.source)
+    focusLeaf(view)
+    return reader
+  }
+  const focusNote = (path: string) => {
+    activeFile = note(path)
+    focusLeaf({ file: note(path) } as unknown as View)
+  }
   const openFile = (file: TFile | null) => {
     activeFile = file
     handlers['file-open']?.forEach((handler) =>
@@ -117,6 +175,9 @@ const harness = (notes: Record<string, string> = {}) => {
     revealLeaf,
     workspace,
     openFile,
+    focusLeaf,
+    focusReader,
+    focusNote,
     editNote,
     readGates,
     setActiveFile: (file: TFile | null) => {
@@ -362,6 +423,144 @@ describe('StudyPanelFeature entry points', () => {
     const entry = panelView(leaves[0]).model.view.entries[0]
     expect(entry.translation).toBe('kjv')
     expect(entry.translationLabel).toBe('KJV')
+  })
+
+  it('mirrors a reader tab as it gains focus', async () => {
+    const { feature, commands, leaves, focusReader } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+
+    const reader = focusReader()
+
+    const view = panelView(leaves[0])
+    expect(view.model.studySource).toBe(reader.source)
+    expect(view.model.view.studyMaterial).toEqual(reader.source.studyMaterial)
+  })
+
+  it('follows the mirrored reader as its selection changes', async () => {
+    const { feature, commands, leaves, focusReader } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const reader = focusReader()
+
+    reader.select(makeVerseId(43, 15, 1))
+
+    expect(panelView(leaves[0]).model.view.studyMaterial?.selectedVerseId).toBe(
+      makeVerseId(43, 15, 1),
+    )
+  })
+
+  it('seeds a panel opened while a reader tab holds focus', async () => {
+    const { feature, commands, leaves, focusReader } = harness()
+    await feature.load()
+    const reader = focusReader()
+
+    commands[0].callback()
+    await flushAsync()
+
+    expect(panelView(leaves[0]).model.studySource).toBe(reader.source)
+  })
+
+  it('restores the note view when a note tab regains focus', async () => {
+    const { feature, commands, leaves, focusReader, focusNote } = harness({
+      'a.md': '{John 15:1}',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    focusReader()
+
+    focusNote('a.md')
+    await flushAsync()
+
+    const view = panelView(leaves[0])
+    expect(view.model.view.studyMaterial).toBe(null)
+    expect(view.model.view.file).toBe('a.md')
+  })
+
+  it('keeps the reader view when a non-document leaf gains focus', async () => {
+    const { feature, commands, leaves, focusReader, focusLeaf } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const reader = focusReader()
+
+    focusLeaf({} as never)
+    focusLeaf(null)
+    await flushAsync()
+
+    expect(panelView(leaves[0]).model.studySource).toBe(reader.source)
+  })
+
+  it('mirrors the reader tab focused last', async () => {
+    const { feature, commands, leaves, focusReader } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const first = focusReader()
+
+    const second = focusReader()
+
+    expect(panelView(leaves[0]).model.studySource).toBe(second.source)
+    expect(first.subscriptions()).toBe(0)
+  })
+
+  it('stops mirroring a reader once the panel closes', async () => {
+    const { feature, commands, leaves, focusReader } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const reader = focusReader()
+
+    feature.releaseModel(panelView(leaves[0]).model)
+
+    expect(reader.subscriptions()).toBe(0)
+  })
+
+  it('routes annotations through the injected annotator', async () => {
+    const { feature } = harness()
+    const annotated: Reference[] = []
+    feature.useAnnotator((reference) => annotated.push(reference))
+
+    feature.annotateReference(ref('John 15:1'))
+
+    expect(annotated).toEqual([ref('John 15:1')])
+  })
+
+  it('edits a cross-reference in its own pane through the navigator', async () => {
+    const { feature } = harness()
+    const edited: [CrossReference, string | null, boolean | undefined][] = []
+    feature.useNavigator({
+      openReference: () => {},
+      openNote: () => {},
+      editCrossReference: (entry, translationId, options) =>
+        edited.push([entry, translationId, options?.newPane]),
+    })
+    const entry: CrossReference = {
+      id: 'xr-vine',
+      members: [ref('John 15:1')],
+      description: null,
+    }
+
+    feature.editCrossReferenceInNewPane(entry)
+
+    expect(edited).toEqual([[entry, 'web', true]])
+  })
+
+  it('opens a note through the injected navigator', async () => {
+    const { feature } = harness()
+    const opened: string[] = []
+    feature.useNavigator({
+      openReference: () => {},
+      openNote: (file) => opened.push(file),
+      editCrossReference: () => {},
+    })
+
+    feature.openNote('Sermons/Vine.md')
+
+    expect(opened).toEqual(['Sermons/Vine.md'])
   })
 
   it('releases models when the view closes', async () => {
