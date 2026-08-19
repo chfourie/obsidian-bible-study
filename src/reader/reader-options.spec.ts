@@ -4,7 +4,6 @@ import { readerOptionGroups } from './reader-options'
 describe('readerOptionGroups', () => {
   it('lists the toggle groups in toolbar order without Strong\'s when untagged', () => {
     expect(readerOptionGroups(false).map((group) => group.key)).toEqual([
-      'details',
       'nav',
       'layout',
       'redLetter',
@@ -14,7 +13,6 @@ describe('readerOptionGroups', () => {
   it('appends the Strong\'s group when the translation is tagged', () => {
     const groups = readerOptionGroups(true)
     expect(groups.map((group) => group.key)).toEqual([
-      'details',
       'nav',
       'layout',
       'redLetter',
@@ -31,14 +29,20 @@ describe('readerOptionGroups', () => {
   })
 
   it('describes each group with labelled value options', () => {
-    const details = readerOptionGroups(false)[0]
-    expect(details).toEqual({
-      key: 'details',
-      label: 'Details',
+    const nav = readerOptionGroups(false)[0]
+    expect(nav).toEqual({
+      key: 'nav',
+      label: 'Nav',
       options: [
-        { value: 'inline', label: 'Inline' },
-        { value: 'side-panel', label: 'Side panel' },
+        { value: 'tree', label: 'Tree' },
+        { value: 'breadcrumb', label: 'Breadcrumb' },
       ],
     })
+  })
+
+  it('offers no details group — companion material lives in the Study Panel', () => {
+    expect(
+      readerOptionGroups(true).some((group) => group.label === 'Details'),
+    ).toBe(false)
   })
 })

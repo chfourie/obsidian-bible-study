@@ -1,8 +1,7 @@
 <!--
 One reader tab's study material as a region: the selected verse's details
 under Translations/Notes sub-tabs, and the cross-references of the chapter on
-screen below them. Rendered wherever the material is surfaced — the reader's
-own side region, or the Study Panel following that tab.
+screen below them. Rendered by the Study Panel following that tab.
 -->
 <script lang="ts">
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
@@ -47,13 +46,7 @@ own side region, or the Study Panel following that tab.
     {:else if material.details === null}
       <div class="bsm-empty">Loading…</div>
     {:else}
-      <VerseDetails
-        details={material.details}
-        {source}
-        {host}
-        collecting={material.collection !== null}
-        {tab}
-      />
+      <VerseDetails details={material.details} {source} {host} {tab} />
     {/if}
   </div>
   <div class="bsm-xrefs">

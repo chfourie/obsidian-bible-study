@@ -40,7 +40,6 @@ export type ScriptureStudySettings = {
   fallbackTranslationId: string | null
   languageFilter: string
   derivedRedLetter: boolean
-  readerDetailsDefault: 'inline' | 'side-panel'
   readerNavDefault: 'tree' | 'breadcrumb'
   readerLayoutDefault: 'verse-per-line' | 'continuous'
   readerStrongsDefault: 'off' | 'on'
@@ -58,7 +57,6 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   fallbackTranslationId: null,
   languageFilter: 'English',
   derivedRedLetter: false,
-  readerDetailsDefault: 'inline',
   readerNavDefault: 'tree',
   readerLayoutDefault: 'verse-per-line',
   readerStrongsDefault: 'off',

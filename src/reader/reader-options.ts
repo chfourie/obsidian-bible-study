@@ -8,14 +8,6 @@ export type ReaderOptionGroup = {
 
 const BASE_GROUPS: ReaderOptionGroup[] = [
   {
-    key: 'details',
-    label: 'Details',
-    options: [
-      { value: 'inline', label: 'Inline' },
-      { value: 'side-panel', label: 'Side panel' },
-    ],
-  },
-  {
     key: 'nav',
     label: 'Nav',
     options: [

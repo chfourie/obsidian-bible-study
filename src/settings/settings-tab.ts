@@ -42,7 +42,6 @@ type SettingsControlKey =
   | 'derivedRedLetter'
   | 'revealPanelOnSelection'
   | 'strongsEnabled'
-  | 'readerDetailsDefault'
   | 'readerNavDefault'
   | 'readerLayoutDefault'
   | 'readerStrongsDefault'
@@ -166,7 +165,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.revealPanelOnSelection
       case 'strongsEnabled':
         return view.strongsInstalled
-      case 'readerDetailsDefault':
       case 'readerNavDefault':
       case 'readerLayoutDefault':
       case 'readerStrongsDefault':
@@ -207,7 +205,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         }))
       case 'strongsEnabled':
         return this.model.setStrongsEnabled(value === true)
-      case 'readerDetailsDefault':
       case 'readerNavDefault':
       case 'readerLayoutDefault':
       case 'readerStrongsDefault':
@@ -475,10 +472,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       type: 'group',
       heading: 'Reader defaults',
       items: [
-        this.#readerDefault('Details', 'readerDetailsDefault', {
-          inline: 'Inline expand',
-          'side-panel': 'Side panel',
-        }),
         this.#readerDefault('Navigation', 'readerNavDefault', {
           tree: 'Tree panel',
           breadcrumb: 'Breadcrumbs',

@@ -40,7 +40,6 @@ export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
 import type { OccurrenceGroup } from '../vault-index'
 
 export type ReaderToggles = {
-  details: 'inline' | 'side-panel'
   nav: 'tree' | 'breadcrumb'
   layout: 'verse-per-line' | 'continuous'
   strongs: 'off' | 'on'
@@ -99,7 +98,6 @@ export type VerseRowView = {
   label: string
   segments: VerseSegment[]
   highlighted: boolean
-  expanded: boolean
   annotations: number
   mentions: number
   poetry: boolean
@@ -125,14 +123,6 @@ const singleVerseReference = (book: number, verseId: number): Reference => ({
   ranges: [{ startId: verseId, endId: verseId }],
 })
 
-const withoutDetail = (
-  details: Record<number, VerseDetailsView>,
-  verseId: number,
-): Record<number, VerseDetailsView> =>
-  Object.fromEntries(
-    Object.entries(details).filter(([key]) => Number(key) !== verseId),
-  )
-
 export const translationTitle = (translation: {
   name: string
   label: string
@@ -155,10 +145,6 @@ export type ReaderPaneView = {
   hasPreviousChapter: boolean
   hasNextChapter: boolean
   fontScalePercent: number
-  // Every verse whose details are loaded, keyed by verse id — the inline
-  // expansion renders several at once. The study material contract projects
-  // the selected verse's entry out of this same store.
-  details: Record<number, VerseDetailsView>
   attribution: string | null
   banner: string | null
   strongsAvailable: boolean
@@ -194,8 +180,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #toggles: ReaderToggles
   #selectedVerseId: number | null = null
   #selectionEnd: number | null = null
-  #expanded = new Set<number>()
-  #details: Record<number, VerseDetailsView> = {}
+  // The loaded details of the selected verse, or null while nothing is
+  // selected or its load is still in flight.
+  #details: VerseDetailsView | null = null
   #attribution: string | null = null
   #bannerDismissed = false
   #strongsAvailable = false
@@ -290,18 +277,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
     // toggle up on its own.
     if (toggle === 'redLetter' && changed && this.#loadToken > 0) {
       void this.#loadChapter()
-      return
-    }
-    // Collapsing an inline verse prunes its details but keeps it selected,
-    // so the side panel can otherwise open onto a selection with nothing
-    // loaded and hang on its loading state.
-    if (
-      toggle === 'details' &&
-      value === 'side-panel' &&
-      this.#selectedVerseId !== null &&
-      this.#details[this.#selectedVerseId] === undefined
-    ) {
-      void this.#loadDetails(this.#selectedVerseId)
     }
   }
 
@@ -350,7 +325,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
       fontScalePercent: this.#fontScalePercent,
       hasPreviousChapter: this.#hasPreviousChapter(),
       hasNextChapter: this.#hasNextChapter(),
-      details: this.#details,
       attribution: this.#attribution,
       strongsAvailable: this.#strongsAvailable,
       strongsMode: this.#strongsAvailable && this.#toggles.strongs === 'on',
@@ -370,15 +344,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   // What this tab offers for study beside its text — the one source the
-  // reader's own details surfaces and the Study Panel both render from.
+  // Study Panel renders from.
   get studyMaterial(): StudyMaterial {
     return {
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
-      details:
-        this.#selectedVerseId === null
-          ? null
-          : (this.#details[this.#selectedVerseId] ?? null),
+      details: this.#details,
       chapterCrossReferences: this.#chapterCrossReferences(),
       collection: this.#collectionView(),
     }
@@ -467,46 +438,38 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   async selectWord(verseId: number, strongsNumbers: string[]): Promise<void> {
     this.#wordStrongs = { verseId, numbers: strongsNumbers }
-    this.#selectedVerseId = verseId
-    this.#selectionEnd = null
-    this.#announceSelection()
-    if (this.#toggles.details === 'inline') {
-      this.#expanded.add(verseId)
-      this.#refreshRowExpansion()
-    } else {
-      this.#notify()
-    }
+    this.#select(verseId)
     await this.#loadDetails(verseId)
   }
 
+  // A verse click always selects — the details it loads belong to the Study
+  // Panel, so there is nothing in the reader to expand or collapse.
   async selectVerse(verseId: number): Promise<void> {
+    const loaded = this.#details
     this.#wordStrongs = null
+    this.#select(verseId)
+    // Re-selecting a verse whose details are already loaded without Strong's
+    // entries would reload the same content; tapping a word first leaves
+    // entries to clear.
+    if (loaded?.verseId === verseId && loaded.strongs.length === 0) return
+    await this.#loadDetails(verseId)
+  }
+
+  // Details of another verse are dropped at once so no surface shows the
+  // previous verse's material beside the newly selected one.
+  #select(verseId: number): void {
     this.#selectedVerseId = verseId
     this.#selectionEnd = null
+    if (this.#details?.verseId !== verseId) this.#details = null
     this.#announceSelection()
-    if (this.#toggles.details === 'inline') {
-      if (this.#expanded.has(verseId)) {
-        this.#expanded.delete(verseId)
-        this.#details = withoutDetail(this.#details, verseId)
-        this.#refreshRowExpansion()
-        return
-      }
-      this.#expanded.add(verseId)
-      this.#refreshRowExpansion()
-    } else {
-      this.#notify()
-    }
-    const existing = this.#details[verseId]
-    if (existing === undefined || existing.strongs.length > 0)
-      await this.#loadDetails(verseId)
+    this.#notify()
   }
 
   #resetSelection(): void {
     this.#selectedVerseId = null
     this.#selectionEnd = null
     this.#wordStrongs = null
-    this.#expanded.clear()
-    this.#details = {}
+    this.#details = null
   }
 
   currentChapterReference(): Reference {
@@ -606,7 +569,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     if (this.#collection === null || selection === null) return
     this.#gather(selection)
     this.#resetSelection()
-    this.#refreshRowExpansion()
+    this.#notify()
   }
 
   typeMember(text: string): void {
@@ -702,31 +665,14 @@ export class ReaderPaneModel implements StudyMaterialSource {
     await this.refreshOccurrences()
   }
 
-  #displayedDetailVerseIds(): number[] {
-    const liveVerseIds =
-      this.#toggles.details === 'inline'
-        ? [...this.#expanded]
-        : this.#selectedVerseId === null
-          ? []
-          : [this.#selectedVerseId]
-    return liveVerseIds.filter(
-      (verseId) => this.#details[verseId] !== undefined,
-    )
-  }
-
   async refreshOccurrences(): Promise<void> {
     this.#rows = this.#rows.map((row) => ({
       ...row,
       ...this.#occurrenceCounts(row.verseId),
     }))
-    const displayed = this.#displayedDetailVerseIds()
-    this.#details = Object.fromEntries(
-      displayed.map((verseId) => [verseId, this.#details[verseId]]),
-    )
     this.#notify()
-    for (const verseId of displayed) {
-      await this.#loadDetails(verseId)
-    }
+    const loadedVerseId = this.#details?.verseId
+    if (loadedVerseId !== undefined) await this.#loadDetails(loadedVerseId)
   }
 
   #occurrenceCounts(verseId: number): { annotations: number; mentions: number } {
@@ -737,14 +683,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
       annotations: groups.filter((occurrence) => occurrence.annotation).length,
       mentions: groups.filter((occurrence) => !occurrence.annotation).length,
     }
-  }
-
-  #refreshRowExpansion(): void {
-    this.#rows = this.#rows.map((row) => ({
-      ...row,
-      expanded: this.#expanded.has(row.verseId),
-    }))
-    this.#notify()
   }
 
   async #loadDetails(verseId: number): Promise<void> {
@@ -772,21 +710,21 @@ export class ReaderPaneModel implements StudyMaterialSource {
       this.#wordStrongs !== null && this.#wordStrongs.verseId === verseId
         ? await this.deps.strongs.entriesFor(this.#wordStrongs.numbers)
         : []
+    // A load the selection has moved on from is dropped: only the verse on
+    // screen may replace what the surfaces are showing.
+    if (this.#selectedVerseId !== verseId) return
     this.#details = {
-      ...this.#details,
-      [verseId]: {
-        verseId,
-        title: formatReference(reference),
-        translations,
-        annotations,
-        mentions: groups
-          .filter((occurrence) => !occurrence.annotation)
-          .map((occurrence) => ({ file: occurrence.file })),
-        crossReferences: this.#crossReferenceViews(reference, [reference]),
-        strongs,
-        strongsAttribution:
-          strongs.length > 0 ? this.deps.strongs.attribution : null,
-      },
+      verseId,
+      title: formatReference(reference),
+      translations,
+      annotations,
+      mentions: groups
+        .filter((occurrence) => !occurrence.annotation)
+        .map((occurrence) => ({ file: occurrence.file })),
+      crossReferences: this.#crossReferenceViews(reference, [reference]),
+      strongs,
+      strongsAttribution:
+        strongs.length > 0 ? this.deps.strongs.attribution : null,
     }
     this.#notify()
   }
@@ -871,7 +809,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
       highlighted:
         this.#entry !== null &&
         this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),
-      expanded: this.#expanded.has(verse.verseId),
       ...this.#occurrenceCounts(verse.verseId),
     }))
     this.#status = 'ok'

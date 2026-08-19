@@ -188,7 +188,6 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Reveal Study Panel on selection',
         'Language',
         "Enable Strong's",
-        'Details',
         'Navigation',
         'Layout',
         "Strong's mode",

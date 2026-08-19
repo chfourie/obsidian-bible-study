@@ -1,29 +1,25 @@
 <!--
 Everything one selected verse offers beside its text: the Strong's entries for
 a tapped word, the same verse in every installed translation, and the notes
-around it — annotations, cross-references and mentions.
+around it — annotations and mentions.
 -->
 <script lang="ts">
   import type { StudyMaterialSource, VerseDetailsView } from '../contracts'
   import type { VerseSegment } from '../rendering'
-  import CrossReferenceList from './CrossReferenceList.svelte'
   import SectionHeading from './SectionHeading.svelte'
-  import type { StudyMaterialHost } from './study-material-host'
+  import type { StudyMaterialHost, StudySubTab } from './study-material-host'
 
   let {
     details,
     source,
     host,
-    collecting,
     tab,
   }: {
     details: VerseDetailsView
     source: StudyMaterialSource
     host: StudyMaterialHost
-    collecting: boolean
-    // Which half to show; null stacks both, as the reader's inline expansion
-    // does, and folds the verse's cross-references in with the notes.
-    tab: 'translations' | 'notes' | null
+    // Which half of the material to show.
+    tab: StudySubTab
   } = $props()
 
   type MarkdownBody = { text: string; path: string }
@@ -63,7 +59,7 @@ around it — annotations, cross-references and mentions.
   {/if}
 {/if}
 
-{#if tab === null || tab === 'translations'}
+{#if tab === 'translations'}
   <table class="bsm-trans-table">
     <tbody>
       {#each details.translations as row (row.id)}
@@ -82,7 +78,7 @@ around it — annotations, cross-references and mentions.
   </table>
 {/if}
 
-{#if tab === null || tab === 'notes'}
+{#if tab === 'notes'}
   <SectionHeading
     label="Annotations"
     action="Annotate this verse"
@@ -103,14 +99,6 @@ around it — annotations, cross-references and mentions.
         <div class="bsm-anno-body" use:markdown={{ text: block.body, path: block.file }}></div>
       </div>
     {/each}
-  {/if}
-  {#if tab === null}
-    <CrossReferenceList
-      entries={details.crossReferences}
-      {source}
-      {host}
-      {collecting}
-    />
   {/if}
   <div class="bsm-group-label bsm-section-label">Mentions</div>
   {#if details.mentions.length === 0}

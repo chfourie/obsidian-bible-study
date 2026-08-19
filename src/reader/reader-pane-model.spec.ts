@@ -13,7 +13,7 @@ import type {
   CrossReferenceEditing,
 } from '../cross-references'
 import type { OccurrenceGroup } from '../vault-index'
-import type { StudyMaterialSource } from '../contracts'
+import type { StudyMaterialSource, VerseDetailsView } from '../contracts'
 import {
   paragraphsOf,
   ReaderPaneModel,
@@ -50,7 +50,6 @@ const passageSourceOver = (texts: MockTexts): PassageSource => ({
 })
 
 const DEFAULT_TOGGLES: ReaderToggles = {
-  details: 'inline',
   nav: 'tree',
   layout: 'verse-per-line',
   strongs: 'off',
@@ -111,6 +110,12 @@ const group = (file: string, annotation: boolean): OccurrenceGroup => ({
   annotation,
   occurrences: [],
 })
+
+const detailsOf = (model: ReaderPaneModel): VerseDetailsView => {
+  const details = model.studyMaterial.details
+  if (details === null) throw new Error('no verse details loaded')
+  return details
+}
 
 const flushAsync = async (): Promise<void> => {
   await new Promise((resolve) => window.setTimeout(resolve, 0))
@@ -435,14 +440,13 @@ describe('verse details', () => {
         : null,
   })
 
-  it('expands a clicked verse inline with every installed translation stacked', async () => {
+  it('loads the clicked verse with every installed translation stacked', async () => {
     const model = modelWith(twoTranslations())
     await model.openAt(ref('John 15:4'), 'web')
 
     await model.selectVerse(verse4)
 
-    expect(model.view.rows[3].expanded).toBe(true)
-    expect(model.view.details[verse4]).toEqual({
+    expect(detailsOf(model)).toEqual({
       verseId: verse4,
       title: 'John 15:4',
       translations: [
@@ -467,54 +471,27 @@ describe('verse details', () => {
     })
   })
 
-  it('collapses an expanded verse when clicked again', async () => {
+  it('keeps the verse selected and its details loaded when clicked again', async () => {
     const model = modelWith(twoTranslations())
-    await model.openAt(ref('John 15:4'), 'web')
-
-    await model.selectVerse(verse4)
-    await model.selectVerse(verse4)
-
-    expect(model.view.rows[3].expanded).toBe(false)
-  })
-
-  it('prunes the details of a collapsed verse', async () => {
-    const model = modelWith(twoTranslations())
-    await model.openAt(ref('John 15:4'), 'web')
-
-    await model.selectVerse(verse4)
-    await model.selectVerse(verse4)
-
-    expect(model.view.details[verse4]).toBeUndefined()
-  })
-
-  it('loads details for the selected verse when switching to the side panel', async () => {
-    // Collapsing an inline verse prunes its details but keeps it selected;
-    // switching Details to side-panel must reload them or the panel shows
-    // a permanent "Loading…".
-    const model = modelWith(twoTranslations())
-    await model.openAt(ref('John 15:4'), 'web')
-    await model.selectVerse(verse4)
-    await model.selectVerse(verse4)
-
-    model.setToggle('details', 'side-panel')
-    await flushAsync()
-
-    expect(model.view.details[verse4]?.translations).toHaveLength(2)
-  })
-
-  it('selects instead of expanding when details show in the side panel', async () => {
-    const model = modelWith(twoTranslations(), {
-      ...DEFAULT_TOGGLES,
-      details: 'side-panel',
-    })
     await model.openAt(ref('John 15:4'), 'web')
 
     await model.selectVerse(verse4)
     await model.selectVerse(verse4)
 
     expect(model.studyMaterial.selectedVerseId).toBe(verse4)
-    expect(model.view.rows[3].expanded).toBe(false)
-    expect(model.view.details[verse4]?.translations).toHaveLength(2)
+    expect(detailsOf(model).translations).toHaveLength(2)
+  })
+
+  it('drops the previous verse details the moment another verse is clicked', async () => {
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+
+    const selecting = model.selectVerse(makeVerseId(43, 15, 5))
+
+    expect(model.studyMaterial.details).toBe(null)
+    await selecting
+    expect(detailsOf(model).verseId).toBe(makeVerseId(43, 15, 5))
   })
 })
 
@@ -549,7 +526,7 @@ describe('annotation ordering in details', () => {
     await model.selectVerse(verse4)
 
     expect(
-      model.view.details[verse4].annotations.map((block) => block.file),
+      detailsOf(model).annotations.map((block) => block.file),
     ).toEqual(['Annotations/Zeal.md', 'Annotations/Abide.md'])
   })
 
@@ -560,7 +537,7 @@ describe('annotation ordering in details', () => {
     await model.selectVerse(verse4)
 
     expect(
-      model.view.details[verse4].annotations.map((block) => block.file),
+      detailsOf(model).annotations.map((block) => block.file),
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
@@ -573,7 +550,7 @@ describe('annotation ordering in details', () => {
     await flushAsync()
 
     expect(
-      model.view.details[verse4].annotations.map((block) => block.file),
+      detailsOf(model).annotations.map((block) => block.file),
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
@@ -699,7 +676,7 @@ describe('occurrence refresh', () => {
     await model.refreshOccurrences()
 
     expect(model.view.rows[3].annotations).toBe(1)
-    expect(model.view.details[verse4].annotations).toEqual([
+    expect(detailsOf(model).annotations).toEqual([
       {
         file: 'Annotations/John 15.4.md',
         body: 'note body',
@@ -707,7 +684,7 @@ describe('occurrence refresh', () => {
     ])
   })
 
-  it('reloads only the details still on display', async () => {
+  it('reloads only the details of the selected verse', async () => {
     const verse4 = makeVerseId(43, 15, 4)
     const verse5 = makeVerseId(43, 15, 5)
     const detailLoads: string[] = []
@@ -727,34 +704,18 @@ describe('occurrence refresh', () => {
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
     await model.selectVerse(verse5)
-    await model.selectVerse(verse4)
     detailLoads.length = 0
 
     await model.refreshOccurrences()
 
     expect(detailLoads).toEqual([`${verse5}`])
-    expect(model.view.details[verse4]).toBeUndefined()
-  })
-
-  it('prunes side-panel details for verses no longer selected on refresh', async () => {
-    const verse4 = makeVerseId(43, 15, 4)
-    const verse5 = makeVerseId(43, 15, 5)
-    const model = modelWith({}, { ...DEFAULT_TOGGLES, details: 'side-panel' })
-    await model.openAt(ref('John 15:4'), 'web')
-    await model.selectVerse(verse4)
-    await model.selectVerse(verse5)
-
-    await model.refreshOccurrences()
-
-    expect(model.view.details[verse4]).toBeUndefined()
-    expect(model.view.details[verse5]).toBeDefined()
+    expect(detailsOf(model).verseId).toBe(verse5)
   })
 })
 
 describe('reader toggles', () => {
   it('seeds the toggles from the configured defaults', () => {
     const model = modelWith({}, {
-      details: 'side-panel',
       nav: 'breadcrumb',
       layout: 'continuous',
       strongs: 'on',
@@ -762,7 +723,6 @@ describe('reader toggles', () => {
     })
 
     expect(model.view.toggles).toEqual({
-      details: 'side-panel',
       nav: 'breadcrumb',
       layout: 'continuous',
       strongs: 'on',
@@ -775,12 +735,11 @@ describe('reader toggles', () => {
     let notified = 0
     model.subscribe(() => notified++)
 
-    model.setToggle('details', 'side-panel')
+    model.setToggle('nav', 'breadcrumb')
     model.setToggle('layout', 'continuous')
 
     expect(model.view.toggles).toEqual({
-      details: 'side-panel',
-      nav: 'tree',
+      nav: 'breadcrumb',
       layout: 'continuous',
       strongs: 'off',
       redLetter: 'off',
@@ -1316,7 +1275,7 @@ describe("Strong's word lookup", () => {
 
     await model.selectWord(verseId, ['G3306', 'G1722'])
 
-    const details = model.view.details[verseId]
+    const details = detailsOf(model)
     expect(details.strongs.map((entry) => entry.strongs)).toEqual([
       'G3306',
       'G1722',
@@ -1333,7 +1292,7 @@ describe("Strong's word lookup", () => {
     await model.selectWord(verseId, ['G2222'])
 
     expect(
-      model.view.details[verseId].strongs.map((entry) => entry.strongs),
+      detailsOf(model).strongs.map((entry) => entry.strongs),
     ).toEqual(['G2222'])
   })
 
@@ -1345,8 +1304,8 @@ describe("Strong's word lookup", () => {
 
     await model.selectVerse(verseId)
 
-    expect(model.view.details[verseId].strongs).toEqual([])
-    expect(model.view.details[verseId].strongsAttribution).toBe(null)
+    expect(detailsOf(model).strongs).toEqual([])
+    expect(detailsOf(model).strongsAttribution).toBe(null)
   })
 })
 
@@ -1381,7 +1340,7 @@ describe('cross-references in verse details', () => {
 
     await model.selectVerse(verse4)
 
-    expect(model.view.details[verse4].crossReferences).toEqual([
+    expect(detailsOf(model).crossReferences).toEqual([
       {
         id: 'xr-vine',
         description: 'Vine and vineyard imagery for Israel',
@@ -1408,7 +1367,7 @@ describe('cross-references in verse details', () => {
     await model.selectVerse(verse4)
 
     expect(
-      model.view.details[verse4].crossReferences.map((entry) => entry.id),
+      detailsOf(model).crossReferences.map((entry) => entry.id),
     ).toEqual(['xr-vine'])
   })
 
@@ -1419,13 +1378,13 @@ describe('cross-references in verse details', () => {
     })
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
-    const member = model.view.details[verse4].crossReferences[0].members[0]
+    const member = detailsOf(model).crossReferences[0].members[0]
 
     await model.openAt(member.reference, null)
     await model.selectVerse(makeVerseId(19, 80, 8))
 
     expect(model.view.position).toEqual({ book: 19, chapter: 80 })
-    const details = model.view.details[makeVerseId(19, 80, 8)]
+    const details = detailsOf(model)
     expect(details.crossReferences.map((entry) => entry.id)).toEqual(['xr-vine'])
     expect(details.crossReferences[0].members.map((m) => m.label)).toEqual([
       'John 15:1-8',
@@ -1441,12 +1400,12 @@ describe('cross-references in verse details', () => {
     })
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
-    const surfacedInWeb = model.view.details[verse4].crossReferences
+    const surfacedInWeb = detailsOf(model).crossReferences
 
     await model.setTranslation('kjv')
     await model.selectVerse(verse4)
 
-    expect(model.view.details[verse4].crossReferences).toEqual(surfacedInWeb)
+    expect(detailsOf(model).crossReferences).toEqual(surfacedInWeb)
     expect(surfacedInWeb.map((entry) => entry.id)).toEqual(['xr-vine'])
   })
 })
@@ -1647,7 +1606,7 @@ describe('translation availability in the reader', () => {
 
     await model.selectVerse(makeVerseId(43, 15, 4))
 
-    const details = model.view.details[makeVerseId(43, 15, 4)]
+    const details = detailsOf(model)
     expect(details.translations).toEqual([
       {
         id: 'web',
@@ -1947,11 +1906,11 @@ describe('collecting a cross-reference', () => {
     model.addSelectionToCollection()
     addTyped(model, 'Psalm 80:8-16')
     await model.selectVerse(verse4)
-    expect(model.view.details[verse4].crossReferences).toEqual([])
+    expect(detailsOf(model).crossReferences).toEqual([])
 
     await model.saveCrossReference()
 
-    expect(model.view.details[verse4].crossReferences).toEqual([
+    expect(detailsOf(model).crossReferences).toEqual([
       {
         id: 'xr-created',
         description: null,

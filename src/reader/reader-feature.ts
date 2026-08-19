@@ -173,7 +173,6 @@ export class ReaderFeature
       },
       {
         toggles: {
-          details: this.settings.readerDetailsDefault,
           nav: this.settings.readerNavDefault,
           layout: this.settings.readerLayoutDefault,
           strongs: this.settings.readerStrongsDefault,

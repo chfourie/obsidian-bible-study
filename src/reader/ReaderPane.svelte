@@ -1,12 +1,6 @@
 <script lang="ts">
-  import { BOOK_COUNT, bookName, chapterCount, type Reference } from '../reference'
-  import type {
-    NavigationOptions,
-    StudyMaterial,
-    StudyMaterialSource,
-    VerseDetailsView,
-  } from '../contracts'
-  import type { CrossReference } from '../cross-references'
+  import { BOOK_COUNT, bookName, chapterCount } from '../reference'
+  import type { StudyMaterial, StudyMaterialSource } from '../contracts'
   import {
     paragraphsOf,
     type ReaderPaneModel,
@@ -15,29 +9,16 @@
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
   import CollectionStrip from '../study-material/CollectionStrip.svelte'
-  import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
-  import type { StudyMaterialHost, StudySubTab } from '../study-material'
-  import VerseDetails from '../study-material/VerseDetails.svelte'
   import TranslationMenu from './TranslationMenu.svelte'
   import OptionsMenu from './OptionsMenu.svelte'
 
   let {
     model,
-    openNote,
-    openReference,
-    editCrossReferenceInNewPane,
-    onAnnotate,
-    renderMarkdown,
   }: {
     model: ReaderPaneModel
-    openNote: (file: string) => void
-    openReference: (reference: Reference, options?: NavigationOptions) => void
-    editCrossReferenceInNewPane: (entry: CrossReference) => void
-    onAnnotate: (reference: Reference) => void
-    renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) => void
   } = $props()
 
-  // The details surfaces read the pane through the study material contract —
+  // The collect strip reads the pane through the study material contract —
   // the same seam the Study Panel consumes — never through reader-only state.
   // svelte-ignore state_referenced_locally
   const studySource: StudyMaterialSource = model
@@ -53,20 +34,6 @@
       material = studySource.studyMaterial
     }),
   )
-
-  // This pane's own side region: one pane, one sub-tab choice.
-  let subTab = $state<StudySubTab>('translations')
-
-  // What the shared study-material surfaces need from the workspace around
-  // this pane; everything else they do goes through the study source above.
-  const host: StudyMaterialHost = {
-    openNote: (file) => openNote(file),
-    openReference: (reference, options) => openReference(reference, options),
-    editCrossReferenceInNewPane: (entry) => editCrossReferenceInNewPane(entry),
-    annotate: (reference) => onAnnotate(reference),
-    renderMarkdown: (el, markdown, sourcePath) =>
-      renderMarkdown(el, markdown, sourcePath),
-  }
 
   let openBook: number | null = $state(null)
 
@@ -113,9 +80,6 @@
     mentions: row.mentions,
   })
 
-  const detailsFor = (row: VerseRowView): VerseDetailsView | null =>
-    row.expanded ? (view.details[row.verseId] ?? null) : null
-
   const onVerseClick = (event: MouseEvent, verseId: number): void => {
     if (event.shiftKey) model.extendSelectionTo(verseId)
     else void model.selectVerse(verseId)
@@ -139,9 +103,7 @@
   }
 
   const verseSelected = (verseId: number): boolean =>
-    inSelectionSpan(verseId) ||
-    (view.toggles.details === 'side-panel' &&
-      material.selectedVerseId === verseId)
+    inSelectionSpan(verseId) || material.selectedVerseId === verseId
 
   const onBookPicked = (event: Event): void => {
     const book = Number((event.target as HTMLSelectElement).value)
@@ -158,23 +120,6 @@
       class:scripture-study-supplied={segment.supplied}
       class:scripture-study-psalm-heading={segment.psalmHeading}
     >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
-
-{#snippet inlineDetails(row: VerseRowView)}
-  {@const details = detailsFor(row)}
-  <div class="bsr-expand">
-    {#if details === null}
-      <div class="bsr-details-empty">Loading…</div>
-    {:else}
-      <VerseDetails
-        {details}
-        source={studySource}
-        {host}
-        collecting={material.collection !== null}
-        tab={null}
-      />
-    {/if}
-  </div>
-{/snippet}
 
 {#snippet segmentText(row: VerseRowView, segment: VerseSegment)}{#if view.strongsMode && segment.strongs !== undefined}<span
       role="button"
@@ -367,9 +312,6 @@
                 <span class="bsr-verse-num">{row.label}</span>
                 {@render verseText(row)}
               </div>
-              {#if view.toggles.details === 'inline' && row.expanded}
-                {@render inlineDetails(row)}
-              {/if}
             {/each}
           {:else}
             {#each paragraphsOf(view.rows) as paragraph (paragraph[0].verseId)}
@@ -393,11 +335,6 @@
                 {/each}
               </p>
             {/each}
-            {#if view.toggles.details === 'inline'}
-              {#each view.rows.filter((row) => row.expanded) as row (row.verseId)}
-                {@render inlineDetails(row)}
-              {/each}
-            {/if}
           {/if}
 
           {#if view.status === 'ok'}
@@ -413,18 +350,6 @@
         </div>
       </div>
     </div>
-
-    {#if view.toggles.details === 'side-panel'}
-      <div class="bsr-side">
-        <StudyMaterialView
-          {material}
-          source={studySource}
-          {host}
-          tab={subTab}
-          selectTab={(tab) => (subTab = tab)}
-        />
-      </div>
-    {/if}
   </div>
 </div>
 
@@ -738,21 +663,6 @@
     vertical-align: super;
   }
 
-  .bsr-expand {
-    margin: 4px 0 10px 24px;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--radius-m);
-    background: var(--background-secondary);
-    padding: 8px 12px;
-    font-size: var(--font-ui-small);
-  }
-
-  .bsr-details-empty {
-    color: var(--text-faint);
-    font-size: var(--font-ui-small);
-    margin: 6px 0;
-  }
-
   .bsr-nudge {
     color: var(--text-faint);
     font-style: italic;
@@ -777,13 +687,5 @@
   .bsr-strongs-word:hover {
     background: hsla(var(--interactive-accent-hsl), 0.15);
     border-radius: 2px;
-  }
-
-  .bsr-side {
-    width: 300px;
-    flex-shrink: 0;
-    border-left: 1px solid var(--background-modifier-border);
-    display: flex;
-    flex-direction: column;
   }
 </style>

@@ -1,13 +1,5 @@
-import {
-  ItemView,
-  MarkdownRenderer,
-  WorkspaceLeaf,
-  type ViewStateResult,
-} from 'obsidian'
+import { ItemView, WorkspaceLeaf, type ViewStateResult } from 'obsidian'
 import { mount, unmount } from 'svelte'
-import type { NavigationOptions } from '../contracts'
-import type { CrossReference } from '../cross-references'
-import type { Reference } from '../reference'
 import ReaderPane from './ReaderPane.svelte'
 import type { ReaderFeature } from './reader-feature'
 import type { ReaderPaneModel } from './reader-pane-model'
@@ -55,18 +47,7 @@ export class ReaderView extends ItemView {
   override async onOpen(): Promise<void> {
     this.#component = mount(ReaderPane, {
       target: this.contentEl,
-      props: {
-        model: this.model,
-        openNote: (file: string) => this.feature.openNote(file),
-        openReference: (reference: Reference, options?: NavigationOptions) =>
-          this.feature.openReference(reference, null, options),
-        editCrossReferenceInNewPane: (entry: CrossReference) =>
-          this.feature.editCrossReference(entry, null, { newPane: true }),
-        onAnnotate: (reference: Reference) =>
-          this.feature.annotateReference(reference),
-        renderMarkdown: (el: HTMLElement, markdown: string, sourcePath: string) =>
-          void MarkdownRenderer.render(this.app, markdown, el, sourcePath, this),
-      },
+      props: { model: this.model },
     }) as Record<string, unknown>
   }
 

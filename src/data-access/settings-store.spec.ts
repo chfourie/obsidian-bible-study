@@ -60,6 +60,23 @@ describe('SettingsStore', () => {
     expect('enabledOnlineTranslationIds' in settings).toBe(false)
   })
 
+  it('silently drops a stale reader details toggle on load', async () => {
+    const { store } = setup({ readerDetailsDefault: 'side-panel' })
+
+    const settings = await store.loadSettings()
+
+    expect(settings).toEqual(DEFAULT_SETTINGS)
+    expect('readerDetailsDefault' in settings).toBe(false)
+  })
+
+  it('drops the stale reader details toggle from the persisted data', async () => {
+    const { store, data } = setup({ readerDetailsDefault: 'inline' })
+
+    await store.updateSettings((settings) => settings)
+
+    expect(data()).not.toHaveProperty('readerDetailsDefault')
+  })
+
   it('bootstraps a legacy online-only default translation on load', async () => {
     const { store } = setup({
       installedModuleIds: ['web'],

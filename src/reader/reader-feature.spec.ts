@@ -252,9 +252,7 @@ describe('ReaderFeature entry points', () => {
 
     await view.model.selectVerse(makeVerseId(43, 15, 1))
 
-    expect(
-      view.model.view.details[makeVerseId(43, 15, 1)].annotations,
-    ).toEqual([
+    expect(view.model.studyMaterial.details?.annotations).toEqual([
       {
         file: 'Annotations/John 15.1.md',
         body: 'The vine is Christ.\n',
@@ -340,9 +338,7 @@ describe('ReaderFeature entry points', () => {
     await flushAsync()
 
     expect(
-      view.model.view.details[makeVerseId(43, 15, 1)].annotations.map(
-        (block) => block.file,
-      ),
+      view.model.studyMaterial.details?.annotations.map((block) => block.file),
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
@@ -576,9 +572,7 @@ describe('ReaderFeature entry points', () => {
     await view.model.selectVerse(makeVerseId(43, 15, 1))
 
     expect(
-      view.model.view.details[makeVerseId(43, 15, 1)].annotations.map(
-        (block) => block.file,
-      ),
+      view.model.studyMaterial.details?.annotations.map((block) => block.file),
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
@@ -616,7 +610,6 @@ describe('ReaderFeature entry points', () => {
     feature.useSettings({
       ...DEFAULT_SETTINGS,
       defaultTranslationId: 'web',
-      readerDetailsDefault: 'side-panel',
       readerNavDefault: 'breadcrumb',
       readerLayoutDefault: 'continuous',
       readerStrongsDefault: 'on',
@@ -629,7 +622,6 @@ describe('ReaderFeature entry points', () => {
 
     const view = leaves[0].view as ReaderView
     expect(view.model.view.toggles).toEqual({
-      details: 'side-panel',
       nav: 'breadcrumb',
       layout: 'continuous',
       strongs: 'on',

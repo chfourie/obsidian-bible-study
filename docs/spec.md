@@ -66,10 +66,10 @@ Rendered verse text is normal selectable/copyable DOM text. Attribution rule: if
 
 An Obsidian workspace leaf. Prototype (visual reference until implementation): [prototypes/reader-pane-prototype](../prototypes/reader-pane-prototype).
 
-- **One layout with three independent toggles**, each with a global settings default plus in-pane switching (in-pane state is ephemeral per-pane workspace state, never written back to settings):
-  1. **Details** — other translations + notes as *inline expand* under the clicked verse, or persistent *right side panel* with Translations/Notes tabs.
-  2. **Nav** — book/chapter picker as *left tree panel* or *breadcrumb top links* with prev/next chapter steppers.
-  3. **Layout** — *verse-per-line* or *continuous prose* (continuous honors pericope/paragraph data when provided).
+- **One layout with two independent toggles**, each with a global settings default plus in-pane switching (in-pane state is ephemeral per-pane workspace state, never written back to settings):
+  1. **Nav** — book/chapter picker as *left tree panel* or *breadcrumb top links* with prev/next chapter steppers.
+  2. **Layout** — *verse-per-line* or *continuous prose* (continuous honors pericope/paragraph data when provided).
+- **Companion material lives in the Study Panel**, never in the reader: clicking a verse selects it (shift-click extends the span) and the panel shows its details. The reader pane itself renders scripture text only.
 - **Multi-translation verse view:** stacked (abbreviation + text, one under another; full translation name as tooltip), not columns. The fallback translation is never substituted here — unavailable translations show an unavailable row.
 - **Indicators:** trailing marks after verse text — ● annotation (amber), ◆n intersecting notes (blue).
 - **Entry points:** nav icon/chip on a rendered reference opens the reader at that passage (current-passage highlight: tint + left bar; dismissible entry-context banner); command-palette entry and ribbon icon open at last position.
@@ -81,7 +81,7 @@ An Obsidian workspace leaf. Prototype (visual reference until implementation): [
 - **Folder & filenames:** one configurable folder, default `Annotations/`, created on demand, organization-only — identity lives in frontmatter, so a moved/renamed note keeps working. Filename = canonicalized ref with `:` → `.` (`John 15.4-6,9.md`); collisions suffix ` 1`, ` 2`, ….
 - **Template:** optional template-file setting (default none). Create flow copies the template body then sets `ref` (overwriting any in the template). No variable substitution in v1 (Templater/core Templates remain compatible).
 - **Create-from-reader:** "Annotate" on a verse or multi-verse selection (ref = the span); command-palette "New annotation" prompts for a ref pre-filled from an open reader. Note opens in a split beside the reader, cursor on the first body line; indicators update immediately via index create events.
-- **Reader display:** full rendered markdown body per annotation in the details surface, one collapsible block per annotation titled by note name, max-height + scroll, read-only; title/edit icon opens the note in an editor split; modify events refresh on save. Ordering is a global setting: creation date oldest-first (default) or file path A→Z.
+- **Reader display:** full rendered markdown body per annotation in the Study Panel, one collapsible block per annotation titled by note name, max-height + scroll, read-only; title/edit icon opens the note in an editor split; modify events refresh on save. Ordering is a global setting: creation date oldest-first (default) or file path A→Z.
 - **In-note intersection surface:** annotations appear there too, grouped first ("Annotations", then "Mentions").
 
 ## 6. Translations: modules and storage
@@ -128,7 +128,7 @@ Nudge only: reader/blocks show an "install a translation" CTA with **BSB** as th
 
 ### 7.2 Interaction
 
-Reader-toolbar **Strong's mode** toggle, visible only when the viewed translation is tagged and the dictionaries are installed; default configurable like other reader toggles. In Strong's mode, tapping a word renders its entries (Strong's number, original-script lemma, transliteration, short gloss, TBESH/TBESG definition, CC BY attribution line) in the reader details surface. Multiple tags stack entries in tag order. No hover popup; normal reading/selection stays inert. Untagged translations simply lack the feature.
+Reader-toolbar **Strong's mode** toggle, visible only when the viewed translation is tagged and the dictionaries are installed; default configurable like other reader toggles. In Strong's mode, tapping a word renders its entries (Strong's number, original-script lemma, transliteration, short gloss, TBESH/TBESG definition, CC BY attribution line) in the Study Panel. Multiple tags stack entries in tag order. No hover popup; normal reading/selection stays inert. Untagged translations simply lack the feature.
 
 ## 8. Settings
 
@@ -137,7 +137,7 @@ Plain `PluginSettingTab` + `Setting` API (Svelte permitted for the translation l
 1. **General** — Default translation (dropdown: installed downloadable modules + enabled online translations); Offline fallback translation (dropdown: installed offline modules only). Bootstrap rules: auto-set to first candidate when one appears; on deletion, reassign to first remaining or unset (back to nudge state); disabled placeholder ("No translations installed — see Translations below") when empty.
 2. **Translations** — Language filter (default English, persisted); management list per §6: one flat list from the bolls catalogue + BSB, per-row actions (Download/progress/Update/Delete), Strong's badge on tagged translations (BSB, KJV). No API key, no online rows (v1.1).
 3. **Strong's** — Enable Strong's toggle (downloads/removes the dictionaries module), note pointing at badged translations when none installed, STEPBible CC BY attribution.
-4. **Reader** — four toggle defaults: Details (inline / side panel), Navigation (tree / breadcrumb), Layout (verse-per-line / continuous), Strong's mode (off / on). Defaults seed new panes only; in-pane switches are ephemeral.
+4. **Reader** — three toggle defaults: Navigation (tree / breadcrumb), Layout (verse-per-line / continuous), Strong's mode (off / on). Defaults seed new panes only; in-pane switches are ephemeral.
 5. **Annotations** — Folder (folder-suggest, default `Annotations/`), Template file (file-suggest, default none), Display ordering (creation oldest-first default / path A→Z).
 
 Ruled out of the v1 surface: bare-ref display-mode setting (display mode comes from grammar tokens only — keeps source portable), chip style variants, first-run nudge configuration, cache TTL/size caps (compliance constants).

@@ -8,11 +8,13 @@ import { applyTranslationBootstrap } from './bootstrap-translations'
 
 type SettingsData = Pick<Plugin, 'loadData' | 'saveData'>
 
-// Persisted fields of features removed in v1.1 (the API.Bible online tier);
-// dropped silently on load, and from data.json on the next save.
+// Persisted fields of removed features — the API.Bible online tier, and the
+// reader details toggle the Study Panel replaced; dropped silently on load,
+// and from data.json on the next save.
 const REMOVED_SETTINGS_KEYS = [
   'apiBibleKey',
   'enabledOnlineTranslationIds',
+  'readerDetailsDefault',
 ] as const
 
 export type SettingsListener = (settings: ScriptureStudySettings) => void
