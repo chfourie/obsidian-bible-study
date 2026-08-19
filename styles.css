@@ -367,6 +367,12 @@ body {
   display: none;
 }
 
+/* Without the title container between them, the view actions would follow the
+   nav arrows; the auto margin keeps them against the right edge. */
+.workspace-leaf-content[data-type='scripture-study-reader'] .view-actions {
+  margin-left: auto;
+}
+
 /* ---- Study Panel header ------------------------------------------------ */
 
 /* The panel's title stands in for the leaf's file header — same classes, so
