@@ -12,12 +12,17 @@ import {
 } from '../cross-references'
 import { readAnnotationDetails } from '../annotations'
 import { PluginFeature } from '../data-access'
-import { isTranslationManifest, type ModuleStore } from '../modules'
+import {
+  isBookManifest,
+  isTranslationManifest,
+  type ModuleStore,
+} from '../modules'
 import type { Reference } from '../reference'
 import { ModulePassageSource, PassageRepository } from '../rendering'
 import type { VaultReferenceIndex } from '../vault-index'
 import {
   ReaderPaneModel,
+  type ReaderBook,
   type ReaderFirstRunDeps,
   type ReaderPosition,
   type ReaderStrongsDeps,
@@ -126,6 +131,25 @@ export class ReaderFeature
       }))
   }
 
+  // A book's manifest carries its own contents table, so the reader learns
+  // which books exist the same way everything else does — from what is
+  // installed (ADR 0002).
+  async #installedBooks(): Promise<ReaderBook[]> {
+    return (await this.store.installedManifests())
+      .filter(isBookManifest)
+      .map((manifest) => ({
+        number: manifest.book.number,
+        title: manifest.name,
+        author: manifest.book.author,
+        year: manifest.book.year,
+        editionId: manifest.id,
+        sections: manifest.book.sections.map(({ chapter, name }) => ({
+          chapter,
+          name,
+        })),
+      }))
+  }
+
   override onSettingsChanged(): void {
     this.#repositories.plain.clear()
     this.#repositories.red.clear()
@@ -173,6 +197,11 @@ export class ReaderFeature
         annotationDetails: (file) =>
           readAnnotationDetails(this.plugin.app.vault, file),
         strongs: this.#strongs,
+        books: {
+          installed: () => this.#installedBooks(),
+          epigraphs: async (editionId, chapter) =>
+            (await this.store.epigraphs(editionId))[chapter] ?? [],
+        },
         firstRun: this.#firstRun,
       },
       {
@@ -181,6 +210,7 @@ export class ReaderFeature
           layout: this.settings.readerLayoutDefault[device],
           strongs: this.settings.readerStrongsDefault[device],
           redLetter: this.settings.derivedRedLetter ? 'on' : 'off',
+          paraNumbers: this.settings.readerParaNumbersDefault[device],
         },
         translationId: this.settings.defaultTranslationId,
         annotationOrdering: this.settings.annotationOrdering,

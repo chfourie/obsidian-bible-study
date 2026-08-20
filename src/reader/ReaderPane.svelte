@@ -156,42 +156,62 @@
     <OptionsMenu
       toggles={view.toggles}
       strongsAvailable={view.strongsAvailable}
+      bookMode={view.book !== null}
       fontScalePercent={view.fontScalePercent}
       onSetToggle={setToggle}
       onIncreaseFontScale={() => model.increaseFontScale()}
       onDecreaseFontScale={() => model.decreaseFontScale()}
       onResetFontScale={() => model.resetFontScale()}
     />
-    <span class="bsr-trans" bind:this={pillSlotEl}>
-      <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
-        {#each view.translations as pill (pill.id)}
-          <button type="button" class="bsr-pill" tabindex="-1">{pill.label}</button>
-        {/each}
+    {#if view.book !== null}
+      <span class="bsr-trans">
+        <span class="bsr-pill bsr-edition">{view.book.edition}</span>
       </span>
-      {#if pillsCollapsed}
-        <TranslationMenu
-          options={view.translations}
-          onPick={(id) => void model.setTranslation(id)}
-        />
-      {:else}
-        {#each view.translations as pill (pill.id)}
-          <button
-            type="button"
-            class="bsr-pill"
-            class:bsr-on={pill.active}
-            title={pill.name}
-            onclick={() => void model.setTranslation(pill.id)}
-          >{pill.label}</button>
-        {/each}
-      {/if}
-    </span>
+    {:else}
+      <span class="bsr-trans" bind:this={pillSlotEl}>
+        <span class="bsr-trans-measure" aria-hidden="true" bind:this={pillMeasureEl}>
+          {#each view.translations as pill (pill.id)}
+            <button type="button" class="bsr-pill" tabindex="-1">{pill.label}</button>
+          {/each}
+        </span>
+        {#if pillsCollapsed}
+          <TranslationMenu
+            options={view.translations}
+            onPick={(id) => void model.setTranslation(id)}
+          />
+        {:else}
+          {#each view.translations as pill (pill.id)}
+            <button
+              type="button"
+              class="bsr-pill"
+              class:bsr-on={pill.active}
+              title={pill.name}
+              onclick={() => void model.setTranslation(pill.id)}
+            >{pill.label}</button>
+          {/each}
+        {/if}
+      </span>
+    {/if}
   </div>
 
   {#if material.collection !== null}
     <CollectionStrip collection={material.collection} source={studySource} />
   {/if}
 
-  {#if view.toggles.nav === 'breadcrumb'}
+  {#if view.toggles.nav === 'breadcrumb' && view.book !== null}
+    <div class="bsr-crumb">
+      <span class="bsr-crumb-book">{view.book.title}</span>
+      <span class="bsr-crumb-sep">›</span>
+      <select class="dropdown" value={String(view.position.chapter)} onchange={onChapterPicked}>
+        {#each view.book.sections as section (section.chapter)}
+          <option value={String(section.chapter)}>{section.name}</option>
+        {/each}
+      </select>
+      <span class="bsr-spacer"></span>
+      <button type="button" class="bsr-step" disabled={!view.hasPreviousChapter} onclick={() => void model.previousChapter()}>‹ Previous</button>
+      <button type="button" class="bsr-step" disabled={!view.hasNextChapter} onclick={() => void model.nextChapter()}>Next ›</button>
+    </div>
+  {:else if view.toggles.nav === 'breadcrumb'}
     <div class="bsr-crumb">
       <select class="dropdown" value={String(view.position.book)} onchange={onBookPicked}>
         {#each books as book (book)}
@@ -211,7 +231,20 @@
   {/if}
 
   <div class="bsr-main">
-    {#if view.toggles.nav === 'tree'}
+    {#if view.toggles.nav === 'tree' && view.book !== null}
+      <div class="bsr-tree">
+        <div class="bsr-toc-title">{view.book.title}</div>
+        <div class="bsr-toc-author">{view.book.author}</div>
+        {#each view.book.sections as section (section.chapter)}
+          <button
+            type="button"
+            class="bsr-toc-item"
+            class:bsr-on={section.current}
+            onclick={() => void model.goTo(view.position.book, section.chapter)}
+          >{section.name}</button>
+        {/each}
+      </div>
+    {:else if view.toggles.nav === 'tree'}
       <div class="bsr-tree">
         {#each books as book (book)}
           {#if book === 1}<div class="bsr-tree-group">Old Testament</div>{/if}
@@ -240,26 +273,39 @@
 
     <div class="bsr-content">
       <div class="bsr-scroll" style:font-size={contentFontSize}>
-        <div class="bsr-inner">
-          <div class="bsr-title-row">
-            <h1 class="bsr-title">{view.title}</h1>
-            <span class="bsr-title-nav">
-              <button
-                type="button"
-                class="bsr-chapter-step"
-                aria-label="Previous chapter"
-                disabled={!view.hasPreviousChapter}
-                onclick={() => void model.previousChapter()}
-              >‹</button>
-              <button
-                type="button"
-                class="bsr-chapter-step"
-                aria-label="Next chapter"
-                disabled={!view.hasNextChapter}
-                onclick={() => void model.nextChapter()}
-              >›</button>
-            </span>
-          </div>
+        <div class="bsr-inner" class:bsr-book={view.book !== null}>
+          {#if view.book !== null}
+            <div class="bsr-book-head">
+              <div class="bsr-book-name">{view.book.title}</div>
+              <h1 class="bsr-book-title">{view.book.sectionName}</h1>
+            </div>
+            {#each view.book.epigraphs as epigraph, index (index)}
+              <div class="bsr-epigraph">
+                {epigraph.quote}
+                <span class="bsr-epigraph-src">—{epigraph.attribution}</span>
+              </div>
+            {/each}
+          {:else}
+            <div class="bsr-title-row">
+              <h1 class="bsr-title">{view.title}</h1>
+              <span class="bsr-title-nav">
+                <button
+                  type="button"
+                  class="bsr-chapter-step"
+                  aria-label="Previous chapter"
+                  disabled={!view.hasPreviousChapter}
+                  onclick={() => void model.previousChapter()}
+                >‹</button>
+                <button
+                  type="button"
+                  class="bsr-chapter-step"
+                  aria-label="Next chapter"
+                  disabled={!view.hasNextChapter}
+                  onclick={() => void model.nextChapter()}
+                >›</button>
+              </span>
+            </div>
+          {/if}
 
           {#if view.status === 'loading'}
             <div class="scripture-study-loading">Loading {view.title}…</div>
@@ -286,6 +332,27 @@
             {/if}
           {:else if view.status === 'unavailable'}
             <div class="bsr-nudge">{view.title} is unavailable in this translation.</div>
+          {:else if view.book !== null}
+            {#each view.rows as row (row.verseId)}
+              <div
+                class="bsr-para"
+                class:bsr-para-numbered={view.toggles.paraNumbers === 'on'}
+                class:bsr-hl={row.highlighted}
+                class:bsr-sel={verseSelected(row.verseId)}
+                role="button"
+                tabindex="0"
+                onclick={(event) => onVerseClick(event, row.verseId)}
+                onkeydown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    void model.selectVerse(row.verseId)
+                  }
+                }}
+              >
+                <span class="bsr-gutter-num">{row.label}</span>
+                <p class="bsr-book-prose">{@render verseText(row)}</p>
+              </div>
+            {/each}
           {:else if view.toggles.layout === 'verse-per-line'}
             {#each view.rows as row (row.verseId)}
               <div
@@ -675,6 +742,139 @@
 
   .bsr-strongs-word {
     cursor: pointer;
+  }
+
+  /* Book mode — variant B of the book-reader prototype: serif prose under a
+     centered heading, with the paragraph numbers out in the margin gutter. */
+  .bsr-edition {
+    cursor: default;
+  }
+
+  .bsr-crumb-book {
+    font-weight: 600;
+  }
+
+  .bsr-toc-title {
+    padding: 0 12px 2px;
+    font-weight: 600;
+  }
+
+  .bsr-toc-author {
+    padding: 0 12px 10px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    color: var(--text-faint);
+    font-size: var(--font-smallest);
+    font-style: italic;
+  }
+
+  .bsr-toc-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-left: 2px solid transparent;
+    box-shadow: none;
+    padding: 3px 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsr-toc-item:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .bsr-toc-item.bsr-on {
+    color: var(--text-accent);
+    border-left-color: var(--text-accent);
+    background: hsla(var(--interactive-accent-hsl), 0.12);
+  }
+
+  .bsr-inner.bsr-book {
+    font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    /* Side padding leaves the margin gutter room to hold the paragraph
+       numbers without clipping them against the pane edge. */
+    padding: 24px 3em 40px;
+  }
+
+  .bsr-book-name {
+    text-align: center;
+    color: var(--text-faint);
+    font-size: 0.8em;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .bsr-book-title {
+    text-align: center;
+    font-size: 1.5em;
+    font-weight: 400;
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+    margin: 0 0 26px;
+  }
+
+  .bsr-epigraph {
+    max-width: 30rem;
+    margin: 0 auto 34px;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
+    line-height: 1.75;
+    font-size: 0.95em;
+  }
+
+  .bsr-epigraph-src {
+    display: block;
+    margin-top: 8px;
+    font-style: normal;
+    font-size: 0.85em;
+  }
+
+  .bsr-para {
+    position: relative;
+    cursor: pointer;
+    border-radius: var(--radius-s);
+  }
+
+  .bsr-book-prose {
+    margin: 0 0 1.1em;
+    font-size: inherit;
+    line-height: 1.9;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  .bsr-gutter-num {
+    position: absolute;
+    left: -2.6em;
+    top: 0.3em;
+    width: 2em;
+    text-align: right;
+    color: var(--text-accent);
+    font-family: var(--font-interface);
+    font-size: 0.7em;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  .bsr-para:hover .bsr-gutter-num,
+  .bsr-para.bsr-sel .bsr-gutter-num,
+  .bsr-para.bsr-para-numbered .bsr-gutter-num {
+    opacity: 1;
+  }
+
+  .bsr-para.bsr-hl {
+    background: hsla(var(--interactive-accent-hsl), 0.1);
+    box-shadow: inset 3px 0 0 var(--text-accent);
+  }
+
+  .bsr-para.bsr-sel {
+    background: hsla(var(--interactive-accent-hsl), 0.18);
   }
 
   .bsr-strongs-word:hover {

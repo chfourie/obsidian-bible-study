@@ -3,6 +3,7 @@ import type { ModuleDataDir } from './module-data-dir'
 import type { ModuleManifest } from './module-manifest'
 import type {
   BookContent,
+  ModuleEpigraphs,
   NormalizedModule,
 } from './normalized-module'
 import { verseTextOf } from './verse-content'
@@ -23,6 +24,9 @@ const manifestPath = (moduleId: string): string =>
 const bookPath = (moduleId: string, book: number): string =>
   `${moduleDir(moduleId)}/${String(book).padStart(3, '0')}.json`
 
+const epigraphsPath = (moduleId: string): string =>
+  `${moduleDir(moduleId)}/epigraphs.json`
+
 const parseOrNull = <T>(content: string): T | null => {
   try {
     return JSON.parse(content) as T
@@ -42,10 +46,24 @@ export class ModuleStore {
         JSON.stringify(content),
       )
     }
+    if (module.epigraphs !== undefined) {
+      await this.dataDir.writeTextFile(
+        epigraphsPath(module.manifest.id),
+        JSON.stringify(module.epigraphs),
+      )
+    }
     await this.dataDir.writeTextFile(
       manifestPath(module.manifest.id),
       JSON.stringify(module.manifest, null, 2),
     )
+  }
+
+  // Only book modules carry epigraphs; every other module — and any module
+  // stored before they existed — simply has none.
+  async epigraphs(moduleId: string): Promise<ModuleEpigraphs> {
+    const content = await this.dataDir.readTextFile(epigraphsPath(moduleId))
+    if (content === null) return {}
+    return parseOrNull<ModuleEpigraphs>(content) ?? {}
   }
 
   async verseText(moduleId: string, verseId: number): Promise<string | null> {

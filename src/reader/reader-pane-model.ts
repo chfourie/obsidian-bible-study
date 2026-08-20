@@ -45,7 +45,8 @@ import {
   type AnnotationOrdering,
 } from '../data-access'
 import { isPoetryVerse } from '../rendering'
-import type { PassageSource, VerseSegment } from '../rendering'
+import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
+import type { Epigraph } from '../modules'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
 import { isAnnotation, type OccurrenceGroup } from '../vault-index'
@@ -55,6 +56,32 @@ export type ReaderToggles = {
   layout: 'verse-per-line' | 'continuous'
   strongs: 'off' | 'on'
   redLetter: 'off' | 'on'
+  // Book mode only: whether the margin-gutter paragraph numbers stay on or
+  // surface on hover (spec-books §5).
+  paraNumbers: 'on' | 'hover'
+}
+
+export type ReaderBookSection = { chapter: number; name: string }
+
+// An installed book as the reader needs it: its own contents table plus the
+// edition module that fills the translation slot (ADR 0002).
+export type ReaderBook = {
+  number: number
+  title: string
+  author: string
+  year: number
+  editionId: string
+  sections: ReaderBookSection[]
+}
+
+export type ReaderBookSource = {
+  installed: () => Promise<ReaderBook[]>
+  epigraphs: (editionId: string, chapter: number) => Promise<Epigraph[]>
+}
+
+const NO_BOOKS: ReaderBookSource = {
+  installed: async () => [],
+  epigraphs: async () => [],
 }
 
 export type ReaderStrongsDeps = {
@@ -94,6 +121,7 @@ export type ReaderPaneDeps = {
   crossReferences: CrossReferenceEditing
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
+  books?: ReaderBookSource
   firstRun?: ReaderFirstRunDeps
 }
 
@@ -153,8 +181,28 @@ export type TranslationPill = {
   active: boolean
 }
 
+export type BookSectionOption = {
+  chapter: number
+  name: string
+  current: boolean
+}
+
+// Everything the pane renders differently for a book: its own contents table
+// replaces the scripture tree, the edition pill replaces the translation
+// switcher, and the section carries its heading and epigraphs.
+export type BookModeView = {
+  title: string
+  author: string
+  edition: string
+  sectionName: string
+  sections: BookSectionOption[]
+  epigraphs: Epigraph[]
+}
+
 export type ReaderPaneView = {
   status: 'loading' | 'ok' | 'unavailable' | 'no-translation'
+  // Null in scripture mode — the pane is in book mode exactly when set.
+  book: BookModeView | null
   title: string
   position: ReaderPosition
   rows: VerseRowView[]
@@ -219,6 +267,10 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #markers = new Map<number, VerseMarkerCounts>()
   #chapterMaterialToken = 0
   #attribution: string | null = null
+  // The installed books, loaded with each passage so a book installed while
+  // the pane is open is recognised on the next move.
+  #books: ReaderBook[] = []
+  #epigraphs: Epigraph[] = []
   #bannerDismissed = false
   #strongsAvailable = false
   #installingSuggested = false
@@ -356,17 +408,22 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   get view(): ReaderPaneView {
+    const book = this.#bookHere()
     return {
       status: this.#status,
+      book: book === null ? null : this.#bookView(book),
       title: this.#title(),
       position: this.#position,
       rows: this.#rows,
-      translations: this.#available.map((translation) => ({
-        id: translation.id,
-        label: translation.label,
-        name: translation.name,
-        active: translation.id === this.#translationId,
-      })),
+      translations:
+        book !== null
+          ? []
+          : this.#available.map((translation) => ({
+              id: translation.id,
+              label: translation.label,
+              name: translation.name,
+              active: translation.id === this.#translationId,
+            })),
       toggles: this.#toggles,
       treeBook: this.#browsedBook ?? this.#position.book,
       fontScalePercent: this.#fontScalePercent,
@@ -386,7 +443,51 @@ export class ReaderPaneModel implements StudyMaterialSource {
       banner:
         this.#entry === null || this.#bannerDismissed
           ? null
-          : `Opened at ${formatReference(this.#entry)}`,
+          : `Opened at ${this.#entryLabel(this.#entry)}`,
+    }
+  }
+
+  // A book's own name and paragraph numbering: scripture's reference grammar
+  // learns book names separately (ticket #72), so the pane labels its entry
+  // from the book it already has in hand.
+  #entryLabel(entry: Reference): string {
+    const book = this.#bookHere()
+    if (book === null) return formatReference(entry)
+    const first = decodeVerseId(entry.ranges[0].startId)
+    const last = decodeVerseId(entry.ranges[entry.ranges.length - 1].endId)
+    const span =
+      first.verse === last.verse
+        ? `${first.verse}`
+        : `${first.verse}-${last.verse}`
+    return `${book.title} ${first.chapter}:${span}`
+  }
+
+  #bookHere(): ReaderBook | null {
+    return (
+      this.#books.find((book) => book.number === this.#position.book) ?? null
+    )
+  }
+
+  #sectionOf(book: ReaderBook): ReaderBookSection | null {
+    return (
+      book.sections.find(
+        (section) => section.chapter === this.#position.chapter,
+      ) ?? null
+    )
+  }
+
+  #bookView(book: ReaderBook): BookModeView {
+    return {
+      title: book.title,
+      author: book.author,
+      edition: `${book.title} ${book.year}`,
+      sectionName: this.#sectionOf(book)?.name ?? '',
+      sections: book.sections.map((section) => ({
+        chapter: section.chapter,
+        name: section.name,
+        current: section.chapter === this.#position.chapter,
+      })),
+      epigraphs: this.#epigraphs,
     }
   }
 
@@ -406,7 +507,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   #title(): string {
-    return `${bookName(this.#position.book)} ${this.#position.chapter}`
+    const book = this.#bookHere()
+    if (book === null)
+      return `${bookName(this.#position.book)} ${this.#position.chapter}`
+    const section = this.#sectionOf(book)
+    return section === null ? book.title : `${book.title} — ${section.name}`
   }
 
   useNavigation(navigate: ReaderNavigation): void {
@@ -487,27 +592,44 @@ export class ReaderPaneModel implements StudyMaterialSource {
     )
   }
 
+  // Book sections are numbered in reading order from the book's own first
+  // chapter — Humility's Preface is 0 — and stepping never leaves the book.
+  #sectionBounds(): { first: number; last: number } | null {
+    const sections = this.#bookHere()?.sections
+    if (sections === undefined || sections.length === 0) return null
+    return {
+      first: sections[0].chapter,
+      last: sections[sections.length - 1].chapter,
+    }
+  }
+
   #hasNextChapter(): boolean {
     const { book, chapter } = this.#position
+    const bounds = this.#sectionBounds()
+    if (bounds !== null) return chapter < bounds.last
     return book < BOOK_COUNT || chapter < chapterCount(book)
   }
 
   #hasPreviousChapter(): boolean {
     const { book, chapter } = this.#position
+    const bounds = this.#sectionBounds()
+    if (bounds !== null) return chapter > bounds.first
     return book > 1 || chapter > 1
   }
 
   async nextChapter(): Promise<void> {
     if (!this.#hasNextChapter()) return
     const { book, chapter } = this.#position
-    if (chapter < chapterCount(book)) await this.goTo(book, chapter + 1)
+    if (this.#sectionBounds() !== null || chapter < chapterCount(book))
+      await this.goTo(book, chapter + 1)
     else await this.goTo(book + 1, 1)
   }
 
   async previousChapter(): Promise<void> {
     if (!this.#hasPreviousChapter()) return
     const { book, chapter } = this.#position
-    if (chapter > 1) await this.goTo(book, chapter - 1)
+    if (this.#sectionBounds() !== null || chapter > 1)
+      await this.goTo(book, chapter - 1)
     else await this.goTo(book - 1, chapterCount(book - 1))
   }
 
@@ -798,8 +920,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
     if (reference === null || anchor === null) return
     this.#loadingDetailsKey = key
     try {
+      // A book has exactly one layer, so its details carry no translation
+      // rows (spec-books §5).
+      const layers = this.#bookHere() === null ? this.#available : []
       const translations = await Promise.all(
-        this.#available.map(
+        layers.map(
           async (translation): Promise<TranslationRowView> => {
             const passage = await this.deps.passages.passage(
               reference,
@@ -918,6 +1043,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async #loadPassage(token: number): Promise<void> {
+    // Only a position outside the canon can be a book, so scripture never
+    // pays for the lookup — and never lands in book mode.
+    const isBookPosition = this.#position.book > BOOK_COUNT
+    this.#books = isBookPosition
+      ? await (this.deps.books ?? NO_BOOKS).installed()
+      : []
+    if (token !== this.#loadToken) return
+    if (isBookPosition) {
+      await this.#loadBookPassage(token, this.#bookHere())
+      return
+    }
     const available = await this.deps.availableTranslations()
     if (token !== this.#loadToken) return
     this.#available = available
@@ -941,7 +1077,52 @@ export class ReaderPaneModel implements StudyMaterialSource {
       return
     }
     this.#attribution = passage.attribution
-    this.#rows = passage.verses.map((verse) => ({
+    this.#rows = this.#rowsOf(passage.verses)
+    this.#status = 'ok'
+    this.#notify()
+  }
+
+  // A book's atoms are paragraphs served by its own edition module, so no
+  // translation is involved — an uninstalled book is a content gap like any
+  // other (ADR 0002).
+  async #loadBookPassage(
+    token: number,
+    book: ReaderBook | null,
+  ): Promise<void> {
+    this.#strongsAvailable = false
+    this.#epigraphs = []
+    if (book === null) {
+      this.#status = 'unavailable'
+      this.#attribution = null
+      this.#notify()
+      return
+    }
+    const [passage, epigraphs] = await Promise.all([
+      this.deps.passages.passage(
+        chapterReference(this.#position),
+        book.editionId,
+      ),
+      (this.deps.books ?? NO_BOOKS).epigraphs(
+        book.editionId,
+        this.#position.chapter,
+      ),
+    ])
+    if (token !== this.#loadToken) return
+    if (passage.status !== 'ok') {
+      this.#status = 'unavailable'
+      this.#attribution = null
+      this.#notify()
+      return
+    }
+    this.#attribution = passage.attribution
+    this.#epigraphs = epigraphs
+    this.#rows = this.#rowsOf(passage.verses)
+    this.#status = 'ok'
+    this.#notify()
+  }
+
+  #rowsOf(verses: PassageVerse[]): VerseRowView[] {
+    return verses.map((verse) => ({
       verseId: verse.verseId,
       label: `${decodeVerseId(verse.verseId).verse}`,
       segments: verse.segments,
@@ -952,8 +1133,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
         this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),
       ...this.#markerCounts(verse.verseId),
     }))
-    this.#status = 'ok'
-    this.#notify()
   }
 
   async refreshTranslations(): Promise<void> {
@@ -963,6 +1142,10 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async #refreshStrongsAvailability(): Promise<void> {
+    if (this.#bookHere() !== null) {
+      this.#strongsAvailable = false
+      return
+    }
     const current = this.#available.find(
       (translation) => translation.id === this.#translationId,
     )

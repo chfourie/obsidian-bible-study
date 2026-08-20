@@ -54,6 +54,7 @@ export type ScriptureStudySettings = {
   readerNavDefault: PerDeviceDefault<'tree' | 'breadcrumb'>
   readerLayoutDefault: PerDeviceDefault<'verse-per-line' | 'continuous'>
   readerStrongsDefault: PerDeviceDefault<'off' | 'on'>
+  readerParaNumbersDefault: PerDeviceDefault<'on' | 'hover'>
   readerFontScalePercent: number
   revealPanelOnSelection: boolean
   annotationsFolder: string
@@ -72,6 +73,7 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   readerNavDefault: perDeviceDefault('tree'),
   readerLayoutDefault: perDeviceDefault('verse-per-line'),
   readerStrongsDefault: perDeviceDefault('off'),
+  readerParaNumbersDefault: perDeviceDefault('hover'),
   readerFontScalePercent: FONT_SCALE_DEFAULT,
   revealPanelOnSelection: true,
   annotationsFolder: 'Annotations',
