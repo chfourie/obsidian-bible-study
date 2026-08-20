@@ -68,6 +68,10 @@ const kjv = (): NormalizedModule => ({
           text: 'And God saw the light, that it was good.',
           tags: [{ start: 4, end: 7, strongs: ['H0430G'] }],
         },
+        [makeVerseId(1, 2, 4)]: {
+          text: 'the day that the LORD God made the earth.',
+          tags: [{ start: 17, end: 25, strongs: ['H3068', 'H0430'] }],
+        },
       },
     ],
     [
@@ -76,6 +80,10 @@ const kjv = (): NormalizedModule => ({
         [makeVerseId(43, 15, 4)]: {
           text: 'Abide in me, and I in you.',
           tags: [{ start: 0, end: 5, strongs: ['G3306'] }],
+        },
+        [makeVerseId(43, 15, 5)]: {
+          text: 'abide, and I in you.',
+          tags: [{ start: 0, end: 6, strongs: ['G3306'] }],
         },
       },
     ],
@@ -101,32 +109,18 @@ const setup = async (
 }
 
 describe('moduleConcordance', () => {
-  it('reads the translation the panel was opened from', async () => {
+  it('offers every installed tagged translation to read in', async () => {
     const { concordance } = await setup([web(), kjv()])
 
-    expect(await concordance.translationFor('kjv')).toEqual({
-      id: 'kjv',
-      name: 'King James Version',
-    })
+    expect(await concordance.translations()).toEqual([
+      { id: 'kjv', name: 'King James Version' },
+    ])
   })
 
-  it('falls back to the first installed tagged translation', async () => {
-    const { concordance } = await setup([web(), kjv()])
-
-    expect(await concordance.translationFor('web')).toEqual({
-      id: 'kjv',
-      name: 'King James Version',
-    })
-    expect(await concordance.translationFor(null)).toEqual({
-      id: 'kjv',
-      name: 'King James Version',
-    })
-  })
-
-  it('has no translation to read while none installed is tagged', async () => {
+  it('offers nothing while nothing installed is tagged', async () => {
     const { concordance } = await setup([web()])
 
-    expect(await concordance.translationFor('web')).toBeNull()
+    expect(await concordance.translations()).toEqual([])
   })
 
   it('serves a family\'s verse ids from the index alone', async () => {
@@ -135,7 +129,11 @@ describe('moduleConcordance', () => {
 
     const verseIds = await concordance.occurrences('kjv', 'H0430')
 
-    expect(verseIds).toEqual([makeVerseId(1, 1, 1), makeVerseId(1, 1, 4)])
+    expect(verseIds).toEqual([
+      makeVerseId(1, 1, 1),
+      makeVerseId(1, 1, 4),
+      makeVerseId(1, 2, 4),
+    ])
     expect(dataDir.reads).toEqual(['modules/kjv/concordance.json'])
   })
 
@@ -145,6 +143,78 @@ describe('moduleConcordance', () => {
     expect(await concordance.occurrences('kjv', 'H0430B')).toEqual([
       makeVerseId(1, 1, 1),
       makeVerseId(1, 1, 4),
+      makeVerseId(1, 2, 4),
+    ])
+  })
+
+  it('groups the occurrences by the words the translation renders them with', async () => {
+    const { concordance } = await setup()
+
+    expect(await concordance.renderings('kjv', 'H0430')).toEqual([
+      {
+        text: 'God',
+        verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 1, 4)],
+      },
+      { text: 'LORD God', verseIds: [makeVerseId(1, 2, 4)] },
+    ])
+  })
+
+  it('reads one rendering however the surface is cased or punctuated', async () => {
+    const { concordance } = await setup()
+
+    expect(await concordance.renderings('kjv', 'G3306')).toEqual([
+      {
+        text: 'Abide',
+        verseIds: [makeVerseId(43, 15, 4), makeVerseId(43, 15, 5)],
+      },
+    ])
+  })
+
+  it('groups an extended number\'s renderings under its family', async () => {
+    const { concordance } = await setup()
+
+    expect(await concordance.renderings('kjv', 'H0430B')).toEqual([
+      {
+        text: 'God',
+        verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 1, 4)],
+      },
+      { text: 'LORD God', verseIds: [makeVerseId(1, 2, 4)] },
+    ])
+  })
+
+  it('holds the last family\'s renderings instead of re-reading for them', async () => {
+    const { dataDir, concordance } = await setup()
+    await concordance.renderings('kjv', 'H0430')
+    dataDir.reads.length = 0
+
+    await concordance.renderings('kjv', 'H0430B')
+
+    expect(dataDir.reads).toEqual([])
+  })
+
+  it('counts a verse once for a rendering it tags twice', async () => {
+    const { concordance } = await setup([
+      {
+        manifest: manifest({}),
+        books: new Map([
+          [
+            1,
+            {
+              [makeVerseId(1, 1, 1)]: {
+                text: 'God is God.',
+                tags: [
+                  { start: 0, end: 3, strongs: ['H0430'] },
+                  { start: 7, end: 10, strongs: ['H0430'] },
+                ],
+              },
+            },
+          ],
+        ]),
+      },
+    ])
+
+    expect(await concordance.renderings('kjv', 'H0430')).toEqual([
+      { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
     ])
   })
 

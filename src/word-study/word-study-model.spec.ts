@@ -3,6 +3,7 @@ import { NOOP_REFERENCE_NAVIGATOR, type StrongsEntryView } from '../contracts'
 import { makeVerseId } from '../reference'
 import {
   WordStudyModel,
+  type ConcordanceRendering,
   type ConcordanceSegment,
   type WordStudyEntry,
 } from './word-study-model'
@@ -287,24 +288,40 @@ const segmentsOf = (verseId: number): ConcordanceSegment[] =>
     .map((text, index) => ({ text, emphasis: index % 2 === 1 }))
     .filter((segment) => segment.text !== '')
 
+// What one translation answers about a family, where it differs from what the
+// rest of them answer.
+type FakeIndex = {
+  occurrences?: Record<string, number[]>
+  renderings?: ConcordanceRendering[]
+}
+
 const fakeConcordance = (
   options: {
     translations?: { id: string; name: string }[]
     occurrences?: Record<string, number[]>
+    renderings?: ConcordanceRendering[]
+    perTranslation?: Record<string, FakeIndex>
   } = {},
 ) => {
-  const translations = options.translations ?? [KJV]
-  const occurrences = options.occurrences ?? {}
+  let translations = options.translations ?? [KJV]
+  const own = (translationId: string): FakeIndex =>
+    options.perTranslation?.[translationId] ?? {}
   const asked: { translationId: string; verseIds: number[] }[] = []
   return {
     asked,
+    uninstall: (translationId: string) => {
+      translations = translations.filter(
+        (translation) => translation.id !== translationId,
+      )
+    },
     deps: {
-      translationFor: async (preferredId: string | null) =>
-        translations.find((translation) => translation.id === preferredId) ??
-        translations[0] ??
-        null,
-      occurrences: async (_translationId: string, strongsNumber: string) =>
-        occurrences[strongsNumber] ?? [],
+      translations: async () => translations,
+      occurrences: async (translationId: string, strongsNumber: string) =>
+        (own(translationId).occurrences ?? options.occurrences ?? {})[
+          strongsNumber
+        ] ?? [],
+      renderings: async (translationId: string) =>
+        own(translationId).renderings ?? options.renderings ?? [],
       versesFor: async (
         translationId: string,
         _strongsNumber: string,
@@ -377,12 +394,20 @@ describe("WordStudyModel's concordance", () => {
     expect(panel.view.concordance?.translation).toEqual(KJV)
   })
 
-  it('has no concordance at all while no tagged translation is installed', async () => {
+  it('says so while no tagged translation is installed to count in', async () => {
     const { model: panel } = concordanceModel({ translations: [] })
 
     await panel.show('H0430')
 
-    expect(panel.view.concordance).toBeNull()
+    expect(panel.view.concordance).toMatchObject({
+      translation: null,
+      translations: [],
+      message: 'No Tagged Translation is installed.',
+      label: 'Occurrences',
+      total: 0,
+      books: [],
+      renderings: [],
+    })
   })
 
   it('groups the occurrences by book in canon order, collapsed and unloaded', async () => {
@@ -504,6 +529,98 @@ describe("WordStudyModel's concordance", () => {
     ])
   })
 
+  it('chips the renderings of the family, the most frequent first', async () => {
+    const { model: panel } = concordanceModel({
+      occurrences: occurrencesOf([
+        makeVerseId(1, 1, 1),
+        makeVerseId(1, 2, 4),
+        makeVerseId(43, 15, 4),
+      ]),
+      renderings: [
+        { text: 'you', verseIds: [makeVerseId(43, 15, 4)] },
+        { text: 'God', verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)] },
+      ],
+    })
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance?.renderings).toEqual([
+      { text: 'God', count: 2, active: false },
+      { text: 'you', count: 1, active: false },
+    ])
+  })
+
+  it('filters the occurrences to a tapped rendering, counts and all', async () => {
+    const { model: panel } = concordanceModel({
+      occurrences: occurrencesOf([
+        makeVerseId(1, 1, 1),
+        makeVerseId(1, 2, 4),
+        makeVerseId(43, 15, 4),
+      ]),
+      renderings: [
+        { text: 'God', verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)] },
+        { text: 'you', verseIds: [makeVerseId(43, 15, 4)] },
+      ],
+    })
+    await panel.show('H0430')
+
+    panel.toggleRendering('you')
+
+    expect(panel.view.concordance).toMatchObject({
+      total: 1,
+      label: 'you: 1 occurrence in KJV',
+      books: [
+        { book: 43, name: 'John', count: 1, expanded: false, verses: null },
+      ],
+      renderings: [
+        { text: 'God', count: 2, active: false },
+        { text: 'you', count: 1, active: true },
+      ],
+    })
+  })
+
+  it('clears the filter when the same rendering is tapped again', async () => {
+    const { model: panel } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1), makeVerseId(43, 15, 4)]),
+      renderings: [
+        { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
+        { text: 'you', verseIds: [makeVerseId(43, 15, 4)] },
+      ],
+    })
+    await panel.show('H0430')
+
+    panel.toggleRendering('you')
+    panel.toggleRendering('you')
+
+    expect(panel.view.concordance).toMatchObject({
+      total: 2,
+      label: '2 occurrences in KJV',
+      books: [{ book: 1 }, { book: 43 }],
+      renderings: [
+        { text: 'God', count: 1, active: false },
+        { text: 'you', count: 1, active: false },
+      ],
+    })
+  })
+
+  it('renders the rows of a book expanded under a filter', async () => {
+    const { concordance, model: panel } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)]),
+      renderings: [
+        { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
+        { text: 'LORD God', verseIds: [makeVerseId(1, 2, 4)] },
+      ],
+    })
+    await panel.show('H0430')
+
+    panel.toggleRendering('LORD God')
+    await panel.toggleConcordanceBook(1)
+
+    expect(concordance.asked).toEqual([
+      { translationId: 'kjv', verseIds: [makeVerseId(1, 2, 4)] },
+    ])
+  })
+
   it('lets a later number win the concordance too', async () => {
     const { model: panel } = concordanceModel(
       {
@@ -521,5 +638,110 @@ describe("WordStudyModel's concordance", () => {
 
     expect(panel.view.concordance?.total).toBe(1)
     expect(panel.view.concordance?.books[0].book).toBe(43)
+  })
+})
+
+describe("WordStudyModel's translation switcher", () => {
+  const switchable = () =>
+    concordanceModel({
+      translations: [KJV, BSB],
+      perTranslation: {
+        kjv: {
+          occurrences: occurrencesOf([
+            makeVerseId(1, 1, 1),
+            makeVerseId(1, 2, 4),
+          ]),
+          renderings: [
+            {
+              text: 'God',
+              verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)],
+            },
+          ],
+        },
+        bsb: {
+          occurrences: occurrencesOf([makeVerseId(43, 15, 4)]),
+          renderings: [{ text: 'you', verseIds: [makeVerseId(43, 15, 4)] }],
+        },
+      },
+    })
+
+  it('offers every installed tagged translation to read the family in', async () => {
+    const { model: panel } = switchable()
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance).toMatchObject({
+      translations: [KJV, BSB],
+      switchable: true,
+    })
+  })
+
+  it('has nothing to switch between while one translation is tagged', async () => {
+    const { model: panel } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1)]),
+    })
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance).toMatchObject({
+      translations: [KJV],
+      switchable: false,
+    })
+  })
+
+  it('re-reads the family in the translation that is chosen', async () => {
+    const { model: panel } = switchable()
+    await panel.show('H0430')
+
+    await panel.useTranslation('bsb')
+
+    expect(panel.view.concordance).toMatchObject({
+      translation: BSB,
+      total: 1,
+      label: '1 occurrence in BSB',
+      books: [{ book: 43, name: 'John', count: 1 }],
+      renderings: [{ text: 'you', count: 1, active: false }],
+    })
+  })
+
+  it('persists the chosen translation beside the number', async () => {
+    const { model: panel } = switchable()
+    await panel.show('H0430')
+
+    await panel.useTranslation('bsb')
+
+    expect(panel.translationId).toBe('bsb')
+  })
+
+  it('drops the rendering filter when the translation changes', async () => {
+    const { model: panel } = switchable()
+    await panel.show('H0430')
+    panel.toggleRendering('God')
+
+    await panel.useTranslation('bsb')
+
+    expect(panel.view.concordance?.renderings).toEqual([
+      { text: 'you', count: 1, active: false },
+    ])
+    expect(panel.view.concordance?.total).toBe(1)
+  })
+
+  it('names the translation it can no longer read, and offers the rest', async () => {
+    const { concordance, model: panel } = switchable()
+    await panel.show('H0430')
+
+    concordance.uninstall('kjv')
+    await panel.useTranslation('kjv')
+
+    expect(panel.view.concordance).toMatchObject({
+      translation: null,
+      translations: [BSB],
+      message: 'King James Version is no longer installed.',
+      switchable: true,
+      label: 'Occurrences',
+      total: 0,
+      books: [],
+      renderings: [],
+    })
   })
 })

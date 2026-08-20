@@ -38,13 +38,18 @@ const fakeDictionary = (
   etymologyAttribution: "Etymology: Strong's (1890, public domain)",
 })
 
+const KJV = { id: 'kjv', name: 'King James Version' }
+const BSB = { id: 'bsb', name: 'Berean Standard Bible' }
+
 // Two installed Tagged Translations, each carrying the same one occurrence.
-const fakeConcordance = (): WordStudyConcordance => ({
-  translationFor: async (preferredId) =>
-    preferredId === 'bsb'
-      ? { id: 'bsb', name: 'Berean Standard Bible' }
-      : { id: 'kjv', name: 'King James Version' },
+const fakeConcordance = (
+  translations: { id: string; name: string }[] = [KJV, BSB],
+): WordStudyConcordance => ({
+  translations: async () => translations,
   occurrences: async () => [makeVerseId(1, 1, 1)],
+  renderings: async () => [
+    { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
+  ],
   versesFor: async (_translationId, _strongsNumber, verseIds) =>
     verseIds.map((verseId) => ({
       verseId,
@@ -339,7 +344,7 @@ describe('WordStudyFeature', () => {
 
     await feature.openWordStudy('G0026')
 
-    expect(panel(leaves[0]).model.view.concordance?.translation.id).toBe('kjv')
+    expect(panel(leaves[0]).model.view.concordance?.translation?.id).toBe('kjv')
   })
 
   it('persists the concordance translation beside the number', async () => {
@@ -360,7 +365,7 @@ describe('WordStudyFeature', () => {
 
     const leaf = await restore({ strongs: 'G0026', translation: 'bsb' })
 
-    expect(panel(leaf).model.view.concordance?.translation.id).toBe('bsb')
+    expect(panel(leaf).model.view.concordance?.translation?.id).toBe('bsb')
   })
 
   it('walks an occurrence row to that chapter through the reader', async () => {
@@ -379,6 +384,56 @@ describe('WordStudyFeature', () => {
       'bsb',
       { newPane: true },
     )
+  })
+
+  it('chips the renderings the translation gives the family', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    await feature.openWordStudy('G0026')
+
+    expect(panel(leaves[0]).model.view.concordance?.renderings).toEqual([
+      { text: 'God', count: 1, active: false },
+    ])
+  })
+
+  it('offers every tagged translation the family can be read in', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    await feature.openWordStudy('G0026')
+
+    expect(panel(leaves[0]).model.view.concordance?.translations).toEqual([
+      KJV,
+      BSB,
+    ])
+  })
+
+  it('persists the translation the reader switches the concordance to', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    await feature.openWordStudy('G0026')
+
+    await panel(leaves[0]).model.useTranslation('bsb')
+
+    expect(panel(leaves[0]).model.view.concordance?.translation).toEqual(BSB)
+    expect(leaves[0].getViewState()).toEqual({
+      type: WORD_STUDY_VIEW_TYPE,
+      state: { strongs: 'G0026', translation: 'bsb' },
+    })
+  })
+
+  it('says so when a restored panel finds no tagged translation', async () => {
+    const { feature, restore } = harness({ concordance: fakeConcordance([]) })
+    await feature.load()
+
+    const leaf = await restore({ strongs: 'G0026', translation: 'kjv' })
+
+    expect(panel(leaf).model.view.concordance).toMatchObject({
+      translation: null,
+      translations: [],
+      message: 'No Tagged Translation is installed.',
+    })
   })
 
   it('renders a book\'s occurrence rows when it is expanded', async () => {

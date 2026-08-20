@@ -3,7 +3,10 @@ The Word Study Panel: one main-area tab dedicated to a single extended
 Strong's number. It leads with the number, lemma, transliteration and the rest
 of its Strong's Family, then the brief lexicon entry and the Strong's 1890
 etymology, and closes with the family's concordance in one Tagged Translation:
+how that translation renders the family, as chips the list filters by, and
 every verse it is tagged in, grouped by book and collapsed until asked for.
+Where more than one Tagged Translation is installed the concordance can be
+switched between them, and where none can be read it says so in their place.
 Every number on the page is walkable — plain activation retargets this panel,
 a modified one spawns another — and every occurrence row walks to its chapter
 in the reader.
@@ -124,14 +127,55 @@ in the reader.
     {/if}
   {/if}
   {#if view.concordance !== null}
-    <div class="bsw-section-heading">{view.concordance.label}</div>
-    {#if view.concordance.familyUndifferentiated}
+    {@const concordance = view.concordance}
+    <div class="bsw-concordance-head">
+      <span class="bsw-section-heading">{concordance.label}</span>
+      {#if concordance.switchable}
+        <select
+          class="dropdown bsw-translation"
+          aria-label="Read the concordance in"
+          value={concordance.translation?.id ?? ''}
+          onchange={(event) =>
+            void model.useTranslation(event.currentTarget.value)}
+        >
+          {#if concordance.translation === null}
+            <option value="" disabled>Choose a translation</option>
+          {/if}
+          {#each concordance.translations as translation (translation.id)}
+            <option value={translation.id}>{translation.name}</option>
+          {/each}
+        </select>
+      {/if}
+    </div>
+    {#if concordance.message !== null}
+      <div class="bsw-empty">{concordance.message}</div>
+    {/if}
+    {#if concordance.familyUndifferentiated}
       <div class="bsw-family-note">
         These occurrences cover the whole {view.entry?.strongs ?? view.number}
         family — a tagged translation does not tell its entries apart.
       </div>
     {/if}
-    {#each view.concordance.books as book (book.book)}
+    {#if concordance.renderings.length > 0}
+      <div class="bsw-renderings">
+        {#each concordance.renderings as rendering (rendering.text)}
+          <span
+            role="button"
+            tabindex="0"
+            class="bsw-chip"
+            class:bsw-chip-active={rendering.active}
+            aria-pressed={rendering.active}
+            title="Show only this rendering"
+            onclick={() => model.toggleRendering(rendering.text)}
+            onkeydown={activate(() => model.toggleRendering(rendering.text))}
+          >
+            <span class="bsw-chip-text">{rendering.text}</span>
+            <span class="bsw-chip-count">{rendering.count}</span>
+          </span>
+        {/each}
+      </div>
+    {/if}
+    {#each concordance.books as book (book.book)}
       <section class="bsw-book">
         <span
           role="button"
@@ -265,6 +309,57 @@ in the reader.
     color: var(--text-faint);
     font-size: var(--font-smallest);
     margin-top: 16px;
+  }
+
+  .bsw-concordance-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .bsw-translation {
+    font-size: var(--font-ui-smaller);
+    max-width: 60%;
+  }
+
+  .bsw-renderings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .bsw-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 2px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-l);
+    background-color: var(--background-secondary);
+    cursor: pointer;
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bsw-chip:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  .bsw-chip-active {
+    background-color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+
+  .bsw-chip-count {
+    color: var(--text-faint);
+  }
+
+  .bsw-chip-active .bsw-chip-count {
+    color: var(--text-on-accent);
+    opacity: 0.75;
   }
 
   .bsw-family-note {

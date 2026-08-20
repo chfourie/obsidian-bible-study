@@ -62,17 +62,25 @@ export type ConcordanceVerse = {
   segments: ConcordanceSegment[]
 }
 
-// The Concordance Indexes seen from the Word Study Panel: which translation a
-// panel reads, the verses one family is tagged in there, and the rendering of
-// as many of them as the reader has actually opened.
+// One way a Tagged Translation renders the family — the surface words under
+// its tag spans — against the verses it renders them in.
+export type ConcordanceRendering = { text: string; verseIds: number[] }
+
+// The Concordance Indexes seen from the Word Study Panel: which translations
+// can be read at all, the verses one family is tagged in one of them, how that
+// translation renders them, and the text of as many as the reader has opened.
 export type WordStudyConcordance = {
-  translationFor: (
-    preferredId: string | null,
-  ) => Promise<ConcordanceTranslation | null>
+  // Every installed Tagged Translation, in install order: a panel reads the
+  // first of them unless it was opened on, or switched to, another.
+  translations: () => Promise<ConcordanceTranslation[]>
   occurrences: (
     translationId: string,
     strongsNumber: string,
   ) => Promise<number[]>
+  renderings: (
+    translationId: string,
+    strongsNumber: string,
+  ) => Promise<ConcordanceRendering[]>
   versesFor: (
     translationId: string,
     strongsNumber: string,
@@ -81,10 +89,11 @@ export type WordStudyConcordance = {
 }
 
 // Stands in when the panel runs without any concordance wired up: no
-// translation, so the panel simply carries no occurrence list.
+// translation to read, which the panel says in place of the occurrences.
 export const INERT_WORD_STUDY_CONCORDANCE: WordStudyConcordance = {
-  translationFor: async () => null,
+  translations: async () => [],
   occurrences: async () => [],
+  renderings: async () => [],
   versesFor: async () => [],
 }
 
@@ -148,11 +157,27 @@ export type ConcordanceBookView = {
   verses: ConcordanceVerseView[] | null
 }
 
+// One rendering as a chip above the occurrences: the words, how many of the
+// occurrences read that way, and whether the list is filtered to it.
+export type RenderingView = { text: string; count: number; active: boolean }
+
 export type ConcordanceView = {
-  translation: ConcordanceTranslation
+  // Null exactly while there is no translation to count in — then the message
+  // below says which problem that is.
+  translation: ConcordanceTranslation | null
+  // Every Tagged Translation the family can be read in, the switcher's own
+  // choices.
+  translations: ConcordanceTranslation[]
+  // Whether those choices are worth a switcher: more than one to choose
+  // between, or a concordance with none of them being read.
+  switchable: boolean
+  message: string | null
   total: number
-  // The section heading: the count, named with the translation it counts in.
+  // The section heading: the count, named with the translation it counts in
+  // and the rendering it is filtered to.
   label: string
+  // The translation's renderings of the family, most frequent first.
+  renderings: RenderingView[]
   // True while the number under study shares its family with other entries:
   // the tagging cannot tell them apart, so the occurrences cover them all.
   familyUndifferentiated: boolean
@@ -184,11 +209,25 @@ const UNTITLED = 'Word study'
 // from, which is the concordance it reads unless that translation is not one.
 export type WordStudyTarget = { translationId?: string | null }
 
-const occurrenceLabel = (total: number, translationId: string): string => {
-  const translation = translationId.toUpperCase()
-  if (total === 0) return `No occurrences in ${translation}`
-  if (total === 1) return `1 occurrence in ${translation}`
-  return `${total.toLocaleString('en-US')} occurrences in ${translation}`
+const NO_TAGGED_TRANSLATION = 'No Tagged Translation is installed.'
+
+const uninstalledMessage = (name: string): string =>
+  `${name} is no longer installed.`
+
+const countPhrase = (total: number): string => {
+  if (total === 0) return 'No occurrences'
+  if (total === 1) return '1 occurrence'
+  return `${total.toLocaleString('en-US')} occurrences`
+}
+
+const occurrenceLabel = (
+  total: number,
+  translation: ConcordanceTranslation | null,
+  rendering: string | null,
+): string => {
+  if (translation === null) return 'Occurrences'
+  const counted = `${countPhrase(total)} in ${translation.id.toUpperCase()}`
+  return rendering === null ? counted : `${rendering}: ${counted}`
 }
 
 const verseReference = (verseId: number): Reference => ({
@@ -206,8 +245,13 @@ type ConcordanceBook = {
 }
 
 type LoadedConcordance = {
-  translation: ConcordanceTranslation
-  total: number
+  translation: ConcordanceTranslation | null
+  translations: ConcordanceTranslation[]
+  message: string | null
+  verseIds: number[]
+  renderings: ConcordanceRendering[]
+  // The rendering the occurrence list is filtered to, or null for all of them.
+  rendering: string | null
   books: ConcordanceBook[]
 }
 
@@ -237,6 +281,9 @@ export class WordStudyModel {
   #installing = false
   #installError: string | null = null
   #loadToken = 0
+  // The concordance settles on its own token: switching translations re-reads
+  // the occurrences without disturbing the entry already on screen.
+  #concordanceToken = 0
   #translationId: string | null = null
   #concordance: LoadedConcordance | null = null
   readonly #listeners = new Set<() => void>()
@@ -301,14 +348,15 @@ export class WordStudyModel {
     if (loaded === null || found === undefined) return
     found.expanded = !found.expanded
     this.#notify()
-    if (!found.expanded || found.verses !== null) return
-    const token = this.#loadToken
+    if (!found.expanded || found.verses !== null || loaded.translation === null)
+      return
+    const token = this.#concordanceToken
     const verses = await this.#concordanceSource().versesFor(
       loaded.translation.id,
       this.#number ?? '',
       found.verseIds,
     )
-    if (token !== this.#loadToken) return
+    if (token !== this.#concordanceToken) return
     found.verses = verses.map((verse) => ({
       ...verse,
       reference: referenceLabel(verseReference(verse.verseId)),
@@ -316,10 +364,44 @@ export class WordStudyModel {
     this.#notify()
   }
 
+  // Tapping a chip filters the occurrences to that rendering, and tapping the
+  // filtering chip again lifts the filter. Books fold shut either way: they
+  // are not the same rows once the list narrows.
+  toggleRendering(text: string): void {
+    const loaded = this.#concordance
+    if (loaded === null) return
+    loaded.rendering = loaded.rendering === text ? null : text
+    loaded.books = groupByBook(this.#filteredVerseIds(loaded))
+    this.#notify()
+  }
+
+  // Switching translations re-reads that translation's own index: its
+  // occurrences, its renderings, and the counts they carry.
+  async useTranslation(translationId: string): Promise<void> {
+    const number = this.#number
+    if (number === null) return
+    const token = ++this.#concordanceToken
+    const translations = await this.#concordanceSource().translations()
+    if (token !== this.#concordanceToken) return
+    this.#translationId = translationId
+    const chosen =
+      translations.find((translation) => translation.id === translationId) ??
+      null
+    if (chosen === null) {
+      this.#concordance = this.#unavailable(
+        translations,
+        uninstalledMessage(this.#nameOf(translationId)),
+      )
+      this.#notify()
+      return
+    }
+    await this.#readConcordance(number, chosen, translations, token)
+  }
+
   // An occurrence row walks the way a Ref Span does: to that chapter in the
   // concordance's own translation, in this reader or a new one.
   openOccurrence(verseId: number, options: NavigationOptions = {}): void {
-    const translationId = this.#concordance?.translation.id ?? null
+    const translationId = this.#concordance?.translation?.id ?? null
     ;(this.deps.navigator ?? NOOP_REFERENCE_NAVIGATOR).openReference(
       verseReference(verseId),
       translationId,
@@ -361,7 +443,7 @@ export class WordStudyModel {
     const token = ++this.#loadToken
     await Promise.all([
       this.#loadEntry(number, token),
-      this.#loadConcordance(number, token),
+      this.#loadConcordance(number, ++this.#concordanceToken),
     ])
   }
 
@@ -382,23 +464,85 @@ export class WordStudyModel {
 
   // The concordance stands on its own: a number the dictionaries carry no
   // entry for still has occurrences, and still lists them.
+  // A panel opened on a translation reads that one where it can, and the first
+  // Tagged Translation installed where it cannot — a preference, not a choice.
   async #loadConcordance(number: string, token: number): Promise<void> {
-    const source = this.#concordanceSource()
-    const translation = await source.translationFor(this.#translationId)
-    if (token !== this.#loadToken) return
+    const translations = await this.#concordanceSource().translations()
+    if (token !== this.#concordanceToken) return
+    const preferred = this.#translationId
+    const chosen =
+      translations.find((translation) => translation.id === preferred) ??
+      translations[0] ??
+      null
+    await this.#readConcordance(number, chosen, translations, token)
+  }
+
+  async #readConcordance(
+    number: string,
+    translation: ConcordanceTranslation | null,
+    translations: ConcordanceTranslation[],
+    token: number,
+  ): Promise<void> {
     if (translation === null) {
-      this.#concordance = null
+      this.#concordance = this.#unavailable(translations, NO_TAGGED_TRANSLATION)
       this.#notify()
       return
     }
+    const source = this.#concordanceSource()
     const verseIds = await source.occurrences(translation.id, number)
-    if (token !== this.#loadToken) return
-    this.#concordance = {
+    if (token !== this.#concordanceToken) return
+    const loaded: LoadedConcordance = {
       translation,
-      total: verseIds.length,
+      translations,
+      message: null,
+      verseIds,
+      renderings: [],
+      rendering: null,
       books: groupByBook(verseIds),
     }
+    this.#concordance = loaded
     this.#notify()
+    // The chips are read out of the verse text itself, a whole family at a
+    // time — far the slower half, so the list stands before they arrive.
+    const renderings = await source.renderings(translation.id, number)
+    if (token !== this.#concordanceToken) return
+    loaded.renderings = renderings
+    this.#notify()
+  }
+
+  #unavailable(
+    translations: ConcordanceTranslation[],
+    message: string,
+  ): LoadedConcordance {
+    return {
+      translation: null,
+      translations,
+      message,
+      verseIds: [],
+      renderings: [],
+      rendering: null,
+      books: [],
+    }
+  }
+
+  // What the translation is called where it is still installed, and its own
+  // code where the concordance has just found that it is not.
+  #nameOf(translationId: string): string {
+    const reading = this.#concordance?.translation ?? null
+    const known = [...(this.#concordance?.translations ?? [])]
+    if (reading !== null) known.push(reading)
+    return (
+      known.find((translation) => translation.id === translationId)?.name ??
+      translationId.toUpperCase()
+    )
+  }
+
+  #filteredVerseIds(loaded: LoadedConcordance): number[] {
+    if (loaded.rendering === null) return loaded.verseIds
+    const rendering = loaded.renderings.find(
+      (candidate) => candidate.text === loaded.rendering,
+    )
+    return rendering?.verseIds ?? []
   }
 
   #concordanceSource(): WordStudyConcordance {
@@ -408,10 +552,23 @@ export class WordStudyModel {
   #concordanceView(): ConcordanceView | null {
     const loaded = this.#concordance
     if (loaded === null) return null
+    const total = this.#filteredVerseIds(loaded).length
     return {
       translation: loaded.translation,
-      total: loaded.total,
-      label: occurrenceLabel(loaded.total, loaded.translation.id),
+      translations: loaded.translations,
+      switchable:
+        loaded.translations.length > 1 ||
+        (loaded.translation === null && loaded.translations.length > 0),
+      message: loaded.message,
+      total,
+      label: occurrenceLabel(total, loaded.translation, loaded.rendering),
+      renderings: [...loaded.renderings]
+        .sort((a, b) => b.verseIds.length - a.verseIds.length)
+        .map(({ text, verseIds }) => ({
+          text,
+          count: verseIds.length,
+          active: text === loaded.rendering,
+        })),
       familyUndifferentiated: (this.#found?.siblings ?? []).length > 0,
       books: loaded.books.map(({ book, verseIds, expanded, verses }) => ({
         book,
