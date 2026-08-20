@@ -66,7 +66,7 @@ An intersecting note that is not an Annotation: a vault note whose body referenc
 A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB (built from the public-domain Berean word-level tables) and KJV (built from bolls.life's `<S>`-tagged dump); the capability is per-translation.
 
 ### Strong's Dictionaries
-The shared dictionary module (STEPBible TBESH/TBESG plus Strong's 1890 derivations) mapping extended Strong's numbers to lemma, transliteration, gloss, definition, variant, morphology, and etymology. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
+The shared dictionary module (STEPBible TBESH/TBESG plus Strong's 1890 derivations) mapping extended Strong's numbers to lemma, transliteration, gloss, definition, family, morphology, and etymology. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
 
 ### Strong's Number
 The translation-independent identity of an original-language word, and the join key of the whole Strong's system: tag spans, dictionary and lexicon entries, and Concordance Indexes share no other common key. What the Verse Id is to verses, the Strong's number is to words — an arbitrary-but-stable coordinate everything projects onto. The glue is only as fine-grained as the coarsest source keyed by it.

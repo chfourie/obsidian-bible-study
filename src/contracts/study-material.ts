@@ -11,7 +11,7 @@ import type { NavigationOptions } from './reference-navigator'
 export type StrongsEntryView = {
   // The Strong's Family the entry answers for — the number a tagged
   // translation carries.
-  strongs: string
+  family: string
   // The extended number the entry actually is, which for a disambiguated
   // family differs from the number asked for ('H0001' → 'H0001G').
   extendedNumber: string

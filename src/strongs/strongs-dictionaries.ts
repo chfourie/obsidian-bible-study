@@ -53,7 +53,7 @@ const storedLexicon = (
     entries: Object.fromEntries(
       [...entries].map(([extendedNumber, entry]) => [
         extendedNumber,
-        { ...entry, derivation: derivations.get(entry.strongs) ?? null },
+        { ...entry, derivation: derivations.get(entry.family) ?? null },
       ]),
     ),
     families: Object.fromEntries(families),
@@ -142,7 +142,7 @@ export class StrongsDictionaries {
     const { entry, derivation } = found
     return {
       entry,
-      siblings: (found.lexicon.families[entry.strongs] ?? []).filter(
+      siblings: (found.lexicon.families[entry.family] ?? []).filter(
         (sibling) => sibling !== entry.extendedNumber,
       ),
       derivation,

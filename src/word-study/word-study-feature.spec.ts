@@ -13,9 +13,9 @@ import type {
 } from './word-study-model'
 import { WORD_STUDY_VIEW_TYPE, WordStudyView } from './word-study-view'
 
-const entryView = (strongs: string): StrongsEntryView => ({
-  strongs,
-  extendedNumber: strongs,
+const entryView = (family: string): StrongsEntryView => ({
+  family,
+  extendedNumber: family,
   lemma: 'ἀγάπη',
   transliteration: 'agapē',
   morphology: 'G:N-F',
@@ -180,7 +180,7 @@ describe('WordStudyFeature', () => {
     expect(panel(leaves[0]).model.view).toMatchObject({
       number: 'G0026',
       status: 'ok',
-      entry: { strongs: 'G0026', lemma: 'ἀγάπη', gloss: 'love' },
+      entry: { family: 'G0026', lemma: 'ἀγάπη', gloss: 'love' },
     })
     expect(revealLeaf).toHaveBeenCalled()
   })

@@ -1,7 +1,7 @@
 export type StrongsEntry = {
   // The Strong's Family this entry disambiguates — the number tagged
   // translations carry.
-  strongs: string
+  family: string
   // The extended number this entry actually is: STEPBible's dStrong, which
   // adds a disambiguating letter where one base number covers several words.
   extendedNumber: string
@@ -44,13 +44,13 @@ export const parseLexicon = (text: string): ParsedLexicon => {
   const families = new Map<string, string[]>()
   for (const line of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
     const row = line.split('\t')
-    const strongs = row[COLUMN.family]?.trim() ?? ''
-    if (!ENTRY_NUMBER.test(strongs)) continue
+    const family = row[COLUMN.family]?.trim() ?? ''
+    if (!ENTRY_NUMBER.test(family)) continue
     if (row.length <= COLUMN.definition) continue
-    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', strongs)
+    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', family)
     if (entries.has(extendedNumber)) continue
     entries.set(extendedNumber, {
-      strongs,
+      family,
       extendedNumber,
       lemma: row[COLUMN.lemma].trim().normalize('NFC'),
       transliteration: row[COLUMN.transliteration].trim().normalize('NFC'),
@@ -58,7 +58,7 @@ export const parseLexicon = (text: string): ParsedLexicon => {
       gloss: row[COLUMN.gloss].trim(),
       definition: row[COLUMN.definition].trim(),
     })
-    families.set(strongs, [...(families.get(strongs) ?? []), extendedNumber])
+    families.set(family, [...(families.get(family) ?? []), extendedNumber])
   }
   return { entries, families }
 }

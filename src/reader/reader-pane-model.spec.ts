@@ -1357,14 +1357,14 @@ describe('opening the reader at a reference', () => {
 
 
 
-const strongsEntry = (strongs: string) => ({
-  strongs,
-  extendedNumber: strongs,
-  lemma: `lemma-${strongs}`,
-  transliteration: `translit-${strongs}`,
-  morphology: `morph-${strongs}`,
-  gloss: `gloss-${strongs}`,
-  definition: `definition of ${strongs}`,
+const strongsEntry = (family: string) => ({
+  family,
+  extendedNumber: family,
+  lemma: `lemma-${family}`,
+  transliteration: `translit-${family}`,
+  morphology: `morph-${family}`,
+  gloss: `gloss-${family}`,
+  definition: `definition of ${family}`,
 })
 
 const strongsDeps = (
@@ -1472,7 +1472,7 @@ describe("Strong's word lookup", () => {
     await model.selectWord(verseId, ['G3306', 'G1722'])
 
     const details = detailsOf(model)
-    expect(details.strongs.map((entry) => entry.strongs)).toEqual([
+    expect(details.strongs.map((entry) => entry.family)).toEqual([
       'G3306',
       'G1722',
     ])
@@ -1488,7 +1488,7 @@ describe("Strong's word lookup", () => {
     await model.selectWord(verseId, ['G2222'])
 
     expect(
-      detailsOf(model).strongs.map((entry) => entry.strongs),
+      detailsOf(model).strongs.map((entry) => entry.family),
     ).toEqual(['G2222'])
   })
 

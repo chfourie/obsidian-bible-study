@@ -11,7 +11,7 @@ describe('parseLexicon', () => {
     const av = entries.get('H0001G')
 
     expect(av).toMatchObject({
-      strongs: 'H0001',
+      family: 'H0001',
       extendedNumber: 'H0001G',
       lemma: 'אָב',
       transliteration: 'av',

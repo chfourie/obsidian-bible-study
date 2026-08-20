@@ -85,7 +85,7 @@ in the reader.
     </div>
     {#if view.siblings.length > 0}
       <div class="bsw-siblings">
-        <span class="bsw-siblings-label">Also in {view.entry.strongs}:</span>
+        <span class="bsw-siblings-label">Also in {view.entry.family}:</span>
         {#each view.siblings as sibling (sibling)}
           <span
             role="button"

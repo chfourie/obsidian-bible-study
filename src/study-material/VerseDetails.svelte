@@ -115,7 +115,7 @@ controls beside the selection's title.
 
 {#if details.strongs.length > 0}
   <div class="bsm-group-label">Strong's</div>
-  {#each details.strongs as entry (entry.strongs)}
+  {#each details.strongs as entry (entry.family)}
     <div class="bsm-strongs-entry">
       <div class="bsm-strongs-head">
         <span
@@ -123,9 +123,9 @@ controls beside the selection's title.
           tabindex="0"
           class="bsm-strongs-number bsm-word-study"
           title="Open word study"
-          onclick={(event) => studyWord(entry.strongs, event)}
-          onkeydown={activate((event) => studyWord(entry.strongs, event))}
-        >{entry.strongs}</span>
+          onclick={(event) => studyWord(entry.family, event)}
+          onkeydown={activate((event) => studyWord(entry.family, event))}
+        >{entry.family}</span>
         <span class="bsm-strongs-lemma">{entry.lemma}</span>
         <span class="bsm-strongs-translit">{entry.transliteration}</span>
         <span
@@ -133,8 +133,8 @@ controls beside the selection's title.
           tabindex="0"
           class="bsm-strongs-more bsm-word-study"
           title="Open word study"
-          onclick={(event) => studyWord(entry.strongs, event)}
-          onkeydown={activate((event) => studyWord(entry.strongs, event))}
+          onclick={(event) => studyWord(entry.family, event)}
+          onkeydown={activate((event) => studyWord(entry.family, event))}
         >More</span>
       </div>
       <div class="bsm-strongs-gloss">{entry.gloss}</div>

@@ -13,9 +13,9 @@ import {
   type WordStudyEntry,
 } from './word-study-model'
 
-const entryView = (strongs: string): StrongsEntryView => ({
-  strongs,
-  extendedNumber: strongs,
+const entryView = (family: string): StrongsEntryView => ({
+  family,
+  extendedNumber: family,
   lemma: 'ἀγάπη',
   transliteration: 'agapē',
   morphology: 'G:N-F',
@@ -106,7 +106,7 @@ describe('WordStudyModel', () => {
       title: 'G0026',
       status: 'ok',
       entry: {
-        strongs: 'G0026',
+        family: 'G0026',
         extendedNumber: 'G0026',
         lemma: 'ἀγάπη',
         transliteration: 'agapē',
@@ -226,7 +226,7 @@ describe('WordStudyModel', () => {
     const { model: panel } = model({ G0026: entry('G0026') }, { installed: false })
     await panel.show('G0026')
     await panel.installDictionary()
-    expect(panel.view).toMatchObject({ status: 'ok', entry: { strongs: 'G0026' } })
+    expect(panel.view).toMatchObject({ status: 'ok', entry: { family: 'G0026' } })
   })
 
   it('reports the install as busy while it runs', async () => {
@@ -273,7 +273,7 @@ describe('WordStudyModel', () => {
     await Promise.all([first, second])
     expect(panel.view).toMatchObject({
       number: 'G0025',
-      entry: { strongs: 'G0025' },
+      entry: { family: 'G0025' },
     })
   })
 })

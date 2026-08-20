@@ -117,7 +117,7 @@ describe('StrongsDictionaries lookup', () => {
 
     const entries = await dictionaries.entriesFor(['G0002', 'H0001'])
 
-    expect(entries.map((entry) => entry.strongs)).toEqual(['G0002', 'H0001'])
+    expect(entries.map((entry) => entry.family)).toEqual(['G0002', 'H0001'])
     expect(entries[0].gloss).toBe('Aaron')
     expect(entries[1].gloss).toBe('father')
   })
@@ -128,7 +128,7 @@ describe('StrongsDictionaries lookup', () => {
 
     const entries = await dictionaries.entriesFor(['H9999', 'H0006'])
 
-    expect(entries.map((entry) => entry.strongs)).toEqual(['H0006'])
+    expect(entries.map((entry) => entry.family)).toEqual(['H0006'])
   })
 
   it('serves no entries when the module is not installed', async () => {
@@ -144,7 +144,7 @@ describe('StrongsDictionaries lookup', () => {
     const [entry] = await dictionaries.entriesFor(['H0002'])
 
     expect(entry).toMatchObject({
-      strongs: 'H0002',
+      family: 'H0002',
       extendedNumber: 'H0002',
       morphology: 'A:N-M',
     })
@@ -156,7 +156,7 @@ describe('StrongsDictionaries lookup', () => {
 
     const [entry] = await dictionaries.entriesFor(['H0001'])
 
-    expect(entry).toMatchObject({ strongs: 'H0001', extendedNumber: 'H0001G' })
+    expect(entry).toMatchObject({ family: 'H0001', extendedNumber: 'H0001G' })
   })
 
   it('answers an extended number with the sub-entry it names', async () => {
