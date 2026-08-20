@@ -40,12 +40,12 @@ describe('buildHumilityArtifact', () => {
 
   it('publishes the section table as the book versification data', () => {
     expect(artifact.manifest.book.sections).toEqual([
-      { chapter: 0, name: 'Preface', paragraphs: 2 },
+      { chapter: 0, name: 'Preface', named: true, paragraphs: 2 },
       { chapter: 1, name: 'Humility: The Glory of the Creature', paragraphs: 2 },
       { chapter: 2, name: 'Humility in the Teaching of Jesus', paragraphs: 3 },
-      { chapter: 13, name: 'Note A', paragraphs: 1 },
-      { chapter: 14, name: 'Note B', paragraphs: 1 },
-      { chapter: 15, name: 'A Prayer for Humility', paragraphs: 1 },
+      { chapter: 13, name: 'Note A', named: true, paragraphs: 1 },
+      { chapter: 14, name: 'Note B', named: true, paragraphs: 1 },
+      { chapter: 15, name: 'A Prayer for Humility', named: true, paragraphs: 1 },
     ])
   })
 

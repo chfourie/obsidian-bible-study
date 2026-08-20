@@ -1,5 +1,37 @@
-import { describe, expect, it } from 'vitest'
-import { BOOKS, bookIdForName, bookName } from './books'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import {
+  BOOKS,
+  bookIdForName,
+  bookName,
+  booksMatchingPrefix,
+  deregisterBook,
+  isNonBiblicalBook,
+  registerBook,
+  registeredBook,
+  type RegisteredBook,
+} from './books'
+
+const HUMILITY_BOOK = 101
+
+const humility = (
+  overrides: Partial<RegisteredBook> = {},
+): RegisteredBook => ({
+  id: HUMILITY_BOOK,
+  name: 'Humility',
+  abbrev: 'Hum',
+  aliases: [],
+  moduleId: 'hum-m1895',
+  editionCode: 'HUM-M1895',
+  author: 'Andrew Murray',
+  year: 1895,
+  sections: [{ chapter: 0, name: 'Preface', named: true }],
+  ...overrides,
+})
+
+afterEach(() => {
+  deregisterBook(HUMILITY_BOOK)
+  vi.restoreAllMocks()
+})
 
 describe('BOOKS', () => {
   it('lists all 66 books in Protestant/OSIS order', () => {
@@ -92,5 +124,73 @@ describe('bookIdForName', () => {
     expect(bookIdForName('Johnny')).toBeNull()
     expect(bookIdForName('')).toBeNull()
     expect(bookIdForName('4 John')).toBeNull()
+  })
+})
+
+describe('isNonBiblicalBook', () => {
+  it('separates scripture from the book id space', () => {
+    expect(isNonBiblicalBook(43)).toBe(false)
+    expect(isNonBiblicalBook(66)).toBe(false)
+    expect(isNonBiblicalBook(101)).toBe(true)
+  })
+})
+
+describe('registerBook', () => {
+  it('makes the book addressable by name, abbreviation and alias', () => {
+    registerBook(humility({ aliases: ['Humility by Murray'] }))
+
+    expect(bookIdForName('Humility')).toBe(HUMILITY_BOOK)
+    expect(bookIdForName('humility')).toBe(HUMILITY_BOOK)
+    expect(bookIdForName('Hum')).toBe(HUMILITY_BOOK)
+    expect(bookIdForName('humility by murray')).toBe(HUMILITY_BOOK)
+  })
+
+  it('names the book for display and exposes its metadata', () => {
+    registerBook(humility())
+
+    expect(bookName(HUMILITY_BOOK)).toBe('Humility')
+    expect(registeredBook(HUMILITY_BOOK)?.editionCode).toBe('HUM-M1895')
+  })
+
+  it('drops a name scripture already owns and warns', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    registerBook(humility({ abbrev: 'Job' }))
+
+    expect(bookIdForName('Job')).toBe(18)
+    expect(bookIdForName('Humility')).toBe(HUMILITY_BOOK)
+    expect(warn).toHaveBeenCalled()
+  })
+
+  it('offers the book to prefix completion', () => {
+    registerBook(humility())
+
+    expect(booksMatchingPrefix('Humi').map((book) => book.name)).toEqual([
+      'Humility',
+    ])
+  })
+
+  it('leaves a wholly shadowed book unaddressable but still named', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    registerBook(humility({ name: 'Jude', abbrev: 'Jud', aliases: [] }))
+
+    expect(bookIdForName('Jude')).toBe(65)
+    expect(booksMatchingPrefix('Jud').map((book) => book.id)).not.toContain(
+      HUMILITY_BOOK,
+    )
+    expect(bookName(HUMILITY_BOOK)).toBe('Jude')
+  })
+})
+
+describe('deregisterBook', () => {
+  it('makes the name unknown again', () => {
+    registerBook(humility())
+
+    deregisterBook(HUMILITY_BOOK)
+
+    expect(bookIdForName('Humility')).toBeNull()
+    expect(registeredBook(HUMILITY_BOOK)).toBeNull()
+    expect(bookName(HUMILITY_BOOK)).toBe('Book 101')
   })
 })

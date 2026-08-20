@@ -1,4 +1,4 @@
-import { bookIdForName } from './books'
+import { bookIdForName, isNonBiblicalBook } from './books'
 import {
   parseHighlightCue,
   sameHighlightCue,
@@ -120,12 +120,15 @@ const classifyOptionTokens = (
   let display: DisplayMode | null = null
   const invalidTokens: ReferenceToken[] = []
   const highlights: HighlightCue[] = []
+  // A book has exactly one edition, pinned by its manifest — naming a
+  // translation (or the edition code itself) says nothing (spec-books §3).
+  const acceptsTranslation = !isNonBiblicalBook(reference.book)
   for (const token of tokens) {
     const lowered = token.text.toLowerCase()
     const displayMode = DISPLAY_MODES.find((mode) => mode === lowered)
-    const translationId = translationIds.find(
-      (id) => id.toLowerCase() === lowered,
-    )
+    const translationId = acceptsTranslation
+      ? translationIds.find((id) => id.toLowerCase() === lowered)
+      : undefined
     const cue = parseHighlightCue(token.text, reference)
     if (displayMode && display === null) {
       display = displayMode

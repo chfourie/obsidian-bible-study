@@ -1,4 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  HUMILITY_BOOK,
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
+import { makeVerseId } from '../reference'
 import type { OccurrenceGroup } from '../vault-index'
 import type { Passage, PassageSource } from './module-passage-source'
 import {
@@ -959,5 +965,106 @@ describe('renderReference highlights', () => {
 
     expect(parent.querySelector('.scripture-study-passage')).toBeNull()
     expect(parent.querySelector('.scripture-study-invalid-token')).toBeNull()
+  })
+})
+
+describe('renderReference book references', () => {
+  const paragraphs = (...texts: string[]): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: texts.map((text, index) => ({
+      verseId: makeVerseId(HUMILITY_BOOK, 2, 2 + index),
+      segments: [{ text, redLetter: false }],
+    })),
+  })
+
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  it('marks the chip as a book and italicizes the title', async () => {
+    const { parent, deps } = setup(paragraphs('Humility is the bloom.'))
+
+    await renderReference(parent, model('Humility 2:2'), deps)
+
+    const chip = parent.querySelector('.scripture-study-chip')
+    expect(chip?.classList.contains('scripture-study-chip-book')).toBe(true)
+    expect(chip?.querySelector('em')?.textContent).toBe('Humility')
+    expect(chip?.textContent).toContain('ch. 2, par. 2')
+  })
+
+  it('names the section instead of the chapter on the chip', async () => {
+    const { parent, deps } = setup(paragraphs('The Preface.'))
+
+    await renderReference(parent, model('Humility 0:3'), deps)
+
+    expect(parent.querySelector('.scripture-study-chip-ref')?.textContent).toBe(
+      'Humility Preface, par. 3',
+    )
+  })
+
+  it('numbers inline paragraphs only when there is more than one', async () => {
+    const single = setup(paragraphs('One.'))
+    await renderReference(
+      single.parent,
+      model('Humility 2:2 inline'),
+      single.deps,
+    )
+
+    expect(
+      single.parent.querySelector('sup.scripture-study-verse-number'),
+    ).toBeNull()
+
+    const multi = setup(paragraphs('One.', 'Two.'))
+    await renderReference(
+      multi.parent,
+      model('Humility 2:2-3 inline'),
+      multi.deps,
+    )
+
+    expect(
+      [...multi.parent.querySelectorAll('sup.scripture-study-verse-number')].map(
+        (sup) => sup.textContent,
+      ),
+    ).toEqual(['2', '3'])
+  })
+
+  it('renders block as prose paragraphs with a full citation line', async () => {
+    const { parent, deps } = setup(paragraphs('One.', 'Two.'))
+
+    await renderReference(parent, model('Humility 2:2-3 block'), deps)
+
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(passage?.querySelector('.scripture-study-verse-line')).toBeNull()
+    const prose =
+      passage?.querySelectorAll('.scripture-study-book-paragraph') ?? []
+    expect([...prose].map((line) => line.textContent)).toEqual([
+      '2One.',
+      '3Two.',
+    ])
+    expect(
+      passage?.querySelector('.scripture-study-attribution')?.textContent,
+    ).toBe('Andrew Murray, Humility (1895), ch. 2, pars. 2-3')
+  })
+
+  // Cues bind under the edition code filling the translation slot, so they
+  // paint the book's own text (spec-books §3).
+  it('paints a highlight cue over the book text', async () => {
+    const { parent, deps } = setup(paragraphs('Humility is the bloom.'))
+
+    await renderReference(parent, model('Humility 2:2 inline h2/2.0-8'), deps)
+
+    expect(
+      parent.querySelector('.scripture-study-highlight-2')?.textContent,
+    ).toBe('Humility')
+  })
+
+  it('reports an absent module instead of substituting a translation', async () => {
+    const { parent, deps } = setup({ status: 'unavailable' })
+
+    await renderReference(parent, model('Humility 2:2 block'), deps)
+
+    expect(
+      parent.querySelector('.scripture-study-unavailable')?.textContent,
+    ).toContain('Humility ch. 2, par. 2')
   })
 })

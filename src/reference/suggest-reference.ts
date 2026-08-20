@@ -1,4 +1,8 @@
-import { booksMatchingPrefix } from './books'
+import {
+  booksMatchingPrefix,
+  isNonBiblicalBook,
+  registeredBook,
+} from './books'
 import { DISPLAY_MODES, matchBook, type ParseOptions } from './parse-reference'
 
 export type ReferenceSuggestion = {
@@ -43,6 +47,25 @@ const optionSuggestions = (
     }))
 }
 
+const CHAPTER_PREFIX = /^\d*$/
+
+// A book's sections are typed by number, so completion carries the
+// number ↔ name mapping the printed work would show (spec-books §3).
+const sectionSuggestions = (
+  bookId: number,
+  current: Token,
+): ReferenceSuggestion[] => {
+  const book = registeredBook(bookId)
+  if (book === null || !CHAPTER_PREFIX.test(current.text)) return []
+  return book.sections
+    .filter((section) => `${section.chapter}`.startsWith(current.text))
+    .map((section) => ({
+      label: `${section.chapter} — ${section.name}`,
+      insert: `${section.chapter}:`,
+      replaceFrom: current.start,
+    }))
+}
+
 const bookSuggestions = (
   query: string,
   tokens: Token[],
@@ -67,12 +90,14 @@ export const suggestReference = (
   if (book) {
     const afterBook = prior.slice(book.wordsUsed)
     if (afterBook.length === 0) {
-      if (current.text === '' || isSpecLike(current.text)) return []
+      if (current.text === '' || isSpecLike(current.text)) {
+        return sectionSuggestions(book.bookId, current)
+      }
     } else if (isSpecLike(afterBook[0].text)) {
       return optionSuggestions(
         afterBook.slice(1),
         current,
-        options.translationIds ?? [],
+        isNonBiblicalBook(book.bookId) ? [] : (options.translationIds ?? []),
       )
     }
   }

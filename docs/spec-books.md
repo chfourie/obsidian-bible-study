@@ -35,7 +35,7 @@ Books ride the existing machinery everywhere — no parallel book paths. Where a
 ## 4. Rendering in notes
 
 - All display modes apply — bare chip / `inline` / `block`. No separate callout type: the v1 "general non-bible reference block type" deferral is **superseded**.
-- **Chip**: scripture's chip anatomy with a distinguishing mark (book icon / modifier class), same accent family. Compact MLA-style locators with the title in italics: *Humility* ch. 5, par. 2. Display-named sections (from the manifest section table) replace the chapter locator: *Humility* Preface, par. 3.
+- **Chip**: scripture's chip anatomy with a distinguishing mark (book icon / modifier class), same accent family. Compact MLA-style locators with the title in italics: *Humility* ch. 5, par. 2. Display-named sections replace the chapter locator: *Humility* Preface, par. 3 — the manifest section table flags them (`named: true`), set by the build for every section the printed work carries no chapter number for (Preface, Notes A–D, the Prayer).
 - **`inline`** mirrors scripture: paragraph numbers superscripted only for multi-paragraph refs.
 - **`block`** renders normal prose paragraphs with superscript paragraph numbers (no one-atom-per-line) plus a full-citation attribution line: `Andrew Murray, Humility (1895), ch. 5, par. 2` (manifest supplies author, title, year). The same full citation renders wherever a one-time citation belongs (Study Panel header).
 
@@ -61,7 +61,7 @@ Visual reference: [book-reader-prototype](../prototypes/book-reader-prototype) (
 
 ## 7. Module packaging, catalogue & settings
 
-- **Manifest**: the existing `ModuleManifest` extended with `kind: 'book'` plus a required-when-book `book` sub-object — `{ number, editionCode, author, sections: [{chapter, name, paragraphs}] }`. One type, one store, one discovery path; `isTranslationManifest()` keeps translation-only code paths books-free. Books share `MODULE_FORMAT_VERSION`; capability flags all false/absent; `source`/`sourceChecksum` filled at download exactly like BSB.
+- **Manifest**: the existing `ModuleManifest` extended with `kind: 'book'` plus a required-when-book `book` sub-object — `{ number, editionCode, author, year, abbreviation, aliases?, sections: [{chapter, name, paragraphs, named?}] }`. One type, one store, one discovery path; `isTranslationManifest()` keeps translation-only code paths books-free. Books share `MODULE_FORMAT_VERSION`; capability flags all false/absent; `source`/`sourceChecksum` filled at download exactly like BSB.
 - **Module id & storage**: id = edition code lowercased (`hum-m1895`) — a future re-cut edition coexists instead of overwriting. Storage layout unchanged: `modules/hum-m1895/manifest.json` + `101.json` keyed by paragraph verse-ids. Same `saveModule()` wipe-then-write flow.
 - **Distribution** mirrors BSB per book: one release tag per book module (`hum-m1895-module`) carrying `hum-m1895-module.json` + `checksums.json`, sha256-verified. `BsbReleaseClient` generalizes into a parameterized release client (tag + filename + id) used by BSB and books; books register in the prebuilt-sources map so checksum-based update detection and cross-device re-download (`installedModuleIds` sync) work unchanged.
 - **Catalogue**: compiled-in book catalogue array (v1: one entry). A future remote catalogue replaces only the array.

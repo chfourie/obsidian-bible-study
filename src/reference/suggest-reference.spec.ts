@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import type { ParseOptions } from './parse-reference'
 import { suggestReference } from './suggest-reference'
 
@@ -84,5 +88,46 @@ describe('suggestReference — option tokens', () => {
 
   it('suggests no translations when none are known', () => {
     expect(labels('John 15:4 ', {})).toEqual(['inline', 'block'])
+  })
+})
+
+describe('suggestReference — installed books', () => {
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  it('completes the book name once its module is installed', () => {
+    expect(labels('humi')).toEqual(['Humility'])
+    expect(labels('hum')).toEqual(['Humility'])
+  })
+
+  it('drops the book name again once the module is uninstalled', () => {
+    uninstallHumilityBook()
+
+    expect(labels('humi')).toEqual([])
+  })
+
+  it('surfaces the section number ↔ name mapping while typing the address', () => {
+    expect(labels('Humility ')).toEqual([
+      '0 — Preface',
+      '1 — The Glory of the Creature',
+      '2 — The Secret of Redemption',
+      '3 — A Prayer for Humility',
+    ])
+    expect(suggestReference('Humility 0', options)).toEqual([
+      { label: '0 — Preface', insert: '0:', replaceFrom: 9 },
+    ])
+  })
+
+  it('stops suggesting sections once the paragraph is being typed', () => {
+    expect(labels('Humility 1:')).toEqual([])
+    expect(labels('Humility 1:6')).toEqual([])
+  })
+
+  it('offers display keywords but never translations on a book reference', () => {
+    expect(labels('Humility 1:6 ')).toEqual(['inline', 'block'])
+  })
+
+  it('leaves scripture without section suggestions', () => {
+    expect(labels('John ')).toEqual([])
   })
 })

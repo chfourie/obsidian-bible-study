@@ -1,7 +1,9 @@
 import {
+  bookCitation,
   formatReference,
   parseReference,
   sameHighlightCue,
+  type BookCitation,
   type HighlightCue,
   type ParsedReference,
   type Reference,
@@ -22,20 +24,31 @@ export type ReferenceRenderModel = {
   display: RenderDisplay
   invalidTokens: string[]
   highlights: HighlightCue[]
+  // Present for a non-biblical book: MLA locators and the full citation the
+  // chip and block attribution line render from (spec-books §4).
+  book: BookCitation | null
 }
 
+// A book has one edition, so its module fills the translation slot outright —
+// never the configured default, never a token (spec-books §6).
 export const modelFromParsed = (
   parsed: ParsedReference,
   context: RenderContext,
-): ReferenceRenderModel => ({
-  reference: parsed.reference,
-  referenceText: formatReference(parsed.reference),
-  translationId: parsed.translation ?? context.defaultTranslationId,
-  chipLabel: parsed.translation?.toUpperCase() ?? null,
-  display: parsed.display ?? 'chip',
-  invalidTokens: parsed.invalidTokens.map((token) => token.text),
-  highlights: parsed.highlights,
-})
+): ReferenceRenderModel => {
+  const book = bookCitation(parsed.reference)
+  return {
+    reference: parsed.reference,
+    referenceText: book?.reference ?? formatReference(parsed.reference),
+    translationId:
+      book?.moduleId ?? parsed.translation ?? context.defaultTranslationId,
+    chipLabel:
+      book === null ? (parsed.translation?.toUpperCase() ?? null) : null,
+    display: parsed.display ?? 'chip',
+    invalidTokens: parsed.invalidTokens.map((token) => token.text),
+    highlights: parsed.highlights,
+    book,
+  }
+}
 
 export const sameRenderModel = (
   a: ReferenceRenderModel,

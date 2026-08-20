@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  HUMILITY_BOOK,
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import { makeVerseId } from '../reference'
 import { extractOccurrences } from './extract-occurrences'
 
@@ -206,5 +211,50 @@ describe('extractOccurrences', () => {
   it('recovers a reference nested inside stray braces', () => {
     const occurrences = extractOccurrences('{{John 15:4}}')
     expect(occurrences.map((o) => o.position)).toEqual([1])
+  })
+})
+
+// Book references need no indexing mechanism of their own: they become
+// Occurrences the moment the grammar accepts them (spec-books §6).
+describe('extractOccurrences — installed books', () => {
+  const paragraph = (chapter: number, atom: number) =>
+    makeVerseId(HUMILITY_BOOK, chapter, atom)
+
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  it('indexes a note whose frontmatter ref names a book as an annotation', () => {
+    const content = '---\nref: Humility 2:2\n---\nnotes'
+
+    expect(extractOccurrences(content)).toEqual([
+      {
+        position: 0,
+        reference: {
+          book: HUMILITY_BOOK,
+          ranges: [{ startId: paragraph(2, 2), endId: paragraph(2, 2) }],
+        },
+        source: 'annotation-frontmatter',
+        translation: null,
+      },
+    ])
+  })
+
+  it('indexes a book reference in the body', () => {
+    const occurrences = extractOccurrences('see {Humility 0:3} and {John 15:4}')
+
+    expect(occurrences.map((occurrence) => occurrence.reference.book)).toEqual([
+      HUMILITY_BOOK,
+      43,
+    ])
+  })
+
+  it('drops book occurrences while the module is uninstalled and restores them', () => {
+    const content = '---\nref: Humility 2:2\n---\nsee {Humility 0:3}'
+
+    uninstallHumilityBook()
+    expect(extractOccurrences(content)).toEqual([])
+
+    installHumilityBook()
+    expect(extractOccurrences(content)).toHaveLength(2)
   })
 })

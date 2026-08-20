@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  HUMILITY_BOOK,
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import { parseReference } from './parse-reference'
 import { makeVerseId } from './verse-id'
 
@@ -361,6 +366,89 @@ describe('parseReference — highlight cues', () => {
 
     expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
       'h1/99.0-99.5',
+    ])
+  })
+})
+
+describe('parseReference — installed books', () => {
+  const paragraph = (chapter: number, atom: number) =>
+    makeVerseId(HUMILITY_BOOK, chapter, atom)
+
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  it('parses the scripture grammar over the book grid', () => {
+    expect(parseReference('Humility 2:2')?.reference).toEqual({
+      book: HUMILITY_BOOK,
+      ranges: [{ startId: paragraph(2, 2), endId: paragraph(2, 2) }],
+    })
+    expect(parseReference('Humility 1:2-4')?.reference.ranges).toEqual([
+      { startId: paragraph(1, 2), endId: paragraph(1, 4) },
+    ])
+    expect(parseReference('Humility 1:2,7')?.reference.ranges).toEqual([
+      { startId: paragraph(1, 2), endId: paragraph(1, 2) },
+      { startId: paragraph(1, 7), endId: paragraph(1, 7) },
+    ])
+    expect(parseReference('Humility 1:8-2:2')?.reference.ranges).toEqual([
+      { startId: paragraph(1, 8), endId: paragraph(2, 2) },
+    ])
+  })
+
+  it('parses a whole section and rejects the whole book', () => {
+    expect(parseReference('Humility 2')?.reference.ranges).toEqual([
+      { startId: paragraph(2, 1), endId: paragraph(2, 6) },
+    ])
+    expect(parseReference('Humility')).toBeNull()
+  })
+
+  it('addresses a special section by its chapter number', () => {
+    expect(parseReference('Humility 0:3')?.reference.ranges).toEqual([
+      { startId: paragraph(0, 3), endId: paragraph(0, 3) },
+    ])
+  })
+
+  it('resolves name and abbreviation case-insensitively', () => {
+    expect(parseReference('hum 2:2')?.reference.book).toBe(HUMILITY_BOOK)
+    expect(parseReference('HUMILITY 2:2')?.reference.book).toBe(HUMILITY_BOOK)
+  })
+
+  it('rejects a paragraph or section past the table', () => {
+    expect(parseReference('Humility 2:7')).toBeNull()
+    expect(parseReference('Humility 9:1')).toBeNull()
+  })
+
+  it('becomes unknown again once the module is uninstalled', () => {
+    uninstallHumilityBook()
+
+    expect(parseReference('Humility 2:2')).toBeNull()
+  })
+
+  it('flags a translation id and the edition code as invalid tokens', () => {
+    const parsed = parseReference('Humility 2:2 web HUM-M1895', {
+      translationIds: ['web', 'nkjv'],
+    })
+
+    expect(parsed?.translation).toBeNull()
+    expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
+      'web',
+      'HUM-M1895',
+    ])
+  })
+
+  it('keeps display keywords and highlight cues working', () => {
+    const parsed = parseReference('Humility 2:2 block h1/2.0-4', {
+      translationIds: ['web'],
+    })
+
+    expect(parsed?.display).toBe('block')
+    expect(parsed?.highlights).toEqual([
+      {
+        slot: 1,
+        startVerseId: paragraph(2, 2),
+        startChar: 0,
+        endVerseId: paragraph(2, 2),
+        endChar: 4,
+      },
     ])
   })
 })

@@ -123,7 +123,10 @@ export const buildPassageView = (
       startsNewLine:
         verse.hasLineData === true || model.reference.book === PSALMS_BOOK,
     })),
-    attribution: model.display === 'block' ? passage.attribution : null,
+    attribution:
+      model.display === 'block'
+        ? (model.book?.attribution ?? passage.attribution)
+        : null,
     fallbackNotice:
       passage.fallback === undefined
         ? null

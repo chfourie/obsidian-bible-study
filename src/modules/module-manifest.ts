@@ -15,11 +15,14 @@ export type ModuleKind = 'translation' | 'strongs-dictionaries' | 'book'
 
 // One addressable section of a book: its chapter number in the BBBCCCVVV id
 // space, its display name, and how many paragraph atoms it holds. The whole
-// table is the book's versification data (spec-books §1).
+// table is the book's versification data (spec-books §1). `named` marks a
+// section the printed work carries no chapter number for — its name replaces
+// the chapter locator when a reference to it is displayed (§4).
 export type BookSection = {
   chapter: number
   name: string
   paragraphs: number
+  named?: boolean
 }
 
 export type BookMetadata = {

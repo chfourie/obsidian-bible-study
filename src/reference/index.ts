@@ -1,3 +1,4 @@
+export * from './book-citation'
 export * from './books'
 export * from './format-reference'
 export * from './highlight-cue'

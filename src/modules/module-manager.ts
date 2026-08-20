@@ -1,8 +1,8 @@
 import type { SettingsStore } from '../data-access'
 import {
-  deregisterManifestVersification,
-  registerManifestVersification,
-} from './book-versification'
+  deregisterManifestBook,
+  registerManifestBook,
+} from './book-registration'
 import type { ModuleManifest } from './module-manifest'
 import type { ModuleStore } from './module-store'
 import type { PrebuiltModuleSource } from './prebuilt-module-source'
@@ -54,7 +54,7 @@ export class ModuleManager {
     const manifest = await this.store.manifest(moduleId)
     await this.store.deleteModule(moduleId)
     await this.#recordDeleted(moduleId)
-    if (manifest !== null) deregisterManifestVersification(manifest)
+    if (manifest !== null) deregisterManifestBook(manifest)
     this.onModulesChanged()
   }
 
@@ -88,7 +88,7 @@ export class ModuleManager {
             installedModuleIds: [...settings.installedModuleIds, moduleId],
           },
     )
-    registerManifestVersification(manifest)
+    registerManifestBook(manifest)
     this.onModulesChanged()
   }
 
