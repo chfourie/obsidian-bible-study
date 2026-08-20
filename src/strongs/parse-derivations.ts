@@ -31,7 +31,9 @@ const extendedNumber = (language: 'H' | 'G', reference: string): string => {
 const tidy = (text: string): string =>
   decodeEntities(text.replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim()
 
-const HEBREW_ENTRY = /<entry\b[^>]*\bid="([HG])(\d+[A-Za-z]?)"[^>]*>([\s\S]*?)<\/entry>/g
+// HebrewStrong.xml keys its entries by an id that carries its own language
+// prefix, and a handful of them are Greek.
+const HEBREW_XML_ENTRY = /<entry\b[^>]*\bid="([HG])(\d+[A-Za-z]?)"[^>]*>([\s\S]*?)<\/entry>/g
 const HEBREW_SOURCE = /<source>([\s\S]*?)<\/source>/
 const HEBREW_CITATION = /<w\b[^>]*\bsrc="([^"]*)"[^>]*>[\s\S]*?<\/w>/g
 
@@ -39,7 +41,7 @@ const HEBREW_CITATION = /<w\b[^>]*\bsrc="([^"]*)"[^>]*>[\s\S]*?<\/w>/g
 // in one attribute.
 export const parseHebrewDerivations = (xml: string): Map<string, string> => {
   const derivations = new Map<string, string>()
-  for (const [, language, reference, body] of xml.matchAll(HEBREW_ENTRY)) {
+  for (const [, language, reference, body] of xml.matchAll(HEBREW_XML_ENTRY)) {
     const source = HEBREW_SOURCE.exec(body)
     if (source === null) continue
     const cited = source[1].replace(HEBREW_CITATION, (_, references: string) =>

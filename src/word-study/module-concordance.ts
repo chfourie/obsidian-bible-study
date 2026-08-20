@@ -48,6 +48,19 @@ type GatheredRendering = {
   forms: Map<string, number>
 }
 
+// What a held set of renderings was gathered from: the same family out of the
+// same translation, counting the same, is the same renderings.
+type RenderingsSource = {
+  translationId: string
+  family: string
+  total: number
+}
+
+const sameSource = (a: RenderingsSource, b: RenderingsSource): boolean =>
+  a.translationId === b.translationId &&
+  a.family === b.family &&
+  a.total === b.total
+
 const commonestForm = (forms: Map<string, number>): string =>
   [...forms.entries()].reduce((best, form) =>
     form[1] > best[1] ? form : best,
@@ -60,7 +73,9 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
   // The renderings of one family cost a read of every book it occurs in, so
   // the last family asked for is held — switching a translation back and forth
   // is the move that would otherwise pay for it twice.
-  let held: { key: string; renderings: ConcordanceRendering[] } | null = null
+  let held:
+    | { source: RenderingsSource; renderings: ConcordanceRendering[] }
+    | null = null
 
   return {
     translations: async () =>
@@ -77,12 +92,13 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
     // counts twice, under whichever renderings its two words fall.
     renderings: async (translationId, strongsNumber) => {
       const occurrences = await store.occurrences(translationId, strongsNumber)
-      const key = [
+      const source: RenderingsSource = {
         translationId,
-        strongsFamily(strongsNumber),
-        totalOccurrences(occurrences),
-      ].join(':')
-      if (held?.key === key) return held.renderings
+        family: strongsFamily(strongsNumber),
+        total: totalOccurrences(occurrences),
+      }
+      if (held !== null && sameSource(held.source, source))
+        return held.renderings
       const gathered = new Map<string, GatheredRendering>()
       for (const [book, inBook] of occurrencesByBook(occurrences)) {
         const content = await store.bookContent(translationId, book)
@@ -111,7 +127,7 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
         text: commonestForm(rendering.forms),
         occurrences: rendering.occurrences,
       }))
-      held = { key, renderings }
+      held = { source, renderings }
       return renderings
     },
 
