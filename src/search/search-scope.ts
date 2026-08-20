@@ -1,4 +1,4 @@
-import { BOOKS, decodeVerseId, isNonBiblicalBook } from '../reference'
+import { decodeVerseId, isNonBiblicalBook } from '../reference'
 import type { SearchHit } from './search-scan'
 
 export type TestamentFilter = 'all' | 'ot' | 'nt'
@@ -28,59 +28,34 @@ export type SearchScopeOptions = {
   fallbackTranslationId: string | null
 }
 
-// One book the scope can narrow to: a scripture book, searched in whichever
-// translation the scope names, or an installed Book, searched in its own
-// module.
-export type SearchBookChoice = {
-  bookId: number
-  label: string
-  moduleId: string | null
-}
-
-// Every book one query can be narrowed to: the compiled-in canon first, then
-// whatever Books are installed, both in book-number order.
-export const searchBookChoices = (
-  options: SearchScopeOptions,
-): SearchBookChoice[] => [
-  ...BOOKS.map((book) => ({
-    bookId: book.id,
-    label: book.name,
-    moduleId: null,
-  })),
-  ...options.books.map((book) => ({
-    bookId: book.bookId,
-    label: book.label,
-    moduleId: book.moduleId,
-  })),
-]
-
 // What one query searches over, resolved against what is installed: never a
-// module that is gone. A chosen `book` narrows the whole query to it, leaving
-// the testament filter and the Books selection with nothing to say.
+// module that is gone. With `scripture` off the translation stays chosen but
+// unsearched, and the query runs over the selected Books alone.
 export type SearchScope = {
   translation: SearchTranslation | null
   testament: TestamentFilter
   books: SearchScopeBook[]
-  book: SearchBookChoice | null
+  scripture: boolean
 }
 
 // The scope as it survives a restart. Books are remembered as the ones opted
 // out of, so a Book installed later is searched without the picker having to
 // be visited; a translation that is gone resolves to the Fallback Translation
-// rather than to nothing, and a single book whose module is gone resolves to
-// every book.
+// rather than to nothing.
 export type StoredSearchScope = {
   translationId: string | null
   testament: TestamentFilter
   excludedBookIds: string[]
-  bookId: number | null
+  // Optional because a scope stored before the flag existed carries no
+  // `scripture` at all — and searching scripture is what it always did.
+  scripture?: boolean
 }
 
 export const defaultStoredSearchScope = (): StoredSearchScope => ({
   translationId: null,
   testament: 'all',
   excludedBookIds: [],
-  bookId: null,
+  scripture: true,
 })
 
 export const resolveSearchScope = (
@@ -99,10 +74,7 @@ export const resolveSearchScope = (
     books: options.books.filter(
       (book) => !stored.excludedBookIds.includes(book.moduleId),
     ),
-    book:
-      searchBookChoices(options).find(
-        (choice) => choice.bookId === stored.bookId,
-      ) ?? null,
+    scripture: stored.scripture !== false,
   }
 }
 
@@ -118,19 +90,18 @@ export const storedSearchScope = (
         !scope.books.some((chosen) => chosen.moduleId === book.moduleId),
     )
     .map((book) => book.moduleId),
-  bookId: scope.book?.bookId ?? null,
+  scripture: scope.scripture,
 })
 
 // The modules a query fans out over, translation first so its hits are read
-// before any Book's. Narrowed to one book, that is the one module holding it.
-export const scopeModuleIds = (scope: SearchScope): string[] => {
-  const translationIds =
-    scope.translation === null ? [] : [scope.translation.id]
-  if (scope.book === null) {
-    return [...translationIds, ...scope.books.map((book) => book.moduleId)]
-  }
-  return scope.book.moduleId === null ? translationIds : [scope.book.moduleId]
-}
+// before any Book's. With scripture left out the translation's module is
+// never read at all.
+export const scopeModuleIds = (scope: SearchScope): string[] => [
+  ...(scope.scripture && scope.translation !== null
+    ? [scope.translation.id]
+    : []),
+  ...scope.books.map((book) => book.moduleId),
+]
 
 // The testament filter is a Canonical Grid book range, so it has nothing to
 // say about a Book: its hits stand whichever testament is filtered for.
@@ -148,18 +119,3 @@ export const hitsInTestament = <T extends Pick<SearchHit, 'verseId'>>(
   hits.filter((hit) =>
     inTestament(testament, decodeVerseId(hit.verseId).book),
   )
-
-export const hitsInBook = <T extends Pick<SearchHit, 'verseId'>>(
-  hits: readonly T[],
-  book: number,
-): T[] => hits.filter((hit) => decodeVerseId(hit.verseId).book === book)
-
-// What the scope keeps of what its modules answered: one book alone, or every
-// book the testament filter allows.
-export const hitsInScope = <T extends Pick<SearchHit, 'verseId'>>(
-  hits: readonly T[],
-  scope: SearchScope,
-): T[] =>
-  scope.book === null
-    ? hitsInTestament(hits, scope.testament)
-    : hitsInBook(hits, scope.book.bookId)

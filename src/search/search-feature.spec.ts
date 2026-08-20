@@ -269,7 +269,7 @@ describe('SearchFeature scope', () => {
         translationId: 'kjv',
         testament: 'nt',
         excludedBookIds: ['hum-m1895'],
-        bookId: null,
+        scripture: true,
       }),
     )
   })
@@ -305,7 +305,7 @@ describe('SearchFeature scope', () => {
           translationId: 'kjv',
           testament: 'all',
           excludedBookIds: [],
-          bookId: null,
+          scripture: true,
         },
       },
     })
@@ -314,39 +314,40 @@ describe('SearchFeature scope', () => {
     expect(model.view.translationLabel).toBe('WEB')
   })
 
-  it('reopens narrowed to the book it was left on', async () => {
+  it('reopens with scripture left out when it was left that way', async () => {
     const { feature, saved } = harness(installed)
     const model = feature.createModel()
-    model.chooseBook(101)
-    await vi.waitFor(() => expect(saved().searchScope.desktop.bookId).toBe(101))
+    model.toggleScripture()
+    await vi.waitFor(() =>
+      expect(saved().searchScope.desktop.scripture).toBe(false),
+    )
 
     const reloaded = harness().feature
     reloaded.useSettings(saved())
-    expect(reloaded.createModel().view.scope.bookId).toBe(101)
+    expect(reloaded.createModel().view.scope.scripture).toBe(false)
   })
 
-  it('searches every book again when the remembered book is uninstalled', async () => {
+  it('keeps a scope stored before the scripture flag searching scripture', () => {
     const { feature } = harness({
       ...installed,
-      installedModuleIds: ['web', 'kjv'],
       searchScope: {
         ...DEFAULT_SETTINGS.searchScope,
         desktop: {
-          ...DEFAULT_SETTINGS.searchScope.desktop,
-          bookId: 101,
+          translationId: 'web',
+          testament: 'all',
+          excludedBookIds: [],
         },
       },
     })
     const model = feature.createModel()
-    expect(model.view.scope.bookId).toBeNull()
-    expect(model.view.scope.narrowedToBook).toBe(false)
+    expect(model.view.scope.scripture).toBe(true)
   })
 
-  it('searches one scripture book in the chosen translation alone', async () => {
+  it('searches only the installed Books with scripture left out', async () => {
     const { feature } = harness(installed)
     const model = feature.createModel()
-    model.chooseBook(43)
-    model.setQuery('humility')
+    model.toggleScripture()
+    model.setQuery('vine')
     await model.submit()
     expect(model.view.books).toEqual([])
   })

@@ -684,7 +684,7 @@ describe('SearchPaneModel scope', () => {
       translationId: 'kjv',
       testament: 'nt',
       excludedBookIds: ['hum-m1895'],
-      bookId: null,
+      scripture: true,
     })
   })
 
@@ -696,57 +696,26 @@ describe('SearchPaneModel scope', () => {
     expect(stored()).toEqual(defaultStoredSearchScope())
   })
 
-  it('offers every scripture book and every installed book to narrow to', () => {
+  it('starts with scripture in the scope', () => {
     const { model } = scopedHarness()
-    expect(model.view.scope.bookId).toBeNull()
-    expect(model.view.scope.narrowedToBook).toBe(false)
-    expect(model.view.scope.bookChoices).toHaveLength(67)
-    expect(model.view.scope.bookChoices[0]).toEqual({
-      bookId: 1,
-      label: 'Genesis',
-      moduleId: null,
-    })
-    expect(model.view.scope.bookChoices[66]).toEqual({
-      bookId: 101,
-      label: 'Humility',
-      moduleId: 'hum-m1895',
-    })
+    expect(model.view.scope.scripture).toBe(true)
   })
 
-  it('searches one scripture book in the chosen translation alone', async () => {
+  it('searches only the selected Books when scripture is left out', async () => {
     const { model, searchedModules } = scopedHarness()
-    model.chooseBook(43)
-    expect(model.view.scope.bookId).toBe(43)
-    expect(model.view.scope.narrowedToBook).toBe(true)
-    model.setQuery('the')
-    await model.submit()
-    expect(searchedModules()).toEqual(['web'])
-    expect(bookSummary(model)).toEqual([{ name: 'John', count: 1 }])
-  })
-
-  it('searches one installed book in its own module alone', async () => {
-    const { model, searchedModules } = scopedHarness()
-    model.chooseBook(101)
+    model.toggleScripture()
+    expect(model.view.scope.scripture).toBe(false)
     model.setQuery('the')
     await model.submit()
     expect(searchedModules()).toEqual(['hum-m1895'])
     expect(bookSummary(model)).toEqual([{ name: 'Humility', count: 2 }])
   })
 
-  it('ignores the testament filter while narrowed to one book', async () => {
+  it('takes scripture back in when toggled again', async () => {
     const { model } = scopedHarness()
-    model.chooseTestament('nt')
-    model.chooseBook(1)
-    model.setQuery('the')
-    await model.submit()
-    expect(bookSummary(model)).toEqual([{ name: 'Genesis', count: 2 }])
-  })
-
-  it('goes back to every book, testament filter and all', async () => {
-    const { model } = scopedHarness()
-    model.chooseBook(43)
-    model.chooseBook(null)
-    expect(model.view.scope.narrowedToBook).toBe(false)
+    model.toggleScripture()
+    model.toggleScripture()
+    expect(model.view.scope.scripture).toBe(true)
     model.setQuery('the')
     await model.submit()
     expect(bookSummary(model).map((group) => group.name)).toEqual([
@@ -756,18 +725,22 @@ describe('SearchPaneModel scope', () => {
     ])
   })
 
-  it('leaves the scope alone when narrowed to a book that is not offered', () => {
-    const { model } = scopedHarness()
-    model.chooseBook(404)
-    expect(model.view.scope.bookId).toBeNull()
+  it('has nothing to search with scripture out and every Book unchecked', async () => {
+    const { model, searchedModules } = scopedHarness()
+    model.toggleScripture()
+    model.toggleBook('hum-m1895')
+    model.setQuery('the')
+    await model.submit()
+    expect(model.view.status).toBe('no-translation')
+    expect(searchedModules()).toEqual([])
   })
 
-  it('remembers the book it was narrowed to', () => {
+  it('remembers scripture as left out and taken back in', () => {
     const { model, stored } = scopedHarness()
-    model.chooseBook(101)
-    expect(stored().bookId).toBe(101)
-    model.chooseBook(null)
-    expect(stored().bookId).toBeNull()
+    model.toggleScripture()
+    expect(stored().scripture).toBe(false)
+    model.toggleScripture()
+    expect(stored().scripture).toBe(true)
   })
 
   it('searches books even with no translation installed', async () => {

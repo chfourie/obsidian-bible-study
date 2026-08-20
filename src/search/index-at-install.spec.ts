@@ -153,7 +153,7 @@ const setup = (books: readonly number[] = [43, HUMILITY_BOOK]) => {
     translation: { id: 'web', label: 'WEB' },
     testament: 'all',
     books: SCOPE_OPTIONS.books,
-    book: null,
+    scripture: true,
   }
   const model = new SearchPaneModel({
     scopeOptions: () => SCOPE_OPTIONS,
