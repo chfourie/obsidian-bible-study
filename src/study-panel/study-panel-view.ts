@@ -43,6 +43,8 @@ export class StudyPanelView extends ItemView {
       editCrossReferenceInNewPane: (entry) =>
         this.feature.editCrossReferenceInNewPane(entry),
       promptAnnotate: (prefill) => this.feature.promptAnnotation(prefill),
+      openWordStudy: (strongsNumber, options) =>
+        void this.feature.openWordStudy(strongsNumber, options),
       renderMarkdown: (el, markdown, sourcePath) =>
         void MarkdownRenderer.render(this.app, markdown, el, sourcePath, this),
     }

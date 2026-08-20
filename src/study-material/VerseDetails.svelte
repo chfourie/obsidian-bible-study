@@ -12,11 +12,13 @@ controls beside the selection's title.
     VerseDetailsView,
   } from '../contracts'
   import type { VerseSegment } from '../rendering'
-  import { activate } from '../ui'
+  import { activate, opensInNewPane } from '../ui'
+  import type { StudyMaterialHost } from './study-material-host'
 
   let {
     details,
     source,
+    host,
     collapsed,
     toggle,
     collapseAll,
@@ -24,11 +26,20 @@ controls beside the selection's title.
   }: {
     details: VerseDetailsView
     source: StudyMaterialSource
+    host: StudyMaterialHost
     collapsed: ReadonlySet<string>
     toggle: (id: string) => void
     collapseAll: () => void
     expandAll: () => void
   } = $props()
+
+  // The card's two ways into the Word Study Panel — the number itself and the
+  // More link — both carry the new-pane modifier, which mobile never sets.
+  const studyWord = (
+    strongsNumber: string,
+    event: MouseEvent | KeyboardEvent,
+  ): void =>
+    host.openWordStudy(strongsNumber, { newPane: opensInNewPane(event) })
 
   function icon(node: HTMLElement, name: string) {
     setIcon(node, name)
@@ -104,9 +115,24 @@ controls beside the selection's title.
   {#each details.strongs as entry (entry.strongs)}
     <div class="bsm-strongs-entry">
       <div class="bsm-strongs-head">
-        <span class="bsm-strongs-number">{entry.strongs}</span>
+        <span
+          role="button"
+          tabindex="0"
+          class="bsm-strongs-number bsm-word-study"
+          title="Open word study"
+          onclick={(event) => studyWord(entry.strongs, event)}
+          onkeydown={activate((event) => studyWord(entry.strongs, event))}
+        >{entry.strongs}</span>
         <span class="bsm-strongs-lemma">{entry.lemma}</span>
         <span class="bsm-strongs-translit">{entry.transliteration}</span>
+        <span
+          role="button"
+          tabindex="0"
+          class="bsm-strongs-more bsm-word-study"
+          title="Open word study"
+          onclick={(event) => studyWord(entry.strongs, event)}
+          onkeydown={activate((event) => studyWord(entry.strongs, event))}
+        >More</span>
       </div>
       <div class="bsm-strongs-gloss">{entry.gloss}</div>
       <div class="bsm-strongs-definition">{entry.definition}</div>
@@ -279,6 +305,22 @@ controls beside the selection's title.
   .bsm-strongs-number {
     color: var(--text-accent);
     font-weight: 600;
+    font-size: var(--font-ui-smaller);
+  }
+
+  /* Both ways into the Word Study Panel read as links without changing the
+     card's height: More rides the head row the number already occupies. */
+  .bsm-word-study {
+    cursor: pointer;
+  }
+
+  .bsm-word-study:hover {
+    text-decoration: underline;
+  }
+
+  .bsm-strongs-more {
+    margin-left: auto;
+    color: var(--text-accent);
     font-size: var(--font-ui-smaller);
   }
 

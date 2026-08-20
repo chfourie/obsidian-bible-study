@@ -77,6 +77,7 @@ selected paragraph's details above its section material (spec-books §5).
         <VerseDetails
           details={material.details}
           {source}
+          {host}
           collapsed={collapsedTranslations}
           toggle={toggleTranslation}
           collapseAll={collapseAllTranslations}
@@ -94,6 +95,7 @@ selected paragraph's details above its section material (spec-books §5).
       <VerseDetails
         details={material.details}
         {source}
+        {host}
         collapsed={collapsedTranslations}
         toggle={toggleTranslation}
         collapseAll={collapseAllTranslations}

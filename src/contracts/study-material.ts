@@ -6,6 +6,7 @@ import type {
 } from '../cross-references'
 import type { Reference } from '../reference'
 import type { VerseSegment } from '../rendering'
+import type { NavigationOptions } from './reference-navigator'
 
 export type StrongsEntryView = {
   strongs: string
@@ -144,6 +145,23 @@ export interface StudyMaterialSource {
   confirmDeleteCrossReference(): void
   cancelDeleteCrossReference(): void
   deleteCrossReference(): Promise<void>
+}
+
+// Opens the Word Study Panel on an extended Strong's number, so a surface
+// showing a Strong's entry card never touches a workspace leaf itself. A plain
+// activation retargets the most-recently-focused panel; a Cmd/Ctrl-activation
+// asks for a new one.
+export interface WordStudyOpener {
+  openWordStudy(
+    strongsNumber: string,
+    options?: NavigationOptions,
+  ): Promise<void>
+}
+
+// Stands in until the word study feature is wired up: entry cards still render,
+// but lead nowhere.
+export const NO_WORD_STUDY: WordStudyOpener = {
+  openWordStudy: async () => {},
 }
 
 // Resolves a focused tab to its study material, so a surface holding workspace

@@ -19,6 +19,7 @@ import {
   StrongsDictionaries,
 } from '../strongs'
 import { VaultIndexFeature } from '../vault-index'
+import { WordStudyFeature } from '../word-study'
 import { PluginFeatureSet } from './plugin-feature-set'
 
 export default class ScriptureStudyPlugin extends Plugin {
@@ -71,10 +72,24 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     this.#firstRun,
   )
+  readonly wordStudy = new WordStudyFeature(this, {
+    dictionary: {
+      installed: () => this.strongsDictionaries.isInstalled(),
+      entryFor: async (strongsNumber) => {
+        const [entry] = await this.strongsDictionaries.entriesFor([strongsNumber])
+        return entry === undefined
+          ? null
+          : { ...entry, definition: formatDefinition(entry.definition) }
+      },
+      install: () => this.strongsDictionaries.install(),
+      attribution: STRONGS_ATTRIBUTION,
+    },
+  })
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
     crossReferences: this.crossReferences.store,
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
+    wordStudy: this.wordStudy,
   })
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(
@@ -102,6 +117,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.#features.addFeature(this.crossReferences)
     this.#features.addFeature(this.reader)
     this.#features.addFeature(this.studyPanel)
+    this.#features.addFeature(this.wordStudy)
     this.#features.addFeature(this.rendering)
     this.#features.addFeature(this.annotations)
     this.#features.addFeature(this.settingsTab)

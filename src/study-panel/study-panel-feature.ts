@@ -1,12 +1,14 @@
 import { TFile, WorkspaceLeaf, type Plugin } from 'obsidian'
 import {
   NO_STUDY_MATERIAL,
+  NO_WORD_STUDY,
   NOOP_REFERENCE_NAVIGATOR,
   type NavigationOptions,
   type ReferenceNavigator,
   type SelectionKind,
   type StudyMaterialProvider,
   type StudyMaterialSource,
+  type WordStudyOpener,
 } from '../contracts'
 import {
   INERT_CROSS_REFERENCE_CATALOG,
@@ -48,6 +50,7 @@ export type StudyPanelFeatureOptions = {
   crossReferences?: CrossReferenceCatalog
   studyMaterial?: StudyMaterialProvider
   index?: StudyPanelVaultIndex
+  wordStudy?: WordStudyOpener
 }
 
 // The focused leaf's note, when it shows one. Reader tabs are not file views,
@@ -76,6 +79,7 @@ export class StudyPanelFeature extends PluginFeature {
   #unread: WorkspaceLeaf | null = null
   readonly #tabs = new TabMemory<WorkspaceLeaf>()
   readonly #index: StudyPanelVaultIndex
+  readonly #wordStudy: WordStudyOpener
   #unsubscribeCrossReferences: (() => void) | null = null
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeSelection: (() => void) | null = null
@@ -95,6 +99,7 @@ export class StudyPanelFeature extends PluginFeature {
     this.#crossReferences =
       options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
     this.#index = options.index ?? INERT_VAULT_INDEX
+    this.#wordStudy = options.wordStudy ?? NO_WORD_STUDY
   }
 
   override async load(): Promise<void> {
@@ -231,6 +236,13 @@ export class StudyPanelFeature extends PluginFeature {
     options?: NavigationOptions,
   ): void {
     this.#navigator.openReference(reference, translationId, options)
+  }
+
+  async openWordStudy(
+    strongsNumber: string,
+    options?: NavigationOptions,
+  ): Promise<void> {
+    await this.#wordStudy.openWordStudy(strongsNumber, options)
   }
 
   async openPanel(): Promise<void> {
