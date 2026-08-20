@@ -104,6 +104,15 @@ export type ReaderStrongsDeps = {
 
 export type ReaderPosition = { book: number; chapter: number }
 
+// What a nav face asks for beyond the target itself. Views translate the
+// platform modifier into this intent, so the model never sees an event.
+export type ReaderNavIntent = { newTab?: boolean }
+
+// Where a mod-clicked nav target lands: the shell opens a fresh reader leaf
+// there and leaves this pane untouched. A model without a shell has no leaf
+// to spawn, so its targets simply open in place.
+export type ReaderNewTab = (position: ReaderPosition) => void
+
 // How a chapter move reaches the screen. The pane's shell routes user
 // navigation through Obsidian's per-pane history and calls `open` back when
 // the new position arrives; a model without a shell opens straight away.
@@ -134,6 +143,7 @@ export type ReaderPaneDeps = {
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
   books?: ReaderBookSource
+  newTab?: ReaderNewTab
   firstRun?: ReaderFirstRunDeps
   clipboard?: ReaderClipboard
 }
@@ -219,10 +229,30 @@ export type BookModeView = {
   epigraphs: EpigraphView[]
 }
 
+// One reachable work in the reader's library, carrying the position that
+// activating it lands on: chapter 1 for a scripture book, its first section
+// for a book.
+export type LibraryEntry = {
+  book: number
+  chapter: number
+  label: string
+  current: boolean
+}
+
+// The library the breadcrumb's root dropdown and the trees' Books group both
+// render, in both reader modes. Uninstalled books are simply absent, so an
+// empty `books` list is what "no book installed" looks like (ticket #78).
+export type ReaderLibraryView = {
+  label: string
+  scripture: LibraryEntry[]
+  books: LibraryEntry[]
+}
+
 export type ReaderPaneView = {
   status: 'loading' | 'ok' | 'unavailable' | 'no-translation'
   // Null in scripture mode — the pane is in book mode exactly when set.
   book: BookModeView | null
+  library: ReaderLibraryView
   title: string
   position: ReaderPosition
   rows: VerseRowView[]
@@ -442,6 +472,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     return {
       status: this.#status,
       book: book === null ? null : this.#bookView(book),
+      library: this.#libraryView(book),
       title: this.#title(),
       position: this.#position,
       rows: this.#rows,
@@ -489,6 +520,29 @@ export class ReaderPaneModel implements StudyMaterialSource {
         (section) => section.chapter === this.#position.chapter,
       ) ?? null
     )
+  }
+
+  // A scripture entry opens at chapter 1 as the breadcrumb's book picker
+  // always has; a book opens at its own first section, which is front matter
+  // wherever the work has any.
+  #libraryView(here: ReaderBook | null): ReaderLibraryView {
+    return {
+      label: here?.title ?? bookName(this.#position.book),
+      scripture: Array.from({ length: BOOK_COUNT }, (_, index) => index + 1).map(
+        (book) => ({
+          book,
+          chapter: 1,
+          label: bookName(book),
+          current: here === null && book === this.#position.book,
+        }),
+      ),
+      books: this.#books.map((book) => ({
+        book: book.number,
+        chapter: book.sections[0]?.chapter ?? 1,
+        label: book.title,
+        current: book.number === this.#position.book,
+      })),
+    }
   }
 
   #bookView(book: ReaderBook): BookModeView {
@@ -586,9 +640,18 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#position = { ...position }
   }
 
-  browseBook(book: number): void {
+  browseBook(book: number, intent: ReaderNavIntent = {}): void {
+    if (this.#spawnedTab({ book, chapter: 1 }, intent)) return
     this.#browsedBook = this.#browsedBook === book ? null : book
     this.#notify()
+  }
+
+  // Whether the target went to a tab of its own. A pane with no shell to
+  // spawn one falls through to navigating in place.
+  #spawnedTab(position: ReaderPosition, intent: ReaderNavIntent): boolean {
+    if (intent.newTab !== true || this.deps.newTab === undefined) return false
+    this.deps.newTab(position)
+    return true
   }
 
   async installSuggestedTranslation(): Promise<void> {
@@ -617,7 +680,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   // The user's own chapter move: unlike openPosition it walks the pane's
   // navigation history.
-  async goTo(book: number, chapter: number): Promise<void> {
+  async goTo(
+    book: number,
+    chapter: number,
+    intent: ReaderNavIntent = {},
+  ): Promise<void> {
+    if (this.#spawnedTab({ book, chapter }, intent)) return
     await this.#navigate({ book, chapter }, () =>
       this.openPosition({ book, chapter }),
     )
@@ -1103,12 +1171,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async #loadPassage(token: number): Promise<void> {
-    // Only a position outside the canon can be a book, so scripture never
-    // pays for the lookup — and never lands in book mode.
+    // The installed books are the reader's library in both modes, so both
+    // load them; only a position outside the canon can be one of them, so
+    // scripture never lands in book mode.
     const isBookPosition = this.#position.book > BOOK_COUNT
-    this.#books = isBookPosition
-      ? await (this.deps.books ?? NO_BOOKS).installed()
-      : []
+    this.#books = await (this.deps.books ?? NO_BOOKS).installed()
     if (token !== this.#loadToken) return
     if (isBookPosition) {
       await this.#loadBookPassage(token, this.#bookHere())

@@ -274,6 +274,27 @@ describe('ReaderFeature entry points', () => {
     })
   })
 
+  // A mod-clicked nav target: the pane asks its shell for a tab of its own
+  // and stays where it stands (ticket #78).
+  it('opens a nav target in a reader tab of its own', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const first = leaves[0].view as ReaderView
+
+    await first.model.goTo(1, 1, { newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: 1,
+      chapter: 1,
+    })
+    expect(first.model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(leaves[0].canGoBack).toBe(false)
+  })
+
   it('restores a saved chapter without recording it in the pane history', async () => {
     const { feature, leaves } = harness()
     await feature.load()
