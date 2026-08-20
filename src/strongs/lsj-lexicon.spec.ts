@@ -1,33 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { InMemoryModuleDataDir } from '../../tests/fixtures/in-memory-module-data-dir'
 import { SettingsStore } from '../data-access'
-import type { ModuleDataDir, ModuleManifest } from '../modules'
+import type { ModuleManifest } from '../modules'
 import { LSJ_LEXICON_ID, LsjLexicon } from './lsj-lexicon'
 import type { LsjSource } from './lsj-source'
 
 const slice = readFileSync('tests/fixtures/tflsj-slice.txt', 'utf8')
-
-class InMemoryModuleDataDir implements ModuleDataDir {
-  readonly files = new Map<string, string>()
-
-  async readTextFile(path: string): Promise<string | null> {
-    return this.files.get(path) ?? null
-  }
-
-  async writeTextFile(path: string, content: string): Promise<void> {
-    this.files.set(path, content)
-  }
-
-  async removeDir(path: string): Promise<void> {
-    for (const file of [...this.files.keys()]) {
-      if (file.startsWith(`${path}/`)) this.files.delete(file)
-    }
-  }
-
-  async listDirs(): Promise<string[]> {
-    return []
-  }
-}
 
 const fakeSource = (parts: string[] = [slice]): LsjSource => ({
   fetchLsj: async () => parts,

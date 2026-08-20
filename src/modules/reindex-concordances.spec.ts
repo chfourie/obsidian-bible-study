@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { InMemoryModuleDataDir } from '../../tests/fixtures/in-memory-module-data-dir'
 import { makeVerseId } from '../reference'
-import type { ModuleDataDir } from './module-data-dir'
 import {
   MODULE_FORMAT_VERSION,
   TRANSLATION_CONTENT_VERSION,
@@ -9,37 +9,6 @@ import {
 import { ModuleStore } from './module-store'
 import type { NormalizedModule } from './normalized-module'
 import { reindexConcordances } from './reindex-concordances'
-
-class FakeModuleDataDir implements ModuleDataDir {
-  readonly files = new Map<string, string>()
-  readonly writes: string[] = []
-
-  async readTextFile(path: string): Promise<string | null> {
-    return this.files.get(path) ?? null
-  }
-
-  async writeTextFile(path: string, content: string): Promise<void> {
-    this.writes.push(path)
-    this.files.set(path, content)
-  }
-
-  async removeDir(path: string): Promise<void> {
-    for (const file of [...this.files.keys()]) {
-      if (file.startsWith(`${path}/`)) this.files.delete(file)
-    }
-  }
-
-  async listDirs(path: string): Promise<string[]> {
-    const dirs = new Set<string>()
-    for (const file of this.files.keys()) {
-      if (!file.startsWith(`${path}/`)) continue
-      const rest = file.slice(path.length + 1)
-      const slash = rest.indexOf('/')
-      if (slash > 0) dirs.add(rest.slice(0, slash))
-    }
-    return [...dirs]
-  }
-}
 
 const manifest = (extras: Partial<ModuleManifest> = {}): ModuleManifest => ({
   id: 'kjv',
@@ -78,7 +47,7 @@ const taggedModule = (extras: Partial<ModuleManifest> = {}): NormalizedModule =>
 })
 
 const setup = () => {
-  const dataDir = new FakeModuleDataDir()
+  const dataDir = new InMemoryModuleDataDir()
   return { dataDir, store: new ModuleStore(dataDir) }
 }
 
@@ -86,7 +55,7 @@ const setup = () => {
 // with no index file beside them.
 const installWithoutIndex = async (
   store: ModuleStore,
-  dataDir: FakeModuleDataDir,
+  dataDir: InMemoryModuleDataDir,
   extras: Partial<ModuleManifest> = {},
 ): Promise<void> => {
   await store.saveModule(taggedModule(extras))

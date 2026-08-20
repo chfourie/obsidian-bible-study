@@ -6,7 +6,7 @@ import {
   type StrongsEntryView,
   type WordStudyOpener,
 } from '../contracts'
-import { strongsFamily } from '../modules'
+import { occurrencesByBook, strongsFamily } from '../modules'
 import {
   bookName,
   decodeVerseId,
@@ -14,23 +14,18 @@ import {
   type Reference,
 } from '../reference'
 
-// All the panel asks of the reference-navigation seam: an occurrence row
-// walks exactly the way a Ref Span does.
 export type WordStudyNavigator = Pick<ReferenceNavigator, 'openReference'>
 
-// One extended number's dictionary entry as the panel studies it: the entry
-// itself, the rest of its Strong's Family, and the Strong's 1890 derivation
-// the brief lexicons carry none of.
+// The derivation is Strong's 1890, which the brief lexicons carry none of.
 export type WordStudyEntry = {
   entry: StrongsEntryView
   siblings: string[]
   derivation: string | null
 }
 
-// The Strong's Dictionaries seen from the Word Study Panel: one entry per
-// extended number, and the install the panel offers while the module is
-// missing. Lookups are per number rather than per family — only the
-// concordance below matches at family granularity.
+// The Strong's Dictionaries seen from the Word Study Panel. Lookups are per
+// extended number rather than per family — only the concordance below matches
+// at family granularity.
 export type WordStudyDictionary = {
   installed: () => Promise<boolean>
   entryFor: (strongsNumber: string) => Promise<WordStudyEntry | null>
@@ -55,10 +50,8 @@ export const INERT_WORD_STUDY_DICTIONARY: WordStudyDictionary = {
   etymologyAttribution: '',
 }
 
-// The LSJ Lexicon seen from the Word Study Panel: one full Liddell-Scott-Jones
-// entry per extended number, and the install the panel offers inline while the
-// optional module is missing. Greek only — no Hebrew counterpart exists, so a
-// Hebrew number is never asked about.
+// The LSJ Lexicon seen from the Word Study Panel. Greek only — no Hebrew
+// counterpart exists, so a Hebrew number is never asked about.
 export type WordStudyLsj = {
   installed: () => Promise<boolean>
   entryFor: (strongsNumber: string) => Promise<string | null>
@@ -75,12 +68,10 @@ export const INERT_WORD_STUDY_LSJ: WordStudyLsj = {
   attribution: '',
 }
 
-// The Tagged Translation one concordance reads. The id is the translation's
-// own code, which is what the occurrence count is named with.
 export type ConcordanceTranslation = { id: string; name: string }
 
 // One stretch of an occurrence's verse text: the words the family is tagged
-// on stand emphasized, the rest reads plainly.
+// on are the emphasized ones.
 export type ConcordanceSegment = { text: string; emphasis: boolean }
 
 export type ConcordanceVerse = {
@@ -92,12 +83,12 @@ export type ConcordanceVerse = {
 // its tag spans — against the verses it renders them in.
 export type ConcordanceRendering = { text: string; verseIds: number[] }
 
-// The Concordance Indexes seen from the Word Study Panel: which translations
-// can be read at all, the verses one family is tagged in one of them, how that
-// translation renders them, and the text of as many as the reader has opened.
+// The Concordance Indexes seen from the Word Study Panel, at family
+// granularity: the verses, the renderings, and the text of as many of them as
+// the reader has opened.
 export type WordStudyConcordance = {
-  // Every installed Tagged Translation, in install order: a panel reads the
-  // first of them unless it was opened on, or switched to, another.
+  // In install order: a panel reads the first of them unless it was opened on,
+  // or switched to, another.
   translations: () => Promise<ConcordanceTranslation[]>
   occurrences: (
     translationId: string,
@@ -127,15 +118,12 @@ export type WordStudyDeps = {
   dictionary: WordStudyDictionary
   concordance?: WordStudyConcordance
   lsj?: WordStudyLsj
-  // How the panel's own links walk: the same opener the Study Panel's entry
-  // cards use, so a plain activation retargets and a modified one spawns.
   opener?: WordStudyOpener
-  // Where an occurrence row leads: the same seam a Ref Span navigates by.
   navigator?: WordStudyNavigator
 }
 
-// A derivation as the panel renders it: plain stretches of text, and the
-// Strong's Numbers it cites, which are walkable.
+// A derivation as the panel renders it: plain text, and the Strong's Numbers
+// it cites, which are walkable.
 export type EtymologySegment = { text: string; number: string | null }
 
 const CITATION = /[HG]\d{4}[A-Za-z]?/g
@@ -156,7 +144,6 @@ const etymologyOf = (derivation: string | null): EtymologySegment[] | null => {
 }
 
 export type WordStudyStatus =
-  // A panel restored without a number, or one never given one.
   | 'empty'
   | 'loading'
   | 'ok'
@@ -179,7 +166,6 @@ export type LsjSectionView = {
   entry: string | null
   // The inline install, non-null exactly while the status is 'not-installed'.
   install: WordStudyInstall | null
-  // Named only while an LSJ entry is actually on screen.
   attribution: string | null
 }
 
@@ -197,29 +183,21 @@ export type ConcordanceBookView = {
   verses: ConcordanceVerseView[] | null
 }
 
-// One rendering as a chip above the occurrences: the words, how many of the
-// occurrences read that way, and whether the list is filtered to it.
 export type RenderingView = { text: string; count: number; active: boolean }
 
 export type ConcordanceView = {
   // Null exactly while there is no translation to count in — then the message
   // below says which problem that is.
   translation: ConcordanceTranslation | null
-  // Every Tagged Translation the family can be read in, the switcher's own
-  // choices.
   translations: ConcordanceTranslation[]
   // Whether those choices are worth a switcher: more than one to choose
   // between, or a concordance with none of them being read.
   switchable: boolean
   message: string | null
   total: number
-  // The section heading: the count, named with the translation it counts in
-  // and the rendering it is filtered to.
   label: string
   // The translation's renderings of the family, most frequent first.
   renderings: RenderingView[]
-  // The Strong's Family the occurrences are counted at, which the note below
-  // names.
   family: string
   // True while the number under study shares its family with other entries —
   // or while nothing installed can rule that out. The tagging cannot tell a
@@ -230,19 +208,15 @@ export type ConcordanceView = {
 
 export type WordStudyViewState = {
   number: string | null
-  // Names the tab: the number under study, until there is one.
   title: string
   status: WordStudyStatus
   entry: StrongsEntryView | null
-  // The rest of the entry's Strong's Family, each one walkable.
   siblings: string[]
-  // Non-null exactly while the 1890 dictionary states a derivation for the
-  // number under study.
+  // Non-null exactly while the 1890 dictionary states a derivation.
   etymology: EtymologySegment[] | null
   attribution: string | null
   etymologyAttribution: string | null
   install: WordStudyInstall | null
-  // The full LSJ entry, null for a number no LSJ section belongs under.
   lsj: LsjSectionView | null
   // The family's occurrences in one Tagged Translation, or null while no
   // tagged translation is installed to count them in.
@@ -251,8 +225,8 @@ export type WordStudyViewState = {
 
 const UNTITLED = 'Word study'
 
-// How a panel is opened: the number, and the translation the tapped word came
-// from, which is the concordance it reads unless that translation is not one.
+// The translation the tapped word came from, which is the concordance the
+// panel reads unless that translation is not a tagged one.
 export type WordStudyTarget = { translationId?: string | null }
 
 const NO_TAGGED_TRANSLATION = 'No Tagged Translation is installed.'
@@ -281,8 +255,6 @@ const verseReference = (verseId: number): Reference => ({
   ranges: [{ startId: verseId, endId: verseId }],
 })
 
-// One book's occurrences, held apart from the view so an expansion renders
-// rows for that book alone.
 type ConcordanceBook = {
   book: number
   verseIds: number[]
@@ -301,27 +273,17 @@ type LoadedConcordance = {
   books: ConcordanceBook[]
 }
 
-const groupByBook = (verseIds: number[]): ConcordanceBook[] => {
-  const books = new Map<number, number[]>()
-  for (const verseId of verseIds) {
-    const book = decodeVerseId(verseId).book
-    books.set(book, [...(books.get(book) ?? []), verseId])
-  }
-  return [...books.keys()]
-    .sort((a, b) => a - b)
-    .map((book) => ({
-      book,
-      verseIds: books.get(book) ?? [],
-      expanded: false,
-      verses: null,
-    }))
-}
+const groupByBook = (verseIds: number[]): ConcordanceBook[] =>
+  [...occurrencesByBook(verseIds)].map(([book, ids]) => ({
+    book,
+    verseIds: ids,
+    expanded: false,
+    verses: null,
+  }))
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
-// LSJ is a Greek lexicon: a Hebrew number has no section to carry, rather than
-// an empty one.
 const isGreek = (strongsNumber: string): boolean =>
   strongsNumber.startsWith('G')
 
@@ -329,8 +291,8 @@ export class WordStudyModel {
   #number: string | null = null
   #status: WordStudyStatus = 'empty'
   #found: WordStudyEntry | null = null
-  // Who else the count covers where no entry was found: null while the
-  // dictionaries cannot say at all, as when the module is missing.
+  // Null while the dictionaries cannot say at all, as when the module is
+  // missing.
   #familySiblings: string[] | null = null
   #installing = false
   #installError: string | null = null
@@ -357,13 +319,10 @@ export class WordStudyModel {
     return () => this.#listeners.delete(listener)
   }
 
-  // The number the panel persists, so a restored tab comes back to it.
   get number(): string | null {
     return this.#number
   }
 
-  // The translation the panel persists beside its number, so a restored tab
-  // comes back to the same concordance.
   get translationId(): string | null {
     return this.#translationId
   }
@@ -421,8 +380,6 @@ export class WordStudyModel {
     await this.#load()
   }
 
-  // Expanding a book renders its rows the first time it is asked for, and
-  // keeps them for every expansion after.
   async toggleConcordanceBook(book: number): Promise<void> {
     const loaded = this.#concordance
     const found = loaded?.books.find((entry) => entry.book === book)
@@ -445,9 +402,8 @@ export class WordStudyModel {
     this.#notify()
   }
 
-  // Tapping a chip filters the occurrences to that rendering, and tapping the
-  // filtering chip again lifts the filter. Books fold shut either way: they
-  // are not the same rows once the list narrows.
+  // Books fold shut either way: they are not the same rows once the list
+  // narrows.
   toggleRendering(text: string): void {
     const loaded = this.#concordance
     if (loaded === null) return
@@ -456,8 +412,6 @@ export class WordStudyModel {
     this.#notify()
   }
 
-  // Switching translations re-reads that translation's own index: its
-  // occurrences, its renderings, and the counts they carry.
   async useTranslation(translationId: string): Promise<void> {
     const number = this.#number
     if (number === null) return
@@ -479,8 +433,6 @@ export class WordStudyModel {
     await this.#readConcordance(number, chosen, translations, token)
   }
 
-  // An occurrence row walks the way a Ref Span does: to that chapter in the
-  // concordance's own translation, in this reader or a new one.
   openOccurrence(verseId: number, options: NavigationOptions = {}): void {
     const translationId = this.#concordance?.translation?.id ?? null
     ;(this.deps.navigator ?? NOOP_REFERENCE_NAVIGATOR).openReference(
@@ -490,10 +442,8 @@ export class WordStudyModel {
     )
   }
 
-  // Walking an etymology citation or a family sibling is the same move the
-  // Study Panel's entry cards make: plain retargets, modified spawns. The
-  // concordance the reader is in travels with it, so a walk never snaps the
-  // occurrences back to another translation.
+  // The concordance the reader is in travels with the walk, so a sibling or a
+  // citation never snaps the occurrences back to another translation.
   async open(
     strongsNumber: string,
     options: NavigationOptions = {},
@@ -510,8 +460,6 @@ export class WordStudyModel {
     this.#notify()
   }
 
-  // The inline install the section offers in its own place — the panel around
-  // it stays exactly as it was.
   async installLsj(): Promise<void> {
     if (this.#lsjInstalling) return
     const number = this.#number
@@ -562,8 +510,8 @@ export class WordStudyModel {
     ])
   }
 
-  // The LSJ section settles beside the entry, on the same token: an optional
-  // module missing is a state of that section alone, never of the panel.
+  // Settles on the panel's own token, beside the entry: an optional module
+  // missing is a state of this section alone, never of the panel.
   async #loadLsj(number: string, token: number): Promise<void> {
     if (!isGreek(number)) return
     const source = this.#lsjSource()
@@ -602,8 +550,6 @@ export class WordStudyModel {
     this.#notify()
   }
 
-  // The concordance stands on its own: a number the dictionaries carry no
-  // entry for still has occurrences, and still lists them.
   // A panel opened on a translation reads that one where it can, and the first
   // Tagged Translation installed where it cannot — a preference, not a choice.
   async #loadConcordance(number: string, token: number): Promise<void> {
@@ -725,11 +671,10 @@ export class WordStudyModel {
     }
   }
 
-  // The occurrences are matched by family whatever the dictionaries know, so
-  // the note follows what is knowable: the entry's own siblings where there is
-  // an entry, the family index where there is none, and — where no dictionary
-  // is installed to say either way — the ambiguity itself, which is exactly
-  // where it is least visible.
+  // Occurrences are matched by family whatever the dictionaries know, so the
+  // note follows what is knowable: the entry's own siblings, the family index
+  // where no entry answers, and — where no dictionary is installed to say
+  // either way — the ambiguity itself, which is where it is least visible.
   #familyUndifferentiated(loaded: LoadedConcordance): boolean {
     if (this.#found !== null) return this.#found.siblings.length > 0
     if (this.#familySiblings !== null) return this.#familySiblings.length > 0

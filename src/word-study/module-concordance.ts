@@ -1,13 +1,13 @@
 import {
   familySpans,
   isTranslationManifest,
+  occurrencesByBook,
   strongsFamily,
   verseTextOf,
   type FormatSpan,
   type ModuleStore,
   type VerseContent,
 } from '../modules'
-import { decodeVerseId } from '../reference'
 import type {
   ConcordanceRendering,
   ConcordanceSegment,
@@ -35,28 +35,18 @@ const segmentsOf = (
 
 const EDGE_PUNCTUATION = /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu
 
-// The words one tag span puts on screen, as a chip would name them: the
-// surface itself, less whatever punctuation the span happens to run over.
+// Less whatever punctuation the span happens to run over.
 const surfaceOf = (text: string, span: FormatSpan): string =>
   text.slice(span.start, span.end).replace(EDGE_PUNCTUATION, '')
 
-// One rendering as it is being gathered: the verses it stands in, and how
-// often each spelling of it was seen, so the chip is named with the commonest.
+// Spellings are counted while they are gathered, so the chip can be named
+// with the commonest of them.
 type GatheredRendering = { verseIds: number[]; forms: Map<string, number> }
 
 const commonestForm = (forms: Map<string, number>): string =>
   [...forms.entries()].reduce((best, form) =>
     form[1] > best[1] ? form : best,
   )[0]
-
-const byBook = (verseIds: number[]): Map<number, number[]> => {
-  const books = new Map<number, number[]>()
-  for (const verseId of verseIds) {
-    const book = decodeVerseId(verseId).book
-    books.set(book, [...(books.get(book) ?? []), verseId])
-  }
-  return books
-}
 
 // The Word Study Panel's concordance, served out of the installed modules: the
 // Concordance Index answers which verses, and each occurrence's rendering is
@@ -77,9 +67,8 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
     occurrences: (translationId, strongsNumber) =>
       store.occurrences(translationId, strongsNumber),
 
-    // The translation's own renderings of the family, read off the same tag
-    // spans the occurrence rows emphasize: spellings that differ only in case or
-    // punctuation are one rendering, named with the commonest of them.
+    // Spellings that differ only in case or punctuation are one rendering,
+    // named with the commonest of them.
     renderings: async (translationId, strongsNumber) => {
       const verseIds = await store.occurrences(translationId, strongsNumber)
       const key = [
@@ -89,7 +78,7 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
       ].join(':')
       if (held?.key === key) return held.renderings
       const gathered = new Map<string, GatheredRendering>()
-      for (const [book, ids] of byBook(verseIds)) {
+      for (const [book, ids] of occurrencesByBook(verseIds)) {
         const content = await store.bookContent(translationId, book)
         if (content === null) continue
         for (const verseId of ids) {
@@ -123,7 +112,7 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
 
     versesFor: async (translationId, strongsNumber, verseIds) => {
       const verses: ConcordanceVerse[] = []
-      for (const [book, ids] of byBook(verseIds)) {
+      for (const [book, ids] of occurrencesByBook(verseIds)) {
         const content = await store.bookContent(translationId, book)
         if (content === null) continue
         for (const verseId of ids) {
