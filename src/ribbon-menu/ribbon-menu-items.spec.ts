@@ -19,7 +19,7 @@ describe('buildRibbonMenuSections', () => {
     expect(sections).toHaveLength(1)
     expect(sections[0].label).toBe(null)
     expect(sections[0].items.map((item) => [item.title, item.icon])).toEqual([
-      ['Open reader', 'book-open-text'],
+      ['Open scripture reader', 'book-open-text'],
       ['Open study panel', 'book-marked'],
     ])
   })
@@ -38,6 +38,23 @@ describe('buildRibbonMenuSections', () => {
 
     studyPanel.onClick(click())
     expect(openStudyPanel).toHaveBeenCalledTimes(1)
+  })
+
+  // The gap the user hit: the reader entry carried no modifier intent at all,
+  // so a mod-click could only ever reuse the open reader (tickets #78/#75).
+  it('opens the reader in a tab of its own on a mod-click', async () => {
+    const openReader = vi.fn()
+    const sections = await buildRibbonMenuSections(actions({ openReader }))
+    const reader = sections[0].items[0]
+
+    reader.onClick(click())
+    expect(openReader).toHaveBeenLastCalledWith({ newTab: false })
+
+    reader.onClick(click({ metaKey: true }))
+    expect(openReader).toHaveBeenLastCalledWith({ newTab: true })
+
+    reader.onClick(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true }))
+    expect(openReader).toHaveBeenLastCalledWith({ newTab: true })
   })
 
   // Where the reader's books are reachable from now that the nav faces stay

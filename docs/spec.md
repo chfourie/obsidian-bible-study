@@ -74,7 +74,7 @@ An Obsidian workspace leaf. Prototype (visual reference until implementation): [
 - **Companion material lives in the Study Panel**, never in the reader: clicking a verse selects it (shift-click extends the span) and the panel shows its details. The reader pane itself renders scripture text only.
 - **Multi-translation verse view:** stacked (abbreviation + text, one under another; full translation name as tooltip), not columns. The fallback translation is never substituted here — unavailable translations show an unavailable row.
 - **Indicators:** trailing marks after verse text — ● annotation (amber), ◆n intersecting notes (blue).
-- **Entry points:** nav icon/chip on a rendered reference opens the reader at that passage (current-passage highlight: tint + left bar; dismissible entry-context banner); command-palette entry and ribbon icon open at last position.
+- **Entry points:** nav icon/chip on a rendered reference opens the reader at that passage (current-passage highlight: tint + left bar; dismissible entry-context banner); the command-palette entry and the ribbon panel's **Open scripture reader** always open the scripture side, at the position scripture was last left (a reader sitting inside a book comes back out; one already on scripture keeps its place), and Cmd/Ctrl-activating opens it in a reader tab of its own.
 - **Shared elements:** translation pill switcher in the toolbar; per-translation copyright attribution line under the chapter; Strong's mode toggle (§7.3).
 
 ## 5. Annotations

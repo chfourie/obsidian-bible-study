@@ -17,7 +17,7 @@ import {
   isTranslationManifest,
   type ModuleStore,
 } from '../modules'
-import type { Reference } from '../reference'
+import { isNonBiblicalBook, type Reference } from '../reference'
 import { ModulePassageSource, PassageRepository } from '../rendering'
 import type { VaultReferenceIndex } from '../vault-index'
 import {
@@ -62,6 +62,10 @@ export class ReaderFeature
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeCrossReferences: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
+  // Books and scripture share one reader but not one entry point: the reader
+  // entry always lands on the scripture side, so where scripture was left
+  // outlives however far into a book the reader has since wandered.
+  #lastScripturePosition: ReaderPosition = DEFAULT_POSITION
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
   readonly #crossReferences: CrossReferenceCatalog
@@ -104,7 +108,7 @@ export class ReaderFeature
     )
     this.plugin.addCommand({
       id: 'open-reader',
-      name: 'Open reader',
+      name: 'Open scripture reader',
       callback: () => void this.openReader(),
     })
   }
@@ -220,6 +224,8 @@ export class ReaderFeature
     )
     model.subscribe(() => {
       this.#lastPosition = model.view.position
+      if (!isNonBiblicalBook(model.view.position.book))
+        this.#lastScripturePosition = model.view.position
     })
     this.#models.add(model)
     return model
@@ -301,15 +307,20 @@ export class ReaderFeature
     return { book, chapter: installed.sections[0]?.chapter ?? 1 }
   }
 
-  async openReader(): Promise<void> {
-    const workspace = this.plugin.app.workspace
-    const existing = workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
-    if (existing) {
-      await workspace.revealLeaf(existing)
+  // The reader entry point, wherever it is triggered from: always the
+  // scripture side, at the position scripture was last left. A reader already
+  // showing scripture keeps its place; one left inside a book comes back out.
+  async openReader(options: { newTab?: boolean } = {}): Promise<void> {
+    const position = this.#lastScripturePosition
+    if (options.newTab === true) {
+      await this.#openInNewTab(position)
       return
     }
-    const lastPosition = this.#lastPosition
-    await this.#withReaderView((view) => view.model.openPosition(lastPosition))
+    await this.#withReaderView(async (view) => {
+      if (view.model.opened && !isNonBiblicalBook(view.model.view.position.book))
+        return
+      await view.model.openPosition(position)
+    })
   }
 
   async #withReaderView(

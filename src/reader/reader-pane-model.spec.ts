@@ -3333,7 +3333,9 @@ describe('ref spans', () => {
 
   // Every section of the book reads the same, so a Note pointer's target
   // renders as readily as the paragraph that points at it.
-  const citingBookModel = (): ReaderPaneModel =>
+  const citingBookModel = (
+    overrides: Partial<ReaderPaneDeps> = {},
+  ): ReaderPaneModel =>
     bookModelWith({
       passages: {
         passage: async (reference, translationId) => {
@@ -3362,6 +3364,7 @@ describe('ref spans', () => {
           { ...CROWNS, refs: [{ start: 0, end: 11, ranges: [JOHN_5_30] }] },
         ],
       },
+      ...overrides,
     })
 
   it('surfaces a paragraph ref span as a segment property', async () => {
@@ -3421,6 +3424,30 @@ describe('ref spans', () => {
     await model.openRefSpan([JOHN_5_30])
 
     expect(visited).toEqual([{ book: 43, chapter: 5 }])
+  })
+
+  // A mod-clicked citation travels the same new-tab seam every other nav
+  // target does, so the book pane keeps its place (tickets #78/#75 follow-up).
+  it('spawns a tab at a mod-clicked citation and leaves the book pane put', async () => {
+    const opened: ReaderPosition[] = []
+    const model = citingBookModel({ newTab: (position) => opened.push(position) })
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    await model.openRefSpan([JOHN_5_30], { newTab: true })
+
+    expect(opened).toEqual([{ book: 43, chapter: 5 }])
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
+  })
+
+  it('spawns a tab at a mod-clicked Note pointer', async () => {
+    const opened: ReaderPosition[] = []
+    const model = citingBookModel({ newTab: (position) => opened.push(position) })
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    await model.openRefSpan([NOTE_A], { newTab: true })
+
+    expect(opened).toEqual([{ book: HUMILITY, chapter: 13 }])
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
   })
 
   it('ignores a span with no ranges', async () => {
