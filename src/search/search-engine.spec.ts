@@ -199,3 +199,58 @@ describe('SearchEngine', () => {
     expect(source.indexWrites).toEqual(['web', 'kjv'])
   })
 })
+
+describe('SearchEngine eager indexing', () => {
+  it('builds and persists a module’s index ahead of any search', async () => {
+    const { engine, source } = engineOver()
+
+    await engine.indexModule('web')
+
+    expect(source.indexWrites).toEqual(['web'])
+    expect(source.contentReads).toEqual(['web/1', 'web/2', 'web/43'])
+  })
+
+  it('leaves the first search with nothing to build and no progress to report', async () => {
+    const { engine, source } = engineOver()
+    await engine.indexModule('web')
+    source.forget()
+
+    const progress: IndexBuildProgress[] = []
+    expect(
+      (await engine.search('web', parseSearchQuery('vine'), (step) =>
+        progress.push(step),
+      )).map((hit) => hit.verseId),
+    ).toEqual([makeVerseId(43, 15, 1)])
+    expect(progress).toEqual([])
+    expect(source.contentReads).toEqual([])
+    expect(source.indexWrites).toEqual([])
+  })
+
+  it('rebuilds against the fresh checksum when a module is downloaded again', async () => {
+    const { engine, source } = engineOver()
+    await engine.indexModule('web')
+    source.redownload('web', 'sha-web-2', {
+      43: { [makeVerseId(43, 15, 5)]: 'I am the vine, you are the branches.' },
+    })
+    source.forget()
+
+    await engine.indexModule('web')
+
+    expect(source.indexWrites).toEqual(['web'])
+    const progress: IndexBuildProgress[] = []
+    expect(
+      (await engine.search('web', parseSearchQuery('branches'), (step) =>
+        progress.push(step),
+      )).map((hit) => hit.verseId),
+    ).toEqual([makeVerseId(43, 15, 5)])
+    expect(progress).toEqual([])
+  })
+
+  it('indexes a module that is not installed as nothing', async () => {
+    const { engine, source } = engineOver()
+
+    await engine.indexModule('nope')
+
+    expect(source.indexWrites).toEqual([])
+  })
+})

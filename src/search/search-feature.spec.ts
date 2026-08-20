@@ -20,7 +20,7 @@ type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 
 type FakeCommand = { id: string; name: string; callback: () => void }
 
-const fakeStore = (): ModuleStore =>
+const fakeStore = (): FakeSearchIndexSource =>
   new FakeSearchIndexSource(
     {
       web: { 43: { [makeVerseId(43, 15, 1)]: 'I am the true vine.' } },
@@ -31,7 +31,7 @@ const fakeStore = (): ModuleStore =>
     },
     undefined,
     { 'hum-m1895': 101 },
-  ) as unknown as ModuleStore
+  )
 
 const harness = (settings: Partial<ScriptureStudySettings> = {}) => {
   const leaves: FakeLeaf[] = []
@@ -97,11 +97,17 @@ const harness = (settings: Partial<ScriptureStudySettings> = {}) => {
       saved = data as ScriptureStudySettings
     },
   })
-  const feature = new SearchFeature(plugin, fakeStore(), settingsStore)
+  const store = fakeStore()
+  const feature = new SearchFeature(
+    plugin,
+    store as unknown as ModuleStore,
+    settingsStore,
+  )
   feature.useNavigator(navigator)
   feature.useSettings(stored)
   return {
     feature,
+    store,
     leaves,
     commands,
     revealLeaf,
@@ -312,5 +318,29 @@ describe('SearchFeature scope', () => {
     model.setQuery('humility')
     await model.submit()
     expect(model.view.books.map((group) => group.name)).toEqual(['Humility'])
+  })
+})
+
+describe('SearchFeature eager indexing', () => {
+  it('builds a module’s index when its install asks for one', async () => {
+    const { feature, store } = harness()
+
+    await feature.indexModule('kjv')
+
+    expect(store.indexWrites).toEqual(['kjv'])
+  })
+
+  it('leaves the pane nothing to index on its first search', async () => {
+    const { feature, store } = harness()
+    await feature.indexModule('web')
+    store.forget()
+    const model = feature.createModel()
+
+    model.setQuery('vine')
+    await model.submit()
+
+    expect(model.view.totalHits).toBe(1)
+    expect(model.view.indexing).toBeNull()
+    expect(store.contentReads).toEqual([])
   })
 })

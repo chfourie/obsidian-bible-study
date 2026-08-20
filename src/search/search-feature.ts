@@ -70,6 +70,12 @@ export class SearchFeature extends PluginFeature {
     this.#models.forEach((model) => model.refresh())
   }
 
+  // What module install calls when a download lands: the module's index is
+  // built and persisted there and then, ahead of any query.
+  readonly indexModule = async (moduleId: string): Promise<void> => {
+    await this.#engine.indexModule(moduleId)
+  }
+
   useNavigator(navigator: ReferenceNavigator): void {
     this.#navigator = navigator
   }

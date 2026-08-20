@@ -100,6 +100,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.annotations.usePrefill(() => this.reader.prefillReference())
     this.studyPanel.useNavigator(this.reader)
     this.search.useNavigator(this.reader)
+    this.modules.manager.useIndexer(this.search.indexModule)
     this.studyPanel.useAnnotationPrompt((prefill) =>
       this.annotations.promptAnnotation(prefill),
     )

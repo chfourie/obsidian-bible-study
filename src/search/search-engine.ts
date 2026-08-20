@@ -38,6 +38,13 @@ export class SearchEngine {
     return index === null ? [] : searchIndex(index, query)
   }
 
+  // The warm-up a freshly installed module gets, so the first query against it
+  // finds an index already stamped with the download's checksum. Nothing here
+  // that the lazy path does not do on its own — only sooner.
+  async indexModule(moduleId: string): Promise<void> {
+    await this.#index(moduleId)
+  }
+
   // A module with no manifest is not installed: nothing to index, and no index
   // file left behind for it.
   async #index(
