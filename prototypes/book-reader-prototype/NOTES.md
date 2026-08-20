@@ -21,7 +21,7 @@
 ## Verdict (final — ticket #54 resolved)
 
 - **Typography: variant B wins** — serif book typography, centered `CHAPTER n` + small-caps title, centered epigraph, justified prose, margin-gutter paragraph numbers (Hover default).
-- **Nav: not a variant choice** — books reuse the scripture reader's existing Nav toggle (global default + in-pane switch). Tree side = B's named-section TOC; breadcrumb side = C's `Humility › [section dropdown]` row.
+- **Nav: not a variant choice** — books reuse the scripture reader's existing Nav toggle (global default + in-pane switch). Tree side = **B's named-section TOC** (the book's own contents; explicitly *not* A's Books-group-with-chapter-grid inside the scripture tree); breadcrumb side = C's `Humility › [section dropdown]` row.
 - **New decision (applies to scripture reading too): reader option defaults split per device class** — separate desktop and mobile global defaults. Rationale: left-hand TOC/tree preferred on desktop, breadcrumb fits mobile's limited space.
 - Shared elements accepted as prototyped: toggle set (Nav + font size + Para numbers On/Hover; Layout/Red letter/Strong's hidden), single non-switchable edition pill, Study Panel paragraph details (locator + full citation + paragraph, no Translations tab), Copy formatted reference action, live-styled epigraph/inline scripture refs (behavior = #58).
 
