@@ -5,7 +5,7 @@ against; the command passes no anchor and the panel centres (mobile).
 -->
 <script lang="ts">
   import { setIcon } from 'obsidian'
-  import { activate, computeMenuPanelPosition } from '../ui'
+  import { computeMenuPanelPosition, pressable, wirePanelDismiss } from '../ui'
   import type { RibbonMenuItem, RibbonMenuSection } from './ribbon-menu-items'
 
   let {
@@ -50,6 +50,7 @@ against; the command passes no anchor and the panel centres (mobile).
 
   function updatePanelPosition() {
     const rect = anchorEl?.getBoundingClientRect()
+    const win = panelEl?.ownerDocument.win ?? activeWindow
     const { top, left } = computeMenuPanelPosition({
       anchor: rect
         ? {
@@ -65,8 +66,8 @@ against; the command passes no anchor and the panel centres (mobile).
         height: panelEl?.offsetHeight ?? 0,
       },
       viewport: {
-        width: activeWindow.innerWidth,
-        height: activeWindow.innerHeight,
+        width: win.innerWidth,
+        height: win.innerHeight,
       },
       placement: 'right',
     })
@@ -98,42 +99,23 @@ against; the command passes no anchor and the panel centres (mobile).
   }
 
   // Position once the portaled panel actually exists — a first-open pass
-  // before `panelEl` binds would fall back to estimated dimensions.
+  // before `panelEl` binds would fall back to estimated dimensions. Dismiss
+  // listeners wire against the panel's own document: the portal may have
+  // dropped it into a popout window, whose events never reach the main
+  // window's `document` (where `svelte:window` and delegated handlers live).
   $effect(() => {
-    if (open && panelEl) updatePanelPosition()
-  })
-
-  function handleDocumentClick(event: MouseEvent) {
-    if (!open) return
-    const target = event.target as Node | null
-    // The ribbon click that opened us bubbles to window in the same gesture;
-    // ignore clicks within the anchor so we don't immediately re-close.
-    if (target && anchorEl?.contains(target)) return
-    if (target && panelEl?.contains(target)) return
-    closePanel()
-  }
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (open && event.key === 'Escape') closePanel()
-  }
-
-  function handleViewportChange() {
-    if (open) updatePanelPosition()
-  }
-
-  $effect(() => {
-    if (!open) return
-    activeDocument.addEventListener('scroll', handleViewportChange, true)
-    return () =>
-      activeDocument.removeEventListener('scroll', handleViewportChange, true)
+    if (!open || !panelEl) return
+    updatePanelPosition()
+    return wirePanelDismiss(panelEl.ownerDocument, {
+      // The ribbon click that opened us bubbles in the same gesture; treating
+      // the anchor as inside avoids an immediate re-close.
+      isInsidePanel: (target) =>
+        Boolean(anchorEl?.contains(target) || panelEl?.contains(target)),
+      onDismiss: closePanel,
+      onViewportChange: updatePanelPosition,
+    })
   })
 </script>
-
-<svelte:window
-  onclick={handleDocumentClick}
-  onkeydown={handleKeydown}
-  onresize={handleViewportChange}
-/>
 
 {#if open}
   <div
@@ -149,12 +131,13 @@ against; the command passes no anchor and the panel centres (mobile).
         <div class="bsm-section-label">{section.label}</div>
       {/if}
       {#each section.items as item (item.title)}
+        <!-- pressable, not onclick/onkeydown: Svelte delegates those to the
+             main window's document, unreachable from a popout portal. -->
         <span
           role="menuitem"
           tabindex="0"
           class="bsm-item"
-          onclick={(event) => runItem(item, event)}
-          onkeydown={activate((event) => runItem(item, event))}
+          use:pressable={(event) => runItem(item, event)}
         >
           <span class="bsm-icon" aria-hidden="true" use:icon={item.icon}></span>
           <span>{item.title}</span>
