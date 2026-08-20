@@ -18,6 +18,11 @@
 - **Live scripture refs** in book text (epigraph source, inline `(Phil. 2:8)`) styled as accent links — behavior is ticket #58's question, only the look is shown here.
 - ● annotation / ◆n intersection markers on paragraphs, attribution line at chapter foot.
 
-## Verdict (pending)
+## Verdict (final — ticket #54 resolved)
 
-_Awaiting user reaction — record the winning variant (or the mix) here, then resolve #54 and delete or keep this folder as the spec-assembly reference._
+- **Typography: variant B wins** — serif book typography, centered `CHAPTER n` + small-caps title, centered epigraph, justified prose, margin-gutter paragraph numbers (Hover default).
+- **Nav: not a variant choice** — books reuse the scripture reader's existing Nav toggle (global default + in-pane switch). Tree side = B's named-section TOC; breadcrumb side = C's `Humility › [section dropdown]` row.
+- **New decision (applies to scripture reading too): reader option defaults split per device class** — separate desktop and mobile global defaults. Rationale: left-hand TOC/tree preferred on desktop, breadcrumb fits mobile's limited space.
+- Shared elements accepted as prototyped: toggle set (Nav + font size + Para numbers On/Hover; Layout/Red letter/Strong's hidden), single non-switchable edition pill, Study Panel paragraph details (locator + full citation + paragraph, no Translations tab), Copy formatted reference action, live-styled epigraph/inline scripture refs (behavior = #58).
+
+Prototype kept as the visual reference for spec assembly (#57); delete this folder when the map closes.
