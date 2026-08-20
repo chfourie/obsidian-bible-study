@@ -540,15 +540,40 @@ describe('verse details', () => {
     })
   })
 
-  it('keeps the verse selected and its details loaded when clicked again', async () => {
+  it('deselects the verse and drops its details when clicked again', async () => {
     const model = modelWith(twoTranslations())
     await model.openAt(ref('John 15:4'), 'web')
 
     await model.selectVerse(verse4)
     await model.selectVerse(verse4)
 
+    expect(model.studyMaterial.selectedVerseId).toBe(null)
+    expect(model.studyMaterial.details).toBe(null)
+  })
+
+  it('collapses an extended selection to its anchor when the anchor is clicked', async () => {
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+    model.extendSelectionTo(makeVerseId(43, 15, 2))
+    await model.selectVerse(verse4)
+
     expect(model.studyMaterial.selectedVerseId).toBe(verse4)
-    expect(detailsOf(model).translations).toHaveLength(2)
+    expect(model.studyMaterial.selectionEndId).toBe(null)
+  })
+
+  it('clears the selection and its details on the clear action', async () => {
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+
+    model.clearSelection()
+
+    expect(model.studyMaterial.selectedVerseId).toBe(null)
+    expect(model.studyMaterial.selectionEndId).toBe(null)
+    expect(model.studyMaterial.details).toBe(null)
+    expect(model.selectionReference()).toBe(null)
   })
 
   it('drops the previous verse details the moment another verse is clicked', async () => {
@@ -2265,6 +2290,24 @@ describe('the study material contract', () => {
 
     await model.selectWord(verse4, ['G3306'])
     expect(selections).toBe(2)
+  })
+
+  it('keeps deselection and clearing off the selection feed', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+    await model.selectVerse(verse2)
+    const source = sourceOf(model)
+    let selections = 0
+    source.onSelection(() => selections++)
+
+    await model.selectVerse(verse2)
+    expect(selections).toBe(0)
+
+    await model.selectVerse(verse4)
+    expect(selections).toBe(1)
+
+    source.clearSelection()
+    expect(selections).toBe(1)
   })
 
   it('keeps material changes that are not selections off the feed', async () => {

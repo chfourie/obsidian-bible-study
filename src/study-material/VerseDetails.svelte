@@ -39,7 +39,16 @@ around it — annotations and mentions.
       class:scripture-study-psalm-heading={segment.psalmHeading}
     >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
 
-<div class="bsm-details-title">{details.title}</div>
+<div class="bsm-details-head">
+  <span class="bsm-details-title">{details.title}</span>
+  <button
+    type="button"
+    class="bsm-details-clear"
+    aria-label="Clear verse selection"
+    title="Clear verse selection"
+    onclick={() => source.clearSelection()}
+  >×</button>
+</div>
 
 {#if details.strongs.length > 0}
   <div class="bsm-group-label">Strong's</div>
@@ -119,10 +128,36 @@ around it — annotations and mentions.
 {/if}
 
 <style>
+  .bsm-details-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
   .bsm-details-title {
     font-size: var(--font-smallest);
     color: var(--text-faint);
-    margin-bottom: 6px;
+  }
+
+  .bsm-details-clear {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0 2px;
+    height: auto;
+    line-height: 1;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsm-details-clear:hover {
+    color: var(--text-accent);
+    background: none;
+    box-shadow: none;
   }
 
   .bsm-details-empty {

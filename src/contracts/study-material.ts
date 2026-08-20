@@ -99,6 +99,9 @@ export interface StudyMaterialSource {
   // change: a surface may act on a deliberate selection — revealing itself,
   // say — without acting on material that merely changed underneath it.
   onSelection(listener: () => void): () => void
+  // Dismisses the selection outright: details and row highlight go with it.
+  // Never fires the selection feed — clearing is not a deliberate selection.
+  clearSelection(): void
   // The reference an annotation of this verse covers: the current selection
   // when it contains the verse, otherwise the verse alone.
   annotationReference(verseId: number): Reference

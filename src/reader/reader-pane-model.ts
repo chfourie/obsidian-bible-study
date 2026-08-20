@@ -497,9 +497,15 @@ export class ReaderPaneModel implements StudyMaterialSource {
     await this.#loadDetails(verseId)
   }
 
-  // A verse click always selects — the details it loads belong to the Study
-  // Panel, so there is nothing in the reader to expand or collapse.
+  // Clicking the sole selected verse deselects it; a click on the anchor of
+  // an extended selection collapses the range to that verse instead. The
+  // details a selection loads belong to the Study Panel, so there is nothing
+  // in the reader to expand or collapse.
   async selectVerse(verseId: number): Promise<void> {
+    if (this.#selectedVerseId === verseId && this.#selectionEnd === null) {
+      this.clearSelection()
+      return
+    }
     const loaded = this.#details
     this.#wordStrongs = null
     this.#select(verseId)
@@ -517,6 +523,13 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#selectionEnd = null
     if (this.#details?.verseId !== verseId) this.#details = null
     this.#announceSelection()
+    this.#notify()
+  }
+
+  // Dismissal, not selection: nothing goes on the selection feed, so clearing
+  // never reveals the panel.
+  clearSelection(): void {
+    this.#resetSelection()
     this.#notify()
   }
 
