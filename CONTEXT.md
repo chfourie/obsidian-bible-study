@@ -82,3 +82,18 @@ A live reference inside a Book's stored content, parsed at module build time: a 
 
 ### Pinned Translation
 The explicit translation token the plugin writes into a reference the moment its first highlight is created, binding the cues' offsets to that translation's text. Changing the translation through plugin UI deletes the cues; hand-editing it leaves them to render best-effort.
+
+### Search Pane
+The singleton workspace view (default home: right sidebar, freely movable) for full-text search over installed modules. A query runs on explicit submit against the current Search Scope; results persist while the pane lives, and nothing survives a restart except the scope. Independent of focus — unlike the Study Panel, it never follows the active tab.
+
+### Search Scope
+What one query searches over: exactly one Translation, an OT/NT/all testament filter, and any subset of installed Books. Remembered across restarts as per-device configuration; a remembered translation whose module is gone falls back to the Fallback Translation.
+
+### Search Query
+One or more words that must all appear in a single atom's text (case- and diacritic-folded, each word matching as a prefix), with quoted phrases required to appear contiguously.
+
+### Hit
+One atom (verse or Book paragraph) whose text satisfies the Search Query in the searched module. Hits present in Canonical Grid order, grouped by book, matched words emphasized. Activating a hit opens the reader at that atom through the entry mechanism — banner shown, matched words emphasized until the banner is dismissed.
+
+### Search Index
+The persistent per-module structure that answers Search Queries without scanning the module's text. Its lifecycle is the module's: built when the module is installed (or lazily on first use), discarded with it, and rebuilt whole whenever the module's content or the index format changes — never updated incrementally.
