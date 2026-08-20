@@ -28,17 +28,17 @@ export const orderChapterAnnotations = <T extends ChapterAnnotationItem>(
   const placement = (item: T): number => {
     const declared = firstIntersectingStart(item.reference.ranges, scope)
     if (declared !== Number.POSITIVE_INFINITY) return declared
-    return Math.min(
-      ...item.intersecting.map((reference) =>
-        firstIntersectingStart(reference.ranges, scope),
-      ),
+    return firstIntersectingStart(
+      item.intersecting.flatMap((reference) => reference.ranges),
+      scope,
     )
   }
   const tiebreak = (a: T, b: T): number =>
     ordering === 'created-oldest-first'
       ? a.created - b.created
       : a.file.localeCompare(b.file)
-  return [...items].sort(
-    (a, b) => placement(a) - placement(b) || tiebreak(a, b),
-  )
+  return items
+    .map((item) => ({ item, placement: placement(item) }))
+    .sort((a, b) => a.placement - b.placement || tiebreak(a.item, b.item))
+    .map(({ item }) => item)
 }

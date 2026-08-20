@@ -1,4 +1,8 @@
-import { orderChapterAnnotations } from '../annotations'
+import {
+  chapterAnnotationViews,
+  loadChapterAnnotations,
+  type AnnotationDetails,
+} from '../annotations'
 import type {
   ChapterAnnotationView,
   ChapterMentionView,
@@ -78,7 +82,7 @@ export type StudyPanelCrossReferences = {
   intersecting: (reference: Reference) => CrossReference[]
 }
 
-export type AnnotationDetails = { body: string; created: number }
+export type { AnnotationDetails } from '../annotations'
 
 export type StudyPanelDeps = {
   passages: PassageSource
@@ -360,36 +364,17 @@ export class StudyPanelModel {
         })),
       scope,
     )
-    const items = await Promise.all(
-      groups
-        .filter((group) => group.annotation)
-        .map(async (group) => {
-          const reference = group.annotationReference
-          if (reference === null) return null
-          const details = await this.deps.annotationDetails(group.file)
-          if (details === null) return null
-          return {
-            file: group.file,
-            created: details.created,
-            reference,
-            intersecting: group.occurrences.map(
-              (occurrence) => occurrence.reference,
-            ),
-            body: details.body,
-          }
-        }),
+    const items = await loadChapterAnnotations(
+      groups,
+      this.deps.annotationDetails,
     )
     if (token !== this.#intersectionToken) return
     this.#mentions = mentions
-    this.#annotations = orderChapterAnnotations(
-      items.filter((item) => item !== null),
+    this.#annotations = chapterAnnotationViews(
+      items,
       scope,
       this.#annotationOrdering,
-    ).map(({ file, reference, body }) => ({
-      file,
-      label: formatReference(reference),
-      body,
-    }))
+    )
     this.#notify()
   }
 

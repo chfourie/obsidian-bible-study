@@ -23,23 +23,31 @@ export const chapterMentionViews = (
   sources: readonly ChapterMentionSource[],
   scope: readonly VerseRange[],
 ): ChapterMentionView[] => {
-  const start = (reference: Reference): number =>
-    firstIntersectingStart(reference.ranges, scope)
   const intersectingLabels = (references: Reference[]): string[] => {
     const labels = references
-      .filter((reference) => start(reference) < Number.POSITIVE_INFINITY)
-      .sort((a, b) => start(a) - start(b))
-      .map(formatReference)
+      .map((reference) => ({
+        reference,
+        start: firstIntersectingStart(reference.ranges, scope),
+      }))
+      .filter(({ start }) => start < Number.POSITIVE_INFINITY)
+      .sort((a, b) => a.start - b.start)
+      .map(({ reference }) => formatReference(reference))
     return [...new Set(labels)]
   }
-  const position = (source: ChapterMentionSource): number =>
-    Math.min(Number.POSITIVE_INFINITY, ...source.references.map(start))
   return sources
-    .filter((source) => position(source) < Number.POSITIVE_INFINITY)
-    .sort(
-      (a, b) => position(a) - position(b) || a.file.localeCompare(b.file),
-    )
     .map((source) => ({
+      source,
+      position: firstIntersectingStart(
+        source.references.flatMap((reference) => reference.ranges),
+        scope,
+      ),
+    }))
+    .filter(({ position }) => position < Number.POSITIVE_INFINITY)
+    .sort(
+      (a, b) =>
+        a.position - b.position || a.source.file.localeCompare(b.source.file),
+    )
+    .map(({ source }) => ({
       file: source.file,
       title: noteTitle(source.file),
       labels: intersectingLabels(source.references),

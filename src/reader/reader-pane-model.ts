@@ -18,7 +18,11 @@ import {
   type CrossReferenceEditing,
   type CrossReferenceView,
 } from '../cross-references'
-import { orderChapterAnnotations } from '../annotations'
+import {
+  chapterAnnotationViews,
+  loadChapterAnnotations,
+  type AnnotationDetails,
+} from '../annotations'
 import { chapterMentionViews } from '../mentions'
 import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
 import type {
@@ -36,6 +40,7 @@ import {
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
   FONT_SCALE_STEP,
+  type AnnotationOrdering,
 } from '../data-access'
 import { isPoetryVerse } from '../rendering'
 import type { PassageSource, VerseSegment } from '../rendering'
@@ -67,13 +72,6 @@ export type ReaderNavigation = (
 ) => Promise<void>
 
 const OPEN_DIRECTLY: ReaderNavigation = (_position, open) => open()
-
-export type AnnotationOrdering = 'created-oldest-first' | 'path-a-z'
-
-export type AnnotationDetails = {
-  body: string
-  created: number
-}
 
 export type ReaderFirstRunDeps = {
   translationName: string
@@ -809,35 +807,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
         })),
       chapter.ranges,
     )
-    const annotationGroups = groups.filter((group) => group.annotation)
-    const items = await Promise.all(
-      annotationGroups.map(async (group) => {
-        const reference = group.annotationReference
-        if (reference === null) return null
-        const details = await this.deps.annotationDetails(group.file)
-        if (details === null) return null
-        return {
-          file: group.file,
-          created: details.created,
-          reference,
-          intersecting: group.occurrences.map(
-            (occurrence) => occurrence.reference,
-          ),
-          body: details.body,
-        }
-      }),
+    const items = await loadChapterAnnotations(
+      groups,
+      this.deps.annotationDetails,
     )
     if (token !== this.#chapterMaterialToken) return
     this.#chapterMentions = mentions
-    this.#chapterAnnotations = orderChapterAnnotations(
-      items.filter((item) => item !== null),
+    this.#chapterAnnotations = chapterAnnotationViews(
+      items,
       chapter.ranges,
       this.#annotationOrdering,
-    ).map(({ file, reference, body }) => ({
-      file,
-      label: formatReference(reference),
-      body,
-    }))
+    )
     this.#notify()
   }
 

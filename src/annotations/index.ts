@@ -1,5 +1,7 @@
+export * from './annotation-details'
 export * from './annotation-file-path'
 export * from './annotation-vault'
+export * from './chapter-annotation-views'
 export * from './annotations-feature'
 export * from './compose-annotation-note'
 export * from './create-annotation'

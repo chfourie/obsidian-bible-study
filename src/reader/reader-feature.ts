@@ -10,9 +10,10 @@ import {
   type CrossReferenceCatalog,
   type CrossReference,
 } from '../cross-references'
+import { readAnnotationDetails } from '../annotations'
 import { PluginFeature } from '../data-access'
 import { isTranslationManifest, type ModuleStore } from '../modules'
-import { frontmatterLength, type Reference } from '../reference'
+import type { Reference } from '../reference'
 import { ModulePassageSource, PassageRepository } from '../rendering'
 import type { VaultReferenceIndex } from '../vault-index'
 import {
@@ -166,7 +167,8 @@ export class ReaderFeature
         intersecting: (reference) =>
           this.index.intersectingOccurrences(reference),
         crossReferences: this.#crossReferences,
-        annotationDetails: (file) => this.#annotationDetails(file),
+        annotationDetails: (file) =>
+          readAnnotationDetails(this.plugin.app.vault, file),
         strongs: this.#strongs,
         firstRun: this.#firstRun,
       },
@@ -195,19 +197,6 @@ export class ReaderFeature
 
   studyMaterialFor(view: View | null): StudyMaterialSource | null {
     return view instanceof ReaderView ? view.model : null
-  }
-
-  async #annotationDetails(
-    file: string,
-  ): Promise<{ body: string; created: number } | null> {
-    const vault = this.plugin.app.vault
-    const noteFile = vault.getFileByPath(file)
-    if (noteFile === null) return null
-    const content = await vault.cachedRead(noteFile)
-    return {
-      body: content.slice(frontmatterLength(content)),
-      created: noteFile.stat.ctime,
-    }
   }
 
   prefillReference(): Reference | null {

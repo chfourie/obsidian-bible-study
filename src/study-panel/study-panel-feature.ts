@@ -12,20 +12,17 @@ import {
   type CrossReference,
   type CrossReferenceCatalog,
 } from '../cross-references'
+import { readAnnotationDetails } from '../annotations'
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
-import { frontmatterLength, type Reference } from '../reference'
+import type { Reference } from '../reference'
 import {
   ModulePassageSource,
   PassageRepository,
   renderContextFromSettings,
 } from '../rendering'
 import { extractOccurrences, type OccurrenceGroup } from '../vault-index'
-import {
-  StudyPanelModel,
-  type ActiveNote,
-  type AnnotationDetails,
-} from './study-panel-model'
+import { StudyPanelModel, type ActiveNote } from './study-panel-model'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelView } from './study-panel-view'
 import { TabMemory, type StudyTabState } from './tab-memory'
 
@@ -182,7 +179,8 @@ export class StudyPanelFeature extends PluginFeature {
           ),
         intersecting: (reference) =>
           this.#index.intersectingOccurrences(reference),
-        annotationDetails: (file) => this.#annotationDetails(file),
+        annotationDetails: (file) =>
+          readAnnotationDetails(this.plugin.app.vault, file),
       },
       {
         translationId: this.settings.defaultTranslationId,
@@ -348,16 +346,5 @@ export class StudyPanelFeature extends PluginFeature {
 
   #refreshIntersectingNotes(): void {
     this.#models.forEach((model) => void model.refreshIntersectingNotes())
-  }
-
-  async #annotationDetails(file: string): Promise<AnnotationDetails | null> {
-    const vault = this.plugin.app.vault
-    const noteFile = vault.getFileByPath(file)
-    if (noteFile === null) return null
-    const content = await vault.cachedRead(noteFile)
-    return {
-      body: content.slice(frontmatterLength(content)),
-      created: noteFile.stat.ctime,
-    }
   }
 }
