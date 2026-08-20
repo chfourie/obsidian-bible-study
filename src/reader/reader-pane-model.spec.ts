@@ -1,13 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  deregisterBook,
   deregisterBookVersification,
   enumerateVerseIds,
   makeVerseId,
   parseReference,
   rangeContains,
   referencesIntersect,
+  registerBook,
   registerBookVersification,
   type Reference,
+  type RegisteredBook,
 } from '../reference'
 import type { Epigraph } from '../modules'
 import type { Passage, PassageSource } from '../rendering'
@@ -82,6 +85,21 @@ const crossReferencesOf = (
   delete: async () => {},
   ...overrides,
 })
+
+// Captures what the copy action would put on the system clipboard, so specs
+// never touch the real one.
+const fakeClipboard = (): {
+  writeText: (text: string) => Promise<void>
+  copied: string[]
+} => {
+  const copied: string[] = []
+  return {
+    copied,
+    writeText: async (text: string) => {
+      copied.push(text)
+    },
+  }
+}
 
 const modelWith = (
   overrides: Partial<ReaderPaneDeps> = {},
@@ -659,6 +677,41 @@ describe('verse details', () => {
     expect(model.studyMaterial.details).toBe(null)
     await selecting
     expect(detailsOf(model).verseId).toBe(makeVerseId(43, 15, 5))
+  })
+})
+
+describe('copying the selection as a formatted reference', () => {
+  it('copies the single verse as a paste-ready reference', async () => {
+    const clipboard = fakeClipboard()
+    const model = modelWith({ clipboard })
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(makeVerseId(43, 15, 4))
+
+    await model.copyFormattedReference()
+
+    expect(clipboard.copied).toEqual(['{John 15:4}'])
+  })
+
+  it('copies an extended selection as one span', async () => {
+    const clipboard = fakeClipboard()
+    const model = modelWith({ clipboard })
+    await model.openAt(ref('John 15:2'), 'web')
+    await model.selectVerse(makeVerseId(43, 15, 2))
+    model.extendSelectionTo(makeVerseId(43, 15, 4))
+
+    await model.copyFormattedReference()
+
+    expect(clipboard.copied).toEqual(['{John 15:2-4}'])
+  })
+
+  it('copies nothing while no verse is selected', async () => {
+    const clipboard = fakeClipboard()
+    const model = modelWith({ clipboard })
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.copyFormattedReference()
+
+    expect(clipboard.copied).toEqual([])
   })
 })
 
@@ -3019,5 +3072,73 @@ describe('ReaderPaneModel book mode', () => {
     await model.openPosition({ book: HUMILITY, chapter: 1 })
 
     expect(model.view.status).toBe('ok')
+  })
+})
+
+// The book's addressable name — registered the way its module registers it
+// on install (ticket #72) — so the copied reference round-trips through the
+// same parser a note typed it into.
+const HUMILITY_REGISTRATION: RegisteredBook = {
+  id: HUMILITY,
+  name: 'Humility',
+  abbrev: 'Hum',
+  aliases: [],
+  moduleId: 'hum-m1895',
+  editionCode: 'HUM-M1895',
+  author: 'Andrew Murray',
+  year: 1895,
+  sections: HUMILITY_SECTIONS.map(({ chapter, name }) => ({
+    chapter,
+    name,
+    named: chapter === 0 || chapter >= 13,
+  })),
+}
+
+describe('copying a book selection as a formatted reference', () => {
+  beforeEach(() => {
+    registerBookVersification({
+      book: HUMILITY,
+      sections: HUMILITY_SECTIONS.map(({ chapter }) => ({
+        chapter,
+        paragraphs: 20,
+      })),
+    })
+    registerBook(HUMILITY_REGISTRATION)
+  })
+
+  afterEach(() => {
+    deregisterBookVersification(HUMILITY)
+    deregisterBook(HUMILITY)
+  })
+
+  it('copies an unnumbered section by its section number, round-tripping through the parser', async () => {
+    const clipboard = fakeClipboard()
+    const model = bookModelWith({ clipboard })
+    await model.openPosition({ book: HUMILITY, chapter: 0 })
+    await model.selectVerse(makeVerseId(HUMILITY, 0, 1))
+
+    await model.copyFormattedReference()
+
+    expect(clipboard.copied).toEqual(['{Humility 0:1}'])
+    const pasted = clipboard.copied[0].slice(1, -1)
+    expect(parseReference(pasted, { translationIds: [] })?.reference).toEqual(
+      bookRef(0, 1),
+    )
+  })
+
+  it('copies an extended paragraph selection as one span', async () => {
+    const clipboard = fakeClipboard()
+    const model = bookModelWith({ clipboard })
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    await model.selectVerse(makeVerseId(HUMILITY, 1, 2))
+    model.extendSelectionTo(makeVerseId(HUMILITY, 1, 3))
+
+    await model.copyFormattedReference()
+
+    expect(clipboard.copied).toEqual(['{Humility 1:2-3}'])
+    const pasted = clipboard.copied[0].slice(1, -1)
+    expect(parseReference(pasted, { translationIds: [] })?.reference).toEqual(
+      bookRef(1, 2, 3),
+    )
   })
 })

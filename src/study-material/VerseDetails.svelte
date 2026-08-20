@@ -78,6 +78,14 @@ controls beside the selection's title.
   ></span>
   <button
     type="button"
+    class="bsm-fold-all"
+    aria-label="Copy formatted reference"
+    title="Copy formatted reference"
+    use:icon={'copy'}
+    onclick={() => void source.copyFormattedReference()}
+  ></button>
+  <button
+    type="button"
     class="bsm-details-clear"
     aria-label="Clear verse selection"
     title="Clear verse selection"
@@ -153,6 +161,15 @@ controls beside the selection's title.
     border-radius: var(--radius-s);
     color: var(--text-muted);
     cursor: pointer;
+    /* Buttons sharing this look (the copy action) shed the browser's own
+       chrome so they read exactly like the span-based fold icons beside
+       them. */
+    background: none;
+    border: none;
+    box-shadow: none;
+    width: auto;
+    height: auto;
+    min-height: 0;
   }
 
   .bsm-fold-all:hover {
