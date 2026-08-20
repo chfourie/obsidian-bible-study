@@ -80,18 +80,6 @@ describe('ScriptureStudyPlugin same-device settings changes', () => {
     )
   })
 
-  it('routes annotate-from-reader to the annotations feature', () => {
-    const plugin = pluginWithStorage()
-    const annotate = vi
-      .spyOn(plugin.annotations, 'annotate')
-      .mockResolvedValue()
-    const reference = { book: 43, ranges: [{ startId: 43015004, endId: 43015004 }] }
-
-    plugin.reader.annotateReference(reference)
-
-    expect(annotate).toHaveBeenCalledWith(reference)
-  })
-
   it('downloads only the suggested BSB translation for the first-run nudge, not the Strong\'s dictionaries', async () => {
     const plugin = pluginWithStorage()
     const installDictionaries = vi.spyOn(plugin.strongsDictionaries, 'install')

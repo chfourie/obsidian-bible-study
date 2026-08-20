@@ -1,15 +1,11 @@
-import type { StudySubTab } from '../study-material'
-
-// What the Study Panel remembers about one tab it follows: the details sub-tab
-// that tab last showed, and the passage entries unfolded under it. Entries
-// start folded, so it is the unfolding that is worth remembering.
+// What the Study Panel remembers about one tab it follows: the passage
+// entries unfolded under it. Entries start folded, so it is the unfolding
+// that is worth remembering.
 export type StudyTabState = {
-  subTab: StudySubTab
   expanded: ReadonlySet<string>
 }
 
 export const freshTabState = (): StudyTabState => ({
-  subTab: 'translations',
   expanded: new Set(),
 })
 

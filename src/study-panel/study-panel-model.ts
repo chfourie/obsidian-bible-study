@@ -17,7 +17,6 @@ import {
   type Reference,
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
-import type { StudySubTab } from '../study-material'
 import type { ExtractedOccurrence } from '../vault-index'
 import { freshTabState, type StudyTabState } from './tab-memory'
 
@@ -56,9 +55,8 @@ export type StudyPanelViewState = {
   // study material, and the note fields above describe the note it will fall
   // back to when a note is focused again.
   studyMaterial: StudyMaterial | null
-  // The followed tab's own state: which details sub-tab it shows, and which
-  // passage entries stay folded — every entry the tab has not unfolded.
-  subTab: StudySubTab
+  // The followed tab's own state: which passage entries stay folded — every
+  // entry the tab has not unfolded.
   folded: ReadonlySet<string>
 }
 
@@ -164,7 +162,6 @@ export class StudyPanelModel {
       entries: this.#entries,
       crossReferences: this.#crossReferences,
       studyMaterial: this.#studySource?.studyMaterial ?? null,
-      subTab: this.#tabState.subTab,
       folded: this.#folded(),
     }
   }
@@ -173,12 +170,6 @@ export class StudyPanelModel {
   // panel writes lands in the tab's own memory, so refocusing it restores it.
   useTabState(state: StudyTabState | null): void {
     this.#tabState = state ?? freshTabState()
-    this.#notify()
-  }
-
-  selectSubTab(subTab: StudySubTab): void {
-    if (this.#tabState.subTab === subTab) return
-    this.#tabState.subTab = subTab
     this.#notify()
   }
 
@@ -212,8 +203,7 @@ export class StudyPanelModel {
     this.#notify()
   }
 
-  // The focused reader tab itself, for the actions the panel invokes on it
-  // (the sub-tab choice is the panel's own per-tab state; the rest lives here).
+  // The focused reader tab itself, for the actions the panel invokes on it.
   get studySource(): StudyMaterialSource | null {
     return this.#studySource
   }

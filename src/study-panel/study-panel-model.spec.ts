@@ -128,7 +128,6 @@ describe('StudyPanelModel', () => {
       entries: [],
       crossReferences: [],
       studyMaterial: null,
-      subTab: 'translations',
       folded: new Set(),
     })
   })
@@ -366,7 +365,6 @@ describe('StudyPanelModel', () => {
       entries: [],
       crossReferences: [],
       studyMaterial: null,
-      subTab: 'translations',
       folded: new Set(),
     })
   })
@@ -821,17 +819,6 @@ describe('cross-references in the Study Panel', () => {
   })
 
   describe('followed tab state', () => {
-    it('writes the sub-tab choice into the followed tab’s state', () => {
-      const panel = model(fakeSource().source)
-      const state = freshTabState()
-      panel.useTabState(state)
-
-      panel.selectSubTab('notes')
-
-      expect(panel.view.subTab).toBe('notes')
-      expect(state.subTab).toBe('notes')
-    })
-
     it('folds every entry until the followed tab unfolds one', async () => {
       const panel = model(fakeSource().source)
       const state = freshTabState()
@@ -896,30 +883,28 @@ describe('cross-references in the Study Panel', () => {
       const second = freshTabState()
       panel.useTabState(first)
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
-      panel.selectSubTab('notes')
       panel.toggleFold('|John 15:1')
 
       panel.useTabState(second)
 
-      expect(panel.view.subTab).toBe('translations')
       expect([...panel.view.folded]).toEqual(['|John 15:1'])
 
       panel.useTabState(first)
-      expect(panel.view.subTab).toBe('notes')
       expect([...panel.view.folded]).toEqual([])
     })
 
-    it('falls back to a fresh state when it follows no tab', () => {
+    it('falls back to a fresh state when it follows no tab', async () => {
       const panel = model(fakeSource().source)
       const state = freshTabState()
       panel.useTabState(state)
-      panel.selectSubTab('notes')
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
+      panel.toggleFold('|John 15:1')
 
       panel.useTabState(null)
-      panel.selectSubTab('notes')
+      panel.toggleFold('|John 15:1')
 
-      expect(state.subTab).toBe('notes')
-      expect(panel.view.subTab).toBe('notes')
+      expect([...state.expanded]).toEqual(['|John 15:1'])
+      expect([...panel.view.folded]).toEqual([])
     })
 
     it('tells its listeners when the followed state changes', () => {
@@ -930,8 +915,8 @@ describe('cross-references in the Study Panel', () => {
       })
 
       panel.useTabState(freshTabState())
-      panel.selectSubTab('notes')
       panel.toggleFold('|John 15:1')
+      panel.toggleFold('|Genesis 1:1')
 
       expect(notifications).toBe(3)
     })

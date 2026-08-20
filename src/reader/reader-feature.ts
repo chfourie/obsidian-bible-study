@@ -56,7 +56,6 @@ export class ReaderFeature
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeCrossReferences: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
-  #annotator: (reference: Reference) => void = () => {}
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
   readonly #crossReferences: CrossReferenceCatalog
@@ -209,14 +208,6 @@ export class ReaderFeature
       body: content.slice(frontmatterLength(content)),
       created: noteFile.stat.ctime,
     }
-  }
-
-  useAnnotator(annotator: (reference: Reference) => void): void {
-    this.#annotator = annotator
-  }
-
-  annotateReference(reference: Reference): void {
-    this.#annotator(reference)
   }
 
   prefillReference(): Reference | null {

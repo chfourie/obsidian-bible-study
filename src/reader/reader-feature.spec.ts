@@ -354,7 +354,7 @@ describe('ReaderFeature entry points', () => {
     expect(reopened.model.view.banner).toBe(null)
   })
 
-  it('serves annotation bodies from the vault to reader details', async () => {
+  it('serves annotation bodies from the vault to the chapter material', async () => {
     const { feature, index, leaves } = harness({
       'Annotations/John 15.1.md': {
         content: '---\nref: John 15:1\n---\nThe vine is Christ.\n',
@@ -370,11 +370,10 @@ describe('ReaderFeature entry points', () => {
     await flushAsync()
     const view = leaves[0].view as ReaderView
 
-    await view.model.selectVerse(makeVerseId(43, 15, 1))
-
-    expect(view.model.studyMaterial.details?.annotations).toEqual([
+    expect(view.model.studyMaterial.chapterAnnotations).toEqual([
       {
         file: 'Annotations/John 15.1.md',
+        label: 'John 15:1',
         body: 'The vine is Christ.\n',
       },
     ])
@@ -447,7 +446,6 @@ describe('ReaderFeature entry points', () => {
     feature.openReference(ref('John 15:1'), 'web')
     await flushAsync()
     const view = leaves[0].view as ReaderView
-    await view.model.selectVerse(makeVerseId(43, 15, 1))
 
     feature.useSettings({
       ...DEFAULT_SETTINGS,
@@ -458,7 +456,7 @@ describe('ReaderFeature entry points', () => {
     await flushAsync()
 
     expect(
-      view.model.studyMaterial.details?.annotations.map((block) => block.file),
+      view.model.studyMaterial.chapterAnnotations.map((item) => item.file),
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
@@ -689,10 +687,8 @@ describe('ReaderFeature entry points', () => {
     await flushAsync()
     const view = leaves[0].view as ReaderView
 
-    await view.model.selectVerse(makeVerseId(43, 15, 1))
-
     expect(
-      view.model.studyMaterial.details?.annotations.map((block) => block.file),
+      view.model.studyMaterial.chapterAnnotations.map((item) => item.file),
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 

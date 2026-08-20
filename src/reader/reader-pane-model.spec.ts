@@ -506,17 +506,6 @@ describe('verse details', () => {
       kjv: { [makeVerseId(43, 15, 1)]: 'I am the true vine (KJV).' },
     }),
     availableTranslations: async () => [translation('web'), translation('kjv')],
-    intersecting: (reference) =>
-      reference.ranges.some((range) => rangeContains(range, verse4))
-        ? [
-            group('Annotations/John 15.4.md', true),
-            group('Sermons/Fruitfulness.md', false),
-          ]
-        : [],
-    annotationDetails: async (file) =>
-      file === 'Annotations/John 15.4.md'
-        ? { body: 'Abiding means remaining.', created: 1000 }
-        : null,
   })
 
   it('loads the clicked verse with every installed translation stacked', async () => {
@@ -537,13 +526,6 @@ describe('verse details', () => {
         },
         { id: 'kjv', label: 'KJV', name: 'KJV Full Name', segments: null },
       ],
-      annotations: [
-        {
-          file: 'Annotations/John 15.4.md',
-          body: 'Abiding means remaining.',
-        },
-      ],
-      mentions: [{ file: 'Sermons/Fruitfulness.md' }],
       strongs: [],
       strongsAttribution: null,
     })
@@ -595,79 +577,6 @@ describe('verse details', () => {
     expect(model.studyMaterial.details).toBe(null)
     await selecting
     expect(detailsOf(model).verseId).toBe(makeVerseId(43, 15, 5))
-  })
-})
-
-describe('annotation ordering in details', () => {
-  const verse4 = makeVerseId(43, 15, 4)
-  const annotated = (
-    ordering?: 'created-oldest-first' | 'path-a-z',
-  ): ReaderPaneModel =>
-    modelWith(
-      {
-        intersecting: (reference) =>
-          reference.ranges.some((range) => rangeContains(range, verse4))
-            ? [
-                group('Annotations/Zeal.md', true),
-                group('Annotations/Abide.md', true),
-              ]
-            : [],
-        annotationDetails: async (file) =>
-          file === 'Annotations/Zeal.md'
-            ? { body: 'older note', created: 100 }
-            : { body: 'newer note', created: 200 },
-      },
-      DEFAULT_TOGGLES,
-      'web',
-      ordering,
-    )
-
-  it('orders annotations by creation date oldest first by default', async () => {
-    const model = annotated()
-    await model.openAt(ref('John 15:4'), 'web')
-
-    await model.selectVerse(verse4)
-
-    expect(
-      detailsOf(model).annotations.map((block) => block.file),
-    ).toEqual(['Annotations/Zeal.md', 'Annotations/Abide.md'])
-  })
-
-  it('orders annotations by file path when configured', async () => {
-    const model = annotated('path-a-z')
-    await model.openAt(ref('John 15:4'), 'web')
-
-    await model.selectVerse(verse4)
-
-    expect(
-      detailsOf(model).annotations.map((block) => block.file),
-    ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
-  })
-
-  it('re-sorts loaded details when the ordering setting changes', async () => {
-    const model = annotated()
-    await model.openAt(ref('John 15:4'), 'web')
-    await model.selectVerse(verse4)
-
-    model.setAnnotationOrdering('path-a-z')
-    await flushAsync()
-
-    expect(
-      detailsOf(model).annotations.map((block) => block.file),
-    ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
-  })
-
-  it('leaves details untouched when the ordering setting is unchanged', async () => {
-    const model = annotated('path-a-z')
-    await model.openAt(ref('John 15:4'), 'web')
-    await model.selectVerse(verse4)
-    let notified = 0
-    model.subscribe(() => notified++)
-
-    model.setAnnotationOrdering('path-a-z')
-    await flushAsync()
-
-    expect(notified).toBe(0)
   })
 })
 
@@ -805,32 +714,10 @@ describe('annotate selection', () => {
 
     expect(model.selectionReference()).toEqual(ref('John 15:2'))
   })
-
-  it('annotates the verse of the details block, not the latest selection', async () => {
-    const verse5 = makeVerseId(43, 15, 5)
-    const model = modelWith()
-    await model.openAt(ref('John 15:1'), 'web')
-
-    await model.selectVerse(verse2)
-    await model.selectVerse(verse5)
-
-    expect(model.annotationReference(verse2)).toEqual(ref('John 15:2'))
-    expect(model.annotationReference(verse5)).toEqual(ref('John 15:5'))
-  })
-
-  it('annotates the whole selection span from a block inside it', async () => {
-    const model = modelWith()
-    await model.openAt(ref('John 15:1'), 'web')
-
-    await model.selectVerse(verse4)
-    model.extendSelectionTo(verse2)
-
-    expect(model.annotationReference(verse4)).toEqual(ref('John 15:2-4'))
-  })
 })
 
 describe('occurrence refresh', () => {
-  it('re-counts indicators and reloads open details from the index', async () => {
+  it('re-counts indicators from the index', async () => {
     const verse4 = makeVerseId(43, 15, 4)
     let groups: OccurrenceGroup[] = []
     const model = modelWith({
@@ -848,24 +735,16 @@ describe('occurrence refresh', () => {
     await model.refreshOccurrences()
 
     expect(model.view.rows[3].annotations).toBe(1)
-    expect(detailsOf(model).annotations).toEqual([
-      {
-        file: 'Annotations/John 15.4.md',
-        body: 'note body',
-      },
-    ])
   })
 
-  it('reloads only the details of the selected verse', async () => {
+  it('leaves the loaded verse details alone', async () => {
     const verse4 = makeVerseId(43, 15, 4)
-    const verse5 = makeVerseId(43, 15, 5)
-    const detailLoads: string[] = []
+    const detailLoads: number[] = []
     const model = modelWith({
-      annotationDetails: async () => null,
       passages: {
         passage: async (reference, translationId) => {
           if (reference.ranges[0].startId === reference.ranges[0].endId)
-            detailLoads.push(`${reference.ranges[0].startId}`)
+            detailLoads.push(reference.ranges[0].startId)
           return passageSourceOver(john15Texts()).passage(
             reference,
             translationId,
@@ -875,13 +754,12 @@ describe('occurrence refresh', () => {
     })
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
-    await model.selectVerse(verse5)
     detailLoads.length = 0
 
     await model.refreshOccurrences()
 
-    expect(detailLoads).toEqual([`${verse5}`])
-    expect(detailsOf(model).verseId).toBe(verse5)
+    expect(detailLoads).toEqual([])
+    expect(detailsOf(model).verseId).toBe(verse4)
   })
 })
 
@@ -2237,7 +2115,7 @@ describe('the study material contract', () => {
   })
 
   it('projects the selected verse, the span it extends over and its details', async () => {
-    const model = modelWith({ intersecting: () => [group('Vine.md', false)] })
+    const model = modelWith()
     await model.openAt(ref('John 15:1'), 'web')
     await model.selectVerse(verse2)
     model.extendSelectionTo(verse4)
@@ -2247,7 +2125,6 @@ describe('the study material contract', () => {
     expect(material.selectionEndId).toBe(verse4)
     expect(material.details?.title).toBe('John 15:2')
     expect(material.details?.translations.map((row) => row.id)).toEqual(['web'])
-    expect(material.details?.mentions).toEqual([{ file: 'Vine.md' }])
   })
 
   it('withholds the details of a verse whose load is still in flight', async () => {
@@ -2414,17 +2291,6 @@ describe('the study material contract', () => {
     await model.selectVerse(verse2)
 
     expect(selections).toBe(0)
-  })
-
-  it('answers the annotation reference covering the selected span', async () => {
-    const model = modelWith()
-    await model.openAt(ref('John 15:1'), 'web')
-    await model.selectVerse(verse2)
-    model.extendSelectionTo(verse4)
-    const source = sourceOf(model)
-
-    expect(source.annotationReference(verse4)).toEqual(ref('John 15:2-4'))
-    expect(source.annotationReference(verse5)).toEqual(ref('John 15:5'))
   })
 
   it('prefills the chapter-level annotate action from the selection, falling back to the chapter', async () => {

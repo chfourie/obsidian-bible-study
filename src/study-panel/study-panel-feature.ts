@@ -46,7 +46,6 @@ export class StudyPanelFeature extends PluginFeature {
   #active: ActiveNote | null = null
   #showToken = 0
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
-  #annotator: (reference: Reference) => void = () => {}
   #annotationPrompter: (prefill: Reference) => void = () => {}
   readonly #crossReferences: CrossReferenceCatalog
   readonly #studyMaterial: StudyMaterialProvider
@@ -168,14 +167,6 @@ export class StudyPanelFeature extends PluginFeature {
 
   useNavigator(navigator: ReferenceNavigator): void {
     this.#navigator = navigator
-  }
-
-  useAnnotator(annotator: (reference: Reference) => void): void {
-    this.#annotator = annotator
-  }
-
-  annotateReference(reference: Reference): void {
-    this.#annotator(reference)
   }
 
   useAnnotationPrompt(prompter: (prefill: Reference) => void): void {

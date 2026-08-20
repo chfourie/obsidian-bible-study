@@ -22,15 +22,6 @@ export type TranslationRowView = {
   segments: VerseSegment[] | null
 }
 
-export type NoteCardView = {
-  file: string
-}
-
-export type AnnotationBlockView = {
-  file: string
-  body: string
-}
-
 // One annotation intersecting the chapter on screen, headed by the reference
 // its frontmatter declares.
 export type ChapterAnnotationView = {
@@ -52,8 +43,6 @@ export type VerseDetailsView = {
   verseId: number
   title: string
   translations: TranslationRowView[]
-  annotations: AnnotationBlockView[]
-  mentions: NoteCardView[]
   strongs: StrongsEntryView[]
   strongsAttribution: string | null
 }
@@ -114,9 +103,6 @@ export interface StudyMaterialSource {
   // Dismisses the selection outright: details and row highlight go with it.
   // Never fires the selection feed — clearing is not a deliberate selection.
   clearSelection(): void
-  // The reference an annotation of this verse covers: the current selection
-  // when it contains the verse, otherwise the verse alone.
-  annotationReference(verseId: number): Reference
   // The reference the chapter-level annotate action prefills: the current
   // selection when there is one, otherwise the whole chapter on screen.
   chapterAnnotationReference(): Reference

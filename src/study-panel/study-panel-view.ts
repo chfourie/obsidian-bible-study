@@ -42,7 +42,6 @@ export class StudyPanelView extends ItemView {
         this.feature.openReference(reference, null, options),
       editCrossReferenceInNewPane: (entry) =>
         this.feature.editCrossReferenceInNewPane(entry),
-      annotate: (reference) => this.feature.annotateReference(reference),
       promptAnnotate: (prefill) => this.feature.promptAnnotation(prefill),
       renderMarkdown: (el, markdown, sourcePath) =>
         void MarkdownRenderer.render(this.app, markdown, el, sourcePath, this),

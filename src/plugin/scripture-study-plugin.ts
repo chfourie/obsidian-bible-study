@@ -88,13 +88,7 @@ export default class ScriptureStudyPlugin extends Plugin {
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
     this.annotations.usePrefill(() => this.reader.prefillReference())
-    this.reader.useAnnotator(
-      (reference) => void this.annotations.annotate(reference),
-    )
     this.studyPanel.useNavigator(this.reader)
-    this.studyPanel.useAnnotator(
-      (reference) => void this.annotations.annotate(reference),
-    )
     this.studyPanel.useAnnotationPrompt((prefill) =>
       this.annotations.promptAnnotation(prefill),
     )

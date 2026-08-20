@@ -667,24 +667,6 @@ describe('StudyPanelFeature entry points', () => {
     expect(reader.subscriptions()).toBe(0)
   })
 
-  it('restores each reader tab’s sub-tab choice as focus moves between them', async () => {
-    const { feature, commands, leaves, focusReader, focusTab } = harness()
-    await feature.load()
-    commands[0].callback()
-    await flushAsync()
-    const first = focusReader()
-    panelView(leaves[0]).model.selectSubTab('notes')
-    const second = focusReader()
-
-    expect(panelView(leaves[0]).model.view.subTab).toBe('translations')
-
-    focusTab(first.leaf)
-    expect(panelView(leaves[0]).model.view.subTab).toBe('notes')
-
-    focusTab(second.leaf)
-    expect(panelView(leaves[0]).model.view.subTab).toBe('translations')
-  })
-
   it('restores each note tab’s fold state as focus moves between them', async () => {
     const { feature, commands, leaves, focusNote, focusTab } = harness({
       'a.md': '{John 15:1}',
@@ -787,16 +769,6 @@ describe('StudyPanelFeature entry points', () => {
     await flushAsync()
 
     expect(panelView(leaves[0]).model.view.status).toBe('no-note')
-  })
-
-  it('routes annotations through the injected annotator', async () => {
-    const { feature } = harness()
-    const annotated: Reference[] = []
-    feature.useAnnotator((reference) => annotated.push(reference))
-
-    feature.annotateReference(ref('John 15:1'))
-
-    expect(annotated).toEqual([ref('John 15:1')])
   })
 
   it('routes annotation prompts through the injected prompter', async () => {

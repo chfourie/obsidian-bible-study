@@ -76,8 +76,6 @@ opens the reference in the reader with the entry's translation.
       {material}
       source={model.studySource}
       {host}
-      tab={view.subTab}
-      selectTab={(tab) => model.selectSubTab(tab)}
     />
   </div>
 {:else}
@@ -238,8 +236,8 @@ opens the reference in the reader with the entry's translation.
     padding-bottom: 0.25rem;
   }
 
-  /* The mirrored reader fills the sidebar: its details region scrolls on its
-     own, with the chapter's cross-references anchored below. */
+  /* The mirrored reader fills the sidebar: its material scrolls as one
+     column under the title. */
   .bsp-reader {
     display: flex;
     flex-direction: column;

@@ -22,7 +22,6 @@ import { orderChapterAnnotations } from '../annotations'
 import { chapterMentionViews } from '../mentions'
 import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
 import type {
-  AnnotationBlockView,
   ChapterAnnotationView,
   ChapterMentionView,
   CollectionView,
@@ -568,17 +567,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
     }
   }
 
-  annotationReference(verseId: number): Reference {
-    const selection = this.selectionReference()
-    if (
-      selection !== null &&
-      selection.ranges.some((range) => rangeContains(range, verseId))
-    ) {
-      return selection
-    }
-    return singleVerseReference(this.#position.book, verseId)
-  }
-
   chapterAnnotationReference(): Reference {
     return this.selectionReference() ?? this.currentChapterReference()
   }
@@ -743,10 +731,10 @@ export class ReaderPaneModel implements StudyMaterialSource {
     await this.refreshOccurrences()
   }
 
+  // Verse details carry only translations and Strong's, neither of which the
+  // vault index feeds — the chapter-scoped material is all that re-reads it.
   async refreshOccurrences(): Promise<void> {
     await this.#loadChapterMaterial()
-    const loadedVerseId = this.#details?.verseId
-    if (loadedVerseId !== undefined) await this.#loadDetails(loadedVerseId)
   }
 
   #markerCounts(verseId: number): { annotations: number; mentions: number } {
@@ -770,10 +758,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
         }
       }),
     )
-    const groups = this.deps.intersecting(reference)
-    const annotations = await this.#annotationBlocks(
-      groups.filter((occurrence) => occurrence.annotation),
-    )
     const strongs =
       this.#wordStrongs !== null && this.#wordStrongs.verseId === verseId
         ? await this.deps.strongs.entriesFor(this.#wordStrongs.numbers)
@@ -785,10 +769,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
       verseId,
       title: formatReference(reference),
       translations,
-      annotations,
-      mentions: groups
-        .filter((occurrence) => !occurrence.annotation)
-        .map((occurrence) => ({ file: occurrence.file })),
       strongs,
       strongsAttribution:
         strongs.length > 0 ? this.deps.strongs.attribution : null,
@@ -871,30 +851,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
         .map((entry) => crossReferenceView(entry, [])),
       [reference],
     )
-  }
-
-  async #annotationBlocks(
-    groups: OccurrenceGroup[],
-  ): Promise<AnnotationBlockView[]> {
-    const blocks = await Promise.all(
-      groups.map(async (occurrence) => {
-        const details = await this.deps.annotationDetails(occurrence.file)
-        if (details === null) return null
-        return {
-          file: occurrence.file,
-          body: details.body,
-          created: details.created,
-        }
-      }),
-    )
-    return blocks
-      .filter((block) => block !== null)
-      .sort((a, b) =>
-        this.#annotationOrdering === 'created-oldest-first'
-          ? a.created - b.created
-          : a.file.localeCompare(b.file),
-      )
-      .map(({ file, body }) => ({ file, body }))
   }
 
   async #loadChapter(): Promise<void> {
