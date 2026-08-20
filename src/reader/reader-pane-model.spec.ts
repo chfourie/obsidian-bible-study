@@ -113,7 +113,6 @@ const group = (
   ...body: string[]
 ): OccurrenceGroup => ({
   file,
-  annotation: frontmatter !== null,
   annotationReference: frontmatter === null ? null : ref(frontmatter),
   occurrences: [...(frontmatter === null ? [] : [frontmatter]), ...body].map(
     (text, position) => ({
@@ -2329,7 +2328,6 @@ describe('chapter annotations in the study material', () => {
         .filter((note) => referencesIntersect(note.reference, reference))
         .map((note) => ({
           file: note.file,
-          annotation: note.annotation ?? true,
           annotationReference:
             note.annotation === false ? null : note.reference,
           occurrences: [
@@ -2539,7 +2537,6 @@ describe('chapter mentions in the study material', () => {
       notes()
         .map((note) => ({
           file: note.file,
-          annotation: note.annotation === true,
           annotationReference:
             note.annotation === true ? note.references[0] : null,
           occurrences: note.references

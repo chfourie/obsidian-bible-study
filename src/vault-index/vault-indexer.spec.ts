@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeVerseId, type Reference } from '../reference'
 import type { NoteVault } from './note-vault'
 import { VaultIndexer } from './vault-indexer'
-import { VaultReferenceIndex } from './vault-reference-index'
+import { isAnnotation, VaultReferenceIndex } from './vault-reference-index'
 
 const johnRef = (chapter: number, verse: number): Reference => ({
   book: 43,
@@ -186,7 +186,7 @@ describe('VaultIndexer full scan', () => {
     await flushMicrotasks()
 
     const groups = index.intersectingOccurrences(johnRef(15, 4))
-    expect(groups.map((group) => group.annotation)).toEqual([true])
+    expect(groups.map(isAnnotation)).toEqual([true])
   })
 })
 

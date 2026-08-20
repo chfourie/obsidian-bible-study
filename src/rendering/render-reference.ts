@@ -2,7 +2,7 @@ import { setIcon } from 'obsidian'
 import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
 import { opensInNewPane } from '../ui'
-import { noteTitle, type OccurrenceGroup } from '../vault-index'
+import { isAnnotation, noteTitle, type OccurrenceGroup } from '../vault-index'
 import type { HighlightEditContext } from './highlight-editing'
 import type { Passage, PassageSource } from './module-passage-source'
 import { VERSE_TEXT_CLASS } from './passage-selection'
@@ -104,7 +104,7 @@ const renderIntersections = (
       'aria-expanded': 'false',
     },
   })
-  const annotationCount = groups.filter((group) => group.annotation).length
+  const annotationCount = groups.filter(isAnnotation).length
   const mentionCount = groups.length - annotationCount
   if (annotationCount > 0) {
     toggle.createSpan({
@@ -149,13 +149,13 @@ const renderIntersections = (
     renderGroupList(
       panel,
       'Annotations',
-      fresh.filter((group) => group.annotation),
+      fresh.filter(isAnnotation),
       noteTitle,
     )
     renderGroupList(
       panel,
       'Mentions',
-      fresh.filter((group) => !group.annotation),
+      fresh.filter((group) => !isAnnotation(group)),
       (file) => file,
     )
     toggle.setAttribute('aria-expanded', 'true')

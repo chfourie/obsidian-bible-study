@@ -4,13 +4,17 @@ import type { Occurrence } from './occurrence'
 
 export type OccurrenceGroup = {
   file: string
-  annotation: boolean
   // The annotation's declared subject — its frontmatter reference — carried
   // even when that reference itself lies outside the queried scope. Null for
   // plain mentions.
   annotationReference: Reference | null
   occurrences: Occurrence[]
 }
+
+// What makes a group an annotation is exactly that it declares a subject.
+export const isAnnotation = (group: {
+  annotationReference: Reference | null
+}): boolean => group.annotationReference !== null
 
 const sameReference = (a: Reference, b: Reference): boolean =>
   a.book === b.book &&
@@ -91,14 +95,13 @@ export class VaultReferenceIndex {
       )
       groups.push({
         file: intersecting[0].file,
-        annotation: frontmatter !== undefined,
         annotationReference: frontmatter?.reference ?? null,
         occurrences: intersecting,
       })
     }
     return groups.sort(
       (a, b) =>
-        Number(b.annotation) - Number(a.annotation) ||
+        Number(isAnnotation(b)) - Number(isAnnotation(a)) ||
         a.file.localeCompare(b.file),
     )
   }

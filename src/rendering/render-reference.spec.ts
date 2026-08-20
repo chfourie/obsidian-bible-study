@@ -574,7 +574,6 @@ describe('renderReference in-note intersections', () => {
     annotation: boolean,
   ): OccurrenceGroup => ({
     file,
-    annotation,
     annotationReference: annotation
       ? { book: 43, ranges: [{ startId: 43015004, endId: 43015004 }] }
       : null,

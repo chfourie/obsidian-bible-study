@@ -27,6 +27,7 @@ import {
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
 import {
+  isAnnotation,
   noteTitle,
   type ExtractedOccurrence,
   type Occurrence,
@@ -330,7 +331,6 @@ export class StudyPanelModel {
     }
     return [...merged.entries()].map(([file, entry]) => ({
       file,
-      annotation: entry.annotationReference !== null,
       annotationReference: entry.annotationReference,
       occurrences: [...entry.occurrences.values()],
     }))
@@ -351,7 +351,7 @@ export class StudyPanelModel {
     const groups = this.#intersectingGroups(references)
     const mentions = chapterMentionViews(
       groups
-        .filter((group) => !group.annotation)
+        .filter((group) => !isAnnotation(group))
         .map((group) => ({
           file: group.file,
           references: group.occurrences.map(

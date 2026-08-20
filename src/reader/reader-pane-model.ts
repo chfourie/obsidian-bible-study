@@ -46,7 +46,7 @@ import { isPoetryVerse } from '../rendering'
 import type { PassageSource, VerseSegment } from '../rendering'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
-import type { OccurrenceGroup } from '../vault-index'
+import { isAnnotation, type OccurrenceGroup } from '../vault-index'
 
 export type ReaderToggles = {
   nav: 'tree' | 'breadcrumb'
@@ -784,7 +784,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#markers = verseMarkers(
       groups.map((group) => ({
         file: group.file,
-        annotation: group.annotation,
+        annotation: isAnnotation(group),
         references: group.occurrences.map(
           (occurrence) => occurrence.reference,
         ),
@@ -798,7 +798,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#notify()
     const mentions = chapterMentionViews(
       groups
-        .filter((group) => !group.annotation)
+        .filter((group) => !isAnnotation(group))
         .map((group) => ({
           file: group.file,
           references: group.occurrences.map(

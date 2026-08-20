@@ -3,7 +3,7 @@ import { MarkdownView, WorkspaceLeaf, type Plugin, type TFile } from 'obsidian'
 import { Notice } from '../../tests/mocks/obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
 import { parseReference, type Reference } from '../reference'
-import { VaultReferenceIndex } from '../vault-index'
+import { isAnnotation, VaultReferenceIndex } from '../vault-index'
 import { AnnotationsFeature } from './annotations-feature'
 
 const ref = (text: string): Reference => {
@@ -100,7 +100,7 @@ describe('AnnotationsFeature', () => {
 
     const groups = index.intersectingOccurrences(ref('John 15:4'))
     expect(groups).toHaveLength(1)
-    expect(groups[0].annotation).toBe(true)
+    expect(isAnnotation(groups[0])).toBe(true)
     expect(groups[0].file).toBe('Annotations/John 15.4.md')
   })
 

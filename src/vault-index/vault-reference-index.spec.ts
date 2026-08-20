@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeVerseId, type Reference } from '../reference'
-import { VaultReferenceIndex } from './vault-reference-index'
+import { isAnnotation, VaultReferenceIndex } from './vault-reference-index'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
@@ -66,7 +66,6 @@ describe('VaultReferenceIndex', () => {
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([
       {
         file: 'Annotations/John 15.4.md',
-        annotation: true,
         annotationReference: johnRef(15, 4),
         occurrences: [
           {
@@ -91,7 +90,7 @@ describe('VaultReferenceIndex', () => {
       book: 42,
       ranges: [{ startId: makeVerseId(42, 15, 4), endId: makeVerseId(42, 15, 4) }],
     })
-    expect(groups.map((group) => group.annotation)).toEqual([true])
+    expect(groups.map(isAnnotation)).toEqual([true])
     expect(groups.map((group) => group.annotationReference)).toEqual([
       johnRef(15, 4),
     ])
@@ -123,7 +122,6 @@ describe('VaultReferenceIndex', () => {
     expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([
       {
         file: 'Sermons/Abiding.md',
-        annotation: false,
         annotationReference: null,
         occurrences: [
           {

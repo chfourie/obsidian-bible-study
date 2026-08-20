@@ -38,13 +38,11 @@ describe('processRenderedElement', () => {
       intersecting: () => [
         {
           file: 'Sermons/Abiding.md',
-          annotation: false,
           annotationReference: null,
           occurrences: [],
         },
         {
           file: 'Topics/Union.md',
-          annotation: false,
           annotationReference: null,
           occurrences: [],
         },
