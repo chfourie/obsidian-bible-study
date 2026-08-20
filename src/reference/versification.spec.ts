@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   chapterCount,
+  deregisterBookVersification,
   isValidVerseId,
   nextVerse,
   ordinalToVerseId,
+  registerBookVersification,
   verseCount,
   verseIdToOrdinal,
 } from './versification'
@@ -159,5 +161,154 @@ describe('ordinal mapping', () => {
       verseId = nextVerse(verseId as number)
     }
     expect(verseId).toBeNull()
+  })
+})
+
+const SYNTHETIC_BOOK = 101
+
+const registerSyntheticBook = (): void =>
+  registerBookVersification({
+    book: SYNTHETIC_BOOK,
+    sections: [
+      { chapter: 0, paragraphs: 4 },
+      { chapter: 1, paragraphs: 3 },
+      { chapter: 2, paragraphs: 5 },
+    ],
+  })
+
+describe('book versification registry', () => {
+  afterEach(() => deregisterBookVersification(SYNTHETIC_BOOK))
+
+  it('reports no grid for an unregistered book', () => {
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(0)
+    expect(verseCount(SYNTHETIC_BOOK, 1)).toBe(0)
+    expect(isValidVerseId(makeVerseId(SYNTHETIC_BOOK, 1, 1))).toBe(false)
+  })
+
+  it('makes a registered book countable', () => {
+    registerSyntheticBook()
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(3)
+    expect(verseCount(SYNTHETIC_BOOK, 0)).toBe(4)
+    expect(verseCount(SYNTHETIC_BOOK, 2)).toBe(5)
+    expect(verseCount(SYNTHETIC_BOOK, 3)).toBe(0)
+  })
+
+  it('validates ids against the registered grid', () => {
+    registerSyntheticBook()
+    expect(isValidVerseId(makeVerseId(SYNTHETIC_BOOK, 0, 4))).toBe(true)
+    expect(isValidVerseId(makeVerseId(SYNTHETIC_BOOK, 0, 5))).toBe(false)
+    expect(isValidVerseId(makeVerseId(SYNTHETIC_BOOK, 2, 5))).toBe(true)
+    expect(isValidVerseId(makeVerseId(SYNTHETIC_BOOK, 2, 0))).toBe(false)
+  })
+
+  it('steps through a registered book, including its chapter 0', () => {
+    registerSyntheticBook()
+    expect(nextVerse(makeVerseId(SYNTHETIC_BOOK, 0, 1))).toBe(
+      makeVerseId(SYNTHETIC_BOOK, 0, 2),
+    )
+    expect(nextVerse(makeVerseId(SYNTHETIC_BOOK, 0, 4))).toBe(
+      makeVerseId(SYNTHETIC_BOOK, 1, 1),
+    )
+    expect(nextVerse(makeVerseId(SYNTHETIC_BOOK, 2, 5))).toBeNull()
+  })
+
+  it('never chains a registered book onto another book', () => {
+    registerBookVersification({
+      book: SYNTHETIC_BOOK + 1,
+      sections: [{ chapter: 1, paragraphs: 2 }],
+    })
+    try {
+      registerSyntheticBook()
+      expect(nextVerse(makeVerseId(SYNTHETIC_BOOK, 2, 5))).toBeNull()
+    } finally {
+      deregisterBookVersification(SYNTHETIC_BOOK + 1)
+    }
+  })
+
+  it('keeps registered books out of the canon ordinal space', () => {
+    registerSyntheticBook()
+    expect(verseIdToOrdinal(makeVerseId(SYNTHETIC_BOOK, 1, 1))).toBeNull()
+    expect(nextVerse(makeVerseId(66, 22, 21))).toBeNull()
+    expect(ordinalToVerseId(31101)).toBe(makeVerseId(66, 22, 21))
+  })
+
+  it('reverts to the unregistered state on deregistration', () => {
+    registerSyntheticBook()
+    deregisterBookVersification(SYNTHETIC_BOOK)
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(0)
+    expect(isValidVerseId(makeVerseId(SYNTHETIC_BOOK, 1, 1))).toBe(false)
+    expect(nextVerse(makeVerseId(SYNTHETIC_BOOK, 1, 1))).toBeNull()
+  })
+
+  it('replaces an earlier table for the same book', () => {
+    registerSyntheticBook()
+    registerBookVersification({
+      book: SYNTHETIC_BOOK,
+      sections: [{ chapter: 1, paragraphs: 9 }],
+    })
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(1)
+    expect(verseCount(SYNTHETIC_BOOK, 0)).toBe(0)
+    expect(verseCount(SYNTHETIC_BOOK, 1)).toBe(9)
+  })
+
+  it('rejects a table that would shadow the compiled canon', () => {
+    expect(() =>
+      registerBookVersification({
+        book: 43,
+        sections: [{ chapter: 1, paragraphs: 1 }],
+      }),
+    ).toThrow()
+    expect(verseCount(43, 1)).toBe(51)
+  })
+
+  it('rejects an empty table', () => {
+    expect(() =>
+      registerBookVersification({ book: SYNTHETIC_BOOK, sections: [] }),
+    ).toThrow()
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(0)
+  })
+
+  it('rejects non-contiguous sections', () => {
+    expect(() =>
+      registerBookVersification({
+        book: SYNTHETIC_BOOK,
+        sections: [
+          { chapter: 1, paragraphs: 3 },
+          { chapter: 3, paragraphs: 3 },
+        ],
+      }),
+    ).toThrow()
+    expect(() =>
+      registerBookVersification({
+        book: SYNTHETIC_BOOK,
+        sections: [
+          { chapter: 2, paragraphs: 3 },
+          { chapter: 1, paragraphs: 3 },
+        ],
+      }),
+    ).toThrow()
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(0)
+  })
+
+  it('rejects zero, negative, and fractional paragraph counts', () => {
+    for (const paragraphs of [0, -1, 2.5]) {
+      expect(() =>
+        registerBookVersification({
+          book: SYNTHETIC_BOOK,
+          sections: [{ chapter: 1, paragraphs }],
+        }),
+      ).toThrow()
+    }
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(0)
+  })
+
+  it('rejects sections starting below chapter 0', () => {
+    expect(() =>
+      registerBookVersification({
+        book: SYNTHETIC_BOOK,
+        sections: [{ chapter: -1, paragraphs: 3 }],
+      }),
+    ).toThrow()
+    expect(chapterCount(SYNTHETIC_BOOK)).toBe(0)
   })
 })

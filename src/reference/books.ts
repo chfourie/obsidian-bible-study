@@ -113,4 +113,5 @@ export const booksMatchingPrefix = (prefix: string): readonly Book[] => {
   )
 }
 
-export const bookName = (bookId: number): string => BOOKS[bookId - 1].name
+export const bookName = (bookId: number): string =>
+  BOOKS[bookId - 1]?.name ?? `Book ${bookId}`
