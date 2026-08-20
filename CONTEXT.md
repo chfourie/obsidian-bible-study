@@ -77,5 +77,8 @@ The serialized form of a highlight: an option token `h<slot>/<verse>.<start>-<ve
 ### Highlight Slot
 One of five global, positional color roles (`h1`–`h5`), each with a light-mode and dark-mode color configured in settings. A cue stores only the slot index, so recoloring a slot re-tints every highlight in the vault that uses it. Slots have no names or semantics — they are colors, not tags.
 
+### Ref Span
+A live reference inside a Book's stored content, parsed at module build time: a character span over one atom's text plus pre-normalized verse ranges (scripture or same-book), stored as a span channel beside the text like Strong's tag spans. Renders as a quiet link (the author's original citation text); tapping navigates the reader to the target. Only explicit citations become ref spans — unreferenced allusions stay plain prose. Ref spans are not Occurrences and never enter the vault index.
+
 ### Pinned Translation
 The explicit translation token the plugin writes into a reference the moment its first highlight is created, binding the cues' offsets to that translation's text. Changing the translation through plugin UI deletes the cues; hand-editing it leaves them to render best-effort.
