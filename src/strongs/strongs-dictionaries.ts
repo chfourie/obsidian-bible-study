@@ -1,6 +1,7 @@
 import type { SettingsStore } from '../data-access'
 import {
   MODULE_FORMAT_VERSION,
+  ModuleInstallation,
   strongsFamily,
   type ModuleDataDir,
   type ModuleManifest,
@@ -39,11 +40,26 @@ type StoredLexicon = {
 
 const EMPTY_LEXICON: StoredLexicon = { entries: {}, families: {} }
 
-const MODULE_DIR = `modules/${STRONGS_DICTIONARIES_ID}`
-const MANIFEST_PATH = `${MODULE_DIR}/manifest.json`
-const LEXICON_PATH = { H: `${MODULE_DIR}/hebrew.json`, G: `${MODULE_DIR}/greek.json` }
+const LEXICON_FILE = { H: 'hebrew.json', G: 'greek.json' }
 
-type LexiconKey = keyof typeof LEXICON_PATH
+type LexiconKey = keyof typeof LEXICON_FILE
+
+const storedLexicon = (
+  raw: string,
+  derivations: Map<string, string>,
+): string => {
+  const { entries, families } = parseLexicon(raw)
+  const stored: StoredLexicon = {
+    entries: Object.fromEntries(
+      [...entries].map(([variant, entry]) => [
+        variant,
+        { ...entry, derivation: derivations.get(entry.strongs) ?? null },
+      ]),
+    ),
+    families: Object.fromEntries(families),
+  }
+  return JSON.stringify(stored)
+}
 
 const manifest = (): ModuleManifest => ({
   id: STRONGS_DICTIONARIES_ID,
@@ -58,13 +74,19 @@ const manifest = (): ModuleManifest => ({
 })
 
 export class StrongsDictionaries {
-  #loaded: Partial<Record<LexiconKey, StoredLexicon>> = {}
+  readonly #installation: ModuleInstallation
 
   constructor(
-    private readonly dataDir: ModuleDataDir,
+    dataDir: ModuleDataDir,
     private readonly source: LexiconSource,
-    private readonly settingsStore: SettingsStore,
-  ) {}
+    settingsStore: SettingsStore,
+  ) {
+    this.#installation = new ModuleInstallation(
+      dataDir,
+      settingsStore,
+      manifest(),
+    )
+  }
 
   async install(): Promise<void> {
     const [hebrew, greek, hebrewDerivations, greekDerivations] =
@@ -74,40 +96,26 @@ export class StrongsDictionaries {
         this.source.fetchHebrewDerivations(),
         this.source.fetchGreekDerivations(),
       ])
-    await this.dataDir.removeDir(MODULE_DIR)
-    await this.#saveLexicon('H', hebrew, parseHebrewDerivations(hebrewDerivations))
-    await this.#saveLexicon('G', greek, parseGreekDerivations(greekDerivations))
-    await this.dataDir.writeTextFile(
-      MANIFEST_PATH,
-      JSON.stringify(manifest(), null, 2),
-    )
-    this.#loaded = {}
-    await this.settingsStore.updateSettings((settings) =>
-      settings.installedModuleIds.includes(STRONGS_DICTIONARIES_ID)
-        ? settings
-        : {
-            ...settings,
-            installedModuleIds: [
-              ...settings.installedModuleIds,
-              STRONGS_DICTIONARIES_ID,
-            ],
-          },
+    await this.#installation.install(
+      new Map([
+        [
+          LEXICON_FILE.H,
+          storedLexicon(hebrew, parseHebrewDerivations(hebrewDerivations)),
+        ],
+        [
+          LEXICON_FILE.G,
+          storedLexicon(greek, parseGreekDerivations(greekDerivations)),
+        ],
+      ]),
     )
   }
 
   async remove(): Promise<void> {
-    await this.dataDir.removeDir(MODULE_DIR)
-    this.#loaded = {}
-    await this.settingsStore.updateSettings((settings) => ({
-      ...settings,
-      installedModuleIds: settings.installedModuleIds.filter(
-        (id) => id !== STRONGS_DICTIONARIES_ID,
-      ),
-    }))
+    await this.#installation.remove()
   }
 
   async isInstalled(): Promise<boolean> {
-    return (await this.#manifest()) !== null
+    return this.#installation.isInstalled()
   }
 
   // A module format bump means the stored lexicons predate what the panel now
@@ -115,7 +123,7 @@ export class StrongsDictionaries {
   // is the only migration, so an outdated install rebuilds itself rather than
   // asking the reader to notice.
   async rebuildIfOutdated(): Promise<void> {
-    const installed = await this.#manifest()
+    const installed = await this.#installation.installedManifest()
     if (installed === null) return
     if (installed.formatVersion >= MODULE_FORMAT_VERSION) return
     await this.install()
@@ -172,36 +180,10 @@ export class StrongsDictionaries {
     return { lexicon, entry, derivation }
   }
 
-  async #manifest(): Promise<ModuleManifest | null> {
-    const content = await this.dataDir.readTextFile(MANIFEST_PATH)
-    return content === null ? null : (JSON.parse(content) as ModuleManifest)
-  }
-
-  async #saveLexicon(
-    key: LexiconKey,
-    raw: string,
-    derivations: Map<string, string>,
-  ): Promise<void> {
-    const { entries, families } = parseLexicon(raw)
-    const stored: StoredLexicon = {
-      entries: Object.fromEntries(
-        [...entries].map(([variant, entry]) => [
-          variant,
-          { ...entry, derivation: derivations.get(entry.strongs) ?? null },
-        ]),
-      ),
-      families: Object.fromEntries(families),
-    }
-    await this.dataDir.writeTextFile(LEXICON_PATH[key], JSON.stringify(stored))
-  }
-
   async #lexicon(key: LexiconKey): Promise<StoredLexicon> {
-    const loaded = this.#loaded[key]
-    if (loaded !== undefined) return loaded
-    const content = await this.dataDir.readTextFile(LEXICON_PATH[key])
-    const parsed =
-      content === null ? EMPTY_LEXICON : (JSON.parse(content) as StoredLexicon)
-    this.#loaded[key] = parsed
-    return parsed
+    return this.#installation.parsed<StoredLexicon>(
+      LEXICON_FILE[key],
+      EMPTY_LEXICON,
+    )
   }
 }
