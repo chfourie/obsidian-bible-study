@@ -280,14 +280,14 @@ describe('opening without an entry reference', () => {
 })
 
 describe('entry banner dismissal', () => {
-  it('hides the banner but keeps the highlight', async () => {
+  it('hides the banner and clears the highlight', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:4-5'), 'web')
 
     model.dismissBanner()
 
     expect(model.view.banner).toBe(null)
-    expect(model.view.rows[3].highlighted).toBe(true)
+    expect(model.view.rows.every((row) => !row.highlighted)).toBe(true)
   })
 })
 
@@ -3070,6 +3070,16 @@ describe('ReaderPaneModel book mode', () => {
     await model.openAt(bookRef(1, 2), null)
 
     expect(model.view.banner).toBe('Opened at Humility ch. 1, par. 2')
+  })
+
+  it('hides the banner and clears the paragraph highlight on dismissal', async () => {
+    const model = bookModelWith()
+    await model.openAt(bookRef(1, 2, 3), null)
+
+    model.dismissBanner()
+
+    expect(model.view.banner).toBe(null)
+    expect(model.view.rows.every((row) => !row.highlighted)).toBe(true)
   })
 
   it('names an unnamed section by its display name in the banner', async () => {

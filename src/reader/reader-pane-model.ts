@@ -454,7 +454,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       book: book === null ? null : this.#bookView(book),
       title: this.#title(),
       position: this.#position,
-      rows: this.#rows,
+      rows: this.#viewRows(),
       translations:
         book !== null
           ? []
@@ -485,6 +485,15 @@ export class ReaderPaneModel implements StudyMaterialSource {
           ? null
           : `Opened at ${referenceLabel(this.#entry)}`,
     }
+  }
+
+  // The entry highlight rides along with its banner: dismissing the banner
+  // dismisses the highlight too, in both scripture and book mode.
+  #viewRows(): VerseRowView[] {
+    if (!this.#bannerDismissed) return this.#rows
+    return this.#rows.map((row) =>
+      row.highlighted ? { ...row, highlighted: false } : row,
+    )
   }
 
   #bookHere(): ReaderBook | null {
