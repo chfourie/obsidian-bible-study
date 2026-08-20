@@ -7,6 +7,7 @@ const READER_OPTION_DEFAULT_KEYS = [
   'readerNavDefault',
   'readerLayoutDefault',
   'readerStrongsDefault',
+  'readerParaNumbersDefault',
 ] as const
 
 // Pre-split installs stored these as a single value. Carrying that value

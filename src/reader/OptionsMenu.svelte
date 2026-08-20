@@ -18,6 +18,7 @@ options can be adjusted in one visit.
   let {
     toggles,
     strongsAvailable,
+    bookMode,
     fontScalePercent,
     onSetToggle,
     onIncreaseFontScale,
@@ -26,6 +27,7 @@ options can be adjusted in one visit.
   }: {
     toggles: ReaderToggles
     strongsAvailable: boolean
+    bookMode: boolean
     fontScalePercent: number
     onSetToggle: (key: keyof ReaderToggles, value: string) => void
     onIncreaseFontScale: () => void
@@ -33,7 +35,7 @@ options can be adjusted in one visit.
     onResetFontScale: () => void
   } = $props()
 
-  const groups = $derived(readerOptionGroups(strongsAvailable))
+  const groups = $derived(readerOptionGroups({ strongsAvailable, bookMode }))
 
   let open = $state(false)
   let triggerEl: HTMLElement | undefined = $state()

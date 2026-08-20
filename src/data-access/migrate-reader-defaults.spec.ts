@@ -18,6 +18,7 @@ describe('applyReaderDefaultMigration', () => {
       readerNavDefault: 'breadcrumb',
       readerLayoutDefault: 'continuous',
       readerStrongsDefault: 'on',
+      readerParaNumbersDefault: 'on',
     } as unknown as typeof DEFAULT_SETTINGS
 
     const migrated = applyReaderDefaultMigration(settings)
@@ -31,6 +32,17 @@ describe('applyReaderDefaultMigration', () => {
       mobile: 'continuous',
     })
     expect(migrated.readerStrongsDefault).toEqual({ desktop: 'on', mobile: 'on' })
+    expect(migrated.readerParaNumbersDefault).toEqual({
+      desktop: 'on',
+      mobile: 'on',
+    })
+  })
+
+  it('seeds paragraph numbers on hover for installs that never stored one', () => {
+    expect(DEFAULT_SETTINGS.readerParaNumbersDefault).toEqual({
+      desktop: 'hover',
+      mobile: 'hover',
+    })
   })
 
   it('leaves every other field untouched', () => {

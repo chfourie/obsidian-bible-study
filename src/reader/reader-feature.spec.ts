@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Platform, WorkspaceLeaf, type Plugin, type View } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
-import { makeVerseId, parseReference, type Reference } from '../reference'
+import {
+  deregisterBookVersification,
+  makeVerseId,
+  parseReference,
+  registerBookVersification,
+  type Reference,
+} from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
 import { READER_VIEW_TYPE, ReaderFeature } from './reader-feature'
 import { ReaderView } from './reader-view'
@@ -729,6 +735,7 @@ describe('ReaderFeature entry points', () => {
       readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
       readerLayoutDefault: { desktop: 'continuous', mobile: 'verse-per-line' },
       readerStrongsDefault: { desktop: 'on', mobile: 'off' },
+      readerParaNumbersDefault: { desktop: 'on', mobile: 'hover' },
       derivedRedLetter: true,
     })
     await feature.load()
@@ -742,6 +749,7 @@ describe('ReaderFeature entry points', () => {
       layout: 'continuous',
       strongs: 'on',
       redLetter: 'on',
+      paraNumbers: 'on',
     })
   })
 
@@ -753,6 +761,7 @@ describe('ReaderFeature entry points', () => {
       readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
       readerLayoutDefault: { desktop: 'continuous', mobile: 'verse-per-line' },
       readerStrongsDefault: { desktop: 'on', mobile: 'off' },
+      readerParaNumbersDefault: { desktop: 'on', mobile: 'hover' },
     })
     Platform.isMobile = true
     try {
@@ -767,6 +776,7 @@ describe('ReaderFeature entry points', () => {
           nav: 'tree',
           layout: 'verse-per-line',
           strongs: 'off',
+          paraNumbers: 'hover',
         }),
       )
     } finally {
@@ -850,5 +860,111 @@ describe('ReaderFeature study material', () => {
     expect(feature.studyMaterialFor(null)).toBe(null)
     const markdownView = { getViewType: () => 'markdown' } as unknown as View
     expect(feature.studyMaterialFor(markdownView)).toBe(null)
+  })
+})
+
+const HUMILITY = 101
+
+const HUMILITY_SECTIONS = [
+  { chapter: 0, name: 'Preface', paragraphs: 2 },
+  { chapter: 1, name: 'The Glory of the Creature', paragraphs: 3 },
+]
+
+const humilityManifest = (): ModuleManifest => ({
+  ...manifest('hum-m1895'),
+  name: 'Humility',
+  kind: 'book',
+  book: {
+    number: HUMILITY,
+    editionCode: 'HUM-M1895',
+    author: 'Andrew Murray',
+    year: 1895,
+    abbreviation: 'Hum',
+    sections: HUMILITY_SECTIONS,
+  },
+})
+
+const bookStore = (): ModuleStore =>
+  ({
+    installedManifests: async () => [manifest('web'), humilityManifest()],
+    manifest: async (moduleId: string) =>
+      moduleId === 'web'
+        ? manifest('web')
+        : moduleId === 'hum-m1895'
+          ? humilityManifest()
+          : null,
+    bookContent: async (moduleId: string, book: number) =>
+      moduleId === 'hum-m1895' && book === HUMILITY
+        ? {
+            [makeVerseId(HUMILITY, 1, 1)]: 'When God created the universe.',
+            [makeVerseId(HUMILITY, 1, 2)]: 'And so pride is the root.',
+          }
+        : moduleId === 'web' && book === 43
+          ? { [makeVerseId(43, 15, 1)]: 'I am the true vine.' }
+          : {},
+    epigraphs: async (moduleId: string) =>
+      moduleId === 'hum-m1895'
+        ? { 1: [{ quote: 'Cast their crowns.', attribution: 'Rev. iv. 11' }] }
+        : {},
+  }) as unknown as ModuleStore
+
+const bookReference = (chapter: number, paragraph: number): Reference => ({
+  book: HUMILITY,
+  ranges: [
+    {
+      startId: makeVerseId(HUMILITY, chapter, paragraph),
+      endId: makeVerseId(HUMILITY, chapter, paragraph),
+    },
+  ],
+})
+
+describe('ReaderFeature book mode', () => {
+  beforeEach(() =>
+    registerBookVersification({
+      book: HUMILITY,
+      sections: HUMILITY_SECTIONS,
+    }),
+  )
+
+  afterEach(() => deregisterBookVersification(HUMILITY))
+
+  // The seam a book chip's navigation uses is the shared ReferenceNavigator —
+  // the same one scripture chips already travel (ticket #72 supplies the chip).
+  it('opens the reader at a book paragraph with highlight and entry banner', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+
+    feature.openReference(bookReference(1, 2), null)
+    await flushAsync()
+
+    const view = (leaves[0].view as ReaderView).model.view
+    expect(view.position).toEqual({ book: HUMILITY, chapter: 1 })
+    expect(view.book?.sectionName).toBe('The Glory of the Creature')
+    expect(view.book?.edition).toBe('Humility 1895')
+    expect(view.book?.epigraphs).toEqual([
+      { quote: 'Cast their crowns.', attribution: 'Rev. iv. 11' },
+    ])
+    expect(
+      view.rows.filter((row) => row.highlighted).map((row) => row.label),
+    ).toEqual(['2'])
+    expect(view.banner).toBe('Opened at Humility 1:2')
+  })
+
+  it('reopens the command entry point at the last book position', async () => {
+    const { feature, leaves, commands } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(bookReference(1, 1), null)
+    await flushAsync()
+    leaves[0].detached = true
+
+    commands[0].callback()
+    await flushAsync()
+
+    const reopened = leaves[1].view as ReaderView
+    expect(reopened.model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 1,
+    })
+    expect(reopened.model.view.banner).toBe(null)
   })
 })

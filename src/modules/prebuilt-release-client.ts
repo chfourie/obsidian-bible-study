@@ -1,7 +1,11 @@
 import { requestUrl } from 'obsidian'
 import type { TextTransport } from './translation-source'
 import type { ModuleManifest } from './module-manifest'
-import type { BookContent, NormalizedModule } from './normalized-module'
+import type {
+  BookContent,
+  ModuleEpigraphs,
+  NormalizedModule,
+} from './normalized-module'
 import type {
   PrebuiltModuleDownload,
   PrebuiltModuleSource,
@@ -29,6 +33,8 @@ export const releaseChecksumsUrl = ({ tag }: PrebuiltRelease): string =>
 export type PrebuiltReleaseArtifact = {
   manifest: Omit<ModuleManifest, 'source' | 'sourceChecksum'>
   books: Record<number, BookContent>
+  // Book artifacts only — a translation release carries no epigraphs.
+  epigraphs?: ModuleEpigraphs
 }
 
 const requestUrlTransport: TextTransport = async (url) =>
@@ -63,6 +69,9 @@ export class PrebuiltReleaseClient implements PrebuiltModuleSource {
           content,
         ]),
       ),
+      ...(artifact.epigraphs === undefined
+        ? {}
+        : { epigraphs: artifact.epigraphs }),
     }
     return { module, checksum }
   }

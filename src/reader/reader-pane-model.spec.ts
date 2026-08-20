@@ -1,12 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  deregisterBookVersification,
   enumerateVerseIds,
   makeVerseId,
   parseReference,
   rangeContains,
   referencesIntersect,
+  registerBookVersification,
   type Reference,
 } from '../reference'
+import type { Epigraph } from '../modules'
 import type { Passage, PassageSource } from '../rendering'
 import type {
   CrossReference,
@@ -17,6 +20,9 @@ import type { StudyMaterialSource, VerseDetailsView } from '../contracts'
 import {
   paragraphsOf,
   ReaderPaneModel,
+  type ReaderBook,
+  type ReaderBookSection,
+  type ReaderBookSource,
   type ReaderPaneDeps,
   type ReaderToggles,
 } from './reader-pane-model'
@@ -54,6 +60,7 @@ const DEFAULT_TOGGLES: ReaderToggles = {
   layout: 'verse-per-line',
   strongs: 'off',
   redLetter: 'off',
+  paraNumbers: 'hover',
 }
 
 const john15Texts = (): MockTexts => ({
@@ -846,6 +853,7 @@ describe('reader toggles', () => {
       layout: 'continuous',
       strongs: 'on',
       redLetter: 'on',
+      paraNumbers: 'on',
     })
 
     expect(model.view.toggles).toEqual({
@@ -853,6 +861,7 @@ describe('reader toggles', () => {
       layout: 'continuous',
       strongs: 'on',
       redLetter: 'on',
+      paraNumbers: 'on',
     })
   })
 
@@ -869,6 +878,7 @@ describe('reader toggles', () => {
       layout: 'continuous',
       strongs: 'off',
       redLetter: 'off',
+      paraNumbers: 'hover',
     })
     expect(notified).toBe(2)
   })
@@ -2755,5 +2765,259 @@ describe('chapter mentions in the study material', () => {
     expect(model.studyMaterial.chapterMentions).toEqual([
       { file: 'abide.md', title: 'abide', labels: ['John 15:4'] },
     ])
+  })
+})
+
+const HUMILITY = 101
+
+const HUMILITY_SECTIONS: ReaderBookSection[] = [
+  { chapter: 0, name: 'Preface' },
+  { chapter: 1, name: 'The Glory of the Creature' },
+  { chapter: 2, name: 'The Secret of Redemption' },
+  { chapter: 3, name: 'In the Life of Jesus' },
+  { chapter: 4, name: 'In the Teaching of Jesus' },
+  { chapter: 5, name: 'In the Disciples of Jesus' },
+  { chapter: 6, name: 'In Daily Life' },
+  { chapter: 7, name: 'And Holiness' },
+  { chapter: 8, name: 'And Sin' },
+  { chapter: 9, name: 'And Faith' },
+  { chapter: 10, name: 'And Death to Self' },
+  { chapter: 11, name: 'And Happiness' },
+  { chapter: 12, name: 'And Exaltation' },
+  { chapter: 13, name: 'Note A' },
+  { chapter: 14, name: 'Note B' },
+  { chapter: 15, name: 'Note C' },
+  { chapter: 16, name: 'Note D' },
+  { chapter: 17, name: 'A Prayer for Humility' },
+]
+
+const humility = (): ReaderBook => ({
+  number: HUMILITY,
+  title: 'Humility',
+  author: 'Andrew Murray',
+  year: 1895,
+  editionId: 'hum-m1895',
+  sections: HUMILITY_SECTIONS,
+})
+
+const CROWNS: Epigraph = {
+  quote: 'They shall cast their crowns before the throne.',
+  attribution: 'Rev. iv. 11',
+}
+
+const humilityTexts = (): MockTexts => ({
+  'hum-m1895': {
+    [makeVerseId(HUMILITY, 0, 1)]: 'In the Preface.',
+    [makeVerseId(HUMILITY, 1, 1)]: 'When God created the universe.',
+    [makeVerseId(HUMILITY, 1, 2)]: 'And so pride is the root.',
+    [makeVerseId(HUMILITY, 1, 3)]: 'Humility is the only soil.',
+    [makeVerseId(HUMILITY, 17, 1)]: 'O God, who resistest the proud.',
+  },
+})
+
+const INERT_BOOKS: ReaderBookSource = {
+  installed: async () => [],
+  epigraphs: async () => [],
+}
+
+const bookModelWith = (
+  overrides: Partial<ReaderPaneDeps> = {},
+  toggles: ReaderToggles = DEFAULT_TOGGLES,
+): ReaderPaneModel =>
+  new ReaderPaneModel(
+    {
+      passages: passageSourceOver({ ...john15Texts(), ...humilityTexts() }),
+      availableTranslations: async () => [translation('web')],
+      intersecting: () => [],
+      crossReferences: crossReferencesOf(),
+      annotationDetails: async () => null,
+      strongs: {
+        dictionariesInstalled: async () => true,
+        entriesFor: async () => [],
+        attribution: 'STEPBible CC BY 4.0',
+      },
+      books: {
+        installed: async () => [humility()],
+        epigraphs: async (editionId, chapter) =>
+          editionId === 'hum-m1895' && chapter === 1 ? [CROWNS] : [],
+      },
+      ...overrides,
+    },
+    { toggles, translationId: 'web' },
+  )
+
+const bookRef = (chapter: number, from: number, to = from): Reference => ({
+  book: HUMILITY,
+  ranges: [
+    {
+      startId: makeVerseId(HUMILITY, chapter, from),
+      endId: makeVerseId(HUMILITY, chapter, to),
+    },
+  ],
+})
+
+describe('ReaderPaneModel book mode', () => {
+  beforeEach(() => {
+    registerBookVersification({
+      book: HUMILITY,
+      sections: HUMILITY_SECTIONS.map(({ chapter }) => ({
+        chapter,
+        paragraphs: 20,
+      })),
+    })
+  })
+
+  afterEach(() => deregisterBookVersification(HUMILITY))
+
+  it('renders a section as book prose with its epigraph and paragraph numbers', async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    const view = model.view
+    expect(view.status).toBe('ok')
+    expect(view.book?.title).toBe('Humility')
+    expect(view.book?.author).toBe('Andrew Murray')
+    expect(view.book?.sectionName).toBe('The Glory of the Creature')
+    expect(view.book?.epigraphs).toEqual([CROWNS])
+    expect(view.rows.map((row) => row.label)).toEqual(['1', '2', '3'])
+  })
+
+  it('renders a section without an epigraph', async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 0 })
+
+    expect(model.view.book?.sectionName).toBe('Preface')
+    expect(model.view.book?.epigraphs).toEqual([])
+  })
+
+  it('titles the pane by book and section', async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.title).toBe('Humility — The Glory of the Creature')
+  })
+
+  it("offers the book's own named-section TOC, marking the section in view", async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 13 })
+
+    const sections = model.view.book?.sections ?? []
+    expect(sections).toHaveLength(18)
+    expect(sections[0]).toEqual({ chapter: 0, name: 'Preface', current: false })
+    expect(sections[13]).toEqual({ chapter: 13, name: 'Note A', current: true })
+    expect(sections[17].name).toBe('A Prayer for Humility')
+  })
+
+  it('steps between sections and stops at both ends of the book', async () => {
+    const model = bookModelWith()
+    await model.openPosition({ book: HUMILITY, chapter: 0 })
+
+    expect(model.view.hasPreviousChapter).toBe(false)
+    expect(model.view.hasNextChapter).toBe(true)
+
+    await model.nextChapter()
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
+    expect(model.view.hasPreviousChapter).toBe(true)
+
+    await model.previousChapter()
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 0 })
+
+    await model.openPosition({ book: HUMILITY, chapter: 17 })
+    expect(model.view.hasNextChapter).toBe(false)
+    await model.nextChapter()
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 17 })
+  })
+
+  it('shows a single non-switchable edition pill instead of translations', async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.book?.edition).toBe('Humility 1895')
+    expect(model.view.translations).toEqual([])
+  })
+
+  it("hides Strong's in book mode however the pane's toggle stands", async () => {
+    const model = bookModelWith({}, { ...DEFAULT_TOGGLES, strongs: 'on' })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.strongsAvailable).toBe(false)
+    expect(model.view.strongsMode).toBe(false)
+  })
+
+  it('leaves scripture mode untouched', async () => {
+    const model = bookModelWith()
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.view.book).toBeNull()
+    expect(model.view.translations.map((pill) => pill.id)).toEqual(['web'])
+    expect(model.view.title).toBe('John 15')
+  })
+
+  it('carries the paragraph-number option as an in-pane toggle', async () => {
+    const model = bookModelWith(
+      {},
+      { ...DEFAULT_TOGGLES, paraNumbers: 'hover' },
+    )
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    expect(model.view.toggles.paraNumbers).toBe('hover')
+
+    model.setToggle('paraNumbers', 'on')
+
+    expect(model.view.toggles.paraNumbers).toBe('on')
+  })
+
+  it('lands on the paragraph a book chip points at, highlighted and bannered', async () => {
+    const model = bookModelWith()
+
+    await model.openAt(bookRef(1, 2, 3), null)
+
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
+    expect(
+      model.view.rows.filter((row) => row.highlighted).map((row) => row.label),
+    ).toEqual(['2', '3'])
+    expect(model.view.banner).toBe('Opened at Humility 1:2-3')
+  })
+
+  it('banners a single-paragraph entry without a range', async () => {
+    const model = bookModelWith()
+
+    await model.openAt(bookRef(1, 2), null)
+
+    expect(model.view.banner).toBe('Opened at Humility 1:2')
+  })
+
+  it('keeps the scripture translation across a visit to a book', async () => {
+    const model = bookModelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(model.view.translations.map((pill) => pill.active)).toEqual([true])
+    expect(model.view.status).toBe('ok')
+  })
+
+  it('reports an uninstalled book as unavailable', async () => {
+    const model = bookModelWith({ books: INERT_BOOKS })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.status).toBe('unavailable')
+    expect(model.view.book).toBeNull()
+  })
+
+  it('renders a book even with no translation installed', async () => {
+    const model = bookModelWith({ availableTranslations: async () => [] })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.status).toBe('ok')
   })
 })

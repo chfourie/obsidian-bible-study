@@ -194,6 +194,8 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Layout (mobile)',
         "Strong's mode (desktop)",
         "Strong's mode (mobile)",
+        'Paragraph numbers (desktop)',
+        'Paragraph numbers (mobile)',
         'Folder',
         'Template file',
         'Display ordering',
@@ -666,6 +668,26 @@ describe('ScriptureStudySettingTab reader defaults', () => {
     expect(
       dropdownOf(settingNamed(container, 'Navigation (mobile)')).value,
     ).toBe('tree')
+  })
+
+  it('persists the paragraph-number default per device', async () => {
+    const { container, settingsStore } = await setup()
+
+    expect(
+      dropdownOf(settingNamed(container, 'Paragraph numbers (desktop)')).value,
+    ).toBe('hover')
+
+    changeDropdown(
+      settingNamed(container, 'Paragraph numbers (mobile)'),
+      'on',
+    )
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.readerParaNumbersDefault).toEqual({
+      desktop: 'hover',
+      mobile: 'on',
+    })
   })
 
   it('persists a desktop reader default change without touching the mobile slot', async () => {

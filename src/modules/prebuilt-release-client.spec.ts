@@ -49,7 +49,9 @@ const humilityArtifact = {
   books: {
     101: { [makeVerseId(101, 0, 1)]: { text: 'In the Preface.' } },
   },
-  epigraphs: {},
+  epigraphs: {
+    0: [{ quote: 'Humble yourselves.', attribution: 'Jas. iv. 10' }],
+  },
 }
 
 const HUMILITY_RELEASE = bookRelease(BOOK_CATALOGUE[0])
@@ -104,6 +106,16 @@ describe('PrebuiltReleaseClient fetchModule', () => {
       sourceChecksum: checksum,
     })
     expect(download.module.books.get(43)).toEqual(bsbArtifact.books[43])
+  })
+
+  it("carries a book artifact's epigraphs into the normalized module", async () => {
+    const { client } = clientFor(HUMILITY_RELEASE, humilityArtifact, {
+      'hum-m1895': sha256(JSON.stringify(humilityArtifact)),
+    })
+
+    const download = await client.fetchModule()
+
+    expect(download.module.epigraphs).toEqual(humilityArtifact.epigraphs)
   })
 
   it('parses a book release artifact, keeping its kind and book metadata', async () => {

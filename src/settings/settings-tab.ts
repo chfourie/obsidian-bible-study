@@ -51,6 +51,7 @@ type ReaderOptionField =
   | 'readerNavDefault'
   | 'readerLayoutDefault'
   | 'readerStrongsDefault'
+  | 'readerParaNumbersDefault'
 
 type ReaderDefaultControlKey =
   | `${ReaderOptionField}Desktop`
@@ -90,6 +91,14 @@ const READER_DEFAULT_CONTROLS: Record<
   },
   readerStrongsDefaultMobile: {
     field: 'readerStrongsDefault',
+    device: 'mobile',
+  },
+  readerParaNumbersDefaultDesktop: {
+    field: 'readerParaNumbersDefault',
+    device: 'desktop',
+  },
+  readerParaNumbersDefaultMobile: {
+    field: 'readerParaNumbersDefault',
     device: 'mobile',
   },
 }
@@ -603,6 +612,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           off: 'Off',
           on: 'On',
         }),
+        ...this.#readerDefaultPair(
+          'Paragraph numbers',
+          'readerParaNumbersDefault',
+          { on: 'On', hover: 'On hover' },
+        ),
         {
           name: 'Text size',
           desc: READER_DEFAULT_DESC + ' Relative to the app font size.',

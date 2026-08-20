@@ -127,6 +127,31 @@ describe('ModuleStore', () => {
     ])
   })
 
+  it('persists a book module\'s epigraphs beside its content', async () => {
+    const { store } = setup()
+    const humility: NormalizedModule = {
+      ...webModule(),
+      manifest: { ...webManifest(), id: 'hum-m1895' },
+      epigraphs: {
+        1: [{ quote: 'They shall cast their crowns.', attribution: 'Rev. iv. 11' }],
+      },
+    }
+
+    await store.saveModule(humility)
+
+    expect(await store.epigraphs('hum-m1895')).toEqual({
+      1: [{ quote: 'They shall cast their crowns.', attribution: 'Rev. iv. 11' }],
+    })
+  })
+
+  it('treats a module without an epigraph file as having none', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+
+    expect(await store.epigraphs('web')).toEqual({})
+    expect(await store.epigraphs('kjv')).toEqual({})
+  })
+
   it('lists the manifests of all installed modules', async () => {
     const { store } = setup()
     await store.saveModule(webModule())
