@@ -6,6 +6,8 @@ This document consolidates every decision from the [wayfinder map](https://githu
 
 Plugin id: `scripture-study`. Stack: TypeScript, Svelte 5, esbuild + esbuild-svelte, vitest, eslint-plugin-obsidianmd — conventions mirrored from `obsidian-journal-folder`. The scaffold is committed and green (issue #5).
 
+Addendum: non-biblical books (readable, referencable, cross-referencable works on the same id grid — first instance *Humility*, Andrew Murray) are specified in [spec-books.md](spec-books.md).
+
 ---
 
 ## 1. Domain model
@@ -176,7 +178,7 @@ Steps 1–5 need no API key and deliver a usable offline reader; 6–9 layer on 
 - User-supplied module import (translations & dictionaries) — motivating case requires DRM circumvention.
 - Tagged KJV (needs STEPBible TAGNT/TAHOT alignment work; only ready-made source is license-shaky).
 - Deuterocanon / non-English book names / localized grammar.
-- Persistent index cache; per-translation versification mapping; page-footer attribution aggregation; multiple chip styles; inline length threshold + expander; general non-bible reference block type; community-store release (own effort, post-spec).
+- Persistent index cache; per-translation versification mapping; page-footer attribution aggregation; multiple chip styles; inline length threshold + expander; general non-bible reference block type (superseded — [spec-books.md](spec-books.md) §4: normal display modes cover books, no separate callout); community-store release (own effort, post-spec).
 
 ## 11. Open items (non-blocking)
 
