@@ -2427,6 +2427,32 @@ describe('chapter annotations in the study material', () => {
     ).toEqual(['a-younger.md', 'z-older.md'])
   })
 
+  it('re-sorts loaded annotations on an ordering change without re-reading notes', async () => {
+    let reads = 0
+    const model = modelWith({
+      intersecting: () => [
+        group('z-older.md', 'John 15:4'),
+        group('a-younger.md', 'John 15:4'),
+      ],
+      annotationDetails: async (file) => {
+        reads += 1
+        return { body: file, created: file === 'z-older.md' ? 100 : 200 }
+      },
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+    expect(
+      model.studyMaterial.chapterAnnotations.map((item) => item.file),
+    ).toEqual(['z-older.md', 'a-younger.md'])
+    const readsAfterLoad = reads
+
+    model.setAnnotationOrdering('path-a-z')
+
+    expect(reads).toBe(readsAfterLoad)
+    expect(
+      model.studyMaterial.chapterAnnotations.map((item) => item.file),
+    ).toEqual(['a-younger.md', 'z-older.md'])
+  })
+
   it('follows the reader to the next chapter', async () => {
     const model = modelWith({
       ...indexOver(() => [

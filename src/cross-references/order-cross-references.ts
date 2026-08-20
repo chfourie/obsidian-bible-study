@@ -28,30 +28,31 @@ export const orderCrossReferences = (
   context: readonly Reference[],
 ): CrossReferenceView[] => {
   const viewedChapters = new Set(context.flatMap(chaptersOf))
+  // A member's rank — leads iff it shares a chapter with the context, then
+  // its first verse — computed once per member, not per comparison.
   const rank = (reference: Reference): [number, number] => [
     chaptersOf(reference).some((key) => viewedChapters.has(key)) ? 0 : 1,
     startOf(reference),
   ]
-  const compare = (a: Reference, b: Reference): number => {
-    const [leadsA, startA] = rank(a)
-    const [leadsB, startB] = rank(b)
-    return leadsA - leadsB || startA - startB
-  }
-  const ordered = entries.map((entry) => ({
-    ...entry,
-    members: [...entry.members].sort((a, b) => compare(a.reference, b.reference)),
-  }))
-  const compareEntries = (a: CrossReferenceView, b: CrossReferenceView): number => {
-    const depth = Math.max(a.members.length, b.members.length)
+  const compareRanks = (a: [number, number], b: [number, number]): number =>
+    a[0] - b[0] || a[1] - b[1]
+  const ordered = entries.map((entry) => {
+    const members = entry.members
+      .map((member) => ({ member, rank: rank(member.reference) }))
+      .sort((a, b) => compareRanks(a.rank, b.rank))
+    return {
+      entry: { ...entry, members: members.map(({ member }) => member) },
+      ranks: members.map((member) => member.rank),
+    }
+  })
+  type Ranked = (typeof ordered)[number]
+  const compareEntries = (a: Ranked, b: Ranked): number => {
+    const depth = Math.min(a.ranks.length, b.ranks.length)
     for (let index = 0; index < depth; index += 1) {
-      const left = a.members[index]?.reference
-      const right = b.members[index]?.reference
-      if (left === undefined) return right === undefined ? 0 : -1
-      if (right === undefined) return 1
-      const order = compare(left, right)
+      const order = compareRanks(a.ranks[index], b.ranks[index])
       if (order !== 0) return order
     }
-    return 0
+    return a.ranks.length - b.ranks.length
   }
-  return ordered.sort(compareEntries)
+  return ordered.sort(compareEntries).map(({ entry }) => entry)
 }

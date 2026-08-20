@@ -2,6 +2,7 @@ import {
   chapterAnnotationViews,
   loadChapterAnnotations,
   type AnnotationDetails,
+  type LoadedChapterAnnotation,
 } from '../annotations'
 import type {
   ChapterAnnotationView,
@@ -24,6 +25,7 @@ import {
   mergeRanges,
   referencesIntersect,
   type Reference,
+  type VerseRange,
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
 import {
@@ -159,6 +161,10 @@ export class StudyPanelModel {
   #entries: ReferenceEntryView[] = []
   #crossReferences: CrossReferenceView[] = []
   #annotations: ChapterAnnotationView[] = []
+  // The loaded annotations and the scope they were placed against, kept so a
+  // changed ordering re-sorts them without re-reading any note.
+  #annotationItems: LoadedChapterAnnotation[] = []
+  #annotationScope: readonly VerseRange[] = []
   #mentions: ChapterMentionView[] = []
   #annotationOrdering: AnnotationOrdering
   #translationId: string | null
@@ -272,6 +278,8 @@ export class StudyPanelModel {
       this.#entries = []
       this.#crossReferences = []
       this.#annotations = []
+      this.#annotationItems = []
+      this.#annotationScope = []
       this.#mentions = []
       this.#notify()
       return
@@ -299,10 +307,17 @@ export class StudyPanelModel {
     await this.#loadIntersectingNotes()
   }
 
+  // Ordering is pure, so the loaded annotations re-sort in place — no
+  // re-query, no re-read of the notes.
   setAnnotationOrdering(ordering: AnnotationOrdering): void {
     if (ordering === this.#annotationOrdering) return
     this.#annotationOrdering = ordering
-    void this.#loadIntersectingNotes()
+    this.#annotations = chapterAnnotationViews(
+      this.#annotationItems,
+      this.#annotationScope,
+      ordering,
+    )
+    this.#notify()
   }
 
   // Every note reference queried once, the hits merged per file so a note
@@ -341,6 +356,8 @@ export class StudyPanelModel {
     const references = this.#entries.map((entry) => entry.reference)
     if (references.length === 0) {
       this.#annotations = []
+      this.#annotationItems = []
+      this.#annotationScope = []
       this.#mentions = []
       this.#notify()
       return
@@ -366,6 +383,8 @@ export class StudyPanelModel {
     )
     if (token !== this.#intersectionToken) return
     this.#mentions = mentions
+    this.#annotationItems = items
+    this.#annotationScope = scope
     this.#annotations = chapterAnnotationViews(
       items,
       scope,

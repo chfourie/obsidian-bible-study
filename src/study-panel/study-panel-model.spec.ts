@@ -1106,6 +1106,31 @@ describe('annotations and mentions in the Study Panel', () => {
     ])
   })
 
+  it('re-sorts loaded annotations on an ordering change without re-reading notes', async () => {
+    const vault = fakeVault({
+      'Annotations/Older.md': '---\nref: John 15:1\n---\nOlder.',
+      'Annotations/Newer.md': '---\nref: John 15:1\n---\nNewer.',
+    })
+    let reads = 0
+    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, {
+      intersecting: vault.intersecting,
+      annotationDetails: (file) => {
+        reads += 1
+        return vault.annotationDetails(file)
+      },
+    })
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
+    const readsAfterLoad = reads
+
+    panel.setAnnotationOrdering('path-a-z')
+
+    expect(reads).toBe(readsAfterLoad)
+    expect(panel.view.annotations.map((item) => item.file)).toEqual([
+      'Annotations/Newer.md',
+      'Annotations/Older.md',
+    ])
+  })
+
   it('tiebreaks mentions at one position by path', async () => {
     const vault = fakeVault({
       'Sermons/B.md': 'On {John 15:1}.',

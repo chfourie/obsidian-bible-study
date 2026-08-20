@@ -22,6 +22,7 @@ import {
   chapterAnnotationViews,
   loadChapterAnnotations,
   type AnnotationDetails,
+  type LoadedChapterAnnotation,
 } from '../annotations'
 import { chapterMentionViews } from '../mentions'
 import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
@@ -199,6 +200,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // selected or its load is still in flight.
   #details: VerseDetailsView | null = null
   #chapterAnnotations: ChapterAnnotationView[] = []
+  // The loaded annotations, kept so a changed ordering re-sorts them without
+  // re-reading any note. Their scope is always the current chapter.
+  #chapterAnnotationItems: LoadedChapterAnnotation[] = []
   #chapterMentions: ChapterMentionView[] = []
   #markers = new Map<number, VerseMarkerCounts>()
   #chapterMaterialToken = 0
@@ -326,10 +330,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#notify()
   }
 
+  // Ordering is pure, so the loaded annotations re-sort in place — no
+  // re-query, no re-read of the notes.
   setAnnotationOrdering(ordering: AnnotationOrdering): void {
     if (ordering === this.#annotationOrdering) return
     this.#annotationOrdering = ordering
-    void this.refreshOccurrences()
+    this.#chapterAnnotations = chapterAnnotationViews(
+      this.#chapterAnnotationItems,
+      chapterReference(this.#position).ranges,
+      ordering,
+    )
+    this.#notify()
   }
 
   get view(): ReaderPaneView {
@@ -813,6 +824,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     )
     if (token !== this.#chapterMaterialToken) return
     this.#chapterMentions = mentions
+    this.#chapterAnnotationItems = items
     this.#chapterAnnotations = chapterAnnotationViews(
       items,
       chapter.ranges,
@@ -840,8 +852,18 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#rows = []
     this.#notify()
     // Annotations and mentions hang off the vault index alone, so they load
-    // whatever becomes of the passage below.
-    await this.#loadChapterMaterial()
+    // beside the passage below instead of holding it up — the verse markers
+    // land synchronously either way. Awaited at the end only so callers
+    // observe a fully loaded chapter.
+    const material = this.#loadChapterMaterial()
+    try {
+      await this.#loadPassage(token)
+    } finally {
+      await material
+    }
+  }
+
+  async #loadPassage(token: number): Promise<void> {
     const available = await this.deps.availableTranslations()
     if (token !== this.#loadToken) return
     this.#available = available
