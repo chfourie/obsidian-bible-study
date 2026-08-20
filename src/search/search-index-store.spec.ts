@@ -87,6 +87,20 @@ describe('loadSearchIndex', () => {
     expect(await loadSearchIndex(source, 'web', 'sha-web-1')).toBeNull()
   })
 
+  it('rejects the older format that carried a copy of the module’s text', async () => {
+    const source = fakeSearchIndexSource()
+    const index = await built(source)
+    await source.writeSearchIndex(
+      'web',
+      JSON.stringify({
+        ...index,
+        formatVersion: 1,
+        texts: ['In the beginning God created the heavens and the earth.'],
+      }),
+    )
+    expect(await loadSearchIndex(source, 'web', 'sha-web-1')).toBeNull()
+  })
+
   it('rejects an index file that is not readable at all', async () => {
     const source = fakeSearchIndexSource()
     await source.writeSearchIndex('web', 'not json')

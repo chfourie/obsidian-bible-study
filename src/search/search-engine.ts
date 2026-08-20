@@ -13,13 +13,14 @@ import {
   type SearchIndexSource,
 } from './search-index-store'
 import { isEmptyQuery, type SearchQuery } from './search-query'
-import type { SearchHit } from './search-scan'
+import { hitsWithText, type SearchHit } from './search-scan'
 
 // Every search a module answers goes through its index: loaded from beside the
 // module's content, or built there and then the first time a query meets a
 // module without a valid one. Once loaded it stays in memory for as long as
-// the plugin runs, re-stamped against the manifest on every search so a module
-// downloaded again is noticed.
+// the plugin runs — postings only, no module text — re-stamped against the
+// manifest on every search so a module downloaded again is noticed. A hit's
+// text is read back from the module's content, for the matched atoms alone.
 export class SearchEngine {
   readonly #loaded = new Map<string, SearchIndex>()
 
@@ -35,7 +36,8 @@ export class SearchEngine {
   ): Promise<SearchHit[]> {
     if (isEmptyQuery(query)) return []
     const index = await this.#index(moduleId, onProgress)
-    return index === null ? [] : searchIndex(index, query)
+    if (index === null) return []
+    return hitsWithText(this.source, moduleId, searchIndex(index, query))
   }
 
   // The warm-up a freshly installed module gets, so the first query against it

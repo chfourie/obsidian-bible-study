@@ -341,6 +341,7 @@ describe('SearchFeature eager indexing', () => {
 
     expect(model.view.totalHits).toBe(1)
     expect(model.view.indexing).toBeNull()
-    expect(store.contentReads).toEqual([])
+    // Only the book the hit sits in is read, and only for its text.
+    expect(store.contentReads).toEqual(['web/43'])
   })
 })

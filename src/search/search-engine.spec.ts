@@ -69,7 +69,45 @@ describe('SearchEngine', () => {
       makeVerseId(1, 1, 2),
       makeVerseId(43, 15, 1),
     ])
-    expect(source.contentReads).toEqual(['web/1', 'web/2', 'web/43'])
+    expect(source.contentReads.slice(0, 3)).toEqual(['web/1', 'web/2', 'web/43'])
+  })
+
+  it('reads a hit’s text back from the module, once per book holding one', async () => {
+    const { engine, source } = engineOver()
+    await engine.indexModule('web')
+    source.forget()
+    expect(
+      await engine.search('web', parseSearchQuery('the')),
+    ).toEqual([
+      {
+        verseId: makeVerseId(1, 1, 1),
+        text: 'In the beginning God created the heavens and the earth.',
+        spans: [
+          { start: 3, end: 6 },
+          { start: 29, end: 32 },
+          { start: 45, end: 48 },
+        ],
+      },
+      {
+        verseId: makeVerseId(1, 1, 2),
+        text: 'The earth was formless and empty.',
+        spans: [{ start: 0, end: 3 }],
+      },
+      {
+        verseId: makeVerseId(43, 15, 1),
+        text: 'I am the true vine.',
+        spans: [{ start: 5, end: 8 }],
+      },
+    ])
+    expect(source.contentReads).toEqual(['web/1', 'web/43'])
+  })
+
+  it('reads no content for a book the query found nothing in', async () => {
+    const { engine, source } = engineOver()
+    await engine.indexModule('web')
+    source.forget()
+    await verses(engine, 'vine')
+    expect(source.contentReads).toEqual(['web/43'])
   })
 
   it('finds nothing in a module that is not installed, and indexes none', async () => {
@@ -108,7 +146,7 @@ describe('SearchEngine', () => {
       makeVerseId(1, 1, 1),
       makeVerseId(1, 1, 2),
     ])
-    expect(source.contentReads).toEqual([])
+    expect(source.contentReads).toEqual(['web/1'])
     expect(source.indexWrites).toEqual([])
   })
 
@@ -118,7 +156,7 @@ describe('SearchEngine', () => {
     source.forget()
     const later = new SearchEngine(source, BOOKS)
     expect(await verses(later, 'vine')).toEqual([makeVerseId(43, 15, 1)])
-    expect(source.contentReads).toEqual([])
+    expect(source.contentReads).toEqual(['web/43'])
     expect(source.indexWrites).toEqual([])
   })
 
@@ -130,7 +168,7 @@ describe('SearchEngine', () => {
       43: { [makeVerseId(43, 15, 5)]: 'I am the vine, you are the branches.' },
     })
     expect(await verses(engine, 'branches')).toEqual([makeVerseId(43, 15, 5)])
-    expect(source.contentReads).toEqual(['web/1', 'web/2', 'web/43'])
+    expect(source.contentReads.slice(0, 3)).toEqual(['web/1', 'web/2', 'web/43'])
     expect(source.indexWrites).toEqual(['web'])
   })
 
@@ -147,7 +185,7 @@ describe('SearchEngine', () => {
     source.forget()
     const later = new SearchEngine(source, BOOKS)
     expect(await verses(later, 'vine')).toEqual([makeVerseId(43, 15, 1)])
-    expect(source.contentReads).toEqual(['web/1', 'web/2', 'web/43'])
+    expect(source.contentReads.slice(0, 3)).toEqual(['web/1', 'web/2', 'web/43'])
     expect(source.indexWrites).toEqual(['web'])
   })
 
@@ -184,7 +222,7 @@ describe('SearchEngine', () => {
     expect(await verses(engine, 'graces', 'hum-m1895')).toEqual([
       makeVerseId(101, 3, 2),
     ])
-    expect(source.contentReads).toEqual(['hum-m1895/101'])
+    expect(source.contentReads.slice(0, 1)).toEqual(['hum-m1895/101'])
   })
 
   it('indexes each module it is asked about separately', async () => {
@@ -222,7 +260,7 @@ describe('SearchEngine eager indexing', () => {
       )).map((hit) => hit.verseId),
     ).toEqual([makeVerseId(43, 15, 1)])
     expect(progress).toEqual([])
-    expect(source.contentReads).toEqual([])
+    expect(source.contentReads).toEqual(['web/43'])
     expect(source.indexWrites).toEqual([])
   })
 

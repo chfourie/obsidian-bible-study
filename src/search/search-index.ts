@@ -6,11 +6,11 @@ import {
   type SearchQuery,
   type SearchTerm,
 } from './search-query'
-import type { ModuleAtom, SearchHit } from './search-scan'
+import type { ModuleAtom, SearchMatch } from './search-scan'
 
 // Bump whenever the serialized shape or the folding behind it changes: every
 // stored index that carries an older stamp is rebuilt whole on load.
-export const SEARCH_INDEX_FORMAT_VERSION = 1
+export const SEARCH_INDEX_FORMAT_VERSION = 2
 
 // One appearance of a term in the module: which atom, which word of it, and
 // the word's character offsets into that atom's stored text. Serialized flat,
@@ -27,12 +27,12 @@ type Occurrence = {
 
 // The whole persisted index. Atoms are numbered by build order — Canonical
 // Grid order — so hits sort by atom number alone. `terms` is sorted for the
-// prefix lookup and `postings` runs parallel to it.
+// prefix lookup and `postings` runs parallel to it. No atom text is kept: the
+// offsets address the module's own stored content, which a hit is read from.
 export type SearchIndex = {
   formatVersion: number
   sourceChecksum: string
   verseIds: number[]
-  texts: string[]
   terms: string[]
   postings: number[][]
 }
@@ -54,7 +54,6 @@ export const buildSearchIndex = (
     formatVersion: SEARCH_INDEX_FORMAT_VERSION,
     sourceChecksum,
     verseIds: atoms.map((atom) => atom.verseId),
-    texts: atoms.map((atom) => atom.text),
     terms,
     postings: terms.map((term) => postingsByTerm.get(term) ?? []),
   }
@@ -177,7 +176,7 @@ const intersect = (
 export const searchIndex = (
   index: SearchIndex,
   query: SearchQuery,
-): SearchHit[] => {
+): SearchMatch[] => {
   if (isEmptyQuery(query)) return []
   let matched: Map<number, MatchSpan[]> | null = null
   for (const term of query.terms) {
@@ -190,7 +189,6 @@ export const searchIndex = (
     .sort((a, b) => a - b)
     .map((atom) => ({
       verseId: index.verseIds[atom],
-      text: index.texts[atom],
       spans: mergeMatchSpans(hits.get(atom) ?? []),
     }))
 }

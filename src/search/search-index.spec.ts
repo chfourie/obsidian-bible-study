@@ -8,7 +8,7 @@ import {
   type SearchIndex,
 } from './search-index'
 import { parseSearchQuery } from './search-query'
-import type { ModuleAtom, SearchHit } from './search-scan'
+import type { ModuleAtom, SearchMatch } from './search-scan'
 
 const atom = (verse: number, text: string): ModuleAtom => ({
   verseId: makeVerseId(43, 15, verse),
@@ -28,8 +28,10 @@ const indexOf = (atoms: ModuleAtom[] = JOHN15, checksum = 'sha-1'): SearchIndex 
 const verses = (index: SearchIndex, query: string): number[] =>
   searchIndex(index, parseSearchQuery(query)).map((hit) => hit.verseId)
 
-const spanTexts = (hit: SearchHit): string[] =>
-  hit.spans.map((span) => hit.text.slice(span.start, span.end))
+// Offsets address the module's own stored atom text, so a spec reads them
+// back against the very text the atom was built from.
+const spanTexts = (match: SearchMatch, text: string): string[] =>
+  match.spans.map((span) => text.slice(span.start, span.end))
 
 describe('buildSearchIndex', () => {
   it('stamps the index with the format version and the module checksum', () => {
@@ -41,6 +43,10 @@ describe('buildSearchIndex', () => {
   it('holds its terms folded and sorted', () => {
     const index = indexOf([atom(1, 'Ánd the Vine, the vine.')])
     expect(index.terms).toEqual(['and', 'the', 'vine'])
+  })
+
+  it('keeps no copy of the module’s text, only offsets into it', () => {
+    expect(JSON.stringify(indexOf())).not.toContain('I am the true vine.')
   })
 
   it('survives a round trip through JSON', () => {
@@ -98,13 +104,13 @@ describe('searchIndex', () => {
 
   it('prefix-matches the words inside a phrase', () => {
     const hits = searchIndex(indexOf(), parseSearchQuery('"tru vin"'))
-    expect(spanTexts(hits[0])).toEqual(['true vine'])
+    expect(spanTexts(hits[0], 'I am the true vine.')).toEqual(['true vine'])
   })
 
   it('carries a phrase across the punctuation between its words', () => {
-    const index = indexOf([atom(1, 'the Lord, the God of hosts')])
-    const hits = searchIndex(index, parseSearchQuery('"lord the"'))
-    expect(spanTexts(hits[0])).toEqual(['Lord, the'])
+    const text = 'the Lord, the God of hosts'
+    const hits = searchIndex(indexOf([atom(1, text)]), parseSearchQuery('"lord the"'))
+    expect(spanTexts(hits[0], text)).toEqual(['Lord, the'])
   })
 
   it('folds case and diacritics on both sides', () => {
@@ -116,23 +122,23 @@ describe('searchIndex', () => {
   })
 
   it('folds non-Latin scripts the same way', () => {
-    const greek = indexOf([atom(1, 'ἐν ἀρχῇ ἦν ὁ λόγος')])
-    expect(spanTexts(searchIndex(greek, parseSearchQuery('λογος'))[0])).toEqual(
-      ['λόγος'],
-    )
-    const hebrew = indexOf([atom(1, 'בְּרֵאשִׁית בָּרָא')])
-    expect(spanTexts(searchIndex(hebrew, parseSearchQuery('ברא'))[0])).toEqual([
-      'בְּרֵאשִׁית',
-      'בָּרָא',
-    ])
+    const greekText = 'ἐν ἀρχῇ ἦν ὁ λόγος'
+    const greek = indexOf([atom(1, greekText)])
+    expect(
+      spanTexts(searchIndex(greek, parseSearchQuery('λογος'))[0], greekText),
+    ).toEqual(['λόγος'])
+    const hebrewText = 'בְּרֵאשִׁית בָּרָא'
+    const hebrew = indexOf([atom(1, hebrewText)])
+    expect(
+      spanTexts(searchIndex(hebrew, parseSearchQuery('ברא'))[0], hebrewText),
+    ).toEqual(['בְּרֵאשִׁית', 'בָּרָא'])
   })
 
-  it('carries the atom text and the matched spans', () => {
+  it('reports the matched atom and its spans, and no text of its own', () => {
     const hits = searchIndex(indexOf(), parseSearchQuery('true vine'))
     expect(hits).toEqual([
       {
         verseId: makeVerseId(43, 15, 1),
-        text: 'I am the true vine.',
         spans: [
           { start: 9, end: 13 },
           { start: 14, end: 18 },
@@ -143,7 +149,7 @@ describe('searchIndex', () => {
 
   it('reports spans in text order however the query was ordered', () => {
     const hits = searchIndex(indexOf(), parseSearchQuery('vine true'))
-    expect(spanTexts(hits[0])).toEqual(['true', 'vine'])
+    expect(spanTexts(hits[0], 'I am the true vine.')).toEqual(['true', 'vine'])
   })
 
   it('emphasizes every occurrence of a matched word', () => {
