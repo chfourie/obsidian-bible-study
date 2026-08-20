@@ -24,6 +24,7 @@ import {
   ReaderPaneModel,
   type ReaderBook,
   type ReaderFirstRunDeps,
+  type ReaderNavTarget,
   type ReaderPosition,
   type ReaderStrongsDeps,
   type ReaderTranslation,
@@ -206,7 +207,7 @@ export class ReaderFeature
           epigraphs: async (editionId, chapter) =>
             (await this.store.epigraphs(editionId))[chapter] ?? [],
         },
-        newTab: (position) => void this.#openInNewTab(position),
+        newTab: (target) => void this.#openInNewTab(target),
         firstRun: this.#firstRun,
       },
       {
@@ -274,12 +275,18 @@ export class ReaderFeature
   }
 
   // The seam a mod-clicked nav target travels: a fresh leaf opened straight
-  // at the position, so it starts its own history there and the pane that
-  // asked keeps both its position and its history.
-  async #openInNewTab(position: ReaderPosition): Promise<void> {
-    await this.#withReaderView((view) => view.model.openPosition(position), {
-      newPane: true,
-    })
+  // at the target, so it starts its own history there and the pane that asked
+  // keeps both its position and its history. A target carrying an entry
+  // reference opens through it, landing the new tab where the same click
+  // lands in place — passage highlighted, entry banner.
+  async #openInNewTab(target: ReaderNavTarget): Promise<void> {
+    await this.#withReaderView(
+      (view) =>
+        target.entry === undefined
+          ? view.model.openPosition(target.position)
+          : view.model.openAt(target.entry, null),
+      { newPane: true },
+    )
   }
 
   // The ribbon panel's Books entry point: a book the reader has already been
@@ -292,7 +299,7 @@ export class ReaderFeature
     const position = await this.#bookPosition(book)
     if (position === null) return
     if (options.newTab === true) {
-      await this.#openInNewTab(position)
+      await this.#openInNewTab({ position })
       return
     }
     await this.#withReaderView((view) => view.model.openPosition(position))
@@ -313,7 +320,7 @@ export class ReaderFeature
   async openReader(options: { newTab?: boolean } = {}): Promise<void> {
     const position = this.#lastScripturePosition
     if (options.newTab === true) {
-      await this.#openInNewTab(position)
+      await this.#openInNewTab({ position })
       return
     }
     await this.#withReaderView(async (view) => {

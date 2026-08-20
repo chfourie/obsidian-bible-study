@@ -110,8 +110,13 @@ export type ReaderNavIntent = { newTab?: boolean }
 
 // Where a mod-clicked nav target lands: the shell opens a fresh reader leaf
 // there and leaves this pane untouched. A model without a shell has no leaf
-// to spawn, so its targets simply open in place.
-export type ReaderNewTab = (position: ReaderPosition) => void
+// to spawn, so its targets simply open in place. A target that entered from a
+// reference — a citation — carries it along, so the spawned tab arrives as the
+// same click would in place: passage highlighted, entry banner. Targets
+// without one (tree and chapter nav) open plain, as they do in place.
+export type ReaderNavTarget = { position: ReaderPosition; entry?: Reference }
+
+export type ReaderNewTab = (target: ReaderNavTarget) => void
 
 // How a chapter move reaches the screen. The pane's shell routes user
 // navigation through Obsidian's per-pane history and calls `open` back when
@@ -585,11 +590,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
   ): Promise<void> {
     if (ranges.length === 0) return
     const { book, chapter } = decodeVerseId(ranges[0].startId)
-    if (this.#spawnedTab({ book, chapter }, intent)) return
-    await this.openAt(
-      { book, ranges: ranges.map((range) => ({ ...range })) },
-      null,
-    )
+    const entry = { book, ranges: ranges.map((range) => ({ ...range })) }
+    if (this.#spawnedTab({ position: { book, chapter }, entry }, intent)) return
+    await this.openAt(entry, null)
   }
 
   // Opens without touching the pane's history — the shell applies restored
@@ -609,16 +612,16 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   browseBook(book: number, intent: ReaderNavIntent = {}): void {
-    if (this.#spawnedTab({ book, chapter: 1 }, intent)) return
+    if (this.#spawnedTab({ position: { book, chapter: 1 } }, intent)) return
     this.#browsedBook = this.#browsedBook === book ? null : book
     this.#notify()
   }
 
   // Whether the target went to a tab of its own. A pane with no shell to
   // spawn one falls through to navigating in place.
-  #spawnedTab(position: ReaderPosition, intent: ReaderNavIntent): boolean {
+  #spawnedTab(target: ReaderNavTarget, intent: ReaderNavIntent): boolean {
     if (intent.newTab !== true || this.deps.newTab === undefined) return false
-    this.deps.newTab(position)
+    this.deps.newTab(target)
     return true
   }
 
@@ -653,7 +656,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     chapter: number,
     intent: ReaderNavIntent = {},
   ): Promise<void> {
-    if (this.#spawnedTab({ book, chapter }, intent)) return
+    if (this.#spawnedTab({ position: { book, chapter } }, intent)) return
     await this.#navigate({ book, chapter }, () =>
       this.openPosition({ book, chapter }),
     )
