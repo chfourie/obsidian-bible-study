@@ -34,6 +34,7 @@ const fakeDictionary = (
 ): WordStudyDictionary => ({
   installed: async () => true,
   entryFor: async (number) => (numbers.includes(number) ? entry(number) : null),
+  familySiblings: async () => [],
   install: async () => {},
   attribution: 'Dictionary data: TBESH/TBESG (CC BY 4.0)',
   etymologyAttribution: "Etymology: Strong's (1890, public domain)",
@@ -325,6 +326,7 @@ describe('WordStudyFeature', () => {
       dictionary: {
         installed: async () => false,
         entryFor: async () => null,
+        familySiblings: async () => [],
         install: async () => {},
         attribution: '',
         etymologyAttribution: '',
@@ -441,6 +443,33 @@ describe('WordStudyFeature', () => {
       type: WORD_STUDY_VIEW_TYPE,
       state: { strongs: 'G0026', translation: 'bsb' },
     })
+  })
+
+  it('keeps the chosen translation when a link inside the panel is walked', async () => {
+    const { feature, leaves } = harness({
+      dictionary: fakeDictionary(['H0001G', 'H0001H', 'H3050']),
+    })
+    await feature.load()
+    await feature.openWordStudy('H0001G')
+    await panel(leaves[0]).model.useTranslation('bsb')
+
+    await panel(leaves[0]).model.open('H0001H')
+
+    expect(panel(leaves[0]).model.view.number).toBe('H0001H')
+    expect(panel(leaves[0]).model.view.concordance?.translation).toEqual(BSB)
+  })
+
+  it('carries the chosen translation into a panel spawned beside it', async () => {
+    const { feature, leaves } = harness({
+      dictionary: fakeDictionary(['H0001G', 'H0001H', 'H3050']),
+    })
+    await feature.load()
+    await feature.openWordStudy('H0001G')
+    await panel(leaves[0]).model.useTranslation('bsb')
+
+    await panel(leaves[0]).model.open('H3050', { newPane: true })
+
+    expect(panel(leaves[1]).model.view.concordance?.translation).toEqual(BSB)
   })
 
   it('says so when a restored panel finds no tagged translation', async () => {

@@ -1,6 +1,7 @@
 import type { SettingsStore } from '../data-access'
 import {
   MODULE_FORMAT_VERSION,
+  strongsFamily,
   type ModuleDataDir,
   type ModuleManifest,
 } from '../modules'
@@ -138,6 +139,17 @@ export class StrongsDictionaries {
       ),
       derivation,
     }
+  }
+
+  // Who a family-matched count covers where no entry was resolved: the rest of
+  // the family, which the index knows even for a number no entry answers to.
+  async familySiblingsOf(number: string): Promise<string[]> {
+    const key = number.charAt(0)
+    if (key !== 'H' && key !== 'G') return []
+    const lexicon = await this.#lexicon(key)
+    return (lexicon.families[strongsFamily(number)] ?? []).filter(
+      (variant) => variant !== number,
+    )
   }
 
   // A tagged translation asks by Strong's Family; the panel's own links ask by

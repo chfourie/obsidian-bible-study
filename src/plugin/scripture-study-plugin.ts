@@ -96,6 +96,8 @@ export default class ScriptureStudyPlugin extends Plugin {
               },
             }
       },
+      familySiblings: (strongsNumber) =>
+        this.strongsDictionaries.familySiblingsOf(strongsNumber),
       install: () => this.strongsDictionaries.install(),
       attribution: STRONGS_ATTRIBUTION,
       etymologyAttribution: STRONGS_ETYMOLOGY_ATTRIBUTION,

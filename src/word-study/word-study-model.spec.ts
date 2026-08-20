@@ -32,7 +32,7 @@ const entry = (
 // not, and one entry per extended number.
 const fakeDictionary = (
   entries: Record<string, WordStudyEntry> = {},
-  options: { installed?: boolean } = {},
+  options: { installed?: boolean; families?: Record<string, string[]> } = {},
 ) => {
   let installed = options.installed ?? true
   let installError: Error | null = null
@@ -56,6 +56,8 @@ const fakeDictionary = (
         lookups.push(number)
         return entries[number] ?? null
       },
+      familySiblings: async (number: string) =>
+        options.families?.[number] ?? [],
       install: async () => {
         await installGate
         if (installError !== null) throw installError
@@ -340,16 +342,20 @@ const fakeConcordance = (
 const concordanceModel = (
   options: Parameters<typeof fakeConcordance>[0] = {},
   entries: Record<string, WordStudyEntry> = { H0430: entry('H0430') },
+  dictionaryOptions: Parameters<typeof fakeDictionary>[1] = {},
 ) => {
-  const dictionary = fakeDictionary(entries)
+  const dictionary = fakeDictionary(entries, dictionaryOptions)
   const concordance = fakeConcordance(options)
   const openReference = vi.fn()
+  const openWordStudy = vi.fn(async () => {})
   return {
     concordance,
     openReference,
+    openWordStudy,
     model: new WordStudyModel({
       dictionary: dictionary.deps,
       concordance: concordance.deps,
+      opener: { openWordStudy },
       navigator: { ...NOOP_REFERENCE_NAVIGATOR, openReference },
     }),
   }
@@ -504,6 +510,63 @@ describe("WordStudyModel's concordance", () => {
     await panel.show('H0430')
 
     expect(panel.view.concordance?.familyUndifferentiated).toBe(false)
+  })
+
+  it('says so for a number with no entry whose family holds others', async () => {
+    const { model: panel } = concordanceModel(
+      { occurrences: occurrencesOf([makeVerseId(1, 1, 1)]) },
+      {},
+      { families: { H0430: ['H0430A', 'H0430B'] } },
+    )
+
+    await panel.show('H0430')
+
+    expect(panel.view.status).toBe('no-entry')
+    expect(panel.view.concordance?.familyUndifferentiated).toBe(true)
+  })
+
+  it('claims nothing for a number the dictionaries know no family for', async () => {
+    const { model: panel } = concordanceModel(
+      { occurrences: occurrencesOf([makeVerseId(1, 1, 1)]) },
+      {},
+    )
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance?.familyUndifferentiated).toBe(false)
+  })
+
+  it('says so while the dictionaries are missing to tell the family apart', async () => {
+    const { model: panel } = concordanceModel(
+      { occurrences: occurrencesOf([makeVerseId(1, 1, 1)]) },
+      {},
+      { installed: false },
+    )
+
+    await panel.show('H0430')
+
+    expect(panel.view.status).toBe('no-dictionary')
+    expect(panel.view.concordance?.familyUndifferentiated).toBe(true)
+  })
+
+  it('has no family to speak of while nothing is counted at all', async () => {
+    const { model: panel } = concordanceModel({}, {}, { installed: false })
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance?.familyUndifferentiated).toBe(false)
+  })
+
+  it('names the family the occurrences cover, letters and all', async () => {
+    const { model: panel } = concordanceModel(
+      { occurrences: { H0430A: [makeVerseId(1, 1, 1)] } },
+      {},
+      { installed: false },
+    )
+
+    await panel.show('H0430A')
+
+    expect(panel.view.concordance?.family).toBe('H0430')
   })
 
   it('navigates the reader to an occurrence in the concordance\'s translation', async () => {
@@ -724,6 +787,30 @@ describe("WordStudyModel's translation switcher", () => {
       { text: 'you', count: 1, active: false },
     ])
     expect(panel.view.concordance?.total).toBe(1)
+  })
+
+  it('carries the chosen translation into the number it walks to', async () => {
+    const { model: panel, openWordStudy } = switchable()
+    await panel.show('H0430')
+    await panel.useTranslation('bsb')
+
+    await panel.open('H0431', { newPane: true })
+
+    expect(openWordStudy).toHaveBeenCalledWith('H0431', {
+      newPane: true,
+      translationId: 'bsb',
+    })
+  })
+
+  it('carries the translation it fell back to just the same', async () => {
+    const { model: panel, openWordStudy } = switchable()
+    await panel.show('H0430')
+
+    await panel.open('H0431')
+
+    expect(openWordStudy).toHaveBeenCalledWith('H0431', {
+      translationId: 'kjv',
+    })
   })
 
   it('names the translation it can no longer read, and offers the rest', async () => {

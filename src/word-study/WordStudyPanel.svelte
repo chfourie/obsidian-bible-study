@@ -206,8 +206,8 @@ in the reader.
     {/if}
     {#if concordance.familyUndifferentiated}
       <div class="bsw-family-note">
-        These occurrences cover the whole {view.entry?.strongs ?? view.number}
-        family — a tagged translation does not tell its entries apart.
+        These occurrences cover the whole {concordance.family} family — a
+        tagged translation does not tell its entries apart.
       </div>
     {/if}
     {#if concordance.renderings.length > 0}

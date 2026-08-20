@@ -253,6 +253,25 @@ describe('StrongsDictionaries word study', () => {
 
     expect(await dictionaries.studyEntryFor('H9999')).toBe(null)
   })
+
+  it('names the family of a number no entry answers to', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    expect(await dictionaries.familySiblingsOf('H0001Z')).toEqual([
+      'H0001G',
+      'H0001H',
+      'H0001I',
+    ])
+  })
+
+  it('knows no family for a number outside the dictionaries', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    expect(await dictionaries.familySiblingsOf('H9999')).toEqual([])
+    expect(await dictionaries.familySiblingsOf('X1')).toEqual([])
+  })
 })
 
 describe('StrongsDictionaries remove', () => {

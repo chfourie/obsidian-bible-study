@@ -6,6 +6,7 @@ import {
   type StrongsEntryView,
   type WordStudyOpener,
 } from '../contracts'
+import { strongsFamily } from '../modules'
 import {
   bookName,
   decodeVerseId,
@@ -33,6 +34,10 @@ export type WordStudyEntry = {
 export type WordStudyDictionary = {
   installed: () => Promise<boolean>
   entryFor: (strongsNumber: string) => Promise<WordStudyEntry | null>
+  // The Strong's Family of a number the dictionaries carry no entry for: the
+  // concordance still matches at family granularity, so the panel asks who
+  // else the count covers even where the entry itself is missing.
+  familySiblings: (strongsNumber: string) => Promise<string[]>
   install: () => Promise<void>
   attribution: string
   // Named separately because it belongs on screen only where a derivation is.
@@ -44,6 +49,7 @@ export type WordStudyDictionary = {
 export const INERT_WORD_STUDY_DICTIONARY: WordStudyDictionary = {
   installed: async () => false,
   entryFor: async () => null,
+  familySiblings: async () => [],
   install: async () => {},
   attribution: '',
   etymologyAttribution: '',
@@ -212,8 +218,12 @@ export type ConcordanceView = {
   label: string
   // The translation's renderings of the family, most frequent first.
   renderings: RenderingView[]
-  // True while the number under study shares its family with other entries:
-  // the tagging cannot tell them apart, so the occurrences cover them all.
+  // The Strong's Family the occurrences are counted at, which the note below
+  // names.
+  family: string
+  // True while the number under study shares its family with other entries —
+  // or while nothing installed can rule that out. The tagging cannot tell a
+  // family's entries apart, so the occurrences cover them all.
   familyUndifferentiated: boolean
   books: ConcordanceBookView[]
 }
@@ -319,6 +329,9 @@ export class WordStudyModel {
   #number: string | null = null
   #status: WordStudyStatus = 'empty'
   #found: WordStudyEntry | null = null
+  // Who else the count covers where no entry was found: null while the
+  // dictionaries cannot say at all, as when the module is missing.
+  #familySiblings: string[] | null = null
   #installing = false
   #installError: string | null = null
   #loadToken = 0
@@ -399,6 +412,7 @@ export class WordStudyModel {
     this.#number = strongsNumber
     this.#status = 'loading'
     this.#found = null
+    this.#familySiblings = null
     this.#lsjStatus = isGreek(strongsNumber) ? 'loading' : null
     this.#lsjEntry = null
     this.#concordance = null
@@ -477,12 +491,18 @@ export class WordStudyModel {
   }
 
   // Walking an etymology citation or a family sibling is the same move the
-  // Study Panel's entry cards make: plain retargets, modified spawns.
+  // Study Panel's entry cards make: plain retargets, modified spawns. The
+  // concordance the reader is in travels with it, so a walk never snaps the
+  // occurrences back to another translation.
   async open(
     strongsNumber: string,
     options: NavigationOptions = {},
   ): Promise<void> {
-    await (this.deps.opener ?? NO_WORD_STUDY).openWordStudy(strongsNumber, options)
+    const translationId = this.#concordance?.translation?.id ?? this.#translationId
+    await (this.deps.opener ?? NO_WORD_STUDY).openWordStudy(strongsNumber, {
+      ...options,
+      ...(translationId === null ? {} : { translationId }),
+    })
   }
 
   toggleLsj(): void {
@@ -566,6 +586,7 @@ export class WordStudyModel {
       if (token !== this.#loadToken) return
       this.#status = 'no-dictionary'
       this.#found = null
+      this.#familySiblings = null
       this.#notify()
       return
     }
@@ -573,6 +594,11 @@ export class WordStudyModel {
     if (token !== this.#loadToken) return
     this.#found = found
     this.#status = found === null ? 'no-entry' : 'ok'
+    this.#notify()
+    if (found !== null) return
+    const siblings = await this.deps.dictionary.familySiblings(number)
+    if (token !== this.#loadToken) return
+    this.#familySiblings = siblings
     this.#notify()
   }
 
@@ -687,7 +713,8 @@ export class WordStudyModel {
           count: verseIds.length,
           active: text === loaded.rendering,
         })),
-      familyUndifferentiated: (this.#found?.siblings ?? []).length > 0,
+      family: strongsFamily(this.#number ?? ''),
+      familyUndifferentiated: this.#familyUndifferentiated(loaded),
       books: loaded.books.map(({ book, verseIds, expanded, verses }) => ({
         book,
         name: bookName(book),
@@ -696,6 +723,17 @@ export class WordStudyModel {
         verses: expanded ? verses : null,
       })),
     }
+  }
+
+  // The occurrences are matched by family whatever the dictionaries know, so
+  // the note follows what is knowable: the entry's own siblings where there is
+  // an entry, the family index where there is none, and — where no dictionary
+  // is installed to say either way — the ambiguity itself, which is exactly
+  // where it is least visible.
+  #familyUndifferentiated(loaded: LoadedConcordance): boolean {
+    if (this.#found !== null) return this.#found.siblings.length > 0
+    if (this.#familySiblings !== null) return this.#familySiblings.length > 0
+    return loaded.verseIds.length > 0
   }
 
   #notify(): void {
