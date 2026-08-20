@@ -1,5 +1,10 @@
 <script lang="ts">
-  import { BOOK_COUNT, bookName, chapterCount } from '../reference'
+  import {
+    BOOK_COUNT,
+    bookName,
+    chapterCount,
+    type VerseRange,
+  } from '../reference'
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
   import {
     paragraphsOf,
@@ -85,6 +90,14 @@
     void model.selectWord(verseId, strongs)
   }
 
+  const onRefClick = (
+    event: MouseEvent | KeyboardEvent,
+    refs: VerseRange[],
+  ): void => {
+    event.stopPropagation()
+    void model.openRefSpan(refs)
+  }
+
   const inSelectionSpan = (verseId: number): boolean => {
     if (material.selectedVerseId === null || material.selectionEndId === null)
       return false
@@ -112,6 +125,19 @@
       class:scripture-study-psalm-heading={segment.psalmHeading}
     >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
 
+{#snippet citedText(segment: VerseSegment)}{#if segment.refs !== undefined}<span
+      role="link"
+      tabindex="0"
+      class="bsr-ref-link"
+      onclick={(event) => onRefClick(event, segment.refs ?? [])}
+      onkeydown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onRefClick(event, segment.refs ?? [])
+        }
+      }}
+    >{segment.text}</span>{:else}{@render formattedText(segment)}{/if}{/snippet}
+
 {#snippet segmentText(row: VerseRowView, segment: VerseSegment)}{#if view.strongsMode && segment.strongs !== undefined}<span
       role="button"
       tabindex="0"
@@ -126,7 +152,7 @@
           onWordClick(event, row.verseId, segment.strongs ?? [])
         }
       }}
-    >{segment.text}</span>{:else}{@render formattedText(segment)}{/if}{/snippet}
+    >{segment.text}</span>{:else}{@render citedText(segment)}{/if}{/snippet}
 
 {#snippet verseText(row: VerseRowView)}
   {@const lineStructured = view.toggles.layout === 'verse-per-line' || row.poetry}
@@ -282,7 +308,8 @@
             {#each view.book.epigraphs as epigraph, index (index)}
               <div class="bsr-epigraph">
                 {epigraph.quote}
-                <span class="bsr-epigraph-src">—{epigraph.attribution}</span>
+                <span class="bsr-epigraph-src"
+                  >—{#each epigraph.attribution as segment, part (part)}{@render citedText(segment)}{/each}</span>
               </div>
             {/each}
           {:else}
@@ -742,6 +769,17 @@
 
   .bsr-strongs-word {
     cursor: pointer;
+  }
+
+  /* A citation the author himself wrote, kept as prose — accent colour and
+     nothing else, so the page still reads as a book (spec-books §8). */
+  .bsr-ref-link {
+    color: var(--text-accent);
+    cursor: pointer;
+  }
+
+  .bsr-ref-link:hover {
+    text-decoration: underline;
   }
 
   /* Book mode — variant B of the book-reader prototype: serif prose under a

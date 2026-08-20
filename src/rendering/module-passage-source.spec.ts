@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { ModuleManifest } from '../modules'
+import type { ModuleManifest, RefSpan } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
-import { ModulePassageSource } from './module-passage-source'
+import { ModulePassageSource, verseSegments } from './module-passage-source'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
@@ -657,5 +657,92 @@ describe('ModulePassageSource derived red letter', () => {
         },
       ],
     })
+  })
+})
+
+// A book's paragraphs carry live citations in a refs channel beside the
+// prose, and the reader lights them up wherever segments are rendered
+// (spec-books §8).
+describe('ref spans', () => {
+  const humility = (chapter: number, paragraph: number) =>
+    makeVerseId(101, chapter, paragraph)
+
+  const bookSource = (refs: RefSpan[]) =>
+    new ModulePassageSource({
+      manifest: async () => ({
+        ...webManifest('Public Domain'),
+        id: 'hum-m1895',
+        name: 'Humility',
+      }),
+      bookContent: async () => ({
+        [humility(1, 2)]: {
+          text: "He said 'not Mine own will' (John v. 30) plainly.",
+          refs,
+        },
+      }),
+    })
+
+  const citation: RefSpan = {
+    start: 29,
+    end: 39,
+    ranges: [{ startId: john(5, 30), endId: john(5, 30) }],
+  }
+
+  it('cuts the citation into its own segment carrying the target ranges', async () => {
+    const passage = await bookSource([citation]).passage(
+      { book: 101, ranges: [{ startId: humility(1, 2), endId: humility(1, 2) }] },
+      'hum-m1895',
+    )
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            { text: "He said 'not Mine own will' (", redLetter: false },
+            { text: 'John v. 30', refs: citation.ranges },
+            { text: ') plainly.', redLetter: false },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('leaves prose without a refs channel unsegmented', async () => {
+    const passage = await bookSource([]).passage(
+      { book: 101, ranges: [{ startId: humility(1, 2), endId: humility(1, 2) }] },
+      'hum-m1895',
+    )
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          segments: [
+            {
+              text: "He said 'not Mine own will' (John v. 30) plainly.",
+              redLetter: false,
+            },
+          ],
+        },
+      ],
+    })
+  })
+})
+
+describe('verseSegments', () => {
+  it('segments a bare string of text as one plain segment', () => {
+    expect(verseSegments('Remain in me.', [])).toEqual([
+      { text: 'Remain in me.', redLetter: false },
+    ])
+  })
+
+  it('carries a ref span through as a segment of its own', () => {
+    const ranges = [{ startId: john(5, 30), endId: john(5, 30) }]
+    expect(
+      verseSegments({ text: 'See John v. 30.', refs: [{ start: 4, end: 14, ranges }] }, []),
+    ).toEqual([
+      { text: 'See ', redLetter: false },
+      { text: 'John v. 30', redLetter: false, refs: ranges },
+      { text: '.', redLetter: false },
+    ])
   })
 })

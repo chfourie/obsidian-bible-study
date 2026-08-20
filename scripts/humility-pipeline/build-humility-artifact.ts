@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
 import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
-import { makeVerseId } from '../../src/reference/verse-id'
+import { decodeVerseId, makeVerseId } from '../../src/reference/verse-id'
 import { type BookRegistryEntry, assertRegisteredBook } from './book-registry'
+import { attachRefSpans, type RefOverrides } from './attach-ref-spans'
 import {
   type BookParagraph,
   type Epigraph,
@@ -50,8 +51,13 @@ export type HumilityArtifact = {
 export const buildHumilityArtifact = (
   gutenbergText: string,
   registry: BookRegistryEntry[],
+  refOverrides: RefOverrides = {},
 ): HumilityArtifact => {
-  const sections = parseHumilityText(gutenbergText)
+  const sections = attachRefSpans(
+    HUMILITY_BOOK_NUMBER,
+    parseHumilityText(gutenbergText),
+    refOverrides,
+  )
 
   assertRegisteredBook(
     {
@@ -106,7 +112,29 @@ export const buildHumilityArtifact = (
   }
 }
 
+// How many live citations each section came out with — the build's own
+// report on what the refs channel picked up (spec-books §8).
+export const refSpanCounts = (
+  artifact: HumilityArtifact,
+): Map<number, number> => {
+  const counts = new Map<number, number>(
+    artifact.manifest.book.sections.map((section) => [section.chapter, 0]),
+  )
+  const add = (chapter: number, spans: number): void => {
+    counts.set(chapter, (counts.get(chapter) ?? 0) + spans)
+  }
+  for (const [verseId, paragraph] of Object.entries(
+    artifact.books[artifact.manifest.book.number],
+  ))
+    add(decodeVerseId(Number(verseId)).chapter, paragraph.refs?.length ?? 0)
+  for (const [chapter, epigraphs] of Object.entries(artifact.epigraphs))
+    for (const epigraph of epigraphs)
+      add(Number(chapter), epigraph.refs?.length ?? 0)
+  return counts
+}
+
 export const sha256Hex = (text: string): string =>
   createHash('sha256').update(text, 'utf8').digest('hex')
 
 export { parseBookRegistry } from './book-registry'
+export { parseRefOverrides } from './attach-ref-spans'

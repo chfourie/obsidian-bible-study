@@ -1,9 +1,14 @@
 // Turns the Project Gutenberg #57121 plain text into the section /
 // paragraph structure that becomes the Humility module's atoms (ADR 0002).
 
+import type { RefSpan } from '../../src/modules/verse-content'
+
 export type Epigraph = {
   quote: string
   attribution: string
+  // The live citations in the attribution line, attached after parsing
+  // (spec-books §8).
+  refs?: RefSpan[]
 }
 
 // Anchored by character offset into the paragraph's stored text, the same
@@ -16,6 +21,7 @@ export type Footnote = {
 export type BookParagraph = {
   text: string
   footnotes?: Footnote[]
+  refs?: RefSpan[]
 }
 
 export type ParsedSection = {

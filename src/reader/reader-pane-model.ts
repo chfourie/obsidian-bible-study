@@ -11,6 +11,7 @@ import {
   referenceLabel,
   verseCount,
   type Reference,
+  type VerseRange,
 } from '../reference'
 import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
@@ -47,7 +48,7 @@ import {
   FONT_SCALE_STEP,
   type AnnotationOrdering,
 } from '../data-access'
-import { isPoetryVerse } from '../rendering'
+import { isPoetryVerse, verseSegments } from '../rendering'
 import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
 import type { Epigraph } from '../modules'
 
@@ -199,6 +200,13 @@ export type BookSectionOption = {
   current: boolean
 }
 
+// The attribution comes through as segments so its citation lights up on the
+// same channel the prose uses (spec-books §8).
+export type EpigraphView = {
+  quote: string
+  attribution: VerseSegment[]
+}
+
 // Everything the pane renders differently for a book: its own contents table
 // replaces the scripture tree, the edition pill replaces the translation
 // switcher, and the section carries its heading and epigraphs.
@@ -208,7 +216,7 @@ export type BookModeView = {
   edition: string
   sectionName: string
   sections: BookSectionOption[]
-  epigraphs: Epigraph[]
+  epigraphs: EpigraphView[]
 }
 
 export type ReaderPaneView = {
@@ -236,6 +244,16 @@ export type ReaderPaneView = {
     error: string | null
   } | null
 }
+
+const epigraphView = (epigraph: Epigraph): EpigraphView => ({
+  quote: epigraph.quote,
+  attribution: verseSegments(
+    epigraph.refs === undefined
+      ? epigraph.attribution
+      : { text: epigraph.attribution, refs: epigraph.refs },
+    [],
+  ),
+})
 
 const chapterReference = (position: ReaderPosition): Reference => ({
   book: position.book,
@@ -484,7 +502,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
         name: section.name,
         current: section.chapter === this.#position.chapter,
       })),
-      epigraphs: this.#epigraphs,
+      epigraphs: this.#epigraphs.map(epigraphView),
     }
   }
 
@@ -535,6 +553,21 @@ export class ReaderPaneModel implements StudyMaterialSource {
       this.#resetSelection()
       await this.#loadChapter()
     })
+  }
+
+  // A citation tapped in book prose. Scripture targets land in the reader as
+  // any other entry does — current translation, passage highlighted, entry
+  // banner — and a Note pointer's own-book target arrives the same way, so
+  // the reader simply stays in the book (spec-books §8).
+  async openRefSpan(ranges: readonly VerseRange[]): Promise<void> {
+    if (ranges.length === 0) return
+    await this.openAt(
+      {
+        book: decodeVerseId(ranges[0].startId).book,
+        ranges: ranges.map((range) => ({ ...range })),
+      },
+      null,
+    )
   }
 
   // Opens without touching the pane's history — the shell applies restored

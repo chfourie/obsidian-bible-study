@@ -18,6 +18,7 @@ const SOURCE_URL = 'https://www.gutenberg.org/cache/epub/57121/pg57121.txt'
 const OUT_DIR = 'dist/hum-m1895-module'
 const ARTIFACT_FILE = 'hum-m1895-module.json'
 const REGISTRY_FILE = 'scripts/book-registry.json'
+const REF_OVERRIDES_FILE = 'scripts/humility-pipeline/ref-overrides.json'
 
 const loadPipeline = async () => {
   const outfile = path.join(tmpdir(), `humility-pipeline-${Date.now()}.mjs`)
@@ -42,12 +43,20 @@ const loadSource = async (sourcePath) => {
   return response.text()
 }
 
-const { buildHumilityArtifact, parseBookRegistry, sha256Hex } =
-  await loadPipeline()
+const {
+  buildHumilityArtifact,
+  parseBookRegistry,
+  parseRefOverrides,
+  refSpanCounts,
+  sha256Hex,
+} = await loadPipeline()
 
 const source = await loadSource(process.argv[2] ?? process.env.HUMILITY_SOURCE)
 const registry = parseBookRegistry(await readFile(REGISTRY_FILE, 'utf8'))
-const artifact = buildHumilityArtifact(source, registry)
+const refOverrides = parseRefOverrides(
+  await readFile(REF_OVERRIDES_FILE, 'utf8'),
+)
+const artifact = buildHumilityArtifact(source, registry, refOverrides)
 
 const artifactJson = JSON.stringify(artifact)
 const checksum = sha256Hex(artifactJson)
@@ -63,12 +72,22 @@ const paragraphCount = sections.reduce(
   (total, section) => total + section.paragraphs,
   0,
 )
+const refSpans = refSpanCounts(artifact)
 for (const section of sections) {
   const chapter = String(section.chapter).padStart(2)
   const paragraphs = String(section.paragraphs).padStart(3)
-  console.log(`  ${chapter}  ${paragraphs}  ${section.name}`)
+  const refs = String(refSpans.get(section.chapter)).padStart(3)
+  console.log(`  ${chapter}  ${paragraphs}  ${refs} refs  ${section.name}`)
 }
+const refSpanCount = [...refSpans.values()].reduce(
+  (total, refs) => total + refs,
+  0,
+)
 console.log(`Sections: ${sections.length}, paragraphs: ${paragraphCount}`)
+console.log(
+  `Ref spans: ${refSpanCount} ` +
+    `(${refOverrides.fix.length} fixed, ${refOverrides.suppress.length} suppressed)`,
+)
 console.log(`sha256(${ARTIFACT_FILE}) = ${checksum}`)
 console.log(`Artifacts written to ${OUT_DIR}/ — attach both files to the`)
 console.log('GitHub release tagged "hum-m1895-module".')

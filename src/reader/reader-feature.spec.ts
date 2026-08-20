@@ -938,7 +938,10 @@ describe('ReaderFeature book mode', () => {
     expect(view.book?.sectionName).toBe('The Glory of the Creature')
     expect(view.book?.edition).toBe('Humility 1895')
     expect(view.book?.epigraphs).toEqual([
-      { quote: 'Cast their crowns.', attribution: 'Rev. iv. 11' },
+      {
+        quote: 'Cast their crowns.',
+        attribution: [{ text: 'Rev. iv. 11', redLetter: false }],
+      },
     ])
     expect(
       view.rows.filter((row) => row.highlighted).map((row) => row.label),
