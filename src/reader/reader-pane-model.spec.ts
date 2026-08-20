@@ -2118,6 +2118,7 @@ describe('the study material contract', () => {
       selectionEndId: null,
       details: null,
       chapterCrossReferences: [],
+      chapterAnnotations: [],
       collection: null,
     })
   })
@@ -2302,5 +2303,200 @@ describe('the study material contract', () => {
 
     expect(source.annotationReference(verse4)).toEqual(ref('John 15:2-4'))
     expect(source.annotationReference(verse5)).toEqual(ref('John 15:5'))
+  })
+
+  it('prefills the chapter-level annotate action from the selection, falling back to the chapter', async () => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+    const source = sourceOf(model)
+
+    expect(source.chapterAnnotationReference()).toEqual(ref('John 15'))
+
+    await model.selectVerse(verse2)
+    model.extendSelectionTo(verse4)
+    expect(source.chapterAnnotationReference()).toEqual(ref('John 15:2-4'))
+  })
+})
+
+describe('chapter annotations in the study material', () => {
+  type IndexedAnnotation = {
+    file: string
+    reference: Reference
+    body: string
+    created: number
+    annotation?: boolean
+  }
+
+  const indexOver = (notes: () => IndexedAnnotation[]) => ({
+    intersecting: (reference: Reference): OccurrenceGroup[] =>
+      notes()
+        .filter((note) => referencesIntersect(note.reference, reference))
+        .map((note) => ({
+          file: note.file,
+          annotation: note.annotation ?? true,
+          occurrences: [
+            {
+              file: note.file,
+              position: 0,
+              reference: note.reference,
+              source:
+                note.annotation === false
+                  ? ('body' as const)
+                  : ('annotation-frontmatter' as const),
+            },
+          ],
+        })),
+    annotationDetails: async (file: string) => {
+      const note = notes().find((candidate) => candidate.file === file)
+      if (note === undefined) return null
+      return { body: note.body, created: note.created }
+    },
+  })
+
+  it('lists every annotation intersecting the chapter without a verse selected', async () => {
+    const model = modelWith(
+      indexOver(() => [
+        {
+          file: 'abide.md',
+          reference: ref('John 15:4-6'),
+          body: 'Abiding',
+          created: 2,
+        },
+        {
+          file: 'branch.md',
+          reference: ref('John 15:2'),
+          body: 'Pruning',
+          created: 1,
+        },
+      ]),
+    )
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.studyMaterial.selectedVerseId).toBe(null)
+    expect(model.studyMaterial.chapterAnnotations).toEqual([
+      { file: 'branch.md', label: 'John 15:2', body: 'Pruning' },
+      { file: 'abide.md', label: 'John 15:4-6', body: 'Abiding' },
+    ])
+  })
+
+  it('keeps mentions out of the chapter annotation list', async () => {
+    const model = modelWith(
+      indexOver(() => [
+        {
+          file: 'sermon.md',
+          reference: ref('John 15:1'),
+          body: 'Body mention',
+          created: 1,
+          annotation: false,
+        },
+      ]),
+    )
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.studyMaterial.chapterAnnotations).toEqual([])
+  })
+
+  it('breaks same-position ties by the configured annotation ordering', async () => {
+    const notes = [
+      {
+        file: 'a-younger.md',
+        reference: ref('John 15:4'),
+        body: 'Later',
+        created: 200,
+      },
+      {
+        file: 'z-older.md',
+        reference: ref('John 15:4'),
+        body: 'Earlier',
+        created: 100,
+      },
+    ]
+    const byCreation = modelWith(indexOver(() => notes))
+    await byCreation.openAt(ref('John 15:1'), 'web')
+    expect(
+      byCreation.studyMaterial.chapterAnnotations.map((item) => item.file),
+    ).toEqual(['z-older.md', 'a-younger.md'])
+
+    const byPath = modelWith(
+      indexOver(() => notes),
+      DEFAULT_TOGGLES,
+      'web',
+      'path-a-z',
+    )
+    await byPath.openAt(ref('John 15:1'), 'web')
+    expect(
+      byPath.studyMaterial.chapterAnnotations.map((item) => item.file),
+    ).toEqual(['a-younger.md', 'z-older.md'])
+  })
+
+  it('follows the reader to the next chapter', async () => {
+    const model = modelWith({
+      ...indexOver(() => [
+        {
+          file: 'abide.md',
+          reference: ref('John 15:4'),
+          body: 'Abiding',
+          created: 1,
+        },
+        {
+          file: 'spirit.md',
+          reference: ref('John 16:13'),
+          body: 'Guidance',
+          created: 2,
+        },
+      ]),
+      passages: passageSourceOver({
+        web: {
+          ...john15Texts().web,
+          [makeVerseId(43, 16, 1)]: 'These things I have spoken.',
+        },
+      }),
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.nextChapter()
+
+    expect(
+      model.studyMaterial.chapterAnnotations.map((item) => item.file),
+    ).toEqual(['spirit.md'])
+  })
+
+  it('refreshes the list when the vault index changes', async () => {
+    const notes: IndexedAnnotation[] = []
+    const model = modelWith(indexOver(() => notes))
+    await model.openAt(ref('John 15:1'), 'web')
+    expect(model.studyMaterial.chapterAnnotations).toEqual([])
+
+    notes.push({
+      file: 'abide.md',
+      reference: ref('John 15:4'),
+      body: 'Abiding',
+      created: 1,
+    })
+    await model.refreshOccurrences()
+
+    expect(model.studyMaterial.chapterAnnotations).toEqual([
+      { file: 'abide.md', label: 'John 15:4', body: 'Abiding' },
+    ])
+  })
+
+  it('drops annotations whose note no longer loads', async () => {
+    const model = modelWith({
+      ...indexOver(() => [
+        {
+          file: 'gone.md',
+          reference: ref('John 15:4'),
+          body: '',
+          created: 1,
+        },
+      ]),
+      annotationDetails: async () => null,
+    })
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.studyMaterial.chapterAnnotations).toEqual([])
   })
 })

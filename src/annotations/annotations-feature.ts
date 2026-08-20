@@ -36,6 +36,12 @@ export class AnnotationsFeature extends PluginFeature {
     return reference === null ? '' : formatReference(reference)
   }
 
+  promptAnnotation(prefill: Reference): void {
+    new RefPromptModal(this.plugin.app, formatReference(prefill), (text) =>
+      this.submitRefText(text),
+    ).open()
+  }
+
   submitRefText(text: string): boolean {
     const parsed = parseReference(text)
     const referenceOnly =

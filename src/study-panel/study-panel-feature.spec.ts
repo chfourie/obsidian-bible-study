@@ -55,6 +55,7 @@ const fakeStudyMaterial = () => {
     selectionEndId: null,
     details: null,
     chapterCrossReferences: [],
+    chapterAnnotations: [],
     collection: null,
   }
   const source = {
@@ -795,6 +796,16 @@ describe('StudyPanelFeature entry points', () => {
     feature.annotateReference(ref('John 15:1'))
 
     expect(annotated).toEqual([ref('John 15:1')])
+  })
+
+  it('routes annotation prompts through the injected prompter', async () => {
+    const { feature } = harness()
+    const prompted: Reference[] = []
+    feature.useAnnotationPrompt((prefill) => prompted.push(prefill))
+
+    feature.promptAnnotation(ref('John 15'))
+
+    expect(prompted).toEqual([ref('John 15')])
   })
 
   it('edits a cross-reference in its own pane through the navigator', async () => {

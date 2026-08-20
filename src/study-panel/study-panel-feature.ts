@@ -47,6 +47,7 @@ export class StudyPanelFeature extends PluginFeature {
   #showToken = 0
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
   #annotator: (reference: Reference) => void = () => {}
+  #annotationPrompter: (prefill: Reference) => void = () => {}
   readonly #crossReferences: CrossReferenceCatalog
   readonly #studyMaterial: StudyMaterialProvider
   // The reader tab the panel mirrors, or null while a note holds focus.
@@ -175,6 +176,14 @@ export class StudyPanelFeature extends PluginFeature {
 
   annotateReference(reference: Reference): void {
     this.#annotator(reference)
+  }
+
+  useAnnotationPrompt(prompter: (prefill: Reference) => void): void {
+    this.#annotationPrompter = prompter
+  }
+
+  promptAnnotation(prefill: Reference): void {
+    this.#annotationPrompter(prefill)
   }
 
   openNote(file: string): void {

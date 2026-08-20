@@ -31,6 +31,14 @@ export type AnnotationBlockView = {
   body: string
 }
 
+// One annotation intersecting the chapter on screen, headed by the reference
+// its frontmatter declares.
+export type ChapterAnnotationView = {
+  file: string
+  label: string
+  body: string
+}
+
 export type VerseDetailsView = {
   verseId: number
   title: string
@@ -73,6 +81,9 @@ export type StudyMaterial = {
   // Every cross-reference touching the chapter on screen, independent of any
   // verse selection.
   chapterCrossReferences: CrossReferenceView[]
+  // Every annotation intersecting the chapter on screen, in scripture order,
+  // independent of any verse selection.
+  chapterAnnotations: ChapterAnnotationView[]
   collection: CollectionView | null
 }
 
@@ -91,6 +102,9 @@ export interface StudyMaterialSource {
   // The reference an annotation of this verse covers: the current selection
   // when it contains the verse, otherwise the verse alone.
   annotationReference(verseId: number): Reference
+  // The reference the chapter-level annotate action prefills: the current
+  // selection when there is one, otherwise the whole chapter on screen.
+  chapterAnnotationReference(): Reference
   startCollecting(): void
   startEditingCrossReference(entry: CrossReference): void
   cancelCollecting(): void

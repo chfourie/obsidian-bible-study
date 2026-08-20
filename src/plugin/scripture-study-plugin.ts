@@ -95,6 +95,9 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.studyPanel.useAnnotator(
       (reference) => void this.annotations.annotate(reference),
     )
+    this.studyPanel.useAnnotationPrompt((prefill) =>
+      this.annotations.promptAnnotation(prefill),
+    )
     this.#features.addFeature(this.vaultIndex)
     this.#features.addFeature(this.modules)
     this.#features.addFeature(this.crossReferences)

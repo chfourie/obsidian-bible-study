@@ -1,10 +1,12 @@
 <!--
 One reader tab's study material as a region: the selected verse's details
-under Translations/Notes sub-tabs, and the cross-references of the chapter on
-screen below them. Rendered by the Study Panel following that tab.
+under Translations/Notes sub-tabs, and the chapter-scoped material — the
+annotations and cross-references of the chapter on screen — below them.
+Rendered by the Study Panel following that tab.
 -->
 <script lang="ts">
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
+  import ChapterAnnotationList from './ChapterAnnotationList.svelte'
   import CrossReferenceList from './CrossReferenceList.svelte'
   import type { StudyMaterialHost, StudySubTab } from './study-material-host'
   import VerseDetails from './VerseDetails.svelte'
@@ -49,7 +51,12 @@ screen below them. Rendered by the Study Panel following that tab.
       <VerseDetails details={material.details} {source} {host} {tab} />
     {/if}
   </div>
-  <div class="bsm-xrefs">
+  <div class="bsm-chapter">
+    <ChapterAnnotationList
+      items={material.chapterAnnotations}
+      {source}
+      {host}
+    />
     <CrossReferenceList
       entries={material.chapterCrossReferences}
       {source}
@@ -105,7 +112,7 @@ screen below them. Rendered by the Study Panel following that tab.
 
   /* Chapter-scoped, so it sits apart from the selected verse's details above
      and takes only the height its rows need, up to its own scroll. */
-  .bsm-xrefs {
+  .bsm-chapter {
     flex: 0 0 auto;
     max-height: 40%;
     overflow-y: auto;
@@ -113,8 +120,9 @@ screen below them. Rendered by the Study Panel following that tab.
     padding: 4px 12px 10px;
   }
 
-  /* The section already sits under its own border, so it needs no lead-in. */
-  .bsm-xrefs :global(.bsm-section-head) {
+  /* The first section already sits under the region's border, so it needs no
+     lead-in; the sections below keep theirs. */
+  .bsm-chapter > :global(.bsm-section-head:first-child) {
     margin-top: 0;
   }
 </style>

@@ -18,8 +18,10 @@ import {
   type CrossReferenceEditing,
   type CrossReferenceView,
 } from '../cross-references'
+import { orderChapterAnnotations } from '../annotations'
 import type {
   AnnotationBlockView,
+  ChapterAnnotationView,
   CollectionView,
   StrongsEntryView,
   StudyMaterial,
@@ -196,6 +198,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // The loaded details of the selected verse, or null while nothing is
   // selected or its load is still in flight.
   #details: VerseDetailsView | null = null
+  #chapterAnnotations: ChapterAnnotationView[] = []
+  #chapterAnnotationsToken = 0
   #attribution: string | null = null
   #bannerDismissed = false
   #strongsAvailable = false
@@ -370,6 +374,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       selectionEndId: this.#selectionEnd,
       details: this.#details,
       chapterCrossReferences: this.#chapterCrossReferences(),
+      chapterAnnotations: this.#chapterAnnotations,
       collection: this.#collectionView(),
     }
   }
@@ -555,6 +560,10 @@ export class ReaderPaneModel implements StudyMaterialSource {
     return singleVerseReference(this.#position.book, verseId)
   }
 
+  chapterAnnotationReference(): Reference {
+    return this.selectionReference() ?? this.currentChapterReference()
+  }
+
   #collectionView(): CollectionView | null {
     if (this.#collection === null) return null
     return {
@@ -721,6 +730,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       ...this.#occurrenceCounts(row.verseId),
     }))
     this.#notify()
+    await this.#loadChapterAnnotations()
     const loadedVerseId = this.#details?.verseId
     if (loadedVerseId !== undefined) await this.#loadDetails(loadedVerseId)
   }
@@ -778,6 +788,44 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#notify()
   }
 
+  // One chapter-level intersection query feeds the panel's annotation list —
+  // no verse selection involved. The token retires a load the reader has
+  // navigated away from.
+  async #loadChapterAnnotations(): Promise<void> {
+    const token = ++this.#chapterAnnotationsToken
+    const chapter = chapterReference(this.#position)
+    const groups = this.deps
+      .intersecting(chapter)
+      .filter((group) => group.annotation)
+    const items = await Promise.all(
+      groups.map(async (group) => {
+        const reference = group.occurrences.find(
+          (occurrence) => occurrence.source === 'annotation-frontmatter',
+        )?.reference
+        if (reference === undefined) return null
+        const details = await this.deps.annotationDetails(group.file)
+        if (details === null) return null
+        return {
+          file: group.file,
+          created: details.created,
+          reference,
+          body: details.body,
+        }
+      }),
+    )
+    if (token !== this.#chapterAnnotationsToken) return
+    this.#chapterAnnotations = orderChapterAnnotations(
+      items.filter((item) => item !== null),
+      chapter,
+      this.#annotationOrdering,
+    ).map(({ file, reference, body }) => ({
+      file,
+      label: formatReference(reference),
+      body,
+    }))
+    this.#notify()
+  }
+
   // The chapter list keeps every member, the chapter's own included, so the
   // reader can see which verses of it a cross-reference touches — and the
   // ordering leads with those, so the passage on screen anchors the row.
@@ -820,6 +868,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#status = 'loading'
     this.#rows = []
     this.#notify()
+    // Annotations hang off the vault index alone, so they load whatever
+    // becomes of the passage below.
+    await this.#loadChapterAnnotations()
     const available = await this.deps.availableTranslations()
     if (token !== this.#loadToken) return
     this.#available = available

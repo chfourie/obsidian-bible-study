@@ -15,6 +15,9 @@ export type StudyMaterialHost = {
   // rather than taking over the collect strip on screen.
   editCrossReferenceInNewPane: (entry: CrossReference) => void
   annotate: (reference: Reference) => void
+  // Opens the annotation prompt with the given reference typed in, letting
+  // the user adjust it before the note is created.
+  promptAnnotate: (prefill: Reference) => void
   renderMarkdown: (
     el: HTMLElement,
     markdown: string,

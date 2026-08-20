@@ -77,6 +77,7 @@ const fakeStudyMaterial = () => {
     selectionEndId: null,
     details: null,
     chapterCrossReferences: [],
+    chapterAnnotations: [],
     collection: null,
   }
   const source = {
