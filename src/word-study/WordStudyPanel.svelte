@@ -126,6 +126,60 @@ in the reader.
       <div class="bsw-attribution">{view.etymologyAttribution}</div>
     {/if}
   {/if}
+  {#if view.lsj !== null}
+    {@const lsj = view.lsj}
+    <section class="bsw-lsj">
+      <span
+        role="button"
+        tabindex="0"
+        class="bsw-lsj-head"
+        aria-expanded={lsj.expanded}
+        onclick={() => model.toggleLsj()}
+        onkeydown={activate(() => model.toggleLsj())}
+      >
+        <span
+          class="bsw-book-fold-icon"
+          aria-hidden="true"
+          use:icon={lsj.expanded ? 'chevron-down' : 'chevron-right'}
+        ></span>
+        <span class="bsw-section-heading">Full LSJ entry</span>
+      </span>
+      {#if lsj.expanded}
+        {#if lsj.status === 'loading'}
+          <div class="bsw-empty">Loading…</div>
+        {:else if lsj.install !== null}
+          <div class="bsw-empty">
+            The full Liddell-Scott-Jones entries are an optional module, which
+            is not installed.
+          </div>
+          <button
+            type="button"
+            class="bsw-install mod-cta"
+            disabled={lsj.install.busy}
+            onclick={() => void model.installLsj()}
+          >
+            {lsj.install.busy
+              ? 'Installing LSJ Lexicon…'
+              : 'Install LSJ Lexicon'}
+          </button>
+          {#if lsj.install.error !== null}
+            <div class="bsw-install-error">
+              Install failed: {lsj.install.error}
+            </div>
+          {/if}
+        {:else if lsj.entry === null}
+          <div class="bsw-empty">
+            The LSJ Lexicon carries no entry for {view.number}.
+          </div>
+        {:else}
+          <div class="bsw-lsj-entry">{lsj.entry}</div>
+          {#if lsj.attribution !== null}
+            <div class="bsw-attribution">{lsj.attribution}</div>
+          {/if}
+        {/if}
+      {/if}
+    </section>
+  {/if}
   {#if view.concordance !== null}
     {@const concordance = view.concordance}
     <div class="bsw-concordance-head">
@@ -309,6 +363,24 @@ in the reader.
     color: var(--text-faint);
     font-size: var(--font-smallest);
     margin-top: 16px;
+  }
+
+  .bsw-lsj {
+    display: block;
+  }
+
+  .bsw-lsj-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .bsw-lsj-entry {
+    margin-top: 6px;
+    color: var(--text-muted);
+    white-space: pre-line;
+    line-height: var(--line-height-normal);
   }
 
   .bsw-concordance-head {

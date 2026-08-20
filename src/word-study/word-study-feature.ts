@@ -11,9 +11,11 @@ import type { Reference } from '../reference'
 import {
   INERT_WORD_STUDY_CONCORDANCE,
   INERT_WORD_STUDY_DICTIONARY,
+  INERT_WORD_STUDY_LSJ,
   WordStudyModel,
   type WordStudyConcordance,
   type WordStudyDictionary,
+  type WordStudyLsj,
   type WordStudyNavigator,
 } from './word-study-model'
 import { WORD_STUDY_VIEW_TYPE, WordStudyView } from './word-study-view'
@@ -23,6 +25,7 @@ export { WORD_STUDY_VIEW_TYPE } from './word-study-view'
 export type WordStudyFeatureOptions = {
   dictionary?: WordStudyDictionary
   concordance?: WordStudyConcordance
+  lsj?: WordStudyLsj
 }
 
 export class WordStudyFeature
@@ -31,6 +34,7 @@ export class WordStudyFeature
 {
   readonly #dictionary: WordStudyDictionary
   readonly #concordance: WordStudyConcordance
+  readonly #lsj: WordStudyLsj
   readonly #models = new Set<WordStudyModel>()
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
   // The panel a plain activation retargets: the one focused most recently, or
@@ -41,6 +45,7 @@ export class WordStudyFeature
     super(plugin)
     this.#dictionary = options.dictionary ?? INERT_WORD_STUDY_DICTIONARY
     this.#concordance = options.concordance ?? INERT_WORD_STUDY_CONCORDANCE
+    this.#lsj = options.lsj ?? INERT_WORD_STUDY_LSJ
   }
 
   // Where an occurrence row leads, wired once the reader exists.
@@ -72,6 +77,7 @@ export class WordStudyFeature
     const model = new WordStudyModel({
       dictionary: this.#dictionary,
       concordance: this.#concordance,
+      lsj: this.#lsj,
       opener: this,
       navigator: this,
     })

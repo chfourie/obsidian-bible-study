@@ -15,6 +15,8 @@ import { RibbonMenuFeature } from '../ribbon-menu'
 import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
+  LSJ_ATTRIBUTION,
+  LsjLexicon,
   STRONGS_ATTRIBUTION,
   STRONGS_ETYMOLOGY_ATTRIBUTION,
   StrongsLexiconClient,
@@ -34,6 +36,11 @@ export default class ScriptureStudyPlugin extends Plugin {
     void this.vaultIndex.reindexVault(),
   )
   readonly strongsDictionaries = new StrongsDictionaries(
+    new ObsidianModuleDataDir(this),
+    new StrongsLexiconClient(),
+    this.settingsStore,
+  )
+  readonly lsjLexicon = new LsjLexicon(
     new ObsidianModuleDataDir(this),
     new StrongsLexiconClient(),
     this.settingsStore,
@@ -94,6 +101,15 @@ export default class ScriptureStudyPlugin extends Plugin {
       etymologyAttribution: STRONGS_ETYMOLOGY_ATTRIBUTION,
     },
     concordance: moduleConcordance(this.modules.store),
+    lsj: {
+      installed: () => this.lsjLexicon.isInstalled(),
+      entryFor: async (strongsNumber) => {
+        const entry = await this.lsjLexicon.entryFor(strongsNumber)
+        return entry === null ? null : formatDefinition(entry)
+      },
+      install: () => this.lsjLexicon.install(),
+      attribution: LSJ_ATTRIBUTION,
+    },
   })
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
     crossReferences: this.crossReferences.store,
@@ -107,6 +123,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.settingsStore,
     this.modules,
     this.strongsDictionaries,
+    this.lsjLexicon,
   )
   readonly ribbonMenu = new RibbonMenuFeature(this, {
     openReader: (options) => this.reader.openReader(options),

@@ -28,11 +28,15 @@ export type SettingsTabDeps = {
   downloadModule: (translationId: string) => Promise<unknown>
   deleteModule: (moduleId: string) => Promise<void>
   modulesWithUpdates: () => Promise<string[]>
-  strongs: {
-    isInstalled: () => Promise<boolean>
-    install: () => Promise<void>
-    remove: () => Promise<void>
-  }
+  strongs: OptionalModule
+  lsj: OptionalModule
+}
+
+// A module the settings offer as one switch: on downloads it, off deletes it.
+export type OptionalModule = {
+  isInstalled: () => Promise<boolean>
+  install: () => Promise<void>
+  remove: () => Promise<void>
 }
 
 export type TranslationOption = { id: string; label: string }
@@ -73,6 +77,9 @@ export type SettingsTabView = {
   strongsInstalled: boolean
   strongsBusy: boolean
   strongsError: string | null
+  lsjInstalled: boolean
+  lsjBusy: boolean
+  lsjError: string | null
   taggedTranslationInstalled: boolean
 }
 
@@ -90,6 +97,9 @@ export class SettingsTabModel {
   #strongsInstalled = false
   #strongsBusy = false
   #strongsError: string | null = null
+  #lsjInstalled = false
+  #lsjBusy = false
+  #lsjError: string | null = null
 
   constructor(private readonly deps: SettingsTabDeps) {}
 
@@ -128,6 +138,7 @@ export class SettingsTabModel {
     this.#settings = await this.deps.settingsStore.loadSettings()
     this.#manifests = await this.deps.installedManifests()
     this.#strongsInstalled = await this.deps.strongs.isInstalled()
+    this.#lsjInstalled = await this.deps.lsj.isInstalled()
   }
 
   async #loadCatalog(): Promise<void> {
@@ -160,6 +171,20 @@ export class SettingsTabModel {
       this.#strongsError = errorMessage(error)
     }
     this.#strongsBusy = false
+    await this.refreshLocal()
+  }
+
+  async setLsjEnabled(enabled: boolean): Promise<void> {
+    this.#lsjBusy = true
+    this.#lsjError = null
+    this.#notify()
+    try {
+      if (enabled) await this.deps.lsj.install()
+      else await this.deps.lsj.remove()
+    } catch (error) {
+      this.#lsjError = errorMessage(error)
+    }
+    this.#lsjBusy = false
     await this.refreshLocal()
   }
 
@@ -207,6 +232,9 @@ export class SettingsTabModel {
       strongsInstalled: this.#strongsInstalled,
       strongsBusy: this.#strongsBusy,
       strongsError: this.#strongsError,
+      lsjInstalled: this.#lsjInstalled,
+      lsjBusy: this.#lsjBusy,
+      lsjError: this.#lsjError,
       taggedTranslationInstalled: this.#manifests.some(
         (installed) => installed.capabilities.strongsTagged,
       ),

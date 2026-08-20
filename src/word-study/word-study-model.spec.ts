@@ -745,3 +745,186 @@ describe("WordStudyModel's translation switcher", () => {
     })
   })
 })
+
+// The LSJ Lexicon seen through the word study's own seam: installed or not,
+// and one full entry per extended number.
+const fakeLsj = (
+  entries: Record<string, string> = {},
+  options: { installed?: boolean } = {},
+) => {
+  let installed = options.installed ?? true
+  let installError: Error | null = null
+  const lookups: string[] = []
+  return {
+    lookups,
+    failInstallWith: (error: Error) => {
+      installError = error
+    },
+    deps: {
+      installed: async () => installed,
+      entryFor: async (number: string) => {
+        lookups.push(number)
+        return entries[number] ?? null
+      },
+      install: async () => {
+        if (installError !== null) throw installError
+        installed = true
+      },
+      attribution: 'Full LSJ entries: TFLSJ (CC BY 4.0)',
+    },
+  }
+}
+
+const LSJ_ENTRY = 'ἀγάπη, ἡ, love, of persons.'
+
+const lsjModel = (
+  lsjEntries: Record<string, string> = { G0026: LSJ_ENTRY },
+  options: { installed?: boolean } = {},
+) => {
+  const dictionary = fakeDictionary({
+    G0026: entry('G0026'),
+    H0001G: entry('H0001G'),
+  })
+  const lsj = fakeLsj(lsjEntries, options)
+  return {
+    lsj,
+    model: new WordStudyModel({ dictionary: dictionary.deps, lsj: lsj.deps }),
+  }
+}
+
+describe("WordStudyModel's LSJ section", () => {
+  it('offers the full entry of a Greek number, collapsed', async () => {
+    const { model: panel } = lsjModel()
+
+    await panel.show('G0026')
+
+    expect(panel.view.lsj).toEqual({
+      status: 'ok',
+      expanded: false,
+      entry: LSJ_ENTRY,
+      install: null,
+      attribution: 'Full LSJ entries: TFLSJ (CC BY 4.0)',
+    })
+  })
+
+  it('expands and folds the section back shut', async () => {
+    const { model: panel } = lsjModel()
+    await panel.show('G0026')
+
+    panel.toggleLsj()
+    expect(panel.view.lsj?.expanded).toBe(true)
+
+    panel.toggleLsj()
+    expect(panel.view.lsj?.expanded).toBe(false)
+  })
+
+  it('keeps the section open across the numbers the panel goes on to study', async () => {
+    const { model: panel } = lsjModel({ G0026: LSJ_ENTRY, G0025: 'ἀγαπάω' })
+    await panel.show('G0026')
+    panel.toggleLsj()
+
+    await panel.show('G0025')
+
+    expect(panel.view.lsj).toMatchObject({ expanded: true, entry: 'ἀγαπάω' })
+  })
+
+  it('has no section at all for a Hebrew number, which LSJ never covers', async () => {
+    const { model: panel } = lsjModel()
+
+    await panel.show('H0001G')
+
+    expect(panel.view.lsj).toBeNull()
+  })
+
+  it('never looks a Hebrew number up', async () => {
+    const { model: panel, lsj } = lsjModel()
+
+    await panel.show('H0001G')
+
+    expect(lsj.lookups).toEqual([])
+  })
+
+  it('has no section while the panel is studying nothing', () => {
+    expect(lsjModel().model.view.lsj).toBeNull()
+  })
+
+  it('degrades gracefully for a Greek number LSJ carries no entry for', async () => {
+    const { model: panel } = lsjModel({})
+
+    await panel.show('G0026')
+
+    expect(panel.view.lsj).toMatchObject({
+      status: 'no-entry',
+      entry: null,
+      attribution: null,
+      install: null,
+    })
+  })
+
+  it('offers an inline install while the module is missing', async () => {
+    const { model: panel } = lsjModel({ G0026: LSJ_ENTRY }, { installed: false })
+
+    await panel.show('G0026')
+
+    expect(panel.view.lsj).toMatchObject({
+      status: 'not-installed',
+      entry: null,
+      attribution: null,
+      install: { busy: false, error: null },
+    })
+  })
+
+  it('never looks a number up while the module is missing', async () => {
+    const { model: panel, lsj } = lsjModel(
+      { G0026: LSJ_ENTRY },
+      { installed: false },
+    )
+
+    await panel.show('G0026')
+
+    expect(lsj.lookups).toEqual([])
+  })
+
+  it('shows the entry once the inline install has run', async () => {
+    const { model: panel } = lsjModel({ G0026: LSJ_ENTRY }, { installed: false })
+    await panel.show('G0026')
+
+    await panel.installLsj()
+
+    expect(panel.view.lsj).toEqual({
+      status: 'ok',
+      expanded: true,
+      entry: LSJ_ENTRY,
+      install: null,
+      attribution: 'Full LSJ entries: TFLSJ (CC BY 4.0)',
+    })
+  })
+
+  it('keeps the affordance and names the failure when the install fails', async () => {
+    const { model: panel, lsj } = lsjModel(
+      { G0026: LSJ_ENTRY },
+      { installed: false },
+    )
+    await panel.show('G0026')
+    lsj.failInstallWith(new Error('offline'))
+
+    await panel.installLsj()
+
+    expect(panel.view.lsj).toMatchObject({
+      status: 'not-installed',
+      install: { busy: false, error: 'offline' },
+    })
+  })
+
+  it('offers the same install affordance when no LSJ module is wired up', async () => {
+    const dictionary = fakeDictionary({ G0026: entry('G0026') })
+    const panel = new WordStudyModel({ dictionary: dictionary.deps })
+
+    await panel.show('G0026')
+
+    expect(panel.view.lsj).toMatchObject({
+      status: 'not-installed',
+      install: { busy: false, error: null },
+    })
+  })
+})

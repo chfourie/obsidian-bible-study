@@ -9,6 +9,7 @@ import type {
   WordStudyConcordance,
   WordStudyDictionary,
   WordStudyEntry,
+  WordStudyLsj,
 } from './word-study-model'
 import { WORD_STUDY_VIEW_TYPE, WordStudyView } from './word-study-view'
 
@@ -38,6 +39,20 @@ const fakeDictionary = (
   etymologyAttribution: "Etymology: Strong's (1890, public domain)",
 })
 
+const LSJ_ENTRY = 'ἀγάπη, ἡ, love, of persons.'
+
+const fakeLsj = (
+  entries: Record<string, string> = { G0026: LSJ_ENTRY },
+  installed = true,
+): WordStudyLsj => ({
+  installed: async () => installed,
+  entryFor: async (number) => entries[number] ?? null,
+  install: async () => {
+    installed = true
+  },
+  attribution: 'Full LSJ entries: TFLSJ (CC BY 4.0)',
+})
+
 const KJV = { id: 'kjv', name: 'King James Version' }
 const BSB = { id: 'bsb', name: 'Berean Standard Bible' }
 
@@ -63,6 +78,7 @@ type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 type HarnessOptions = {
   dictionary?: WordStudyDictionary | null
   concordance?: WordStudyConcordance
+  lsj?: WordStudyLsj
 }
 
 const harness = (options: HarnessOptions = {}) => {
@@ -120,7 +136,11 @@ const harness = (options: HarnessOptions = {}) => {
   const feature =
     dictionary === null
       ? new WordStudyFeature(plugin)
-      : new WordStudyFeature(plugin, { dictionary, concordance })
+      : new WordStudyFeature(plugin, {
+          dictionary,
+          concordance,
+          ...(options.lsj === undefined ? {} : { lsj: options.lsj }),
+        })
   feature.useSettings(DEFAULT_SETTINGS)
   const focus = (leaf: WorkspaceLeaf | null) => {
     handlers['active-leaf-change']?.forEach((handler) =>
@@ -452,6 +472,93 @@ describe('WordStudyFeature', () => {
           segments: [{ text: 'In the beginning God created.', emphasis: false }],
         },
       ],
+    })
+  })
+
+  it('gives a Greek entry a collapsed full LSJ section', async () => {
+    const { feature, leaves } = harness({ lsj: fakeLsj() })
+    await feature.load()
+
+    await feature.openWordStudy('G0026')
+
+    expect(panel(leaves[0]).model.view.lsj).toMatchObject({
+      status: 'ok',
+      expanded: false,
+      entry: LSJ_ENTRY,
+      attribution: 'Full LSJ entries: TFLSJ (CC BY 4.0)',
+    })
+  })
+
+  it('keeps the LSJ section open for as long as the panel lives', async () => {
+    const { feature, leaves } = harness({
+      dictionary: fakeDictionary(['G0026', 'G0025']),
+      lsj: fakeLsj({ G0026: LSJ_ENTRY, G0025: 'ἀγαπάω' }),
+    })
+    await feature.load()
+    await feature.openWordStudy('G0026')
+    panel(leaves[0]).model.toggleLsj()
+
+    await feature.openWordStudy('G0025')
+
+    expect(panel(leaves[0]).model.view.lsj).toMatchObject({
+      expanded: true,
+      entry: 'ἀγαπάω',
+    })
+  })
+
+  it('gives a Hebrew entry no LSJ section at all', async () => {
+    const { feature, leaves } = harness({
+      dictionary: fakeDictionary(['H0001G', 'H0001H', 'H3050']),
+      lsj: fakeLsj(),
+    })
+    await feature.load()
+
+    await feature.openWordStudy('H0001G')
+
+    expect(panel(leaves[0]).model.view.lsj).toBeNull()
+  })
+
+  it('degrades an unknown Greek entry to a section carrying nothing', async () => {
+    const { feature, leaves } = harness({ lsj: fakeLsj({}) })
+    await feature.load()
+
+    await feature.openWordStudy('G0026')
+
+    expect(panel(leaves[0]).model.view.lsj).toMatchObject({
+      status: 'no-entry',
+      entry: null,
+      attribution: null,
+    })
+  })
+
+  it('offers an inline install, and the entry once it has run', async () => {
+    const { feature, leaves } = harness({
+      lsj: fakeLsj({ G0026: LSJ_ENTRY }, false),
+    })
+    await feature.load()
+    await feature.openWordStudy('G0026')
+    expect(panel(leaves[0]).model.view.lsj).toMatchObject({
+      status: 'not-installed',
+      install: { busy: false, error: null },
+    })
+
+    await panel(leaves[0]).model.installLsj()
+
+    expect(panel(leaves[0]).model.view.lsj).toMatchObject({
+      status: 'ok',
+      entry: LSJ_ENTRY,
+    })
+  })
+
+  it('offers the same install affordance when no LSJ module is wired up', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    await feature.openWordStudy('G0026')
+
+    expect(panel(leaves[0]).model.view.lsj).toMatchObject({
+      status: 'not-installed',
+      install: { busy: false, error: null },
     })
   })
 })

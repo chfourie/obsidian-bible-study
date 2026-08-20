@@ -75,7 +75,7 @@ The translation-independent identity of an original-language word, and the join 
 A base Strong's number together with its lettered disambiguations (`H4191`, `H4191a`, `H4191b`). Dictionary entries exist at extended-number granularity; occurrence matching is only honest at family granularity, because tagged translations mostly predate disambiguation.
 
 ### Word Study Panel
-A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, and the family's concordance in one tagged translation at a time — switchable where more than one is installed, and filterable by Rendering. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel.
+A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, a collapsible full LSJ entry where the number is Greek and that module is installed, and the family's concordance in one tagged translation at a time — switchable where more than one is installed, and filterable by Rendering. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel.
 
 ### Concordance Index
 The per-translation mapping from Strong's Family to the verse ids where the family is tagged, built when a Tagged Translation module is installed. A concordance is inherently per-text — counts and renderings are only meaningful within one translation.

@@ -24,7 +24,11 @@ export type ModuleCapabilities = {
   poetry?: boolean
 }
 
-export type ModuleKind = 'translation' | 'strongs-dictionaries' | 'book'
+export type ModuleKind =
+  | 'translation'
+  | 'strongs-dictionaries'
+  | 'lsj-lexicon'
+  | 'book'
 
 // One addressable section of a book: its chapter number in the BBBCCCVVV id
 // space, its display name, and how many paragraph atoms it holds. The whole

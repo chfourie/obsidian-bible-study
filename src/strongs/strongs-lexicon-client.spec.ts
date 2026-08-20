@@ -5,6 +5,7 @@ import {
   StrongsLexiconClient,
   TBESG_URL,
   TBESH_URL,
+  TFLSJ_URLS,
 } from './strongs-lexicon-client'
 
 describe('StrongsLexiconClient', () => {
@@ -24,5 +25,14 @@ describe('StrongsLexiconClient', () => {
     expect(await client.fetchGreekDerivations()).toBe(
       `content of ${STRONGS_GREEK_URL}`,
     )
+  })
+
+  it('fetches both halves of the full LSJ lexicon from STEPBible-Data', async () => {
+    const client = new StrongsLexiconClient(async (url) => `content of ${url}`)
+
+    expect(await client.fetchLsj()).toEqual(
+      TFLSJ_URLS.map((url) => `content of ${url}`),
+    )
+    expect(TFLSJ_URLS).toHaveLength(2)
   })
 })

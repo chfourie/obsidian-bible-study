@@ -49,6 +49,26 @@ export const INERT_WORD_STUDY_DICTIONARY: WordStudyDictionary = {
   etymologyAttribution: '',
 }
 
+// The LSJ Lexicon seen from the Word Study Panel: one full Liddell-Scott-Jones
+// entry per extended number, and the install the panel offers inline while the
+// optional module is missing. Greek only — no Hebrew counterpart exists, so a
+// Hebrew number is never asked about.
+export type WordStudyLsj = {
+  installed: () => Promise<boolean>
+  entryFor: (strongsNumber: string) => Promise<string | null>
+  install: () => Promise<void>
+  attribution: string
+}
+
+// Stands in when the panel runs without the LSJ module wired up: a Greek
+// number degrades to the same inline install, which installs nothing.
+export const INERT_WORD_STUDY_LSJ: WordStudyLsj = {
+  installed: async () => false,
+  entryFor: async () => null,
+  install: async () => {},
+  attribution: '',
+}
+
 // The Tagged Translation one concordance reads. The id is the translation's
 // own code, which is what the occurrence count is named with.
 export type ConcordanceTranslation = { id: string; name: string }
@@ -100,6 +120,7 @@ export const INERT_WORD_STUDY_CONCORDANCE: WordStudyConcordance = {
 export type WordStudyDeps = {
   dictionary: WordStudyDictionary
   concordance?: WordStudyConcordance
+  lsj?: WordStudyLsj
   // How the panel's own links walk: the same opener the Study Panel's entry
   // cards use, so a plain activation retargets and a modified one spawns.
   opener?: WordStudyOpener
@@ -142,6 +163,19 @@ export type WordStudyStatus =
 // The install the panel offers in place of the dictionary area, non-null
 // exactly while the status is 'no-dictionary'.
 export type WordStudyInstall = { busy: boolean; error: string | null }
+
+// The full LSJ entry as a collapsible section of its own, null for every
+// number LSJ has no business covering — a Hebrew one, or none at all.
+export type LsjSectionView = {
+  status: 'loading' | 'ok' | 'no-entry' | 'not-installed'
+  expanded: boolean
+  // Non-null exactly while the status is 'ok'.
+  entry: string | null
+  // The inline install, non-null exactly while the status is 'not-installed'.
+  install: WordStudyInstall | null
+  // Named only while an LSJ entry is actually on screen.
+  attribution: string | null
+}
 
 export type ConcordanceVerseView = ConcordanceVerse & { reference: string }
 
@@ -198,6 +232,8 @@ export type WordStudyViewState = {
   attribution: string | null
   etymologyAttribution: string | null
   install: WordStudyInstall | null
+  // The full LSJ entry, null for a number no LSJ section belongs under.
+  lsj: LsjSectionView | null
   // The family's occurrences in one Tagged Translation, or null while no
   // tagged translation is installed to count them in.
   concordance: ConcordanceView | null
@@ -274,6 +310,11 @@ const groupByBook = (verseIds: number[]): ConcordanceBook[] => {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
+// LSJ is a Greek lexicon: a Hebrew number has no section to carry, rather than
+// an empty one.
+const isGreek = (strongsNumber: string): boolean =>
+  strongsNumber.startsWith('G')
+
 export class WordStudyModel {
   #number: string | null = null
   #status: WordStudyStatus = 'empty'
@@ -281,6 +322,14 @@ export class WordStudyModel {
   #installing = false
   #installError: string | null = null
   #loadToken = 0
+  // Null exactly where the panel carries no LSJ section at all.
+  #lsjStatus: LsjSectionView['status'] | null = null
+  #lsjEntry: string | null = null
+  // Remembered for as long as the panel lives: a reader who opened the LSJ
+  // entry once means it for the numbers they go on to study.
+  #lsjExpanded = false
+  #lsjInstalling = false
+  #lsjInstallError: string | null = null
   // The concordance settles on its own token: switching translations re-reads
   // the occurrences without disturbing the entry already on screen.
   #concordanceToken = 0
@@ -324,6 +373,22 @@ export class WordStudyModel {
         this.#status === 'no-dictionary'
           ? { busy: this.#installing, error: this.#installError }
           : null,
+      lsj: this.#lsjView(),
+    }
+  }
+
+  #lsjView(): LsjSectionView | null {
+    const status = this.#lsjStatus
+    if (status === null) return null
+    return {
+      status,
+      expanded: this.#lsjExpanded,
+      entry: status === 'ok' ? this.#lsjEntry : null,
+      install:
+        status === 'not-installed'
+          ? { busy: this.#lsjInstalling, error: this.#lsjInstallError }
+          : null,
+      attribution: status === 'ok' ? this.#lsjSource().attribution : null,
     }
   }
 
@@ -334,6 +399,8 @@ export class WordStudyModel {
     this.#number = strongsNumber
     this.#status = 'loading'
     this.#found = null
+    this.#lsjStatus = isGreek(strongsNumber) ? 'loading' : null
+    this.#lsjEntry = null
     this.#concordance = null
     this.#translationId = target.translationId ?? null
     this.#notify()
@@ -418,6 +485,33 @@ export class WordStudyModel {
     await (this.deps.opener ?? NO_WORD_STUDY).openWordStudy(strongsNumber, options)
   }
 
+  toggleLsj(): void {
+    this.#lsjExpanded = !this.#lsjExpanded
+    this.#notify()
+  }
+
+  // The inline install the section offers in its own place — the panel around
+  // it stays exactly as it was.
+  async installLsj(): Promise<void> {
+    if (this.#lsjInstalling) return
+    const number = this.#number
+    if (number === null) return
+    this.#lsjInstalling = true
+    this.#lsjInstallError = null
+    this.#notify()
+    try {
+      await this.#lsjSource().install()
+    } catch (error) {
+      this.#lsjInstalling = false
+      this.#lsjInstallError = errorMessage(error)
+      this.#notify()
+      return
+    }
+    this.#lsjInstalling = false
+    this.#lsjExpanded = true
+    await this.#loadLsj(number, this.#loadToken)
+  }
+
   async installDictionary(): Promise<void> {
     if (this.#installing) return
     this.#installing = true
@@ -443,8 +537,28 @@ export class WordStudyModel {
     const token = ++this.#loadToken
     await Promise.all([
       this.#loadEntry(number, token),
+      this.#loadLsj(number, token),
       this.#loadConcordance(number, ++this.#concordanceToken),
     ])
+  }
+
+  // The LSJ section settles beside the entry, on the same token: an optional
+  // module missing is a state of that section alone, never of the panel.
+  async #loadLsj(number: string, token: number): Promise<void> {
+    if (!isGreek(number)) return
+    const source = this.#lsjSource()
+    if (!(await source.installed())) {
+      if (token !== this.#loadToken) return
+      this.#lsjStatus = 'not-installed'
+      this.#lsjEntry = null
+      this.#notify()
+      return
+    }
+    const entry = await source.entryFor(number)
+    if (token !== this.#loadToken) return
+    this.#lsjEntry = entry
+    this.#lsjStatus = entry === null ? 'no-entry' : 'ok'
+    this.#notify()
   }
 
   async #loadEntry(number: string, token: number): Promise<void> {
@@ -543,6 +657,10 @@ export class WordStudyModel {
       (candidate) => candidate.text === loaded.rendering,
     )
     return rendering?.verseIds ?? []
+  }
+
+  #lsjSource(): WordStudyLsj {
+    return this.deps.lsj ?? INERT_WORD_STUDY_LSJ
   }
 
   #concordanceSource(): WordStudyConcordance {
