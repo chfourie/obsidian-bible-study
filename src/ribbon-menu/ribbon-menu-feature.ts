@@ -3,9 +3,9 @@ import { mount, unmount } from 'svelte'
 import { PluginFeature } from '../data-access'
 import RibbonMenuPanel from './RibbonMenuPanel.svelte'
 import {
-  buildRibbonMenuItems,
+  buildRibbonMenuSections,
   type RibbonMenuActions,
-  type RibbonMenuItem,
+  type RibbonMenuSection,
 } from './ribbon-menu-items'
 
 export type { RibbonMenuActions } from './ribbon-menu-items'
@@ -39,7 +39,8 @@ export class RibbonMenuFeature extends PluginFeature {
     this.#component = mount(RibbonMenuPanel, {
       target: host,
       props: {
-        getItems: (): RibbonMenuItem[] => buildRibbonMenuItems(this.actions),
+        getSections: (): Promise<RibbonMenuSection[]> =>
+          buildRibbonMenuSections(this.actions),
         registerApi: (api: RibbonMenuApi) => {
           this.#api = api
         },
