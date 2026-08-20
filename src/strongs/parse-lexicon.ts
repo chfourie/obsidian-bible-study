@@ -4,7 +4,7 @@ export type StrongsEntry = {
   strongs: string
   // The extended number this entry actually is: STEPBible's dStrong, which
   // adds a disambiguating letter where one base number covers several words.
-  variant: string
+  extendedNumber: string
   lemma: string
   transliteration: string
   // STEPBible's morphology code for the entry, e.g. 'H:N-M'.
@@ -34,7 +34,7 @@ const COLUMN = {
 
 // The dStrong column leads with the extended number and trails the relation
 // that motivated it ('H0001H = a Part of').
-const extendedNumber = (cell: string, family: string): string => {
+const extendedNumberOf = (cell: string, family: string): string => {
   const candidate = cell.split('=')[0].trim()
   return ENTRY_NUMBER.test(candidate) ? candidate : family
 }
@@ -47,18 +47,18 @@ export const parseLexicon = (text: string): ParsedLexicon => {
     const strongs = row[COLUMN.family]?.trim() ?? ''
     if (!ENTRY_NUMBER.test(strongs)) continue
     if (row.length <= COLUMN.definition) continue
-    const variant = extendedNumber(row[COLUMN.dStrong] ?? '', strongs)
-    if (entries.has(variant)) continue
-    entries.set(variant, {
+    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', strongs)
+    if (entries.has(extendedNumber)) continue
+    entries.set(extendedNumber, {
       strongs,
-      variant,
+      extendedNumber,
       lemma: row[COLUMN.lemma].trim().normalize('NFC'),
       transliteration: row[COLUMN.transliteration].trim().normalize('NFC'),
       morphology: row[COLUMN.morphology].trim(),
       gloss: row[COLUMN.gloss].trim(),
       definition: row[COLUMN.definition].trim(),
     })
-    families.set(strongs, [...(families.get(strongs) ?? []), variant])
+    families.set(strongs, [...(families.get(strongs) ?? []), extendedNumber])
   }
   return { entries, families }
 }

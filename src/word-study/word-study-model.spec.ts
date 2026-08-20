@@ -15,7 +15,7 @@ import {
 
 const entryView = (strongs: string): StrongsEntryView => ({
   strongs,
-  variant: strongs,
+  extendedNumber: strongs,
   lemma: 'ἀγάπη',
   transliteration: 'agapē',
   morphology: 'G:N-F',
@@ -107,7 +107,7 @@ describe('WordStudyModel', () => {
       status: 'ok',
       entry: {
         strongs: 'G0026',
-        variant: 'G0026',
+        extendedNumber: 'G0026',
         lemma: 'ἀγάπη',
         transliteration: 'agapē',
         morphology: 'G:N-F',

@@ -14,7 +14,7 @@ export type StrongsEntryView = {
   strongs: string
   // The extended number the entry actually is, which for a disambiguated
   // family differs from the number asked for ('H0001' → 'H0001G').
-  variant: string
+  extendedNumber: string
   lemma: string
   transliteration: string
   morphology: string

@@ -15,7 +15,7 @@ import { WORD_STUDY_VIEW_TYPE, WordStudyView } from './word-study-view'
 
 const entryView = (strongs: string): StrongsEntryView => ({
   strongs,
-  variant: strongs,
+  extendedNumber: strongs,
   lemma: 'ἀγάπη',
   transliteration: 'agapē',
   morphology: 'G:N-F',

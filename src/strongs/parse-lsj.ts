@@ -8,7 +8,7 @@ const COLUMN = { family: 0, dStrong: 1, meaning: 7 } as const
 
 // The dStrong column leads with the extended number and trails the relation
 // that motivated it ('G0001G = a Part of').
-const extendedNumber = (cell: string, family: string): string => {
+const extendedNumberOf = (cell: string, family: string): string => {
   const candidate = cell.split('=')[0].trim()
   return ENTRY_NUMBER.test(candidate) ? candidate : family
 }
@@ -24,9 +24,9 @@ export const parseLsjLexicon = (text: string): Map<string, string> => {
     if (row.length <= COLUMN.meaning) continue
     const meaning = row[COLUMN.meaning].trim()
     if (meaning === '') continue
-    const variant = extendedNumber(row[COLUMN.dStrong] ?? '', family)
-    if (entries.has(variant)) continue
-    entries.set(variant, meaning)
+    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', family)
+    if (entries.has(extendedNumber)) continue
+    entries.set(extendedNumber, meaning)
     if (!entries.has(family)) entries.set(family, meaning)
   }
   return entries

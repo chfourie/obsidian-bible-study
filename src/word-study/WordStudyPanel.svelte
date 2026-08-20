@@ -79,7 +79,7 @@ in the reader.
     </div>
   {:else}
     <div class="bsw-head">
-      <span class="bsw-number">{view.entry.variant}</span>
+      <span class="bsw-number">{view.entry.extendedNumber}</span>
       <span class="bsw-lemma">{view.entry.lemma}</span>
       <span class="bsw-translit">{view.entry.transliteration}</span>
     </div>

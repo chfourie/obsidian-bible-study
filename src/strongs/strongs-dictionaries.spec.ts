@@ -145,7 +145,7 @@ describe('StrongsDictionaries lookup', () => {
 
     expect(entry).toMatchObject({
       strongs: 'H0002',
-      variant: 'H0002',
+      extendedNumber: 'H0002',
       morphology: 'A:N-M',
     })
   })
@@ -156,7 +156,7 @@ describe('StrongsDictionaries lookup', () => {
 
     const [entry] = await dictionaries.entriesFor(['H0001'])
 
-    expect(entry).toMatchObject({ strongs: 'H0001', variant: 'H0001G' })
+    expect(entry).toMatchObject({ strongs: 'H0001', extendedNumber: 'H0001G' })
   })
 
   it('answers an extended number with the sub-entry it names', async () => {
@@ -165,7 +165,7 @@ describe('StrongsDictionaries lookup', () => {
 
     const [entry] = await dictionaries.entriesFor(['H0001I'])
 
-    expect(entry).toMatchObject({ variant: 'H0001I', gloss: 'father of' })
+    expect(entry).toMatchObject({ extendedNumber: 'H0001I', gloss: 'father of' })
   })
 })
 
@@ -176,7 +176,7 @@ describe('StrongsDictionaries word study', () => {
 
     const study = await dictionaries.studyEntryFor('H0001H')
 
-    expect(study?.entry.variant).toBe('H0001H')
+    expect(study?.entry.extendedNumber).toBe('H0001H')
     expect(study?.siblings).toEqual(['H0001G', 'H0001I'])
   })
 

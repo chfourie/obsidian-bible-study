@@ -12,7 +12,7 @@ describe('parseLexicon', () => {
 
     expect(av).toMatchObject({
       strongs: 'H0001',
-      variant: 'H0001G',
+      extendedNumber: 'H0001G',
       lemma: 'אָב',
       transliteration: 'av',
       gloss: 'father',

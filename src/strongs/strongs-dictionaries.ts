@@ -51,8 +51,8 @@ const storedLexicon = (
   const { entries, families } = parseLexicon(raw)
   const stored: StoredLexicon = {
     entries: Object.fromEntries(
-      [...entries].map(([variant, entry]) => [
-        variant,
+      [...entries].map(([extendedNumber, entry]) => [
+        extendedNumber,
         { ...entry, derivation: derivations.get(entry.strongs) ?? null },
       ]),
     ),
@@ -143,7 +143,7 @@ export class StrongsDictionaries {
     return {
       entry,
       siblings: (found.lexicon.families[entry.strongs] ?? []).filter(
-        (sibling) => sibling !== entry.variant,
+        (sibling) => sibling !== entry.extendedNumber,
       ),
       derivation,
     }
@@ -156,7 +156,7 @@ export class StrongsDictionaries {
     if (key !== 'H' && key !== 'G') return []
     const lexicon = await this.#lexicon(key)
     return (lexicon.families[strongsFamily(number)] ?? []).filter(
-      (variant) => variant !== number,
+      (extendedNumber) => extendedNumber !== number,
     )
   }
 
@@ -173,8 +173,8 @@ export class StrongsDictionaries {
     const key = number.charAt(0)
     if (key !== 'H' && key !== 'G') return null
     const lexicon = await this.#lexicon(key)
-    const variant = lexicon.families[number]?.[0] ?? number
-    const stored = lexicon.entries[variant]
+    const extendedNumber = lexicon.families[number]?.[0] ?? number
+    const stored = lexicon.entries[extendedNumber]
     if (stored === undefined) return null
     const { derivation, ...entry } = stored
     return { lexicon, entry, derivation }
