@@ -3,8 +3,8 @@ import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 
 // The tab a surface shows a reader's study material under: the chapter's
-// study sections, or the selection's translations.
-export type StudySubTab = 'study' | 'translations'
+// study sections, or the selection's details.
+export type StudySubTab = 'chapter' | 'selection'
 
 // What a surface rendering study material — the Study Panel — must be able to
 // do on the workspace around it. Everything that acts on the material itself

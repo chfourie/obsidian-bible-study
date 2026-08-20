@@ -1,7 +1,7 @@
 <!--
-One reader tab's study material under two tabs: Study carries the
+One reader tab's study material under two tabs: Chapter carries the
 chapter-scoped material — the annotations, mentions and cross-references of
-the chapter on screen — and Translations carries the selection's verse
+the chapter on screen — and Selection carries the selection's verse
 details. Rendered by the Study Panel following that tab.
 
 A book has exactly one layer, so it drops the tab bar outright and shows the
@@ -60,15 +60,15 @@ selected paragraph's details above its section material (spec-books §5).
       <button
         type="button"
         class="bsm-tab"
-        class:bsm-on={tab === 'study'}
-        onclick={() => selectTab('study')}
-      >Study</button>
+        class:bsm-on={tab === 'chapter'}
+        onclick={() => selectTab('chapter')}
+      >Chapter</button>
       <button
         type="button"
         class="bsm-tab"
-        class:bsm-on={tab === 'translations'}
-        onclick={() => selectTab('translations')}
-      >Translations</button>
+        class:bsm-on={tab === 'selection'}
+        onclick={() => selectTab('selection')}
+      >Selection</button>
     </div>
   {/if}
   <div class="bsm-body">
@@ -84,10 +84,10 @@ selected paragraph's details above its section material (spec-books §5).
         />
       {/if}
       {@render sectionMaterial()}
-    {:else if tab === 'study'}
+    {:else if tab === 'chapter'}
       {@render sectionMaterial()}
     {:else if material.selectedVerseId === null}
-      <div class="bsm-empty">Select a verse to see its translations.</div>
+      <div class="bsm-empty">Select a verse to see its details.</div>
     {:else if material.details === null}
       <div class="bsm-empty">Loading…</div>
     {:else}

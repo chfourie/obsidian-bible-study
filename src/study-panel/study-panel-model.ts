@@ -229,14 +229,14 @@ export class StudyPanelModel {
     this.#notify()
   }
 
-  // The followed reader loads translation texts only while the Translations
+  // The followed reader loads translation texts only while the Selection
   // tab shows them — but a book has no such tab, so its paragraph details are
   // wanted for as long as the panel mirrors it (spec-books §5).
   #syncDetailsWanted(): void {
     const source = this.#studySource
     if (source === null) return
     source.setDetailsWanted(
-      source.studyMaterial.bookMode || this.#tabState.subTab === 'translations',
+      source.studyMaterial.bookMode || this.#tabState.subTab === 'selection',
     )
   }
 

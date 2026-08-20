@@ -8,7 +8,7 @@ describe('TabMemory', () => {
     const memory = new TabMemory<Tab>()
 
     expect(memory.stateFor({ id: 'a' })).toEqual({
-      subTab: 'study',
+      subTab: 'chapter',
       expanded: new Set(),
       collapsedTranslations: new Set(),
     })
@@ -17,11 +17,11 @@ describe('TabMemory', () => {
   it('hands the same tab back its own state', () => {
     const memory = new TabMemory<Tab>()
     const tab = { id: 'a' }
-    memory.stateFor(tab).subTab = 'translations'
+    memory.stateFor(tab).subTab = 'selection'
     memory.stateFor(tab).expanded = new Set(['John 15:1'])
     memory.stateFor(tab).collapsedTranslations = new Set(['kjv'])
 
-    expect(memory.stateFor(tab).subTab).toBe('translations')
+    expect(memory.stateFor(tab).subTab).toBe('selection')
     expect([...memory.stateFor(tab).expanded]).toEqual(['John 15:1'])
     expect([...memory.stateFor(tab).collapsedTranslations]).toEqual(['kjv'])
   })
@@ -30,10 +30,10 @@ describe('TabMemory', () => {
     const memory = new TabMemory<Tab>()
     const first = { id: 'a' }
     const second = { id: 'a' }
-    memory.stateFor(first).subTab = 'translations'
+    memory.stateFor(first).subTab = 'selection'
     memory.stateFor(first).expanded = new Set(['John 15:1'])
 
-    expect(memory.stateFor(second).subTab).toBe('study')
+    expect(memory.stateFor(second).subTab).toBe('chapter')
     expect(memory.stateFor(second).expanded.size).toBe(0)
   })
 

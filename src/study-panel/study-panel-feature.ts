@@ -310,14 +310,14 @@ export class StudyPanelFeature extends PluginFeature {
   }
 
   // A verse pick leaves the remembered sub-tab standing; a Strong's word tap
-  // switches to the Translations tab, the only place its entries render.
+  // switches to the Selection tab, the only place its entries render.
   #selected(kind: SelectionKind): void {
     if (this.settings.revealPanelOnSelection) void this.openPanel()
     if (kind !== 'word') return
-    this.#models.forEach((model) => model.selectSubTab('translations'))
+    this.#models.forEach((model) => model.selectSubTab('selection'))
     // The panel may not exist yet; its model reads the tab state on creation.
     const state = this.#followedState()
-    if (state !== null) state.subTab = 'translations'
+    if (state !== null) state.subTab = 'selection'
   }
 
   #followedState(): StudyTabState | null {

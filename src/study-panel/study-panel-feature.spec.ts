@@ -718,17 +718,17 @@ describe('StudyPanelFeature entry points', () => {
     await flushAsync()
     const first = focusReader()
     const view = panelView(leaves[0])
-    view.model.selectSubTab('translations')
+    view.model.selectSubTab('selection')
     const second = focusReader()
 
-    expect(view.model.view.subTab).toBe('study')
+    expect(view.model.view.subTab).toBe('chapter')
 
     focusTab(first.leaf)
-    expect(view.model.view.subTab).toBe('translations')
+    expect(view.model.view.subTab).toBe('selection')
     expect(first.detailsWanted()).toBe(true)
 
     focusTab(second.leaf)
-    expect(view.model.view.subTab).toBe('study')
+    expect(view.model.view.subTab).toBe('chapter')
     expect(first.detailsWanted()).toBe(false)
   })
 
@@ -741,10 +741,10 @@ describe('StudyPanelFeature entry points', () => {
     const view = panelView(leaves[0])
 
     reader.select(makeVerseId(43, 15, 1))
-    expect(view.model.view.subTab).toBe('study')
+    expect(view.model.view.subTab).toBe('chapter')
 
     reader.tapWord(makeVerseId(43, 15, 1))
-    expect(view.model.view.subTab).toBe('translations')
+    expect(view.model.view.subTab).toBe('selection')
   })
 
   it('opens on the translations tab when a word is tapped with the panel closed', async () => {
@@ -759,7 +759,7 @@ describe('StudyPanelFeature entry points', () => {
     commands[0].callback()
     await flushAsync()
 
-    expect(panelView(leaves[0]).model.view.subTab).toBe('translations')
+    expect(panelView(leaves[0]).model.view.subTab).toBe('selection')
   })
 
   it('keeps two tabs on the same note independent', async () => {
