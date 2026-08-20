@@ -50,6 +50,9 @@ A symmetric connection between two or more References that belong together in st
 ### Study Panel
 The single right-sidebar surface that follows the last-focused note or reader tab: for a reader, two sub-tabs — Study, with the chapter's Annotations, Mentions, and Cross-References, and Translations, with the selection's whole text in every installed translation plus tapped-word Strong's details, loaded only while that tab shows; for a note, the same three sections for its referenced scriptures, plus the passages it references. Remembers its state per tab (in memory, for the tab's lifetime). The reader itself shows only scripture text — all companion material lives here.
 
+### Title Bar
+The reader's static header naming what is in view (chapter reference or Book section) and owning previous/next stepping. The single stepping surface besides the end-of-content footer nav; pickers live in the nav surfaces, not here.
+
 ### Occurrence
 One appearance of a reference at a position in a vault note (in the body or in annotation frontmatter). The unit the vault index stores; intersection queries return occurrences.
 
@@ -63,7 +66,25 @@ An intersecting note that is not an Annotation: a vault note whose body referenc
 A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB (built from the public-domain Berean word-level tables) and KJV (built from bolls.life's `<S>`-tagged dump); the capability is per-translation.
 
 ### Strong's Dictionaries
-The shared dictionary module (STEPBible TBESH/TBESG, CC BY 4.0) mapping Strong's numbers to lemma, transliteration, gloss, and definition. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
+The shared dictionary module (STEPBible TBESH/TBESG plus Strong's 1890 derivations) mapping extended Strong's numbers to lemma, transliteration, gloss, definition, variant, morphology, and etymology. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
+
+### Strong's Number
+The translation-independent identity of an original-language word, and the join key of the whole Strong's system: tag spans, dictionary and lexicon entries, and Concordance Indexes share no other common key. What the Verse Id is to verses, the Strong's number is to words — an arbitrary-but-stable coordinate everything projects onto. The glue is only as fine-grained as the coarsest source keyed by it.
+
+### Strong's Family
+A base Strong's number together with its lettered disambiguations (`H4191`, `H4191a`, `H4191b`). Dictionary entries exist at extended-number granularity; occurrence matching is only honest at family granularity, because tagged translations mostly predate disambiguation.
+
+### Word Study Panel
+A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, and the family's concordance in one tagged translation at a time. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel.
+
+### Concordance Index
+The per-translation mapping from Strong's Family to the verse ids where the family is tagged, built when a Tagged Translation module is installed. A concordance is inherently per-text — counts and renderings are only meaningful within one translation.
+
+### Rendering
+The surface text a translation uses where a Strong's Family is tagged ("love", "charity"). The unit occurrence lists group and filter by; meaningful only within one translation.
+
+### LSJ Lexicon
+The optional Greek-only module (STEPBible TFLSJ, CC BY 4.0) carrying full Liddell-Scott-Jones entries keyed by extended Strong's number. Depth is asymmetric by source availability: no full Hebrew counterpart exists, so Hebrew stays at Strong's Dictionaries depth.
 
 ### Strong's Mode
 A reader-toolbar toggle (visible only when the viewed translation is tagged and the Strong's Dictionaries are installed) that makes tagged words tappable. Tapping renders the word's dictionary entries in the Study Panel, with CC BY attribution.
