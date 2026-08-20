@@ -229,30 +229,10 @@ export type BookModeView = {
   epigraphs: EpigraphView[]
 }
 
-// One reachable work in the reader's library, carrying the position that
-// activating it lands on: chapter 1 for a scripture book, its first section
-// for a book.
-export type LibraryEntry = {
-  book: number
-  chapter: number
-  label: string
-  current: boolean
-}
-
-// The library the breadcrumb's root dropdown and the trees' Books group both
-// render, in both reader modes. Uninstalled books are simply absent, so an
-// empty `books` list is what "no book installed" looks like (ticket #78).
-export type ReaderLibraryView = {
-  label: string
-  scripture: LibraryEntry[]
-  books: LibraryEntry[]
-}
-
 export type ReaderPaneView = {
   status: 'loading' | 'ok' | 'unavailable' | 'no-translation'
   // Null in scripture mode — the pane is in book mode exactly when set.
   book: BookModeView | null
-  library: ReaderLibraryView
   title: string
   position: ReaderPosition
   rows: VerseRowView[]
@@ -472,7 +452,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
     return {
       status: this.#status,
       book: book === null ? null : this.#bookView(book),
-      library: this.#libraryView(book),
       title: this.#title(),
       position: this.#position,
       rows: this.#rows,
@@ -520,29 +499,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
         (section) => section.chapter === this.#position.chapter,
       ) ?? null
     )
-  }
-
-  // A scripture entry opens at chapter 1 as the breadcrumb's book picker
-  // always has; a book opens at its own first section, which is front matter
-  // wherever the work has any.
-  #libraryView(here: ReaderBook | null): ReaderLibraryView {
-    return {
-      label: here?.title ?? bookName(this.#position.book),
-      scripture: Array.from({ length: BOOK_COUNT }, (_, index) => index + 1).map(
-        (book) => ({
-          book,
-          chapter: 1,
-          label: bookName(book),
-          current: here === null && book === this.#position.book,
-        }),
-      ),
-      books: this.#books.map((book) => ({
-        book: book.number,
-        chapter: book.sections[0]?.chapter ?? 1,
-        label: book.title,
-        current: book.number === this.#position.book,
-      })),
-    }
   }
 
   #bookView(book: ReaderBook): BookModeView {
@@ -1171,11 +1127,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async #loadPassage(token: number): Promise<void> {
-    // The installed books are the reader's library in both modes, so both
-    // load them; only a position outside the canon can be one of them, so
-    // scripture never lands in book mode.
+    // Only a position outside the canon can be a book, so scripture never
+    // pays for the lookup — and never lands in book mode.
     const isBookPosition = this.#position.book > BOOK_COUNT
-    this.#books = await (this.deps.books ?? NO_BOOKS).installed()
+    this.#books = isBookPosition
+      ? await (this.deps.books ?? NO_BOOKS).installed()
+      : []
     if (token !== this.#loadToken) return
     if (isBookPosition) {
       await this.#loadBookPassage(token, this.#bookHere())

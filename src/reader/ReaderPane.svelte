@@ -8,15 +8,13 @@
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
   import {
     paragraphsOf,
-    type LibraryEntry,
     type ReaderPaneModel,
     type ReaderToggles,
     type VerseRowView,
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
-  import { opensInNewPane, type NavMenuGroup } from '../ui'
+  import { opensInNewPane } from '../ui'
   import CollectionStrip from '../study-material/CollectionStrip.svelte'
-  import NavMenu from './NavMenu.svelte'
   import TranslationMenu from './TranslationMenu.svelte'
   import OptionsMenu from './OptionsMenu.svelte'
 
@@ -112,76 +110,20 @@
   const verseSelected = (verseId: number): boolean =>
     inSelectionSpan(verseId) || material.selectedVerseId === verseId
 
-  // Every nav target reads the platform modifier the same way: a plain
+  // Every tree target reads the platform modifier the same way: a plain
   // activation moves this pane, a mod-click asks for a tab of its own.
   const navIntent = (event: MouseEvent | KeyboardEvent): { newTab: boolean } => ({
     newTab: opensInNewPane(event),
   })
 
-  const goToEntry = (
-    entry: LibraryEntry,
-    event: MouseEvent | KeyboardEvent,
-  ): void => {
-    void model.goTo(entry.book, entry.chapter, navIntent(event))
+  const onBookPicked = (event: Event): void => {
+    const book = Number((event.target as HTMLSelectElement).value)
+    void model.goTo(book, 1)
   }
 
-  const menuItem = (entry: LibraryEntry) => ({
-    key: String(entry.book),
-    label: entry.label,
-    current: entry.current,
-  })
-
-  const libraryGroups = $derived<NavMenuGroup[]>([
-    { label: 'Scripture', items: view.library.scripture.map(menuItem) },
-    ...(view.library.books.length === 0
-      ? []
-      : [{ label: 'Books', items: view.library.books.map(menuItem) }]),
-  ])
-
-  const onLibraryPick = (
-    key: string,
-    event: MouseEvent | KeyboardEvent,
-  ): void => {
-    const entry = [...view.library.scripture, ...view.library.books].find(
-      (candidate) => String(candidate.book) === key,
-    )
-    if (entry !== undefined) goToEntry(entry, event)
+  const onChapterPicked = (event: Event): void => {
+    void model.goTo(view.position.book, Number((event.target as HTMLSelectElement).value))
   }
-
-  const chapterGroups = $derived<NavMenuGroup[]>([
-    {
-      label: null,
-      items:
-        view.book !== null
-          ? view.book.sections.map((section) => ({
-              key: String(section.chapter),
-              label: section.name,
-              current: section.current,
-            }))
-          : chaptersOf(view.position.book).map((chapter) => ({
-              key: String(chapter),
-              label: String(chapter),
-              current: chapter === view.position.chapter,
-            })),
-    },
-  ])
-
-  const chapterLabel = $derived(
-    view.book !== null ? view.book.sectionName : String(view.position.chapter),
-  )
-
-  const onChapterPick = (
-    key: string,
-    event: MouseEvent | KeyboardEvent,
-  ): void => {
-    void model.goTo(view.position.book, Number(key), navIntent(event))
-  }
-
-  // The book already open lists its own sections above, so the library node
-  // beside them holds its siblings only.
-  const siblingBooks = $derived(
-    view.library.books.filter((entry) => !entry.current),
-  )
 </script>
 
 {#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.psalmHeading}<span
@@ -289,16 +231,32 @@
     <CollectionStrip collection={material.collection} source={studySource} />
   {/if}
 
-  {#if view.toggles.nav === 'breadcrumb'}
+  {#if view.toggles.nav === 'breadcrumb' && view.book !== null}
     <div class="bsr-crumb">
-      <NavMenu
-        label={view.library.label}
-        title="Library"
-        groups={libraryGroups}
-        onPick={onLibraryPick}
-      />
+      <span class="bsr-crumb-book">{view.book.title}</span>
       <span class="bsr-crumb-sep">›</span>
-      <NavMenu label={chapterLabel} groups={chapterGroups} onPick={onChapterPick} />
+      <select class="dropdown" value={String(view.position.chapter)} onchange={onChapterPicked}>
+        {#each view.book.sections as section (section.chapter)}
+          <option value={String(section.chapter)}>{section.name}</option>
+        {/each}
+      </select>
+      <span class="bsr-spacer"></span>
+      <button type="button" class="bsr-step" disabled={!view.hasPreviousChapter} onclick={() => void model.previousChapter()}>‹ Previous</button>
+      <button type="button" class="bsr-step" disabled={!view.hasNextChapter} onclick={() => void model.nextChapter()}>Next ›</button>
+    </div>
+  {:else if view.toggles.nav === 'breadcrumb'}
+    <div class="bsr-crumb">
+      <select class="dropdown" value={String(view.position.book)} onchange={onBookPicked}>
+        {#each books as book (book)}
+          <option value={String(book)}>{bookName(book)}</option>
+        {/each}
+      </select>
+      <span class="bsr-crumb-sep">›</span>
+      <select class="dropdown" value={String(view.position.chapter)} onchange={onChapterPicked}>
+        {#each chaptersOf(view.position.book) as chapter (chapter)}
+          <option value={String(chapter)}>{chapter}</option>
+        {/each}
+      </select>
       <span class="bsr-spacer"></span>
       <button type="button" class="bsr-step" disabled={!view.hasPreviousChapter} onclick={() => void model.previousChapter()}>‹ Previous</button>
       <button type="button" class="bsr-step" disabled={!view.hasNextChapter} onclick={() => void model.nextChapter()}>Next ›</button>
@@ -318,24 +276,6 @@
             onclick={(event) => void model.goTo(view.position.book, section.chapter, navIntent(event))}
           >{section.name}</button>
         {/each}
-        <div class="bsr-tree-group">Scripture</div>
-        {#each view.library.scripture as entry (entry.book)}
-          <button
-            type="button"
-            class="bsr-tree-book"
-            onclick={(event) => goToEntry(entry, event)}
-          >{entry.label}</button>
-        {/each}
-        {#if siblingBooks.length > 0}
-          <div class="bsr-tree-group">Books</div>
-          {#each siblingBooks as entry (entry.book)}
-            <button
-              type="button"
-              class="bsr-tree-book"
-              onclick={(event) => goToEntry(entry, event)}
-            >{entry.label}</button>
-          {/each}
-        {/if}
       </div>
     {:else if view.toggles.nav === 'tree'}
       <div class="bsr-tree">
@@ -361,16 +301,6 @@
             </div>
           {/if}
         {/each}
-        {#if view.library.books.length > 0}
-          <div class="bsr-tree-group">Books</div>
-          {#each view.library.books as entry (entry.book)}
-            <button
-              type="button"
-              class="bsr-tree-book"
-              onclick={(event) => goToEntry(entry, event)}
-            >{entry.label}</button>
-          {/each}
-        {/if}
       </div>
     {/if}
 
@@ -863,6 +793,10 @@
      centered heading, with the paragraph numbers out in the margin gutter. */
   .bsr-edition {
     cursor: default;
+  }
+
+  .bsr-crumb-book {
+    font-weight: 600;
   }
 
   .bsr-toc-title {

@@ -134,7 +134,7 @@ export class ReaderFeature
   // A book's manifest carries its own contents table, so the reader learns
   // which books exist the same way everything else does — from what is
   // installed (ADR 0002).
-  async #installedBooks(): Promise<ReaderBook[]> {
+  async installedBooks(): Promise<ReaderBook[]> {
     return (await this.store.installedManifests())
       .filter(isBookManifest)
       .map((manifest) => ({
@@ -198,7 +198,7 @@ export class ReaderFeature
           readAnnotationDetails(this.plugin.app.vault, file),
         strongs: this.#strongs,
         books: {
-          installed: () => this.#installedBooks(),
+          installed: () => this.installedBooks(),
           epigraphs: async (editionId, chapter) =>
             (await this.store.epigraphs(editionId))[chapter] ?? [],
         },
@@ -274,6 +274,31 @@ export class ReaderFeature
     await this.#withReaderView((view) => view.model.openPosition(position), {
       newPane: true,
     })
+  }
+
+  // The ribbon panel's Books entry point: a book the reader has already been
+  // inside reopens where it was left, any other opens at its first section —
+  // front matter wherever the work has any.
+  async openBook(
+    book: number,
+    options: { newTab?: boolean } = {},
+  ): Promise<void> {
+    const position = await this.#bookPosition(book)
+    if (position === null) return
+    if (options.newTab === true) {
+      await this.#openInNewTab(position)
+      return
+    }
+    await this.#withReaderView((view) => view.model.openPosition(position))
+  }
+
+  async #bookPosition(book: number): Promise<ReaderPosition | null> {
+    if (this.#lastPosition.book === book) return this.#lastPosition
+    const installed = (await this.installedBooks()).find(
+      (candidate) => candidate.number === book,
+    )
+    if (installed === undefined) return null
+    return { book, chapter: installed.sections[0]?.chapter ?? 1 }
   }
 
   async openReader(): Promise<void> {

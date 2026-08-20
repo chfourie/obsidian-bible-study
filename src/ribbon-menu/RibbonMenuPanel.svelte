@@ -6,13 +6,13 @@ against; the command passes no anchor and the panel centres (mobile).
 <script lang="ts">
   import { setIcon } from 'obsidian'
   import { activate, computeMenuPanelPosition } from '../ui'
-  import type { RibbonMenuItem } from './ribbon-menu-items'
+  import type { RibbonMenuItem, RibbonMenuSection } from './ribbon-menu-items'
 
   let {
-    getItems,
+    getSections,
     registerApi,
   }: {
-    getItems: () => RibbonMenuItem[]
+    getSections: () => Promise<RibbonMenuSection[]>
     registerApi: (api: {
       toggle: (anchor?: HTMLElement | null) => void
       close: () => void
@@ -20,11 +20,14 @@ against; the command passes no anchor and the panel centres (mobile).
   } = $props()
 
   let open = $state(false)
-  let items = $state.raw<RibbonMenuItem[]>([])
+  let sections = $state.raw<RibbonMenuSection[]>([])
   let panelEl: HTMLElement | undefined = $state()
   let panelStyle = $state('')
   // Non-reactive: only read inside positioning, which re-runs explicitly.
   let anchorEl: HTMLElement | null = null
+  // Sections arrive asynchronously, so a close or a second toggle in the
+  // meantime must win over the open the in-flight build would have done.
+  let openToken = 0
 
   // Registering through an effect avoids capturing the prop non-reactively
   // and runs well before any user click.
@@ -76,17 +79,22 @@ against; the command passes no anchor and the panel centres (mobile).
       return
     }
     anchorEl = anchor ?? null
-    items = getItems()
-    open = true
+    const token = ++openToken
+    void getSections().then((built) => {
+      if (token !== openToken) return
+      sections = built
+      open = true
+    })
   }
 
   function closePanel() {
+    openToken += 1
     open = false
   }
 
-  function runItem(item: RibbonMenuItem) {
+  function runItem(item: RibbonMenuItem, event: MouseEvent | KeyboardEvent) {
     closePanel()
-    item.onClick()
+    item.onClick(event)
   }
 
   // Position once the portaled panel actually exists — a first-open pass
@@ -136,17 +144,22 @@ against; the command passes no anchor and the panel centres (mobile).
     role="menu"
     tabindex="-1"
   >
-    {#each items as item (item.title)}
-      <span
-        role="menuitem"
-        tabindex="0"
-        class="bsm-item"
-        onclick={() => runItem(item)}
-        onkeydown={activate(() => runItem(item))}
-      >
-        <span class="bsm-icon" aria-hidden="true" use:icon={item.icon}></span>
-        <span>{item.title}</span>
-      </span>
+    {#each sections as section (section.label)}
+      {#if section.label !== null}
+        <div class="bsm-section-label">{section.label}</div>
+      {/if}
+      {#each section.items as item (item.title)}
+        <span
+          role="menuitem"
+          tabindex="0"
+          class="bsm-item"
+          onclick={(event) => runItem(item, event)}
+          onkeydown={activate((event) => runItem(item, event))}
+        >
+          <span class="bsm-icon" aria-hidden="true" use:icon={item.icon}></span>
+          <span>{item.title}</span>
+        </span>
+      {/each}
     {/each}
   </div>
 {/if}
@@ -167,6 +180,13 @@ against; the command passes no anchor and the panel centres (mobile).
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
     box-sizing: border-box;
     font-size: var(--font-ui-smaller);
+  }
+
+  .bsm-section-label {
+    padding: 0.4rem 0.4rem 0.15rem;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    font-weight: 600;
   }
 
   .bsm-item {

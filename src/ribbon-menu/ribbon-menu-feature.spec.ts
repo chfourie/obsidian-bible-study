@@ -18,6 +18,8 @@ const harness = () => {
   const actions = {
     openReader: vi.fn(),
     openStudyPanel: vi.fn(),
+    installedBooks: vi.fn(async () => []),
+    openBook: vi.fn(),
   }
   return { feature: new RibbonMenuFeature(plugin, actions), commands, ribbons }
 }

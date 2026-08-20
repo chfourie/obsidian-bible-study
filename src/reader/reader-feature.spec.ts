@@ -970,6 +970,67 @@ describe('ReaderFeature book mode', () => {
     expect(view.banner).toBe('Opened at Humility ch. 1, par. 2')
   })
 
+  // What the ribbon panel's Books section renders and activates (ticket #78).
+  it('lists the installed books for the ribbon menu', async () => {
+    const { feature } = harness({}, { store: bookStore() })
+    await feature.load()
+
+    expect((await feature.installedBooks()).map((book) => book.title)).toEqual([
+      'Humility',
+    ])
+  })
+
+  it('opens a book at its first section in the reader already open', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    expect(leaves).toHaveLength(1)
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 0,
+    })
+  })
+
+  it('opens a book at the last position the reader held inside it', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(bookReference(1, 1), null)
+    await flushAsync()
+
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 1,
+    })
+  })
+
+  it('opens a book in a reader tab of its own when asked', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    await feature.openBook(HUMILITY, { newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 0,
+    })
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+  })
+
   it('reopens the command entry point at the last book position', async () => {
     const { feature, leaves, commands } = harness({}, { store: bookStore() })
     await feature.load()
