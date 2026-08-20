@@ -3,6 +3,7 @@
 export type RibbonMenuActions = {
   openReader: () => void | Promise<void>
   openStudyPanel: () => void | Promise<void>
+  openSearch: () => void | Promise<void>
 }
 
 export type RibbonMenuItem = {
@@ -23,5 +24,10 @@ export const buildRibbonMenuItems = (
     title: 'Open study panel',
     icon: 'book-marked',
     onClick: () => void actions.openStudyPanel(),
+  },
+  {
+    title: 'Open search',
+    icon: 'search',
+    onClick: () => void actions.openSearch(),
   },
 ]

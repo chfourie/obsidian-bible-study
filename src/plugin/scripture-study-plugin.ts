@@ -11,6 +11,7 @@ import { ReaderFeature } from '../reader'
 import { StudyPanelFeature } from '../study-panel'
 import { RenderingFeature } from '../rendering'
 import { RibbonMenuFeature } from '../ribbon-menu'
+import { SearchFeature } from '../search'
 import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
@@ -76,6 +77,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
   })
+  readonly search = new SearchFeature(this, this.modules.store)
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(
     this,
@@ -86,12 +88,14 @@ export default class ScriptureStudyPlugin extends Plugin {
   readonly ribbonMenu = new RibbonMenuFeature(this, {
     openReader: () => this.reader.openReader(),
     openStudyPanel: () => this.studyPanel.openPanel(),
+    openSearch: () => this.search.openPane(),
   })
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest)
     this.annotations.usePrefill(() => this.reader.prefillReference())
     this.studyPanel.useNavigator(this.reader)
+    this.search.useNavigator(this.reader)
     this.studyPanel.useAnnotationPrompt((prefill) =>
       this.annotations.promptAnnotation(prefill),
     )
@@ -100,6 +104,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.#features.addFeature(this.crossReferences)
     this.#features.addFeature(this.reader)
     this.#features.addFeature(this.studyPanel)
+    this.#features.addFeature(this.search)
     this.#features.addFeature(this.rendering)
     this.#features.addFeature(this.annotations)
     this.#features.addFeature(this.settingsTab)
