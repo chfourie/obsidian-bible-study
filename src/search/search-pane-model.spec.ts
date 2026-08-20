@@ -233,6 +233,20 @@ describe('SearchPaneModel', () => {
     expect(model.view.books).toEqual([])
   })
 
+  it('labels the total once a search has run, nothing found included', async () => {
+    const { model } = harness()
+    expect(model.view.totalLabel).toBeNull()
+    model.setQuery('vine')
+    await model.submit()
+    expect(model.view.totalLabel).toBe('1 result')
+    model.setQuery('the')
+    await model.submit()
+    expect(model.view.totalLabel).toBe('3 results')
+    model.setQuery('leviathan')
+    await model.submit()
+    expect(model.view.totalLabel).toBe('0 results')
+  })
+
   it('goes back to idle when an emptied query is submitted', async () => {
     const { model } = harness()
     model.setQuery('vine')

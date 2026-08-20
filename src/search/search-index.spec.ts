@@ -8,7 +8,7 @@ import {
   type SearchIndex,
 } from './search-index'
 import { parseSearchQuery } from './search-query'
-import type { ModuleAtom } from './search-scan'
+import type { ModuleAtom, SearchHit } from './search-scan'
 
 const atom = (verse: number, text: string): ModuleAtom => ({
   verseId: makeVerseId(43, 15, verse),
@@ -27,6 +27,9 @@ const indexOf = (atoms: ModuleAtom[] = JOHN15, checksum = 'sha-1'): SearchIndex 
 
 const verses = (index: SearchIndex, query: string): number[] =>
   searchIndex(index, parseSearchQuery(query)).map((hit) => hit.verseId)
+
+const spanTexts = (hit: SearchHit): string[] =>
+  hit.spans.map((span) => hit.text.slice(span.start, span.end))
 
 describe('buildSearchIndex', () => {
   it('stamps the index with the format version and the module checksum', () => {
@@ -75,6 +78,12 @@ describe('searchIndex', () => {
     expect(verses(indexOf(), 'ranch')).toEqual([])
   })
 
+  it('does not match a word sitting inside a longer one', () => {
+    const index = indexOf([atom(1, 'My beloved son')])
+    expect(verses(index, 'love')).toEqual([])
+    expect(verses(index, 'belove')).toEqual([makeVerseId(43, 15, 1)])
+  })
+
   it('intersects postings so every word must be in one atom', () => {
     expect(verses(indexOf(), 'love remain')).toEqual([makeVerseId(43, 15, 9)])
     expect(verses(indexOf(), 'love vine')).toEqual([])
@@ -87,9 +96,35 @@ describe('searchIndex', () => {
     expect(verses(indexOf(), '"the vine"')).toEqual([])
   })
 
+  it('prefix-matches the words inside a phrase', () => {
+    const hits = searchIndex(indexOf(), parseSearchQuery('"tru vin"'))
+    expect(spanTexts(hits[0])).toEqual(['true vine'])
+  })
+
+  it('carries a phrase across the punctuation between its words', () => {
+    const index = indexOf([atom(1, 'the Lord, the God of hosts')])
+    const hits = searchIndex(index, parseSearchQuery('"lord the"'))
+    expect(spanTexts(hits[0])).toEqual(['Lord, the'])
+  })
+
   it('folds case and diacritics on both sides', () => {
     const index = indexOf([atom(1, 'Yo soy la vid verdadéra.')])
     expect(verses(index, 'VERDADERA')).toEqual([makeVerseId(43, 15, 1)])
+    expect(verses(indexOf([atom(1, 'Los Angeles')]), 'Ángeles')).toEqual([
+      makeVerseId(43, 15, 1),
+    ])
+  })
+
+  it('folds non-Latin scripts the same way', () => {
+    const greek = indexOf([atom(1, 'ἐν ἀρχῇ ἦν ὁ λόγος')])
+    expect(spanTexts(searchIndex(greek, parseSearchQuery('λογος'))[0])).toEqual(
+      ['λόγος'],
+    )
+    const hebrew = indexOf([atom(1, 'בְּרֵאשִׁית בָּרָא')])
+    expect(spanTexts(searchIndex(hebrew, parseSearchQuery('ברא'))[0])).toEqual([
+      'בְּרֵאשִׁית',
+      'בָּרָא',
+    ])
   })
 
   it('carries the atom text and the matched spans', () => {
@@ -104,6 +139,11 @@ describe('searchIndex', () => {
         ],
       },
     ])
+  })
+
+  it('reports spans in text order however the query was ordered', () => {
+    const hits = searchIndex(indexOf(), parseSearchQuery('vine true'))
+    expect(spanTexts(hits[0])).toEqual(['true', 'vine'])
   })
 
   it('emphasizes every occurrence of a matched word', () => {

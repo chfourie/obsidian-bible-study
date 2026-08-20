@@ -76,8 +76,21 @@ export type SearchPaneViewState = {
   indexing: IndexBuildProgress | null
   indexingLabel: string | null
   totalHits: number
+  // The hit count as the pane prints it, null until a search has settled —
+  // once one has, the count is shown whether or not anything was found.
+  totalLabel: string | null
   books: SearchBookView[]
 }
+
+const HIT_COUNT_STATUSES: SearchPaneStatus[] = ['ok', 'no-results']
+
+const totalLabelOf = (
+  status: SearchPaneStatus,
+  totalHits: number,
+): string | null =>
+  HIT_COUNT_STATUSES.includes(status)
+    ? `${totalHits} ${totalHits === 1 ? 'result' : 'results'}`
+    : null
 
 export class SearchPaneModel {
   #query = ''
@@ -112,6 +125,7 @@ export class SearchPaneModel {
       indexing: this.#indexing,
       indexingLabel: this.#indexingLabel,
       totalHits: this.#totalHits,
+      totalLabel: totalLabelOf(this.#status, this.#totalHits),
       books: bookViews(this.#groups, this.#collapsedBooks, this.#expandedBooks),
     }
   }

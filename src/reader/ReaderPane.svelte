@@ -162,7 +162,7 @@
     >{segment.text}</span>{:else}{@render citedText(segment)}{/if}{/snippet}
 
 {#snippet matchedText(row: VerseRowView, segment: VerseSegment)}{#if segment.emphasized}<mark
-      class="bsr-match">{@render segmentText(row, segment)}</mark
+      class="scripture-study-match">{@render segmentText(row, segment)}</mark
     >{:else}{@render segmentText(row, segment)}{/if}{/snippet}
 
 {#snippet verseText(row: VerseRowView)}
@@ -729,17 +729,6 @@
   .bsr-verse-span.bsr-hl {
     background: hsla(var(--interactive-accent-hsl), 0.1);
     box-shadow: -3px 0 0 var(--text-accent);
-  }
-
-  /* The words a search hit matched: emphasis only, so it reads apart from a
-     user Highlight's fill and from the entry row's tint. */
-  .bsr-match {
-    background-color: transparent;
-    color: inherit;
-    font-weight: 600;
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 2px;
   }
 
   .bsr-mark-anno {

@@ -116,12 +116,10 @@ Activating a hit opens the reader at that verse or paragraph.
         )}%
       </p>
     {:else if view.status === 'no-results'}
+      <p class="bss-total">{view.totalLabel}</p>
       <p class="bss-empty">Nothing found for {view.submittedQuery}.</p>
     {:else}
-      <p class="bss-total">
-        {view.totalHits}
-        {view.totalHits === 1 ? 'result' : 'results'}
-      </p>
+      <p class="bss-total">{view.totalLabel}</p>
       {#each view.books as group (group.book)}
         <section class="bss-book">
           <button
@@ -147,7 +145,7 @@ Activating a hit opens the reader at that verse or paragraph.
               <span class="bss-hit-label">{hit.label}</span>
               <span class="bss-hit-text"
                 >{#each hit.segments as segment, index (index)}{#if segment.matched}<mark
-                      class="bss-match">{segment.text}</mark
+                      class="scripture-study-match">{segment.text}</mark
                     >{:else}{segment.text}{/if}{/each}</span
               >
             </div>
@@ -334,15 +332,5 @@ Activating a hit opens the reader at that verse or paragraph.
     margin-right: 0.35rem;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
-  }
-
-  /* Emphasis only — the matched words keep the text color around them. */
-  .bss-match {
-    background-color: transparent;
-    color: inherit;
-    font-weight: 600;
-    text-decoration: underline;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 2px;
   }
 </style>
