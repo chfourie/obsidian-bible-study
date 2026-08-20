@@ -9,7 +9,16 @@ A pointer to scripture in exactly one book: a book plus a set of verse ranges (e
 The fixed, translation-independent numbering of all verses in the 66-book Protestant canon, following KJV versification (~31,102 verses). Every reference, intersection, and cache key lives on this grid. A translation that omits or renumbers a verse has a content gap at that grid position — the grid itself never changes per translation.
 
 ### Verse Id
-The canonical internal identity of a verse: a BCV-encoded integer `BBBCCCVVV` (book number 1-66 in Protestant/OSIS order, chapter, verse — e.g. John 15:4 = 043015004). Ids are stable forever: adding books to the collection later never renumbers existing verses. Book/chapter/verse is derivable by arithmetic; validity and adjacency come from versification data.
+The canonical internal identity of an atom: a BCV-encoded integer `BBBCCCVVV` (book number, chapter, atom-within-chapter — e.g. John 15:4 = 043015004). Scripture occupies book numbers 1-66 (Protestant/OSIS order) with the verse as atom; 67-100 are reserved for canon extensions; non-biblical Books start at 101 with the paragraph as atom. Ids are stable forever: adding books later never renumbers existing atoms. Book/chapter/atom is derivable by arithmetic; validity and adjacency come from versification data.
+
+### Book
+A non-biblical work (e.g. *Humility*, Andrew Murray) addressable on the same id space as scripture, with a Book Registry-assigned book number ≥ 101 and the paragraph as its atom. Sections (front matter, printed chapters, back matter) take chapter numbers in reading order, keeping printed numbers where they exist. One book = one module = one grid — editions are not modeled as translations; the module's Edition Code fills the translation slot wherever one is required.
+
+### Book Registry
+The append-only, repo-side authority mapping book numbers to works. Numbers are never reused, even for withdrawn modules. The plugin discovers which Books exist from installed module manifests; scripture's 66 books stay compiled-in.
+
+### Edition Code
+A book module's single manifest-declared code (e.g. `HUM-M1895`) occupying the translation slot in all keying for that Book. Fallback Translation never applies to Books; a Book has exactly one layer in any multi-translation view.
 
 ### Verse Range
 An inclusive span of verse ids within one book (`startId`-`endId` on the Canonical Grid). The normalized form of a reference is a set of verse ranges. Overlap, sorting, and containment are plain integer interval operations; enumerating the verses inside a range uses versification data to skip non-existent ids.
