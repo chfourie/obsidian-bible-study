@@ -1,39 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { InMemoryModuleDataDir } from '../../tests/fixtures/in-memory-module-data-dir'
 import { makeVerseId } from '../reference'
 import { CONCORDANCE_INDEX_VERSION } from './concordance-index'
-import type { ModuleDataDir } from './module-data-dir'
 import type { ModuleManifest } from './module-manifest'
 import { ModuleStore } from './module-store'
 import type { NormalizedModule } from './normalized-module'
-
-class FakeModuleDataDir implements ModuleDataDir {
-  readonly files = new Map<string, string>()
-
-  async readTextFile(path: string): Promise<string | null> {
-    return this.files.get(path) ?? null
-  }
-
-  async writeTextFile(path: string, content: string): Promise<void> {
-    this.files.set(path, content)
-  }
-
-  async removeDir(path: string): Promise<void> {
-    for (const file of [...this.files.keys()]) {
-      if (file.startsWith(`${path}/`)) this.files.delete(file)
-    }
-  }
-
-  async listDirs(path: string): Promise<string[]> {
-    const dirs = new Set<string>()
-    for (const file of this.files.keys()) {
-      if (!file.startsWith(`${path}/`)) continue
-      const rest = file.slice(path.length + 1)
-      const slash = rest.indexOf('/')
-      if (slash > 0) dirs.add(rest.slice(0, slash))
-    }
-    return [...dirs]
-  }
-}
 
 const webManifest = (): ModuleManifest => ({
   id: 'web',
@@ -61,7 +32,7 @@ const webModule = (): NormalizedModule => ({
 })
 
 const setup = () => {
-  const dataDir = new FakeModuleDataDir()
+  const dataDir = new InMemoryModuleDataDir()
   const store = new ModuleStore(dataDir)
   return { dataDir, store }
 }

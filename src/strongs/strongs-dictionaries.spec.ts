@@ -1,45 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { InMemoryModuleDataDir } from '../../tests/fixtures/in-memory-module-data-dir'
 import { SettingsStore } from '../data-access'
-import {
-  MODULE_FORMAT_VERSION,
-  type ModuleDataDir,
-  type ModuleManifest,
-} from '../modules'
+import { MODULE_FORMAT_VERSION, type ModuleManifest } from '../modules'
 import type { LexiconSource } from './lexicon-source'
 import { STRONGS_DICTIONARIES_ID, StrongsDictionaries } from './strongs-dictionaries'
 
 const hebrewSlice = readFileSync('tests/fixtures/tbesh-slice.txt', 'utf8')
 const greekSlice = readFileSync('tests/fixtures/tbesg-slice.txt', 'utf8')
-
-class InMemoryModuleDataDir implements ModuleDataDir {
-  readonly files = new Map<string, string>()
-
-  async readTextFile(path: string): Promise<string | null> {
-    return this.files.get(path) ?? null
-  }
-
-  async writeTextFile(path: string, content: string): Promise<void> {
-    this.files.set(path, content)
-  }
-
-  async removeDir(path: string): Promise<void> {
-    for (const file of [...this.files.keys()]) {
-      if (file.startsWith(`${path}/`)) this.files.delete(file)
-    }
-  }
-
-  async listDirs(path: string): Promise<string[]> {
-    const dirs = new Set<string>()
-    for (const file of this.files.keys()) {
-      if (!file.startsWith(`${path}/`)) continue
-      const rest = file.slice(path.length + 1)
-      const slash = rest.indexOf('/')
-      if (slash > 0) dirs.add(rest.slice(0, slash))
-    }
-    return [...dirs]
-  }
-}
 
 const hebrewDerivations = readFileSync(
   'tests/fixtures/strongs-hebrew-slice.xml',
