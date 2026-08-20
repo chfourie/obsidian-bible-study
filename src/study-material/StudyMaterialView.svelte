@@ -3,6 +3,9 @@ One reader tab's study material under two tabs: Study carries the
 chapter-scoped material — the annotations, mentions and cross-references of
 the chapter on screen — and Translations carries the selection's verse
 details. Rendered by the Study Panel following that tab.
+
+A book has exactly one layer, so it drops the tab bar outright and shows the
+selected paragraph's details above its section material (spec-books §5).
 -->
 <script lang="ts">
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
@@ -36,35 +39,53 @@ details. Rendered by the Study Panel following that tab.
   } = $props()
 </script>
 
+{#snippet sectionMaterial()}
+  <ChapterAnnotationList
+    items={material.chapterAnnotations}
+    {host}
+    annotate={() => host.promptAnnotate(source.chapterAnnotationReference())}
+  />
+  <ChapterMentionList items={material.chapterMentions} {host} />
+  <CrossReferenceList
+    entries={material.chapterCrossReferences}
+    {source}
+    {host}
+    collecting={material.collection !== null}
+  />
+{/snippet}
+
 <div class="bsm-view">
-  <div class="bsm-tabs">
-    <button
-      type="button"
-      class="bsm-tab"
-      class:bsm-on={tab === 'study'}
-      onclick={() => selectTab('study')}
-    >Study</button>
-    <button
-      type="button"
-      class="bsm-tab"
-      class:bsm-on={tab === 'translations'}
-      onclick={() => selectTab('translations')}
-    >Translations</button>
-  </div>
+  {#if !material.bookMode}
+    <div class="bsm-tabs">
+      <button
+        type="button"
+        class="bsm-tab"
+        class:bsm-on={tab === 'study'}
+        onclick={() => selectTab('study')}
+      >Study</button>
+      <button
+        type="button"
+        class="bsm-tab"
+        class:bsm-on={tab === 'translations'}
+        onclick={() => selectTab('translations')}
+      >Translations</button>
+    </div>
+  {/if}
   <div class="bsm-body">
-    {#if tab === 'study'}
-      <ChapterAnnotationList
-        items={material.chapterAnnotations}
-        {host}
-        annotate={() => host.promptAnnotate(source.chapterAnnotationReference())}
-      />
-      <ChapterMentionList items={material.chapterMentions} {host} />
-      <CrossReferenceList
-        entries={material.chapterCrossReferences}
-        {source}
-        {host}
-        collecting={material.collection !== null}
-      />
+    {#if material.bookMode}
+      {#if material.details !== null}
+        <VerseDetails
+          details={material.details}
+          {source}
+          collapsed={collapsedTranslations}
+          toggle={toggleTranslation}
+          collapseAll={collapseAllTranslations}
+          expandAll={expandAllTranslations}
+        />
+      {/if}
+      {@render sectionMaterial()}
+    {:else if tab === 'study'}
+      {@render sectionMaterial()}
     {:else if material.selectedVerseId === null}
       <div class="bsm-empty">Select a verse to see its translations.</div>
     {:else if material.details === null}

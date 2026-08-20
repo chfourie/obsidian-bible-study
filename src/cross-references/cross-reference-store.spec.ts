@@ -531,3 +531,27 @@ describe('configurable file path', () => {
     )
   })
 })
+
+describe('members of a book that is not installed', () => {
+  const mixed: CrossReference = {
+    id: 'xr-pride',
+    members: [john15Vine, reference(101, [[1, 2], [1, 2]])],
+    description: 'Pride and its cure',
+  }
+
+  // Members are plain verse ids, so an entry naming a book survives the
+  // module's absence untouched — dormant, never deleted (spec-books §6).
+  it('round-trips a book member with no book registered at all', async () => {
+    const files: Record<string, string> = {
+      [CROSS_REFERENCES_FILE_NAME]: `${serializeCrossReference(mixed)}\n`,
+    }
+    const store = await storeOverFiles(files)
+
+    expect(store.all()).toEqual([mixed])
+
+    await store.save()
+    expect(files[CROSS_REFERENCES_FILE_NAME]).toBe(
+      `${serializeCrossReference(mixed)}\n`,
+    )
+  })
+})

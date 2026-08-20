@@ -56,26 +56,28 @@ controls beside the selection's title.
 
 <div class="bsm-details-head">
   <span class="bsm-details-title">{details.title}</span>
-  <span
-    role="button"
-    tabindex="0"
-    class="bsm-fold-all"
-    aria-label="Collapse all translations"
-    title="Collapse all translations"
-    use:icon={'chevrons-down-up'}
-    onclick={collapseAll}
-    onkeydown={activate(collapseAll)}
-  ></span>
-  <span
-    role="button"
-    tabindex="0"
-    class="bsm-fold-all"
-    aria-label="Expand all translations"
-    title="Expand all translations"
-    use:icon={'chevrons-up-down'}
-    onclick={expandAll}
-    onkeydown={activate(expandAll)}
-  ></span>
+  {#if details.book === null}
+    <span
+      role="button"
+      tabindex="0"
+      class="bsm-fold-all"
+      aria-label="Collapse all translations"
+      title="Collapse all translations"
+      use:icon={'chevrons-down-up'}
+      onclick={collapseAll}
+      onkeydown={activate(collapseAll)}
+    ></span>
+    <span
+      role="button"
+      tabindex="0"
+      class="bsm-fold-all"
+      aria-label="Expand all translations"
+      title="Expand all translations"
+      use:icon={'chevrons-up-down'}
+      onclick={expandAll}
+      onkeydown={activate(expandAll)}
+    ></span>
+  {/if}
   <button
     type="button"
     class="bsm-fold-all"
@@ -92,6 +94,11 @@ controls beside the selection's title.
     onclick={() => source.clearSelection()}
   >×</button>
 </div>
+
+{#if details.book !== null}
+  <p class="bsm-book-text">{details.book.text}</p>
+  <p class="bsm-book-citation">{details.book.citation}</p>
+{/if}
 
 {#if details.strongs.length > 0}
   <div class="bsm-group-label">Strong's</div>
@@ -199,6 +206,20 @@ controls beside the selection's title.
     color: var(--text-accent);
     background: none;
     box-shadow: none;
+  }
+
+  /* A paragraph reads as prose, not as a stacked translation row. */
+  .bsm-book-text {
+    margin: 0 0 4px;
+    line-height: var(--line-height-normal);
+    user-select: text;
+  }
+
+  .bsm-book-citation {
+    margin: 0 0 8px;
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+    user-select: text;
   }
 
   .bsm-group-label {

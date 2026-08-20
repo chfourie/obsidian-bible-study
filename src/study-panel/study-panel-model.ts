@@ -20,10 +20,12 @@ import {
 import type { AnnotationOrdering } from '../data-access'
 import { chapterMentionViews } from '../mentions'
 import {
+  bookCitation,
   decodeVerseId,
   formatReference,
   mergeRanges,
   referencesIntersect,
+  type BookCitation,
   type Reference,
   type VerseRange,
 } from '../reference'
@@ -53,6 +55,10 @@ export type ReferenceEntryView = {
   status: ReferenceEntryStatus
   verses: ReferenceEntryVerse[]
   attribution: string | null
+  // Present for an installed non-biblical book: its edition module fills the
+  // translation slot outright and its full citation stands in for the
+  // module's license attribution (spec-books §6).
+  book: BookCitation | null
 }
 
 export type StudyPanelStatus =
@@ -224,9 +230,14 @@ export class StudyPanelModel {
   }
 
   // The followed reader loads translation texts only while the Translations
-  // tab shows them.
+  // tab shows them — but a book has no such tab, so its paragraph details are
+  // wanted for as long as the panel mirrors it (spec-books §5).
   #syncDetailsWanted(): void {
-    this.#studySource?.setDetailsWanted(this.#tabState.subTab === 'translations')
+    const source = this.#studySource
+    if (source === null) return
+    source.setDetailsWanted(
+      source.studyMaterial.bookMode || this.#tabState.subTab === 'translations',
+    )
   }
 
   toggleTranslationFold(id: string): void {
@@ -298,8 +309,15 @@ export class StudyPanelModel {
     this.#studySource?.setDetailsWanted(false)
     this.#unsubscribeStudySource?.()
     this.#studySource = source
+    // A tab that walks from scripture into a book changes where its details
+    // belong, so what it wants is re-read with every change it reports.
     this.#unsubscribeStudySource =
-      source === null ? null : source.subscribe(() => this.#notify())
+      source === null
+        ? null
+        : source.subscribe(() => {
+            this.#syncDetailsWanted()
+            this.#notify()
+          })
     this.#notify()
   }
 
@@ -313,7 +331,7 @@ export class StudyPanelModel {
     if (this.#file === null) return 'no-note'
     if (this.#entries.length === 0) return 'no-references'
     const someLoadable = this.#entries.some(
-      (entry) => (entry.translation ?? this.#translationId) !== null,
+      (entry) => this.#slotFor(entry) !== null,
     )
     return someLoadable ? 'ok' : 'no-translation'
   }
@@ -473,7 +491,8 @@ export class StudyPanelModel {
     const token = ++this.#loadToken
     this.#entries = this.#entries.map((entry) => ({
       ...entry,
-      translationLabel: this.#translationLabel(entry.translation),
+      translationLabel:
+        entry.book === null ? this.#translationLabel(entry.translation) : null,
       status: 'loading',
       verses: [],
       attribution: null,
@@ -490,16 +509,19 @@ export class StudyPanelModel {
       })),
     )
     return references.map(({ reference, translation }) => {
-      const label = formatReference(reference)
+      const book = bookCitation(reference)
+      const label = book?.reference ?? formatReference(reference)
       return {
         key: `${translation ?? ''}|${label}`,
         label,
         reference,
         translation,
-        translationLabel: this.#translationLabel(translation),
+        translationLabel:
+          book === null ? this.#translationLabel(translation) : null,
         status: 'loading',
         verses: [],
         attribution: null,
+        book,
       }
     })
   }
@@ -508,10 +530,16 @@ export class StudyPanelModel {
     return (translation ?? this.#translationId)?.toUpperCase() ?? null
   }
 
+  // Which layer an entry's text comes from: a book's own edition module wins
+  // outright, then the note's own translation token, then the default.
+  #slotFor(entry: ReferenceEntryView): string | null {
+    return entry.book?.moduleId ?? entry.translation ?? this.#translationId
+  }
+
   async #loadEntries(token: number): Promise<void> {
     await Promise.all(
       this.#entries.map(async (entry) => {
-        const translationId = entry.translation ?? this.#translationId
+        const translationId = this.#slotFor(entry)
         const passage =
           translationId === null
             ? ({ status: 'unavailable' } as const)
@@ -539,7 +567,7 @@ export class StudyPanelModel {
           label: labels[index],
           text: verse.segments.map((segment) => segment.text).join(''),
         })),
-        attribution: passage.attribution,
+        attribution: entry.book?.attribution ?? passage.attribution,
       }
     })
   }

@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  HUMILITY_BOOK,
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import type { StudyMaterial, StudyMaterialSource } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import {
@@ -75,6 +80,7 @@ const fakeStudyMaterial = () => {
   let detailsWanted = false
   let material: StudyMaterial = {
     title: 'John 15',
+    bookMode: false,
     selectedVerseId: null,
     selectionEndId: null,
     details: null,
@@ -99,6 +105,10 @@ const fakeStudyMaterial = () => {
     source,
     subscriptions: () => listeners.size,
     detailsWanted: () => detailsWanted,
+    showBook: () => {
+      material = { ...material, title: 'Humility — Preface', bookMode: true }
+      listeners.forEach((listener) => listener())
+    },
     select: (verseId: number) => {
       material = { ...material, selectedVerseId: verseId }
       listeners.forEach((listener) => listener())
@@ -109,6 +119,7 @@ const fakeStudyMaterial = () => {
         details: {
           verseId: makeVerseId(43, 15, 1),
           title: 'John 15:1',
+          book: null,
           translations: translationIds.map((id) => ({
             id,
             label: id.toUpperCase(),
@@ -1052,6 +1063,18 @@ describe('cross-references in the Study Panel', () => {
 
       expect(reader.detailsWanted()).toBe(false)
     })
+
+    it('wants a book tab’s details on the study tab, its only home', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      reader.showBook()
+
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(freshTabState())
+
+      expect(panel.view.subTab).toBe('study')
+      expect(reader.detailsWanted()).toBe(true)
+    })
   })
 
   describe('translation folds on the translations tab', () => {
@@ -1346,5 +1369,175 @@ describe('annotations and mentions in the Study Panel', () => {
       'Sermons/Abiding.md',
     ])
     expect(notified).toBeGreaterThan(0)
+  })
+})
+
+describe('book references in the Study Panel', () => {
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  const atom = (book: number, chapter: number, verse: number): Reference => ({
+    book,
+    ranges: [
+      {
+        startId: makeVerseId(book, chapter, verse),
+        endId: makeVerseId(book, chapter, verse),
+      },
+    ],
+  })
+
+  const humilityParagraph = atom(HUMILITY_BOOK, 1, 2)
+  const johnVine = atom(43, 15, 5)
+
+  const mixedCrossReference: CrossReference = {
+    id: 'xr-pride',
+    members: [johnVine, humilityParagraph],
+    description: 'Pride and its cure',
+  }
+
+  it("resolves a book entry's translation slot to the edition module", async () => {
+    const source = fakeSource()
+    const panel = model(source.source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: 'On {Humility 1:2} and {John 15:1}.',
+    })
+
+    expect(source.requests.map((request) => request.translationId)).toEqual([
+      'hum-m1895',
+      'web',
+    ])
+  })
+
+  it('keeps the edition slot whatever the default translation becomes', async () => {
+    const source = fakeSource()
+    const panel = model(source.source)
+    await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
+
+    await panel.setTranslation('kjv')
+
+    expect(source.requests.map((request) => request.translationId)).toEqual([
+      'hum-m1895',
+      'hum-m1895',
+    ])
+    expect(panel.view.entries[0].translationLabel).toBeNull()
+  })
+
+  it('leaves a translation token on a book reference with no say', async () => {
+    const source = fakeSource()
+    const panel = model(source.source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{Humility 1:2 kjv}',
+    })
+
+    expect(source.requests.map((request) => request.translationId)).toEqual([
+      'hum-m1895',
+    ])
+    expect(panel.view.entries[0].translation).toBeNull()
+  })
+
+  it('loads a book entry with no translation installed at all', async () => {
+    const panel = model(fakeSource().source, null)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
+
+    expect(panel.view.status).toBe('ok')
+    expect(panel.view.entries[0].status).toBe('ok')
+  })
+
+  it('heads a book entry with the display format and its full citation', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
+
+    expect(panel.view.entries[0].label).toBe('Humility ch. 1, par. 2')
+    expect(panel.view.entries[0].attribution).toBe(
+      'Andrew Murray, Humility (1895), ch. 1, par. 2',
+    )
+  })
+
+  it('never substitutes a translation for an absent book module', async () => {
+    const source = fakeSource()
+    source.useResponse(() => ({ status: 'unavailable' }))
+    const panel = model(source.source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
+
+    expect(panel.view.entries[0].status).toBe('unavailable')
+    expect(source.requests.map((request) => request.translationId)).toEqual([
+      'hum-m1895',
+    ])
+  })
+
+  it('labels the members of a mixed cross-reference each in its own format', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([mixedCrossReference])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:5}' })
+
+    expect(
+      panel.view.crossReferences[0].members.map((member) => member.label),
+    ).toEqual(['John 15:5', 'Humility ch. 1, par. 2'])
+  })
+
+  it('surfaces the same cross-reference from the book end of it', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([mixedCrossReference])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
+
+    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
+      'xr-pride',
+    ])
+  })
+
+  it('surfaces annotations and mentions of a book paragraph', async () => {
+    const vault = fakeVault({
+      'Annotations/Humility 1.2.md': '---\nref: Humility 1:2\n---\nPride.',
+      'Sermons/Lowly.md': 'See {Humility 1:2}.',
+    })
+    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, vault)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
+
+    expect(panel.view.annotations.map((item) => item.label)).toEqual([
+      'Humility 1:2',
+    ])
+    expect(panel.view.mentions.map((item) => item.file)).toEqual([
+      'Sermons/Lowly.md',
+    ])
+  })
+
+  it('goes dormant with the module and comes back on reinstall', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([mixedCrossReference])
+    const panel = model(fakeSource().source, 'web', store.deps)
+    const note = 'On {John 15:5} and {Humility 1:2}.'
+
+    uninstallHumilityBook()
+    await panel.setActiveNote({ file: 'note.md', content: note })
+
+    expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+      'John 15:5',
+    ])
+    expect(
+      panel.view.crossReferences[0].members.map((member) => member.label),
+    ).toEqual(['John 15:5', 'Book 101 1:2'])
+
+    installHumilityBook()
+    await panel.setActiveNote({ file: 'note.md', content: note })
+
+    expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+      'John 15:5',
+      'Humility ch. 1, par. 2',
+    ])
+    expect(
+      panel.view.crossReferences[0].members.map((member) => member.label),
+    ).toEqual(['John 15:5', 'Humility ch. 1, par. 2'])
   })
 })

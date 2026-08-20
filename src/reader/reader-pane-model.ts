@@ -1,5 +1,6 @@
 import {
   BOOK_COUNT,
+  bookCitation,
   bookName,
   chapterCount,
   decodeVerseId,
@@ -7,6 +8,7 @@ import {
   makeVerseId,
   parseReference,
   rangeContains,
+  referenceLabel,
   verseCount,
   type Reference,
 } from '../reference'
@@ -27,6 +29,7 @@ import {
 import { chapterMentionViews } from '../mentions'
 import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
 import type {
+  BookDetailsView,
   ChapterAnnotationView,
   ChapterMentionView,
   CollectionView,
@@ -452,23 +455,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
       banner:
         this.#entry === null || this.#bannerDismissed
           ? null
-          : `Opened at ${this.#entryLabel(this.#entry)}`,
+          : `Opened at ${referenceLabel(this.#entry)}`,
     }
-  }
-
-  // A book's own name and paragraph numbering: scripture's reference grammar
-  // learns book names separately (ticket #72), so the pane labels its entry
-  // from the book it already has in hand.
-  #entryLabel(entry: Reference): string {
-    const book = this.#bookHere()
-    if (book === null) return formatReference(entry)
-    const first = decodeVerseId(entry.ranges[0].startId)
-    const last = decodeVerseId(entry.ranges[entry.ranges.length - 1].endId)
-    const span =
-      first.verse === last.verse
-        ? `${first.verse}`
-        : `${first.verse}-${last.verse}`
-    return `${book.title} ${first.chapter}:${span}`
   }
 
   #bookHere(): ReaderBook | null {
@@ -505,6 +493,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   get studyMaterial(): StudyMaterial {
     return {
       title: this.#title(),
+      bookMode: this.#bookHere() !== null,
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
@@ -736,7 +725,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     if (this.#collection === null) return null
     return {
       members: this.#collection.members.map((member, index) => ({
-        label: formatReference(member),
+        label: referenceLabel(member),
         reference: member,
         index,
       })),
@@ -934,15 +923,32 @@ export class ReaderPaneModel implements StudyMaterialSource {
     await this.#loadDetails(key)
   }
 
+  // The selected paragraphs are already on screen, so a book's details read
+  // the rows in hand rather than fetching the passage a second time.
+  #bookDetails(reference: Reference): BookDetailsView | null {
+    const citation = bookCitation(reference)
+    if (citation === null) return null
+    const selected = this.#rows.filter((row) =>
+      reference.ranges.some((range) => rangeContains(range, row.verseId)),
+    )
+    return {
+      citation: citation.attribution,
+      text: joinedSegments(selected)
+        .map((segment) => segment.text)
+        .join(''),
+    }
+  }
+
   async #loadDetails(key: string): Promise<void> {
     const reference = this.selectionReference()
     const anchor = this.#selectedVerseId
     if (reference === null || anchor === null) return
     this.#loadingDetailsKey = key
     try {
-      // A book has exactly one layer, so its details carry no translation
-      // rows (spec-books §5).
+      // A book has exactly one layer, so its details carry the paragraph's
+      // own citation and prose instead of translation rows (spec-books §5).
       const layers = this.#bookHere() === null ? this.#available : []
+      const book = this.#bookDetails(reference)
       const translations = await Promise.all(
         layers.map(
           async (translation): Promise<TranslationRowView> => {
@@ -971,7 +977,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
       if (this.#detailsKey() !== key) return
       this.#details = {
         verseId: anchor,
-        title: formatReference(reference),
+        title: referenceLabel(reference),
+        book,
         translations,
         strongs,
         strongsAttribution:
