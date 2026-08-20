@@ -108,7 +108,7 @@ The explicit translation token the plugin writes into a reference the moment its
 The singleton workspace view (default home: right sidebar, freely movable) for full-text search over installed modules. A query runs on explicit submit against the current Search Scope; results persist while the pane lives, and nothing survives a restart except the scope. Independent of focus — unlike the Study Panel, it never follows the active tab.
 
 ### Search Scope
-What one query searches over: exactly one Translation, an OT/NT/all testament filter, and any subset of installed Books. Remembered across restarts as per-device configuration; a remembered translation whose module is gone falls back to the Fallback Translation.
+What one query searches over: exactly one Translation, an OT/NT/all testament filter, and any subset of installed Books — or one single book alone, any scripture book or installed Book, which supersedes both filters and searches only the module holding it. Remembered across restarts as per-device configuration; a remembered translation whose module is gone falls back to the Fallback Translation, and a remembered single book whose module is gone falls back visibly to every book.
 
 ### Search Query
 One or more words that must all appear in a single atom's text (case- and diacritic-folded, each word matching as a prefix), with quoted phrases required to appear contiguously.

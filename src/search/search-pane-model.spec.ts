@@ -495,6 +495,64 @@ describe('SearchPaneModel result list', () => {
     model.expandBookHits(1)
     expect(stored()).toEqual(defaultStoredSearchScope())
   })
+
+  it('collapses every group at once', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.collapseAllBooks()
+    expect(model.view.books.map((view) => view.collapsed)).toEqual([true, true])
+    expect(model.view.totalHits).toBe(LONG_BOOK_HITS + 1)
+  })
+
+  it('expands every group at once, past the cap', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.collapseAllBooks()
+    model.expandAllBooks()
+    expect(model.view.books.map((view) => view.collapsed)).toEqual([
+      false,
+      false,
+    ])
+    expect(group(model, 43).hits).toHaveLength(LONG_BOOK_HITS)
+    expect(group(model, 43).hiddenHits).toBe(0)
+  })
+
+  it('tells its subscribers when every group is collapsed or expanded', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    let notifications = 0
+    model.subscribe(() => {
+      notifications += 1
+    })
+    model.collapseAllBooks()
+    model.expandAllBooks()
+    expect(notifications).toBe(2)
+  })
+
+  it('caps every group again on a new search after expanding them all', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.expandAllBooks()
+    await model.submit()
+    expect(group(model, 43).hits).toHaveLength(HITS_SHOWN_PER_BOOK)
+    expect(group(model, 43).hiddenHits).toBe(4)
+  })
+
+  it('opens every group again on a new search after collapsing them all', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.collapseAllBooks()
+    await model.submit()
+    expect(model.view.books.map((view) => view.collapsed)).toEqual([
+      false,
+      false,
+    ])
+  })
 })
 
 const scopedHarness = () =>
@@ -626,6 +684,7 @@ describe('SearchPaneModel scope', () => {
       translationId: 'kjv',
       testament: 'nt',
       excludedBookIds: ['hum-m1895'],
+      bookId: null,
     })
   })
 
@@ -635,6 +694,80 @@ describe('SearchPaneModel scope', () => {
     await model.submit()
     expect(model.view.totalHits).toBeGreaterThan(0)
     expect(stored()).toEqual(defaultStoredSearchScope())
+  })
+
+  it('offers every scripture book and every installed book to narrow to', () => {
+    const { model } = scopedHarness()
+    expect(model.view.scope.bookId).toBeNull()
+    expect(model.view.scope.narrowedToBook).toBe(false)
+    expect(model.view.scope.bookChoices).toHaveLength(67)
+    expect(model.view.scope.bookChoices[0]).toEqual({
+      bookId: 1,
+      label: 'Genesis',
+      moduleId: null,
+    })
+    expect(model.view.scope.bookChoices[66]).toEqual({
+      bookId: 101,
+      label: 'Humility',
+      moduleId: 'hum-m1895',
+    })
+  })
+
+  it('searches one scripture book in the chosen translation alone', async () => {
+    const { model, searchedModules } = scopedHarness()
+    model.chooseBook(43)
+    expect(model.view.scope.bookId).toBe(43)
+    expect(model.view.scope.narrowedToBook).toBe(true)
+    model.setQuery('the')
+    await model.submit()
+    expect(searchedModules()).toEqual(['web'])
+    expect(bookSummary(model)).toEqual([{ name: 'John', count: 1 }])
+  })
+
+  it('searches one installed book in its own module alone', async () => {
+    const { model, searchedModules } = scopedHarness()
+    model.chooseBook(101)
+    model.setQuery('the')
+    await model.submit()
+    expect(searchedModules()).toEqual(['hum-m1895'])
+    expect(bookSummary(model)).toEqual([{ name: 'Humility', count: 2 }])
+  })
+
+  it('ignores the testament filter while narrowed to one book', async () => {
+    const { model } = scopedHarness()
+    model.chooseTestament('nt')
+    model.chooseBook(1)
+    model.setQuery('the')
+    await model.submit()
+    expect(bookSummary(model)).toEqual([{ name: 'Genesis', count: 2 }])
+  })
+
+  it('goes back to every book, testament filter and all', async () => {
+    const { model } = scopedHarness()
+    model.chooseBook(43)
+    model.chooseBook(null)
+    expect(model.view.scope.narrowedToBook).toBe(false)
+    model.setQuery('the')
+    await model.submit()
+    expect(bookSummary(model).map((group) => group.name)).toEqual([
+      'Genesis',
+      'John',
+      'Humility',
+    ])
+  })
+
+  it('leaves the scope alone when narrowed to a book that is not offered', () => {
+    const { model } = scopedHarness()
+    model.chooseBook(404)
+    expect(model.view.scope.bookId).toBeNull()
+  })
+
+  it('remembers the book it was narrowed to', () => {
+    const { model, stored } = scopedHarness()
+    model.chooseBook(101)
+    expect(stored().bookId).toBe(101)
+    model.chooseBook(null)
+    expect(stored().bookId).toBeNull()
   })
 
   it('searches books even with no translation installed', async () => {

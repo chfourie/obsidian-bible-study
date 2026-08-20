@@ -1,7 +1,8 @@
 <!--
 The singleton Search Pane. Typing fills the box and nothing more; Enter runs
 the query over the Search Scope — one translation, a testament filter and any
-subset of the installed Books — and the hits below group under their book.
+subset of the installed Books, or one book alone — and the hits below group
+under their book, expandable and collapsible one group or all at once.
 Activating a hit opens the reader at that verse or paragraph.
 -->
 <script lang="ts">
@@ -16,6 +17,13 @@ Activating a hit opens the reader at that verse or paragraph.
     { value: 'ot', label: 'OT' },
     { value: 'nt', label: 'NT' },
   ]
+
+  // The dropdown carries strings, so "every book" needs an option value no
+  // book number can collide with.
+  const ALL_BOOKS = 'all'
+
+  const chosenBook = (value: string): number | null =>
+    value === ALL_BOOKS ? null : Number(value)
 
   let { model }: { model: SearchPaneModel } = $props()
 
@@ -79,6 +87,7 @@ Activating a hit opens the reader at that verse or paragraph.
           class="bss-testament"
           class:bss-chosen={view.scope.testament === testament.value}
           aria-pressed={view.scope.testament === testament.value}
+          disabled={view.scope.narrowedToBook}
           onclick={() => model.chooseTestament(testament.value)}
         >
           {testament.label}
@@ -87,13 +96,29 @@ Activating a hit opens the reader at that verse or paragraph.
     </div>
   </div>
 
+  <select
+    class="dropdown bss-scope-book-choice"
+    aria-label="Book to search"
+    value={view.scope.bookId === null ? ALL_BOOKS : String(view.scope.bookId)}
+    onchange={(event) => model.chooseBook(chosenBook(event.currentTarget.value))}
+  >
+    <option value={ALL_BOOKS}>All books</option>
+    {#each view.scope.bookChoices as choice (choice.bookId)}
+      <option value={String(choice.bookId)}>{choice.label}</option>
+    {/each}
+  </select>
+
   {#if view.scope.books.length > 0}
     <div class="bss-scope-books">
       {#each view.scope.books as book (book.moduleId)}
-        <label class="bss-scope-book">
+        <label
+          class="bss-scope-book"
+          class:bss-inapplicable={view.scope.narrowedToBook}
+        >
           <input
             type="checkbox"
             checked={book.selected}
+            disabled={view.scope.narrowedToBook}
             onchange={() => model.toggleBook(book.moduleId)}
           />
           {book.label}
@@ -119,7 +144,25 @@ Activating a hit opens the reader at that verse or paragraph.
       <p class="bss-total">{view.totalLabel}</p>
       <p class="bss-empty">Nothing found for {view.submittedQuery}.</p>
     {:else}
-      <p class="bss-total">{view.totalLabel}</p>
+      <div class="bss-results-head">
+        <p class="bss-total">{view.totalLabel}</p>
+        <div class="bss-fold-all">
+          <button
+            type="button"
+            class="bss-fold-all-button"
+            onclick={() => model.expandAllBooks()}
+          >
+            Expand all
+          </button>
+          <button
+            type="button"
+            class="bss-fold-all-button"
+            onclick={() => model.collapseAllBooks()}
+          >
+            Collapse all
+          </button>
+        </div>
+      </div>
       {#each view.books as group (group.book)}
         <section class="bss-book">
           <button
@@ -229,6 +272,12 @@ Activating a hit opens the reader at that verse or paragraph.
     color: var(--text-on-accent);
   }
 
+  .bss-scope-book-choice {
+    flex-shrink: 0;
+    width: 100%;
+    font-size: var(--font-ui-small);
+  }
+
   .bss-scope-books {
     display: flex;
     flex-shrink: 0;
@@ -242,6 +291,13 @@ Activating a hit opens the reader at that verse or paragraph.
     gap: 0.3rem;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
+  }
+
+  /* Narrowed to one book, the testament filter and the Book checkboxes have
+     nothing to say until every book is searched again. */
+  .bss-scope-book.bss-inapplicable,
+  .bss-testament:disabled {
+    opacity: 0.5;
   }
 
   /* The results scroll on their own so the query box above stays put. */
@@ -260,6 +316,32 @@ Activating a hit opens the reader at that verse or paragraph.
     margin: 0;
     color: var(--text-muted);
     font-size: var(--font-ui-small);
+  }
+
+  .bss-results-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .bss-fold-all {
+    display: flex;
+    gap: 0.15rem;
+  }
+
+  .bss-fold-all-button {
+    padding: 0.1rem 0.3rem;
+    box-shadow: none;
+    background-color: transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bss-fold-all-button:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
   }
 
   .bss-book {
