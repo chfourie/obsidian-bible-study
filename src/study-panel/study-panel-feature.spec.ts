@@ -54,6 +54,7 @@ const fakeStudyMaterial = () => {
   let detailsWanted = false
   let material: StudyMaterial = {
     title: 'John 15',
+    bookMode: false,
     selectedVerseId: null,
     selectionEndId: null,
     details: null,

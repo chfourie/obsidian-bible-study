@@ -1,4 +1,4 @@
-import { formatReference, referencesIntersect, type Reference } from '../reference'
+import { referenceLabel, referencesIntersect, type Reference } from '../reference'
 import type { CrossReference } from './cross-reference-store'
 
 export type CrossReferenceMemberView = {
@@ -34,7 +34,7 @@ export const crossReferenceView = (
         !viewed.some((reference) => referencesIntersect(member, reference)),
     )
     .map(({ member, index }) => ({
-      label: formatReference(member),
+      label: referenceLabel(member),
       reference: member,
       index,
     })),

@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Platform, WorkspaceLeaf, type Plugin, type View } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
-import type { ModuleManifest, ModuleStore } from '../modules'
 import {
-  deregisterBookVersification,
-  makeVerseId,
-  parseReference,
-  registerBookVersification,
-  type Reference,
-} from '../reference'
+  deregisterManifestBook,
+  registerManifestBook,
+  type ModuleManifest,
+  type ModuleStore,
+} from '../modules'
+import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
 import { READER_VIEW_TYPE, ReaderFeature } from './reader-feature'
 import { ReaderView } from './reader-view'
@@ -919,14 +918,11 @@ const bookReference = (chapter: number, paragraph: number): Reference => ({
 })
 
 describe('ReaderFeature book mode', () => {
-  beforeEach(() =>
-    registerBookVersification({
-      book: HUMILITY,
-      sections: HUMILITY_SECTIONS,
-    }),
-  )
+  // Registered exactly as plugin load does it, so the pane sees the book the
+  // grammar and the citations see.
+  beforeEach(() => registerManifestBook(humilityManifest()))
 
-  afterEach(() => deregisterBookVersification(HUMILITY))
+  afterEach(() => deregisterManifestBook(humilityManifest()))
 
   // The seam a book chip's navigation uses is the shared ReferenceNavigator —
   // the same one scripture chips already travel (ticket #72 supplies the chip).
@@ -947,7 +943,7 @@ describe('ReaderFeature book mode', () => {
     expect(
       view.rows.filter((row) => row.highlighted).map((row) => row.label),
     ).toEqual(['2'])
-    expect(view.banner).toBe('Opened at Humility 1:2')
+    expect(view.banner).toBe('Opened at Humility ch. 1, par. 2')
   })
 
   it('reopens the command entry point at the last book position', async () => {

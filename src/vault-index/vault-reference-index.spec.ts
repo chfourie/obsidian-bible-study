@@ -1,4 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import {
+  HUMILITY_BOOK,
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import { makeVerseId, type Reference } from '../reference'
 import { isAnnotation, VaultReferenceIndex } from './vault-reference-index'
 
@@ -217,5 +222,43 @@ describe('VaultReferenceIndex change events', () => {
     index.removeNote('unknown.md')
 
     expect(notified).toBe(0)
+  })
+})
+
+// A book's references live in the index only while its module is installed;
+// uninstalling makes them dormant, never deleting anything (spec-books §6).
+describe('VaultReferenceIndex dormancy of an uninstalled book', () => {
+  const NOTE = 'Sermons/Lowly.md'
+  const CONTENT = 'On {John 15:5} and {Humility 1:2}.'
+
+  const humilityParagraph: Reference = {
+    book: HUMILITY_BOOK,
+    ranges: [
+      {
+        startId: makeVerseId(HUMILITY_BOOK, 1, 2),
+        endId: makeVerseId(HUMILITY_BOOK, 1, 2),
+      },
+    ],
+  }
+
+  afterEach(uninstallHumilityBook)
+
+  it('drops and restores the occurrences with the module, note untouched', () => {
+    installHumilityBook()
+    const index = new VaultReferenceIndex()
+    index.indexNote(NOTE, CONTENT)
+    expect(index.intersectingOccurrences(humilityParagraph)).toHaveLength(1)
+
+    uninstallHumilityBook()
+    index.indexNote(NOTE, CONTENT)
+
+    expect(index.intersectingOccurrences(humilityParagraph)).toEqual([])
+    expect(index.intersectingOccurrences(johnRef(15, 5))).toHaveLength(1)
+
+    installHumilityBook()
+    index.indexNote(NOTE, CONTENT)
+
+    expect(index.intersectingOccurrences(humilityParagraph)).toHaveLength(1)
+    expect(CONTENT).toBe('On {John 15:5} and {Humility 1:2}.')
   })
 })

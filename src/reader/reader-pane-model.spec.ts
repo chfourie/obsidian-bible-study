@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  deregisterBook,
   deregisterBookVersification,
   enumerateVerseIds,
   makeVerseId,
   parseReference,
   rangeContains,
   referencesIntersect,
+  registerBook,
   registerBookVersification,
   type Reference,
 } from '../reference'
@@ -533,6 +535,7 @@ describe('verse details', () => {
     expect(detailsOf(model)).toEqual({
       verseId: verse4,
       title: 'John 15:4',
+      book: null,
       translations: [
         {
           id: 'web',
@@ -2183,6 +2186,7 @@ describe('the study material contract', () => {
 
     expect(sourceOf(model).studyMaterial).toEqual({
       title: 'John 15',
+      bookMode: false,
       selectedVerseId: null,
       selectionEndId: null,
       details: null,
@@ -2856,18 +2860,36 @@ const bookRef = (chapter: number, from: number, to = from): Reference => ({
   ],
 })
 
+// The sections the printed work carries no chapter number for: their name
+// replaces the chapter locator wherever a reference to them is displayed.
+const NAMED_SECTIONS = new Set([0, 13, 14, 15, 16, 17])
+
 describe('ReaderPaneModel book mode', () => {
   beforeEach(() => {
-    registerBookVersification({
-      book: HUMILITY,
-      sections: HUMILITY_SECTIONS.map(({ chapter }) => ({
-        chapter,
-        paragraphs: 20,
-      })),
+    const sections = HUMILITY_SECTIONS.map(({ chapter, name }) => ({
+      chapter,
+      name,
+      named: NAMED_SECTIONS.has(chapter),
+      paragraphs: 20,
+    }))
+    registerBookVersification({ book: HUMILITY, sections })
+    registerBook({
+      id: HUMILITY,
+      name: 'Humility',
+      abbrev: 'Hum',
+      aliases: [],
+      moduleId: 'hum-m1895',
+      editionCode: 'HUM-M1895',
+      author: 'Andrew Murray',
+      year: 1895,
+      sections,
     })
   })
 
-  afterEach(() => deregisterBookVersification(HUMILITY))
+  afterEach(() => {
+    deregisterBookVersification(HUMILITY)
+    deregisterBook(HUMILITY)
+  })
 
   it('renders a section as book prose with its epigraph and paragraph numbers', async () => {
     const model = bookModelWith()
@@ -2982,7 +3004,7 @@ describe('ReaderPaneModel book mode', () => {
     expect(
       model.view.rows.filter((row) => row.highlighted).map((row) => row.label),
     ).toEqual(['2', '3'])
-    expect(model.view.banner).toBe('Opened at Humility 1:2-3')
+    expect(model.view.banner).toBe('Opened at Humility ch. 1, pars. 2-3')
   })
 
   it('banners a single-paragraph entry without a range', async () => {
@@ -2990,7 +3012,15 @@ describe('ReaderPaneModel book mode', () => {
 
     await model.openAt(bookRef(1, 2), null)
 
-    expect(model.view.banner).toBe('Opened at Humility 1:2')
+    expect(model.view.banner).toBe('Opened at Humility ch. 1, par. 2')
+  })
+
+  it('names an unnamed section by its display name in the banner', async () => {
+    const model = bookModelWith()
+
+    await model.openAt(bookRef(0, 1), null)
+
+    expect(model.view.banner).toBe('Opened at Humility Preface, par. 1')
   })
 
   it('keeps the scripture translation across a visit to a book', async () => {
@@ -3019,5 +3049,126 @@ describe('ReaderPaneModel book mode', () => {
     await model.openPosition({ book: HUMILITY, chapter: 1 })
 
     expect(model.view.status).toBe('ok')
+  })
+
+  it('marks the paragraphs notes annotate or merely mention', async () => {
+    const model = bookModelWith({
+      intersecting: () => [
+        group('Annotations/Humility 1.2.md', 'Humility 1:2'),
+        group('Sermons/Lowly.md', null, 'Humility 1:3'),
+      ],
+    })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(
+      model.view.rows.map((row) => [row.annotations, row.mentions]),
+    ).toEqual([
+      [0, 0],
+      [1, 0],
+      [0, 1],
+    ])
+  })
+
+  it('lists the section as the chapter scope of its annotations and mentions', async () => {
+    const model = bookModelWith({
+      intersecting: () => [
+        group('Annotations/Preface.md', 'Humility 0:1'),
+        group('Sermons/Lowly.md', null, 'Humility 0:1'),
+      ],
+      annotationDetails: async () => ({ body: 'Lowliness.', created: 1 }),
+    })
+
+    await model.openPosition({ book: HUMILITY, chapter: 0 })
+
+    const material = model.studyMaterial
+    expect(material.chapterAnnotations.map((item) => item.label)).toEqual([
+      'Humility 0:1',
+    ])
+    expect(material.chapterMentions.map((item) => item.file)).toEqual([
+      'Sermons/Lowly.md',
+    ])
+  })
+
+  it("shows the selected paragraph's citation and text instead of translations", async () => {
+    const model = bookModelWith()
+    model.setDetailsWanted(true)
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    await model.selectVerse(makeVerseId(HUMILITY, 1, 2))
+
+    expect(detailsOf(model)).toEqual({
+      verseId: makeVerseId(HUMILITY, 1, 2),
+      title: 'Humility ch. 1, par. 2',
+      book: {
+        citation: 'Andrew Murray, Humility (1895), ch. 1, par. 2',
+        text: 'And so pride is the root.',
+      },
+      translations: [],
+      strongs: [],
+      strongsAttribution: null,
+    })
+  })
+
+  it('runs the paragraph details across an extended selection', async () => {
+    const model = bookModelWith()
+    model.setDetailsWanted(true)
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    await model.selectVerse(makeVerseId(HUMILITY, 1, 2))
+    model.extendSelectionTo(makeVerseId(HUMILITY, 1, 3))
+    await flushAsync()
+
+    const details = detailsOf(model)
+    expect(details.title).toBe('Humility ch. 1, pars. 2-3')
+    expect(details.book?.text).toBe(
+      'And so pride is the root. Humility is the only soil.',
+    )
+  })
+
+  it('tells the study material it is showing a book', async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    expect(model.studyMaterial.bookMode).toBe(true)
+
+    await model.openAt(ref('John 15:1'), 'web')
+    expect(model.studyMaterial.bookMode).toBe(false)
+  })
+
+  it('collects a book paragraph beside scripture, each in its own format', async () => {
+    const model = bookModelWith()
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    model.startCollecting()
+
+    await model.selectVerse(makeVerseId(HUMILITY, 1, 2))
+    model.addSelectionToCollection()
+    model.typeMember('John 15:5')
+    model.addTypedReferenceToCollection()
+
+    expect(
+      model.studyMaterial.collection?.members.map((member) => member.label),
+    ).toEqual(['Humility ch. 1, par. 2', 'John 15:5'])
+    expect(model.studyMaterial.collection?.canSave).toBe(true)
+  })
+
+  it('lists a cross-reference touching the section on screen', async () => {
+    const entry = {
+      id: 'xr-pride',
+      description: 'Pride and its cure',
+      members: [ref('John 15:5'), bookRef(1, 2)],
+    }
+    const model = bookModelWith({
+      crossReferences: crossReferencesOf({ intersecting: () => [entry] }),
+    })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    const listed = model.studyMaterial.chapterCrossReferences
+    expect(listed.map((view) => view.id)).toEqual(['xr-pride'])
+    expect(listed[0].members.map((member) => member.label)).toEqual([
+      'Humility ch. 1, par. 2',
+      'John 15:5',
+    ])
   })
 })
