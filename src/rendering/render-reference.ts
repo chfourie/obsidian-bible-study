@@ -60,10 +60,19 @@ const renderChip = (
   deps: ReferenceRenderDeps,
 ): void => {
   const chip = parent.createSpan({
-    cls: 'scripture-study-chip',
+    cls:
+      model.book === null
+        ? 'scripture-study-chip'
+        : 'scripture-study-chip scripture-study-chip-book',
     attr: { role: 'button', tabindex: 0 },
   })
-  chip.createSpan({ cls: 'scripture-study-chip-ref', text: model.referenceText })
+  const ref = chip.createSpan({ cls: 'scripture-study-chip-ref' })
+  if (model.book === null) {
+    ref.setText(model.referenceText)
+  } else {
+    ref.createEl('em', { text: model.book.title })
+    ref.appendText(` ${model.book.locator}`)
+  }
   if (model.chipLabel !== null) {
     chip.createSpan({
       cls: 'scripture-study-chip-translation',
@@ -71,7 +80,7 @@ const renderChip = (
     })
   }
   const icon = chip.createSpan({ cls: 'scripture-study-chip-icon' })
-  setIcon(icon, 'book-open')
+  setIcon(icon, model.book === null ? 'book-open' : 'book-marked')
   activateAsButton(chip, (event) =>
     deps.openReference(model, { newPane: opensInNewPane(event) }),
   )
@@ -314,13 +323,22 @@ const renderAttribution = (host: HTMLElement, view: PassageView): void => {
   })
 }
 
-const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
-  renderFallbackNotice(host, view)
-  for (const block of view.verses) {
-    renderSegments(host.createDiv({ cls: 'scripture-study-verse-line' }), block)
+// Scripture's `block` gives each verse its own line; a book atom is already a
+// paragraph, so the same stack reads as prose instead (spec-books §4).
+const renderStackedAtoms =
+  (cls: string) =>
+  (host: HTMLElement, view: PassageView): void => {
+    renderFallbackNotice(host, view)
+    for (const block of view.verses) {
+      renderSegments(host.createDiv({ cls }), block)
+    }
+    renderAttribution(host, view)
   }
-  renderAttribution(host, view)
-}
+
+const renderVerseLines = renderStackedAtoms('scripture-study-verse-line')
+const renderBookParagraphs = renderStackedAtoms(
+  'scripture-study-book-paragraph',
+)
 
 const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
@@ -353,12 +371,12 @@ const renderBlock = (
   const host = inline
     ? block.createSpan({ cls: 'scripture-study-passage' })
     : block.createDiv({ cls: 'scripture-study-passage' })
-  const mounted = mountPassage(
-    host,
-    model,
-    deps,
-    inline ? renderVerseRun : renderVerseLines,
-  )
+  const renderPassage = inline
+    ? renderVerseRun
+    : model.book === null
+      ? renderVerseLines
+      : renderBookParagraphs
+  const mounted = mountPassage(host, model, deps, renderPassage)
   if (deps.intersections) {
     renderIntersections(block, model, deps.intersections, sourcePath)
   }

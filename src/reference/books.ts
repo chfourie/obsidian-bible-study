@@ -6,6 +6,30 @@ export type Book = {
   aliases: readonly string[]
 }
 
+// One addressable section of a registered book. `named` marks a section the
+// printed work gives no chapter number to (Preface, Notes, the closing
+// Prayer) — its name replaces the chapter locator when a reference to it is
+// displayed (spec-books §4).
+export type BookSectionLabel = {
+  chapter: number
+  name: string
+  named?: boolean
+}
+
+// A non-biblical book, known only while its module is installed. Scripture's
+// 66 stay compiled in; books arrive and leave with their manifests.
+export type RegisteredBook = {
+  id: number
+  name: string
+  abbrev: string
+  aliases: readonly string[]
+  moduleId: string
+  editionCode: string
+  author: string
+  year: number
+  sections: readonly BookSectionLabel[]
+}
+
 const BOOK_NAMES: readonly [
   name: string,
   osis: string,
@@ -101,12 +125,72 @@ const BOOK_ID_BY_NORMALIZED_NAME = new Map<string, number>(
   ),
 )
 
-export const bookIdForName = (name: string): number | null =>
-  BOOK_ID_BY_NORMALIZED_NAME.get(normalizeName(name)) ?? null
+// Scripture owns 1-66, 67-100 are reserved for canon extensions, and
+// non-biblical books start at 101 (ADR 0002).
+export const isNonBiblicalBook = (bookId: number): boolean =>
+  bookId > BOOKS.length
+
+const registeredById = new Map<number, RegisteredBook>()
+const registeredNames = new Map<number, string[]>()
+
+const addressableNames = (book: RegisteredBook): string[] => {
+  const kept: string[] = []
+  for (const candidate of [book.name, book.abbrev, ...book.aliases]) {
+    if (BOOK_ID_BY_NORMALIZED_NAME.has(normalizeName(candidate))) {
+      console.warn(
+        `Book ${book.id} name "${candidate}" is dropped: scripture already owns it`,
+      )
+      continue
+    }
+    kept.push(candidate)
+  }
+  return kept
+}
+
+export const registerBook = (book: RegisteredBook): void => {
+  registeredById.set(book.id, book)
+  registeredNames.set(book.id, addressableNames(book))
+}
+
+export const deregisterBook = (bookId: number): void => {
+  registeredById.delete(bookId)
+  registeredNames.delete(bookId)
+}
+
+export const registeredBook = (bookId: number): RegisteredBook | null =>
+  registeredById.get(bookId) ?? null
+
+const asBook = (book: RegisteredBook, names: string[]): Book => ({
+  id: book.id,
+  name: names[0],
+  osis: book.abbrev,
+  abbrev: book.abbrev,
+  aliases: names.slice(1),
+})
+
+// Registered books that can still be typed: a book whose every name collides
+// with scripture keeps its identity for display but is not addressable.
+const addressableBooks = (): Book[] =>
+  [...registeredById.values()].flatMap((book) => {
+    const names = registeredNames.get(book.id) ?? []
+    return names.length === 0 ? [] : [asBook(book, names)]
+  })
+
+export const bookIdForName = (name: string): number | null => {
+  const normalized = normalizeName(name)
+  const scripture = BOOK_ID_BY_NORMALIZED_NAME.get(normalized)
+  if (scripture !== undefined) return scripture
+  for (const [id, names] of registeredNames) {
+    if (names.some((candidate) => normalizeName(candidate) === normalized)) {
+      return id
+    }
+  }
+  return null
+}
 
 export const booksMatchingPrefix = (prefix: string): readonly Book[] => {
   const normalized = normalizeName(prefix)
-  return BOOKS.filter((book) =>
+  return [...BOOKS, ...addressableBooks()].filter((book) =>
     [book.name, book.osis, book.abbrev, ...book.aliases].some((alias) =>
       normalizeName(alias).startsWith(normalized),
     ),
@@ -114,4 +198,6 @@ export const booksMatchingPrefix = (prefix: string): readonly Book[] => {
 }
 
 export const bookName = (bookId: number): string =>
-  BOOKS[bookId - 1]?.name ?? `Book ${bookId}`
+  BOOKS[bookId - 1]?.name ??
+  registeredById.get(bookId)?.name ??
+  `Book ${bookId}`

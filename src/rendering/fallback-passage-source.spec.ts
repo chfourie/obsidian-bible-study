@@ -79,6 +79,21 @@ describe('FallbackPassageSource', () => {
       status: 'unavailable',
     })
   })
+
+  // A book has one edition; no translation can stand in for its module.
+  it('never substitutes a translation for a book', async () => {
+    const humility2_2 = makeVerseId(101, 2, 2)
+    const { source, requested } = sourceOf({ web: okPassage('WEB text') })
+    const fallback = new FallbackPassageSource(source, () => 'web')
+
+    expect(
+      await fallback.passage(
+        { book: 101, ranges: [{ startId: humility2_2, endId: humility2_2 }] },
+        'hum-m1895',
+      ),
+    ).toEqual({ status: 'unavailable' })
+    expect(requested).toEqual(['hum-m1895'])
+  })
 })
 
 describe('resolveFallbackTranslationId', () => {

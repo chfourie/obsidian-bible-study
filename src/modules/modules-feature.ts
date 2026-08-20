@@ -2,7 +2,7 @@ import type { Plugin } from 'obsidian'
 import { PluginFeature, type SettingsStore } from '../data-access'
 import { BollsClient } from './bolls-client'
 import { BOOK_CATALOGUE, bookRelease } from './book-catalogue'
-import { registerManifestVersification } from './book-versification'
+import { registerManifestBook } from './book-registration'
 import { BSB_MODULE_ID, BSB_RELEASE } from './bsb-release'
 import { removeLegacyOnlineTierArtifacts } from './legacy-online-tier-cleanup'
 import { ModuleManager } from './module-manager'
@@ -49,7 +49,7 @@ export class ModulesFeature extends PluginFeature {
   override async load(): Promise<void> {
     await removeLegacyOnlineTierArtifacts(this.#dataDir)
     for (const manifest of await this.store.installedManifests()) {
-      registerManifestVersification(manifest)
+      registerManifestBook(manifest)
     }
   }
 }

@@ -1,5 +1,5 @@
 import type { ScriptureStudySettings } from '../data-access'
-import type { Reference } from '../reference'
+import { isNonBiblicalBook, type Reference } from '../reference'
 import type { Passage, PassageSource } from './module-passage-source'
 
 export const resolveFallbackTranslationId = (
@@ -27,6 +27,9 @@ export class FallbackPassageSource implements PassageSource {
   async passage(reference: Reference, translationId: string): Promise<Passage> {
     const requested = await this.source.passage(reference, translationId)
     if (requested.status === 'ok') return requested
+    // No translation can stand in for a book: an absent book module is a
+    // content gap, not a missing translation (spec-books §6).
+    if (isNonBiblicalBook(reference.book)) return requested
     const fallbackId = this.fallbackTranslationId()
     if (fallbackId === null || fallbackId === translationId) return requested
     const fallback = await this.source.passage(reference, fallbackId)

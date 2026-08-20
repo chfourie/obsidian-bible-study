@@ -1,15 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  bookIdForName,
   chapterCount,
+  deregisterBook,
   deregisterBookVersification,
   isValidVerseId,
   makeVerseId,
+  registeredBook,
   verseCount,
 } from '../reference'
 import {
-  deregisterManifestVersification,
-  registerManifestVersification,
-} from './book-versification'
+  deregisterManifestBook,
+  registerManifestBook,
+} from './book-registration'
 import { MODULE_FORMAT_VERSION, type ModuleManifest } from './module-manifest'
 
 const HUMILITY_BOOK = 101
@@ -49,12 +52,13 @@ const translationManifest: ModuleManifest = {
 
 afterEach(() => {
   deregisterBookVersification(HUMILITY_BOOK)
+  deregisterBook(HUMILITY_BOOK)
   vi.restoreAllMocks()
 })
 
-describe('registerManifestVersification', () => {
+describe('registerManifestBook', () => {
   it('registers the section table of a book manifest', () => {
-    registerManifestVersification(
+    registerManifestBook(
       bookManifest([
         { chapter: 0, name: 'Preface', paragraphs: 4 },
         { chapter: 1, name: 'The Glory of the Creature', paragraphs: 9 },
@@ -68,7 +72,7 @@ describe('registerManifestVersification', () => {
   })
 
   it('ignores a translation manifest', () => {
-    registerManifestVersification(translationManifest)
+    registerManifestBook(translationManifest)
 
     expect(chapterCount(HUMILITY_BOOK)).toBe(0)
   })
@@ -78,34 +82,61 @@ describe('registerManifestVersification', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     expect(() =>
-      registerManifestVersification(
+      registerManifestBook(
         bookManifest([{ chapter: 3, name: 'Broken', paragraphs: 0 }]),
       ),
     ).not.toThrow()
     expect(error).toHaveBeenCalled()
     expect(chapterCount(HUMILITY_BOOK)).toBe(0)
   })
+
+  it('leaves an unusable grid unaddressable by name', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    registerManifestBook(
+      bookManifest([{ chapter: 3, name: 'Broken', paragraphs: 0 }]),
+    )
+
+    expect(bookIdForName('Humility')).toBeNull()
+  })
+
+  it('registers the book identity the grammar resolves names against', () => {
+    registerManifestBook(
+      bookManifest([{ chapter: 0, name: 'Preface', paragraphs: 4 }]),
+    )
+
+    expect(bookIdForName('Humility')).toBe(HUMILITY_BOOK)
+    expect(bookIdForName('Hum')).toBe(HUMILITY_BOOK)
+    expect(registeredBook(HUMILITY_BOOK)).toMatchObject({
+      moduleId: 'hum-m1895',
+      editionCode: 'HUM-M1895',
+      author: 'Andrew Murray',
+      year: 1895,
+      sections: [{ chapter: 0, name: 'Preface' }],
+    })
+  })
 })
 
-describe('deregisterManifestVersification', () => {
+describe('deregisterManifestBook', () => {
   it('drops the book grid so its ids stop validating', () => {
     const manifest = bookManifest([
       { chapter: 0, name: 'Preface', paragraphs: 4 },
     ])
-    registerManifestVersification(manifest)
+    registerManifestBook(manifest)
 
-    deregisterManifestVersification(manifest)
+    deregisterManifestBook(manifest)
 
     expect(chapterCount(HUMILITY_BOOK)).toBe(0)
     expect(isValidVerseId(makeVerseId(HUMILITY_BOOK, 0, 1))).toBe(false)
+    expect(bookIdForName('Humility')).toBeNull()
   })
 
   it('ignores a translation manifest', () => {
-    registerManifestVersification(
+    registerManifestBook(
       bookManifest([{ chapter: 0, name: 'Preface', paragraphs: 4 }]),
     )
 
-    deregisterManifestVersification(translationManifest)
+    deregisterManifestBook(translationManifest)
 
     expect(chapterCount(HUMILITY_BOOK)).toBe(1)
   })

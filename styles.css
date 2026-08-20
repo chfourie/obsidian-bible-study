@@ -26,6 +26,16 @@ body {
   background-color: hsla(var(--interactive-accent-hsl), 0.22);
 }
 
+/* A book chip keeps the accent family and takes a distinguishing mark:
+   a dotted underline under the locator plus the book icon (spec-books §4). */
+.scripture-study-chip-book .scripture-study-chip-ref {
+  border-bottom: 1px dotted hsla(var(--interactive-accent-hsl), 0.6);
+}
+
+.scripture-study-chip-book .scripture-study-chip-ref em {
+  font-style: italic;
+}
+
 .scripture-study-chip-translation {
   color: var(--text-muted);
   font-size: 0.85em;
@@ -93,6 +103,15 @@ body {
 
 .scripture-study-verse-line + .scripture-study-verse-line {
   margin-top: 0.25em;
+}
+
+/* A book atom is a paragraph, so `block` reads as prose (spec-books §4). */
+.scripture-study-book-paragraph {
+  text-indent: 1.25em;
+}
+
+.scripture-study-book-paragraph + .scripture-study-book-paragraph {
+  margin-top: 0.4em;
 }
 
 .scripture-study-indent-1 {

@@ -21,6 +21,7 @@ export type BookParagraph = {
 export type ParsedSection = {
   chapter: number
   name: string
+  named?: true
   epigraphs?: Epigraph[]
   paragraphs: BookParagraph[]
 }
@@ -156,8 +157,16 @@ export const parseHumilityText = (raw: string): ParsedSection[] => {
   let skipping = true
   let notesSeen = 0
 
-  const open = (chapter: number, name: string): ParsedSection => {
-    const section: ParsedSection = { chapter, name, paragraphs: [] }
+  // Front and back matter carry no printed chapter number, so their names
+  // stand in for the chapter locator when they are cited (spec-books §4).
+  const open = (
+    chapter: number,
+    name: string,
+    named?: true,
+  ): ParsedSection => {
+    const section: ParsedSection = named
+      ? { chapter, name, named, paragraphs: [] }
+      : { chapter, name, paragraphs: [] }
     sections.push(section)
     skipping = false
     expectEpigraph = false
@@ -171,11 +180,15 @@ export const parseHumilityText = (raw: string): ParsedSection[] => {
       continue
     }
     if (block === PREFACE_HEAD) {
-      current = open(PREFACE_CHAPTER, 'Preface')
+      current = open(PREFACE_CHAPTER, 'Preface', true)
       continue
     }
     if (block === PRAYER_HEAD) {
-      current = open(FIRST_NOTE_CHAPTER + notesSeen, 'A Prayer for Humility')
+      current = open(
+        FIRST_NOTE_CHAPTER + notesSeen,
+        'A Prayer for Humility',
+        true,
+      )
       continue
     }
     const numeral = chapterNumeralValue(block)
@@ -195,6 +208,7 @@ export const parseHumilityText = (raw: string): ParsedSection[] => {
       current = open(
         FIRST_NOTE_CHAPTER + letter.charCodeAt(0) - 'A'.charCodeAt(0),
         `Note ${letter}`,
+        true,
       )
       notesSeen += 1
       current.paragraphs.push(parseParagraph(block.slice(note[0].length)))

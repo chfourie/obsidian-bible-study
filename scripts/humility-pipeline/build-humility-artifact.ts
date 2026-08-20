@@ -96,6 +96,7 @@ export const buildHumilityArtifact = (
         sections: sections.map((section) => ({
           chapter: section.chapter,
           name: section.name,
+          ...(section.named === true ? { named: true } : {}),
           paragraphs: section.paragraphs.length,
         })),
       },

@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import {
   buildReferenceRenderModel,
   sameRenderModel,
@@ -71,6 +75,49 @@ describe('buildReferenceRenderModel', () => {
     const model = buildReferenceRenderModel('John 15:4', context)
 
     expect(model?.reference.book).toBe(43)
+  })
+
+  it('leaves scripture without a book citation', () => {
+    expect(buildReferenceRenderModel('John 15:4', context)?.book).toBeNull()
+  })
+})
+
+describe('buildReferenceRenderModel — book references', () => {
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  it('displays MLA locators and carries the full citation', () => {
+    const model = buildReferenceRenderModel('Humility 2:2 block', context)
+
+    expect(model).toMatchObject({
+      referenceText: 'Humility ch. 2, par. 2',
+      display: 'block',
+      book: {
+        title: 'Humility',
+        locator: 'ch. 2, par. 2',
+        attribution: 'Andrew Murray, Humility (1895), ch. 2, par. 2',
+      },
+    })
+  })
+
+  it('pins the translation slot to the book module, not the default', () => {
+    const model = buildReferenceRenderModel('Humility 2:2', context)
+
+    expect(model?.translationId).toBe('hum-m1895')
+    expect(model?.chipLabel).toBeNull()
+  })
+
+  it('ignores a translation token while keeping it flagged', () => {
+    const model = buildReferenceRenderModel('Humility 2:2 nkjv', context)
+
+    expect(model?.translationId).toBe('hum-m1895')
+    expect(model?.invalidTokens).toEqual(['nkjv'])
+  })
+
+  it('renders as plain text once the module is uninstalled', () => {
+    uninstallHumilityBook()
+
+    expect(buildReferenceRenderModel('Humility 2:2', context)).toBeNull()
   })
 })
 
