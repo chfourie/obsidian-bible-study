@@ -15,10 +15,8 @@ import {
 } from './search-results'
 import type { SearchHit } from './search-scan'
 import {
-  hitsInScope,
+  hitsInTestament,
   scopeModuleIds,
-  searchBookChoices,
-  type SearchBookChoice,
   type SearchScope,
   type SearchScopeOptions,
   type SearchTranslation,
@@ -58,16 +56,14 @@ export type SearchScopeBookView = {
   selected: boolean
 }
 
-// The picker's state. Narrowed to one book, the testament filter and the Book
-// selection have nothing to say, and the picker greys them out.
+// The picker's state. With scripture left out the translation and the
+// testament filter have nothing to say, and the picker greys them out.
 export type SearchScopeView = {
   translations: SearchTranslation[]
   translationId: string | null
   testament: TestamentFilter
   books: SearchScopeBookView[]
-  bookChoices: SearchBookChoice[]
-  bookId: number | null
-  narrowedToBook: boolean
+  scripture: boolean
 }
 
 export type SearchPaneViewState = {
@@ -158,20 +154,11 @@ export class SearchPaneModel {
     this.#chooseScope({ ...this.deps.scope(), testament })
   }
 
-  // Narrowing to one book leaves the testament filter and the Book selection
-  // as they stand: they wait, inapplicable, until every book is searched
-  // again. A book that is not on offer leaves the scope alone.
-  chooseBook(bookId: number | null): void {
+  // Leaving scripture out leaves the translation and the testament filter as
+  // they stand: they wait, inapplicable, until scripture is searched again.
+  toggleScripture(): void {
     const scope = this.deps.scope()
-    if (bookId === null) {
-      this.#chooseScope({ ...scope, book: null })
-      return
-    }
-    const book = searchBookChoices(this.deps.scopeOptions()).find(
-      (choice) => choice.bookId === bookId,
-    )
-    if (book === undefined) return
-    this.#chooseScope({ ...scope, book })
+    this.#chooseScope({ ...scope, scripture: !scope.scripture })
   }
 
   toggleBook(moduleId: string): void {
@@ -227,7 +214,7 @@ export class SearchPaneModel {
     }
     // Atom ids sort into Canonical Grid order across modules on their own:
     // scripture holds books 1-66 and every Book sits above them.
-    const scoped = hitsInScope(hits, scope).sort(
+    const scoped = hitsInTestament(hits, scope.testament).sort(
       (a, b) => a.verseId - b.verseId,
     )
     this.#groups = groupHitsByBook(scoped)
@@ -293,9 +280,7 @@ export class SearchPaneModel {
       translations: this.deps.scopeOptions().translations,
       translationId: scope.translation?.id ?? null,
       testament: scope.testament,
-      bookChoices: searchBookChoices(this.deps.scopeOptions()),
-      bookId: scope.book?.bookId ?? null,
-      narrowedToBook: scope.book !== null,
+      scripture: scope.scripture,
       books: this.deps.scopeOptions().books.map((book) => ({
         ...book,
         selected: scope.books.some(
