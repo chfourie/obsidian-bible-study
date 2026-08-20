@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE — throwaway. Wayfinder ticket #54: what does the reader look like for a
+     prose book with no verse grid?
+     Three variants of the book reader, switchable via ?variant= (floating bottom bar, ←/→ keys):
+       A — Scripture parity: books slot into the existing reader shell unchanged
+           (tree nav gains a "Books" group, inline superscript paragraph numbers).
+       B — Book reading mode: named-section TOC sidebar, serif book typography,
+           paragraph numbers only on hover/selection.
+       C — Breadcrumb edition: no sidebar, section-name breadcrumb, classic
+           margin-gutter paragraph numbers always visible.
+     Shared across variants: toolbar (Options + edition pill), Study Panel showing
+     "paragraph details" for the selected atom, ●/◆ markers, copy-formatted-reference action.
+     Mock data: Humility (Andrew Murray, 1895), public domain — Preface + Chapter I from PG #57121.
+     Delete when the ticket resolves. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book Reader Prototype — Scripture Study</title>
+<style>
+  :root {
+    --bg: #1e1e1e; --bg2: #262626; --bg3: #2f2f2f; --border: #3a3a3a;
+    --text: #dcddde; --muted: #9a9a9a; --faint: #6e6e6e;
+    --accent: #a78bfa; --accent-dim: rgba(167,139,250,.14);
+    --highlight: rgba(167,139,250,.10);
+    --anno: #e0af68; --inter: #7aa2f7;
+    font-size: 16px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height: 100vh; overflow: hidden;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; }
+
+  #app { height: 100vh; display: flex; flex-direction: column; }
+
+  /* ---------- shared chrome ---------- */
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .opt-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px;
+    color: var(--muted); font-size: .82rem; background: var(--bg2); position: relative;
+  }
+  .opt-btn:hover { color: var(--text); }
+  .opt-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; min-width: 240px; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    display: none; text-align: left; cursor: default;
+  }
+  .opt-menu.open { display: block; }
+  .opt-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: .8rem; }
+  .opt-row .lbl { width: 92px; color: var(--faint); }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+  .seg button { padding: 2px 10px; font-size: .75rem; color: var(--muted); }
+  .seg button.on { background: var(--accent-dim); color: var(--accent); }
+  .opt-note { color: var(--faint); font-size: .7rem; font-style: italic; margin-top: 8px; }
+  .spacer { flex: 1; }
+  .pill {
+    border: 1px solid var(--accent); border-radius: 999px; padding: 2px 12px;
+    font-size: .78rem; background: var(--accent-dim); color: var(--accent);
+  }
+  .pill .ed { color: var(--faint); font-style: italic; margin-left: 4px; }
+
+  .main { flex: 1; display: flex; min-height: 0; }
+  .content { flex: 1; overflow-y: auto; min-width: 0; }
+  .inner { max-width: 44rem; margin: 0 auto; padding: 20px 28px 80px; }
+
+  .mark-anno { color: var(--anno); font-size: .68em; margin-left: 4px; vertical-align: super; }
+  .mark-inter { color: var(--inter); font-size: .68em; margin-left: 3px; vertical-align: super; }
+
+  .scripture-ref { color: var(--accent); cursor: pointer; text-decoration: none; border-bottom: 1px dotted rgba(167,139,250,.5); }
+  .scripture-ref:hover { background: var(--accent-dim); }
+  .note-link { color: var(--inter); cursor: pointer; border-bottom: 1px dotted rgba(122,162,247,.5); }
+
+  .para { cursor: pointer; border-radius: 4px; }
+  .para:hover { background: rgba(255,255,255,.04); }
+  .para.sel { background: rgba(167,139,250,.16); }
+
+  .foot-nav { display: flex; justify-content: space-between; margin-top: 28px; font-size: .85rem; }
+  .step { color: var(--muted); padding: 3px 10px; border-radius: 6px; }
+  .step:hover { background: rgba(255,255,255,.06); color: var(--text); }
+  .attribution { margin-top: 30px; color: var(--faint); font-size: .72rem; font-style: italic; }
+
+  /* ---------- variant A: scripture parity ---------- */
+  .tree {
+    width: 210px; flex-shrink: 0; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 8px 0 40px; font-size: .82rem;
+  }
+  .tree-group {
+    padding: 4px 12px; margin-top: 8px; color: var(--faint);
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .06em;
+  }
+  .tree-book { display: block; width: 100%; text-align: left; padding: 2px 12px; color: var(--muted); }
+  .tree-book:hover { color: var(--text); background: rgba(255,255,255,.05); }
+  .tree-book.on { color: var(--accent); }
+  .tree-chapters { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 12px 8px 20px; }
+  .tree-chip {
+    min-width: 30px; height: 26px; border-radius: 5px; background: var(--bg2);
+    color: var(--muted); font-size: .72rem; padding: 0 6px;
+  }
+  .tree-chip.on { background: var(--accent-dim); color: var(--accent); outline: 1px solid var(--accent); }
+
+  .a-title-row { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+  .a-title { font-size: 1.35rem; font-weight: 600; margin: 0; }
+  .a-sub { color: var(--muted); font-weight: 400; }
+  .chapter-step { width: 26px; height: 26px; border-radius: 5px; color: var(--muted); font-size: 1.15rem; line-height: 1; }
+  .chapter-step:hover { background: rgba(255,255,255,.06); color: var(--text); }
+  .a-epigraph { font-style: italic; color: var(--muted); margin: 0 0 18px; line-height: 1.7; }
+  .a-prose { line-height: 1.85; margin: 0 0 1em; }
+  .para-num { color: var(--accent); font-size: .72em; font-weight: 600; margin-right: 4px; vertical-align: super; }
+
+  /* ---------- variant B: book reading mode ---------- */
+  .toc {
+    width: 250px; flex-shrink: 0; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 14px 0 40px; font-size: .82rem;
+  }
+  .toc-title { padding: 0 16px 4px; font-size: .95rem; font-weight: 600; }
+  .toc-author { padding: 0 16px 12px; color: var(--faint); font-size: .74rem; font-style: italic; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .toc-item { display: flex; gap: 8px; width: 100%; text-align: left; padding: 4px 16px; color: var(--muted); border-left: 2px solid transparent; }
+  .toc-item:hover { color: var(--text); background: rgba(255,255,255,.05); }
+  .toc-item.on { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+  .toc-num { width: 2em; flex-shrink: 0; color: var(--faint); font-variant-numeric: tabular-nums; text-align: right; }
+  .toc-item.on .toc-num { color: var(--accent); }
+  .toc-sep { margin: 8px 16px; border-top: 1px solid var(--border); }
+
+  .b-inner { max-width: 40rem; margin: 0 auto; padding: 40px 32px 80px; font-family: Georgia, "Iowan Old Style", "Times New Roman", serif; }
+  .b-chap-num { text-align: center; color: var(--faint); font-size: .85rem; letter-spacing: .25em; margin: 0 0 6px; }
+  .b-chap-title { text-align: center; font-size: 1.5rem; font-weight: 400; margin: 0 0 26px; font-variant: small-caps; letter-spacing: .04em; }
+  .b-epigraph { max-width: 30rem; margin: 0 auto 34px; font-style: italic; color: var(--muted); text-align: center; line-height: 1.75; font-size: .95rem; }
+  .b-epigraph .src { display: block; margin-top: 8px; font-style: normal; font-size: .8rem; }
+  .b-para-wrap { position: relative; }
+  .b-prose { line-height: 1.9; margin: 0 0 1.1em; font-size: 1.02rem; text-align: justify; hyphens: auto; }
+  .b-gutter-num {
+    position: absolute; left: -2.6em; top: .25em; width: 2em; text-align: right;
+    color: var(--accent); font-size: .72rem; font-weight: 600;
+    font-family: -apple-system, sans-serif; opacity: 0; transition: opacity .12s;
+  }
+  .b-para-wrap:hover .b-gutter-num, .b-para-wrap.sel .b-gutter-num { opacity: 1; }
+  .b-para-wrap.sel .b-prose { background: rgba(167,139,250,.16); border-radius: 4px; }
+  .b-foot { font-family: -apple-system, sans-serif; }
+
+  /* ---------- variant C: breadcrumb edition ---------- */
+  .crumb {
+    display: flex; align-items: center; gap: 6px; padding: 6px 12px;
+    border-bottom: 1px solid var(--border); font-size: .85rem; flex-shrink: 0;
+  }
+  .crumb-book { color: var(--text); font-weight: 600; }
+  .crumb-sep { color: var(--faint); }
+  .crumb-select {
+    background: var(--bg2); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 8px; font: inherit; font-size: .82rem;
+  }
+  .c-inner { max-width: 46rem; margin: 0 auto; padding: 26px 32px 80px 64px; }
+  .c-heading { font-size: 1.25rem; font-weight: 600; margin: 0 0 4px; }
+  .c-heading .printed { color: var(--faint); font-weight: 400; margin-right: 8px; }
+  .c-epigraph { font-style: italic; color: var(--muted); margin: 14px 0 24px; padding-left: 14px; border-left: 2px solid var(--border); line-height: 1.7; }
+  .c-para-wrap { position: relative; }
+  .c-prose { line-height: 1.85; margin: 0 0 1em; }
+  .c-gutter-num {
+    position: absolute; left: -2.9em; top: .3em; width: 2.2em; text-align: right;
+    color: var(--faint); font-size: .72rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .c-para-wrap:hover .c-gutter-num { color: var(--accent); }
+  .c-para-wrap.sel .c-gutter-num { color: var(--accent); }
+  .c-para-wrap.sel .c-prose { background: rgba(167,139,250,.16); border-radius: 4px; }
+
+  /* ---------- study panel (shared) ---------- */
+  .study {
+    width: 320px; flex-shrink: 0; border-left: 1px solid var(--border);
+    overflow-y: auto; padding: 0 0 40px; font-size: .84rem; background: var(--bg2);
+  }
+  .study-head { padding: 12px 14px 8px; border-bottom: 1px solid var(--border); }
+  .study-loc { font-weight: 600; font-size: .92rem; }
+  .study-loc em { color: var(--text); }
+  .study-cite { color: var(--faint); font-size: .74rem; margin-top: 3px; }
+  .study-tabs { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--border); }
+  .study-tab { padding: 4px 10px; font-size: .76rem; color: var(--muted); border-radius: 6px 6px 0 0; }
+  .study-tab.on { background: var(--bg3); color: var(--accent); }
+  .study-body { padding: 12px 14px; }
+  .study-para { font-style: normal; line-height: 1.7; color: var(--text); background: var(--bg3); border-radius: 6px; padding: 10px 12px; font-size: .82rem; }
+  .study-para .pn { color: var(--accent); font-size: .7em; font-weight: 700; vertical-align: super; margin-right: 3px; }
+  .study-sec { margin-top: 16px; }
+  .study-sec-h { color: var(--faint); font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .study-action { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 6px 8px; border-radius: 6px; color: var(--muted); font-size: .8rem; }
+  .study-action:hover { background: rgba(255,255,255,.05); color: var(--text); }
+  .xref { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
+  .xref-note { color: var(--inter); font-size: .78rem; }
+  .xref-snip { color: var(--muted); font-size: .76rem; margin-top: 4px; line-height: 1.5; }
+  .study-empty-note { color: var(--faint); font-size: .74rem; font-style: italic; margin-top: 8px; line-height: 1.5; }
+
+  /* ---------- switcher ---------- */
+  .switcher {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 100;
+    display: flex; align-items: center; gap: 10px;
+    background: #0d0d0d; border: 1px solid #555; border-radius: 999px;
+    padding: 8px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size: .82rem;
+  }
+  .switcher b { color: #fff; }
+  .switcher .desc { color: #aaa; }
+  .sw-arrow { color: #ccc; font-size: 1rem; padding: 0 4px; }
+  .sw-arrow:hover { color: #fff; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ---------- mock data: Humility (Andrew Murray, 1895), PG #57121, PD ----------
+const BOOK = {
+  name: 'Humility', author: 'Andrew Murray', year: 1895,
+  fullTitle: 'Humility: The Beauty of Holiness', edition: 'HUM-M1895',
+  attribution: 'Humility: The Beauty of Holiness, Andrew Murray (Fleming H. Revell, 1895). Public domain.',
+};
+
+const SECTIONS = [
+  { num: 0,  printed: '',      name: 'Preface' },
+  { num: 1,  printed: 'I',     name: 'The Glory of the Creature' },
+  { num: 2,  printed: 'II',    name: 'The Secret of Redemption' },
+  { num: 3,  printed: 'III',   name: 'In the Life of Jesus' },
+  { num: 4,  printed: 'IV',    name: 'In the Teaching of Jesus' },
+  { num: 5,  printed: 'V',     name: 'In the Disciples of Jesus' },
+  { num: 6,  printed: 'VI',    name: 'In Daily Life' },
+  { num: 7,  printed: 'VII',   name: 'And Holiness' },
+  { num: 8,  printed: 'VIII',  name: 'And Sin' },
+  { num: 9,  printed: 'IX',    name: 'And Faith' },
+  { num: 10, printed: 'X',     name: 'And Death to Self' },
+  { num: 11, printed: 'XI',    name: 'And Happiness' },
+  { num: 12, printed: 'XII',   name: 'And Exaltation' },
+  { num: 13, printed: 'A',     name: 'Note A' },
+  { num: 14, printed: 'B',     name: 'Note B' },
+  { num: 15, printed: 'C',     name: 'Note C' },
+  { num: 16, printed: '',      name: 'A Prayer for Humility' },
+];
+
+// Chapter 1 content (full, hand-checked against PG #57121). refs render live.
+const CHAPTER = {
+  num: 1, printed: 'I', name: 'The Glory of the Creature',
+  epigraph: {
+    text: "'They shall cast their crowns before the throne, saying: Worthy art Thou, our Lord and our God, to receive the glory, and the honour and the power: for Thou didst create all things, and because of Thy will they were, and were created.'",
+    src: 'Rev. 4:11',
+  },
+  paras: [
+    { n: 1, text: `When God created the universe, it was with the one object of making the creature partaker of His perfection and blessedness, and so showing forth in it the glory of His love and wisdom and power. God wished to reveal Himself in and through created beings by communicating to them as much of His own goodness and glory as they were capable of receiving. But this communication was not a giving to the creature something which it could possess in itself, a certain life or goodness, of which it had the charge and disposal. By no means. But as God is the ever-living, ever-present, ever-acting One, who upholdeth all things by the word of His power, and in whom all things exist, the relation of the creature to God could only be one of unceasing, absolute, universal dependence. As truly as God by His power once created, so truly by that same power must God every moment maintain. The creature has not only to look back to the origin and first beginning of existence, and acknowledge that it there owes everything to God; its chief care, its highest virtue, its only happiness, now and through all eternity, is to present itself an empty vessel, in which God can dwell and manifest His power and goodness.` },
+    { n: 2, text: `The life God bestows is imparted not once for all, but each moment continuously, by the unceasing operation of His mighty power. Humility, the place of entire dependence on God, is, from the very nature of things, the first duty and the highest virtue of the creature, and the root of every virtue.` },
+    { n: 3, anno: 1, text: `And so pride, or the loss of this humility, is the root of every sin and evil. It was when the now fallen angels began to look upon themselves with self-complacency that they were led to disobedience, and were cast down from the light of heaven into outer darkness. Even so it was, when the serpent breathed the poison of his pride, the desire to be as God, into the hearts of our first parents, that they too fell from their high estate into all the wretchedness in which man is now sunk. In heaven and earth, pride, self-exaltation, is the gate and the birth, and the curse, of hell. |NOTE_A|` },
+    { n: 4, text: `Hence it follows that nothing can be our redemption, but the restoration of the lost humility, the original and only true relation of the creature to its God. And so Jesus came to bring humility back to earth, to make us partakers of it, and by it to save us. In heaven He humbled Himself to become man. The humility we see in Him possessed Him in heaven; it brought Him, He brought it, from there. Here on earth 'He humbled Himself, and became obedient unto death' |REF:Phil. 2:8|; His humility gave His death its value, and so became our redemption. And now the salvation He imparts is nothing less and nothing else than a communication of His own life and death, His own disposition and spirit, His own humility, as the ground and root of His relation to God and His redeeming work. Jesus Christ took the place and fulfilled the destiny of man, as a creature, by His life of perfect humility. His humility is our salvation. His salvation is our humility.` },
+    { n: 5, text: `And so the life of the saved ones, of the saints, must needs bear this stamp of deliverance from sin, and full restoration to their original state; their whole relation to God and man marked by an all-pervading humility. Without this there can be no true abiding in God's presence, or experience of His favour and the power of His Spirit; without this no abiding faith, or love or joy or strength. Humility is the only soil in which the graces root; the lack of humility is the sufficient explanation of every defect and failure. Humility is not so much a grace or virtue along with others; it is the root of all, because it alone takes the right attitude before God, and allows Him as God to do all.` },
+    { n: 6, inter: 2, text: `God has so constituted us as reasonable beings, that the truer the insight into the real nature or the absolute need of a command, the readier and fuller will be our obedience to it. The call to humility has been too little regarded in the Church because its true nature and importance has been too little apprehended. It is not a something which we bring to God, or He bestows; it is simply <em>the sense of entire nothingness, which comes when we see how truly God is all, and in which we make way for God to be all.</em> When the creature realises that this is the true nobility, and consents to be with his will, his mind, and his affections, the form, the vessel in which the life and glory of God are to work and manifest themselves, he sees that humility is simply acknowledging the truth of his position as creature, and yielding to God His place.` },
+    { n: 7, text: `In the life of earnest Christians, of those who pursue and profess holiness, humility ought to be the chief mark of their uprightness. It is often said that it is not so. May not one reason be that in the teaching and example of the Church, it has never had that place of supreme importance which belongs to it? And that this, again, is owing to the neglect of this truth, that strong as sin is as a motive to humility, there is one of still wider and mightier influence, that which makes the angels, that which made Jesus, that which makes the holiest of saints in heaven, so humble; that the first and chief mark of the relation of the creature, the secret of his blessedness, is the humility and nothingness which leaves God free to be all?` },
+    { n: 8, text: `I am sure there are many Christians who will confess that their experience has been very much like my own in this, that we had long known the Lord without realising that meekness and lowliness of heart are to be the distinguishing feature of the disciple as they were of the Master. And further, that this humility is not a thing that will come of itself, but that it must be made the object of special desire and prayer and faith and practice. As we study the word, we shall see what very distinct and oft-repeated instructions Jesus gave His disciples on this point, and how slow they were in understanding Him. Let us, at the very commencement of our meditations, admit that there is nothing so natural to man, nothing so insidious and hidden from our sight, nothing so difficult and dangerous, as pride. Let us feel that nothing but a very determined and persevering waiting on God and Christ will discover how lacking we are in the grace of humility, and how impotent to obtain what we seek. Let us study the character of Christ until our souls are filled with the love and admiration of His lowliness. And let us believe that, when we are broken down under a sense of our pride, and our impotence to cast it out, Jesus Christ Himself will come in to impart this grace too, as a part of His wondrous life within us.` },
+  ],
+};
+
+const SELECTED = 6; // paragraph selected by default → drives the Study Panel
+
+const VARIANTS = {
+  A: 'Scripture parity — existing shell, tree gains a Books group, inline superscript numbers',
+  B: 'Book reading mode — named-section TOC, serif typography, numbers on hover only',
+  C: 'Breadcrumb edition — no sidebar, section-name breadcrumb, always-on margin numbers',
+};
+const KEYS = Object.keys(VARIANTS);
+
+// ---------- helpers ----------
+const esc = s => s;
+const renderText = t => t
+  .replace(/\|NOTE_A\|/g, '<span class="note-link">(See Note A.)</span>')
+  .replace(/\|REF:([^|]+)\|/g, '(<span class="scripture-ref">$1</span>)');
+
+const markHtml = p =>
+  (p.anno ? `<span class="mark-anno" title="Annotation">●</span>` : '') +
+  (p.inter ? `<span class="mark-inter" title="${p.inter} intersecting notes">◆${p.inter}</span>` : '');
+
+const optionsMenu = variant => `
+  <span class="opt-btn" id="opt-btn" onclick="toggleMenu(event)">Aa Options ▾
+    <span class="opt-menu" id="opt-menu" onclick="event.stopPropagation()">
+      <div class="opt-row"><span class="lbl">Nav</span>
+        <span class="seg">
+          <button class="${variant !== 'C' ? 'on' : ''}">${variant === 'B' ? 'Contents' : 'Tree'}</button>
+          <button class="${variant === 'C' ? 'on' : ''}">Breadcrumb</button>
+        </span>
+      </div>
+      <div class="opt-row"><span class="lbl">Para numbers</span>
+        <span class="seg">
+          <button class="${variant === 'B' ? '' : 'on'}">On</button>
+          <button class="${variant === 'B' ? 'on' : ''}">Hover</button>
+        </span>
+      </div>
+      <div class="opt-row"><span class="lbl">Font size</span>
+        <span class="seg"><button>−</button><button>100%</button><button>+</button></span>
+      </div>
+      <div class="opt-note">Layout, Red letter &amp; Strong's don't apply to books — hidden, not disabled.</div>
+    </span>
+  </span>`;
+
+const toolbar = variant => `
+  <div class="toolbar">
+    ${optionsMenu(variant)}
+    <span class="spacer"></span>
+    <span class="pill" title="Single edition — no translation switching for books">${BOOK.name}<span class="ed">1895</span></span>
+  </div>`;
+
+const epigraphA = `
+  <p class="a-epigraph">${CHAPTER.epigraph.text} —<span class="scripture-ref">${CHAPTER.epigraph.src}</span></p>`;
+
+const studyPanel = () => {
+  const p = CHAPTER.paras.find(x => x.n === SELECTED);
+  return `
+  <div class="study">
+    <div class="study-head">
+      <div class="study-loc"><em>${BOOK.name}</em> ch. ${CHAPTER.num}, par. ${p.n}</div>
+      <div class="study-cite">${BOOK.author}, <i>${BOOK.fullTitle}</i> (${BOOK.year}), ch. ${CHAPTER.num} “${CHAPTER.name}”, par. ${p.n}</div>
+    </div>
+    <div class="study-tabs">
+      <button class="study-tab on">Passage</button>
+      <button class="study-tab">Cross-refs</button>
+      <button class="study-tab">Notes</button>
+    </div>
+    <div class="study-body">
+      <div class="study-para"><span class="pn">${p.n}</span>${renderText(p.text)}</div>
+      <div class="study-empty-note">One edition only — no Translations tab, no stacked versions, no Strong's. The passage tab shows the paragraph itself.</div>
+      <div class="study-sec">
+        <div class="study-sec-h">Actions</div>
+        <button class="study-action">⧉ Copy formatted reference — <code>{Humility 1:${p.n}}</code></button>
+        <button class="study-action">✎ Annotate this paragraph</button>
+        <button class="study-action">⌕ Find in vault notes</button>
+      </div>
+      <div class="study-sec">
+        <div class="study-sec-h">Intersecting notes (2)</div>
+        <div class="xref">
+          <div class="xref-note">◆ Sermon notes — self-emptying</div>
+          <div class="xref-snip">…Murray's line that humility is “the sense of entire nothingness” {Humility 1:6} pairs with {Php 2:5-8}…</div>
+        </div>
+        <div class="xref">
+          <div class="xref-note">◆ Study — God is all</div>
+          <div class="xref-snip">…compare {Humility 1:6} with {1Co 15:28} “that God may be all in all”…</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+};
+
+// ---------- variant A: scripture parity ----------
+function renderA() {
+  const treeChapters = SECTIONS.map(s =>
+    `<button class="tree-chip ${s.num === 1 ? 'on' : ''}" title="${s.name}">${s.num}</button>`).join('');
+  return `
+  ${toolbar('A')}
+  <div class="main">
+    <div class="tree">
+      <div class="tree-group">Old Testament</div>
+      <button class="tree-book">▸ Genesis</button>
+      <button class="tree-book">▸ Exodus</button>
+      <button class="tree-book" style="color:var(--faint)">… 37 more</button>
+      <div class="tree-group">New Testament</div>
+      <button class="tree-book">▸ Matthew</button>
+      <button class="tree-book" style="color:var(--faint)">… 25 more</button>
+      <button class="tree-book">▸ Revelation</button>
+      <div class="tree-group">Books</div>
+      <button class="tree-book on">▾ Humility</button>
+      <div class="tree-chapters">${treeChapters}</div>
+    </div>
+    <div class="content">
+      <div class="inner">
+        <div class="a-title-row">
+          <h1 class="a-title">Humility 1 <span class="a-sub">— The Glory of the Creature</span></h1>
+          <span><button class="chapter-step">‹</button><button class="chapter-step">›</button></span>
+        </div>
+        ${epigraphA}
+        ${CHAPTER.paras.map(p => `
+          <p class="a-prose para ${p.n === SELECTED ? 'sel' : ''}" onclick="void 0">
+            <span class="para-num">${p.n}</span>${renderText(p.text)}${markHtml(p)}
+          </p>`).join('')}
+        <div class="foot-nav"><button class="step">‹ Preface</button><button class="step">The Secret of Redemption ›</button></div>
+        <div class="attribution">${BOOK.attribution}</div>
+      </div>
+    </div>
+    ${studyPanel()}
+  </div>`;
+}
+
+// ---------- variant B: book reading mode ----------
+function renderB() {
+  const toc = SECTIONS.map(s => {
+    const sep = (s.num === 1 || s.num === 13) ? '<div class="toc-sep"></div>' : '';
+    return `${sep}<button class="toc-item ${s.num === 1 ? 'on' : ''}">
+      <span class="toc-num">${s.printed}</span><span>${s.name}</span>
+    </button>`;
+  }).join('');
+  return `
+  ${toolbar('B')}
+  <div class="main">
+    <div class="toc">
+      <div class="toc-title">${BOOK.fullTitle}</div>
+      <div class="toc-author">${BOOK.author}, ${BOOK.year}</div>
+      ${toc}
+    </div>
+    <div class="content">
+      <div class="b-inner">
+        <div class="b-chap-num">CHAPTER ${CHAPTER.printed}</div>
+        <h1 class="b-chap-title">${CHAPTER.name}</h1>
+        <div class="b-epigraph">${CHAPTER.epigraph.text}
+          <span class="src">—<span class="scripture-ref">${CHAPTER.epigraph.src}</span></span>
+        </div>
+        ${CHAPTER.paras.map(p => `
+          <div class="b-para-wrap para ${p.n === SELECTED ? 'sel' : ''}">
+            <span class="b-gutter-num">${p.n}</span>
+            <p class="b-prose">${renderText(p.text)}${markHtml(p)}</p>
+          </div>`).join('')}
+        <div class="foot-nav b-foot"><button class="step">‹ Preface</button><button class="step">II. The Secret of Redemption ›</button></div>
+        <div class="attribution" style="font-family:-apple-system,sans-serif">${BOOK.attribution}</div>
+      </div>
+    </div>
+    ${studyPanel()}
+  </div>`;
+}
+
+// ---------- variant C: breadcrumb edition ----------
+function renderC() {
+  const options = SECTIONS.map(s =>
+    `<option ${s.num === 1 ? 'selected' : ''}>${s.printed ? s.printed + '. ' : ''}${s.name}</option>`).join('');
+  return `
+  ${toolbar('C')}
+  <div class="crumb">
+    <span class="crumb-book">Humility</span>
+    <span class="crumb-sep">›</span>
+    <select class="crumb-select">${options}</select>
+    <span class="spacer"></span>
+    <button class="step">‹ Previous</button>
+    <button class="step">Next ›</button>
+  </div>
+  <div class="main">
+    <div class="content">
+      <div class="c-inner">
+        <h1 class="c-heading"><span class="printed">${CHAPTER.printed}.</span>${CHAPTER.name}</h1>
+        <div class="c-epigraph">${CHAPTER.epigraph.text} —<span class="scripture-ref">${CHAPTER.epigraph.src}</span></div>
+        ${CHAPTER.paras.map(p => `
+          <div class="c-para-wrap para ${p.n === SELECTED ? 'sel' : ''}">
+            <span class="c-gutter-num">${p.n}</span>
+            <p class="c-prose">${renderText(p.text)}${markHtml(p)}</p>
+          </div>`).join('')}
+        <div class="foot-nav"><button class="step">‹ Preface</button><button class="step">II. The Secret of Redemption ›</button></div>
+        <div class="attribution">${BOOK.attribution}</div>
+      </div>
+    </div>
+    ${studyPanel()}
+  </div>`;
+}
+
+// ---------- switcher & wiring ----------
+const RENDER = { A: renderA, B: renderB, C: renderC };
+
+function currentVariant() {
+  const v = new URLSearchParams(location.search).get('variant');
+  return KEYS.includes(v) ? v : 'A';
+}
+
+function setVariant(v) {
+  const url = new URL(location);
+  url.searchParams.set('variant', v);
+  history.replaceState(null, '', url);
+  draw();
+}
+
+function cycle(delta) {
+  const i = (KEYS.indexOf(currentVariant()) + delta + KEYS.length) % KEYS.length;
+  setVariant(KEYS[i]);
+}
+
+function toggleMenu(e) {
+  e.stopPropagation();
+  document.getElementById('opt-menu').classList.toggle('open');
+}
+document.addEventListener('click', () => {
+  const m = document.getElementById('opt-menu');
+  if (m) m.classList.remove('open');
+});
+
+function draw() {
+  const v = currentVariant();
+  document.getElementById('app').innerHTML = `
+    ${RENDER[v]()}
+    <div class="switcher">
+      <button class="sw-arrow" onclick="cycle(-1)">←</button>
+      <span><b>${v}</b> <span class="desc">— ${VARIANTS[v].split(' — ')[0]}</span></span>
+      <button class="sw-arrow" onclick="cycle(1)">→</button>
+    </div>`;
+}
+
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
+  if (e.key === 'ArrowLeft') cycle(-1);
+  if (e.key === 'ArrowRight') cycle(1);
+});
+
+draw();
+</script>
+</body>
+</html>
