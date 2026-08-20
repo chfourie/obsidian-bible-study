@@ -313,8 +313,11 @@ export class StudyPanelFeature extends PluginFeature {
   // switches to the Translations tab, the only place its entries render.
   #selected(kind: SelectionKind): void {
     if (this.settings.revealPanelOnSelection) void this.openPanel()
-    if (kind === 'word')
-      this.#models.forEach((model) => model.selectSubTab('translations'))
+    if (kind !== 'word') return
+    this.#models.forEach((model) => model.selectSubTab('translations'))
+    // The panel may not exist yet; its model reads the tab state on creation.
+    const state = this.#followedState()
+    if (state !== null) state.subTab = 'translations'
   }
 
   #followedState(): StudyTabState | null {

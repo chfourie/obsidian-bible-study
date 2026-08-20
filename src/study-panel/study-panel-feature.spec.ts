@@ -746,6 +746,21 @@ describe('StudyPanelFeature entry points', () => {
     expect(view.model.view.subTab).toBe('translations')
   })
 
+  it('opens on the translations tab when a word is tapped with the panel closed', async () => {
+    const { feature, commands, leaves, focusReader } = harness(
+      {},
+      { revealPanelOnSelection: false },
+    )
+    await feature.load()
+    const reader = focusReader()
+
+    reader.tapWord(makeVerseId(43, 15, 1))
+    commands[0].callback()
+    await flushAsync()
+
+    expect(panelView(leaves[0]).model.view.subTab).toBe('translations')
+  })
+
   it('keeps two tabs on the same note independent', async () => {
     const { feature, commands, leaves, focusNote, focusTab } = harness({
       'a.md': '{John 15:1}',
