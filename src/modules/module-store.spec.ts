@@ -157,6 +157,42 @@ describe('ModuleStore', () => {
     expect(await store.verseText('web', makeVerseId(43, 15, 4))).toBeNull()
   })
 
+  it('has no search index for a module that has never been indexed', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+
+    expect(await store.readSearchIndex('web')).toBeNull()
+  })
+
+  it('keeps a module’s search index beside its content', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+
+    await store.writeSearchIndex('web', '{"terms":[]}')
+
+    expect(await store.readSearchIndex('web')).toBe('{"terms":[]}')
+  })
+
+  it('drops the search index with the module it belongs to', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+    await store.writeSearchIndex('web', '{"terms":[]}')
+
+    await store.deleteModule('web')
+
+    expect(await store.readSearchIndex('web')).toBeNull()
+  })
+
+  it('drops the search index when the module is saved again', async () => {
+    const { store } = setup()
+    await store.saveModule(webModule())
+    await store.writeSearchIndex('web', '{"terms":[]}')
+
+    await store.saveModule(webModule())
+
+    expect(await store.readSearchIndex('web')).toBeNull()
+  })
+
   it('refuses module ids that are not a plain path segment', async () => {
     const { dataDir, store } = setup()
     const evil = webModule()

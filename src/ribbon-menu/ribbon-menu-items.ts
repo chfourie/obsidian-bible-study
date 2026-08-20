@@ -12,6 +12,7 @@ export type RibbonMenuActions = {
   // whichever reader has focus, so a second instance would have nothing of
   // its own to show — it takes no new-tab intent.
   openStudyPanel: () => void | Promise<void>
+  openSearch: () => void | Promise<void>
   installedBooks: () => Promise<RibbonMenuBook[]>
   openBook: (
     book: number,
@@ -47,6 +48,11 @@ export const buildRibbonMenuSections = async (
           title: 'Open study panel',
           icon: 'book-marked',
           onClick: () => void actions.openStudyPanel(),
+        },
+        {
+          title: 'Open search',
+          icon: 'search',
+          onClick: () => void actions.openSearch(),
         },
       ],
     },

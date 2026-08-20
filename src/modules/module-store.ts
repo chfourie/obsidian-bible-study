@@ -34,6 +34,11 @@ const bookPath = (moduleId: string, book: number): string =>
 const epigraphsPath = (moduleId: string): string =>
   `${moduleDir(moduleId)}/epigraphs.json`
 
+// Inside the module's own directory, so saving over the module or deleting it
+// takes its search index along with the content the index was built from.
+const searchIndexPath = (moduleId: string): string =>
+  `${moduleDir(moduleId)}/search-index.json`
+
 const concordancePath = (moduleId: string): string =>
   `${moduleDir(moduleId)}/concordance.json`
 
@@ -95,6 +100,14 @@ export class ModuleStore {
     const content = await this.dataDir.readTextFile(epigraphsPath(moduleId))
     if (content === null) return {}
     return parseOrNull<ModuleEpigraphs>(content) ?? {}
+  }
+
+  async readSearchIndex(moduleId: string): Promise<string | null> {
+    return this.dataDir.readTextFile(searchIndexPath(moduleId))
+  }
+
+  async writeSearchIndex(moduleId: string, content: string): Promise<void> {
+    await this.dataDir.writeTextFile(searchIndexPath(moduleId), content)
   }
 
   async verseText(moduleId: string, verseId: number): Promise<string | null> {

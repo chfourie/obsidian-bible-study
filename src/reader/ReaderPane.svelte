@@ -161,13 +161,17 @@
       }}
     >{segment.text}</span>{:else}{@render citedText(segment)}{/if}{/snippet}
 
+{#snippet matchedText(row: VerseRowView, segment: VerseSegment)}{#if segment.emphasized}<mark
+      class="scripture-study-match">{@render segmentText(row, segment)}</mark
+    >{:else}{@render segmentText(row, segment)}{/if}{/snippet}
+
 {#snippet verseText(row: VerseRowView)}
   {@const lineStructured = view.toggles.layout === 'verse-per-line' || row.poetry}
   {#each row.segments as segment, index (index)}
     {#if segment.lineBreakBefore && lineStructured}<br />{/if}
     {#if lineStructured && segment.lineStart && segment.indent !== undefined}<span
         class="scripture-study-indent-{segment.indent}"
-      >{@render segmentText(row, segment)}</span>{:else}{@render segmentText(row, segment)}{/if}
+      >{@render matchedText(row, segment)}</span>{:else}{@render matchedText(row, segment)}{/if}
   {/each}
   {#if row.annotations > 0}
     <span class="bsr-mark-anno" title={row.annotations > 1 ? `${row.annotations} annotations` : 'Annotation'}>●{row.annotations > 1 ? row.annotations : ''}</span>

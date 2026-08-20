@@ -12,6 +12,7 @@ import { ReaderFeature } from '../reader'
 import { StudyPanelFeature } from '../study-panel'
 import { RenderingFeature } from '../rendering'
 import { RibbonMenuFeature } from '../ribbon-menu'
+import { SearchFeature } from '../search'
 import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
@@ -119,6 +120,11 @@ export default class ScriptureStudyPlugin extends Plugin {
     index: this.vaultIndex.index,
     wordStudy: this.wordStudy,
   })
+  readonly search = new SearchFeature(
+    this,
+    this.modules.store,
+    this.settingsStore,
+  )
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(
     this,
@@ -130,6 +136,7 @@ export default class ScriptureStudyPlugin extends Plugin {
   readonly ribbonMenu = new RibbonMenuFeature(this, {
     openReader: (options) => this.reader.openReader(options),
     openStudyPanel: () => this.studyPanel.openPanel(),
+    openSearch: () => this.search.openPane(),
     installedBooks: () => this.reader.installedBooks(),
     openBook: (book, options) => this.reader.openBook(book, options),
   })
@@ -138,6 +145,8 @@ export default class ScriptureStudyPlugin extends Plugin {
     super(app, manifest)
     this.annotations.usePrefill(() => this.reader.prefillReference())
     this.studyPanel.useNavigator(this.reader)
+    this.search.useNavigator(this.reader)
+    this.modules.manager.useIndexer(this.search.indexModule)
     this.wordStudy.useNavigator(this.reader)
     this.studyPanel.useAnnotationPrompt((prefill) =>
       this.annotations.promptAnnotation(prefill),
@@ -147,6 +156,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.#features.addFeature(this.crossReferences)
     this.#features.addFeature(this.reader)
     this.#features.addFeature(this.studyPanel)
+    this.#features.addFeature(this.search)
     this.#features.addFeature(this.wordStudy)
     this.#features.addFeature(this.rendering)
     this.#features.addFeature(this.annotations)

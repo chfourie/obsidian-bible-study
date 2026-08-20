@@ -353,3 +353,89 @@ describe('ModuleManager update detection', () => {
     expect(await manager.modulesWithUpdates()).toEqual([])
   })
 })
+
+describe('ModuleManager search index', () => {
+  it('builds the module’s index when an install completes', async () => {
+    const { manager } = setup()
+    const indexed: string[] = []
+    manager.useIndexer(async (moduleId) => {
+      indexed.push(moduleId)
+    })
+
+    await manager.downloadModule('web')
+
+    expect(indexed).toEqual(['web'])
+  })
+
+  it('indexes a prebuilt Book against the content just saved', async () => {
+    const { store, manager } = setup()
+    const seen: (string | null)[] = []
+    manager.useIndexer(async (moduleId) => {
+      seen.push((await store.manifest(moduleId))?.sourceChecksum ?? null)
+    })
+
+    await manager.downloadModule('hum-m1895')
+
+    expect(seen).toEqual(['sha-hum-1'])
+  })
+
+  it('rebuilds the index on every re-download', async () => {
+    const { manager } = setup()
+    const indexed: string[] = []
+    manager.useIndexer(async (moduleId) => {
+      indexed.push(moduleId)
+    })
+
+    await manager.downloadModule('web')
+    await manager.downloadModule('web')
+
+    expect(indexed).toEqual(['web', 'web'])
+  })
+
+  it('installs the module even when its index build fails', async () => {
+    const { store, settingsStore, manager } = setup()
+    manager.useIndexer(async () => {
+      throw new Error('index build failed')
+    })
+
+    await expect(manager.downloadModule('web')).resolves.toBeDefined()
+
+    expect(await store.manifest('web')).not.toBeNull()
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'web',
+    ])
+  })
+
+  it('indexes nothing when the download never lands', async () => {
+    const { manager } = setup()
+    const indexed: string[] = []
+    manager.useIndexer(async (moduleId) => {
+      indexed.push(moduleId)
+    })
+
+    await expect(manager.downloadModule('nope')).rejects.toThrow()
+
+    expect(indexed).toEqual([])
+  })
+
+  it('leaves no index behind when the module is uninstalled', async () => {
+    const { store, manager } = setup()
+    await manager.downloadModule('web')
+    await store.writeSearchIndex('web', '{"terms":[],"verseIds":[]}')
+
+    await manager.deleteModule('web')
+
+    expect(await store.readSearchIndex('web')).toBeNull()
+  })
+
+  it('leaves no stale index behind when the module is downloaded over', async () => {
+    const { store, manager } = setup()
+    await manager.downloadModule('web')
+    await store.writeSearchIndex('web', '{"terms":[],"verseIds":[]}')
+    manager.useIndexer(async () => {})
+
+    await manager.downloadModule('web')
+
+    expect(await store.readSearchIndex('web')).toBeNull()
+  })
+})

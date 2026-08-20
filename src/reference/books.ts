@@ -160,6 +160,11 @@ export const deregisterBook = (bookId: number): void => {
 export const registeredBook = (bookId: number): RegisteredBook | null =>
   registeredById.get(bookId) ?? null
 
+// Every book installed right now, in book-number order — the order they were
+// assigned in, so a listing never depends on install order.
+export const registeredBooks = (): RegisteredBook[] =>
+  [...registeredById.values()].sort((a, b) => a.id - b.id)
+
 const asBook = (book: RegisteredBook, names: string[]): Book => ({
   id: book.id,
   name: names[0],

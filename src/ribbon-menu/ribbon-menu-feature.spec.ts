@@ -18,6 +18,7 @@ const harness = () => {
   const actions = {
     openReader: vi.fn(),
     openStudyPanel: vi.fn(),
+    openSearch: vi.fn(),
     installedBooks: vi.fn(async () => []),
     openBook: vi.fn(),
   }

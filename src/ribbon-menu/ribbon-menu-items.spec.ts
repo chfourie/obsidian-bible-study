@@ -4,6 +4,7 @@ import { buildRibbonMenuSections } from './ribbon-menu-items'
 const actions = (overrides = {}) => ({
   openReader: () => {},
   openStudyPanel: () => {},
+  openSearch: () => {},
   installedBooks: async () => [],
   openBook: () => {},
   ...overrides,
@@ -13,7 +14,7 @@ const click = (options: MouseEventInit = {}): MouseEvent =>
   new MouseEvent('click', options)
 
 describe('buildRibbonMenuSections', () => {
-  it('lists the reader and the study panel with their view icons', async () => {
+  it('lists the reader, the study panel and search with their view icons', async () => {
     const sections = await buildRibbonMenuSections(actions())
 
     expect(sections).toHaveLength(1)
@@ -21,16 +22,18 @@ describe('buildRibbonMenuSections', () => {
     expect(sections[0].items.map((item) => [item.title, item.icon])).toEqual([
       ['Open scripture reader', 'book-open-text'],
       ['Open study panel', 'book-marked'],
+      ['Open search', 'search'],
     ])
   })
 
   it('routes clicks to the injected actions', async () => {
     const openReader = vi.fn()
     const openStudyPanel = vi.fn()
+    const openSearch = vi.fn()
     const sections = await buildRibbonMenuSections(
-      actions({ openReader, openStudyPanel }),
+      actions({ openReader, openStudyPanel, openSearch }),
     )
-    const [reader, studyPanel] = sections[0].items
+    const [reader, studyPanel, search] = sections[0].items
 
     reader.onClick(click())
     expect(openReader).toHaveBeenCalledTimes(1)
@@ -38,6 +41,9 @@ describe('buildRibbonMenuSections', () => {
 
     studyPanel.onClick(click())
     expect(openStudyPanel).toHaveBeenCalledTimes(1)
+
+    search.onClick(click())
+    expect(openSearch).toHaveBeenCalledTimes(1)
   })
 
   // The gap the user hit: the reader entry carried no modifier intent at all,

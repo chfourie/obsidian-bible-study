@@ -410,3 +410,17 @@ body {
 .workspace-leaf-content[data-type='scripture-study-panel'] .view-content {
   overflow: hidden;
 }
+
+/* ---- Search match emphasis --------------------------------------------- */
+
+/* The words a search hit matched, shared by the reader and the search pane:
+   emphasis only, so it reads apart from a user Highlight's fill and from the
+   entry row's tint. */
+.scripture-study-match {
+  background-color: transparent;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}

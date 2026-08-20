@@ -34,6 +34,7 @@ import type {
   ChapterAnnotationView,
   ChapterMentionView,
   CollectionView,
+  EmphasisSpan,
   SelectionKind,
   StrongsEntryView,
   StudyMaterial,
@@ -48,7 +49,7 @@ import {
   FONT_SCALE_STEP,
   type AnnotationOrdering,
 } from '../data-access'
-import { isPoetryVerse, verseSegments } from '../rendering'
+import { isPoetryVerse, markSpanChannel, verseSegments } from '../rendering'
 import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
 import type { Epigraph } from '../modules'
 
@@ -288,6 +289,10 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #position: ReaderPosition = { book: 1, chapter: 1 }
   #translationId: string | null
   #entry: Reference | null = null
+  // The entry's emphasized words, kept beside the passage they were computed
+  // against so dismissing the banner can drop them without a reload.
+  #emphasis: readonly EmphasisSpan[] = []
+  #verses: PassageVerse[] = []
   #rows: VerseRowView[] = []
   #status: ReaderPaneView['status'] = 'loading'
   #available: ReaderTranslation[] = []
@@ -570,15 +575,19 @@ export class ReaderPaneModel implements StudyMaterialSource {
     return this.#loadToken > 0
   }
 
+  // The emphasis spans are the entry's own: whoever opened the reader knows
+  // which words matched, the reader only lays them over the passage.
   async openAt(
     reference: Reference,
     translationId: string | null,
+    emphasis: readonly EmphasisSpan[] = [],
   ): Promise<void> {
     const { book, chapter } = decodeVerseId(reference.ranges[0].startId)
     await this.#navigate({ book, chapter }, async () => {
       this.#moveTo({ book, chapter })
       if (translationId !== null) this.#translationId = translationId
       this.#entry = reference
+      this.#emphasis = emphasis
       this.#bannerDismissed = false
       this.#resetSelection()
       await this.#loadChapter()
@@ -606,6 +615,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   async openPosition(position: ReaderPosition): Promise<void> {
     this.#moveTo(position)
     this.#entry = null
+    this.#emphasis = []
     this.#resetSelection()
     await this.#loadChapter()
   }
@@ -650,8 +660,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
     await this.#loadChapter()
   }
 
+  // The emphasized words belong to the banner: dismissing it leaves the
+  // passage reading as it normally does.
   dismissBanner(): void {
     this.#bannerDismissed = true
+    this.#emphasis = []
+    this.#rows = this.#rowsOf(this.#verses)
     this.#notify()
   }
 
@@ -1131,6 +1145,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   async #loadChapter(): Promise<void> {
     const token = ++this.#loadToken
     this.#status = 'loading'
+    this.#verses = []
     this.#rows = []
     this.#notify()
     // Annotations and mentions hang off the vault index alone, so they load
@@ -1180,6 +1195,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       return
     }
     this.#attribution = passage.attribution
+    this.#verses = passage.verses
     this.#rows = this.#rowsOf(passage.verses)
     this.#status = 'ok'
     this.#notify()
@@ -1219,16 +1235,28 @@ export class ReaderPaneModel implements StudyMaterialSource {
     }
     this.#attribution = passage.attribution
     this.#epigraphs = epigraphs
+    this.#verses = passage.verses
     this.#rows = this.#rowsOf(passage.verses)
     this.#status = 'ok'
     this.#notify()
+  }
+
+  #emphasizedSegments(verse: PassageVerse): VerseSegment[] {
+    const spans = this.#emphasis.filter(
+      (span) => span.verseId === verse.verseId,
+    )
+    return spans.length === 0
+      ? verse.segments
+      : markSpanChannel(verse.segments, spans, (segment) => {
+          segment.emphasized = true
+        })
   }
 
   #rowsOf(verses: PassageVerse[]): VerseRowView[] {
     return verses.map((verse) => ({
       verseId: verse.verseId,
       label: `${decodeVerseId(verse.verseId).verse}`,
-      segments: verse.segments,
+      segments: this.#emphasizedSegments(verse),
       poetry: isPoetryVerse(verse.segments, this.#position.book),
       startsParagraph: verse.startsParagraph === true,
       highlighted:

@@ -8,6 +8,7 @@ import {
   isNonBiblicalBook,
   registerBook,
   registeredBook,
+  registeredBooks,
   type RegisteredBook,
 } from './books'
 
@@ -30,6 +31,7 @@ const humility = (
 
 afterEach(() => {
   deregisterBook(HUMILITY_BOOK)
+  deregisterBook(102)
   vi.restoreAllMocks()
 })
 
@@ -180,6 +182,19 @@ describe('registerBook', () => {
       HUMILITY_BOOK,
     )
     expect(bookName(HUMILITY_BOOK)).toBe('Jude')
+  })
+})
+
+describe('registeredBooks', () => {
+  it('lists the installed books in book-number order', () => {
+    registerBook({ ...humility(), id: 102, name: 'Confessions', abbrev: 'Conf' })
+    registerBook(humility())
+
+    expect(registeredBooks().map((book) => book.id)).toEqual([101, 102])
+  })
+
+  it('lists nothing while no book is installed', () => {
+    expect(registeredBooks()).toEqual([])
   })
 })
 

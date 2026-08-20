@@ -9,6 +9,11 @@ import type { ModuleStore } from './module-store'
 import type { PrebuiltModuleSource } from './prebuilt-module-source'
 import type { TranslationSource } from './translation-source'
 
+// Building the freshly saved module's search index, so the first search
+// against it answers straight away. Search owns the how; install only says
+// when.
+export type ModuleIndexer = (moduleId: string) => Promise<void>
+
 export class ChecksumMismatchError extends Error {
   constructor(translationId: string) {
     super(`downloaded ${translationId} does not match its published checksum`)
@@ -17,6 +22,8 @@ export class ChecksumMismatchError extends Error {
 }
 
 export class ModuleManager {
+  #indexModule: ModuleIndexer = async () => {}
+
   constructor(
     private readonly source: TranslationSource,
     private readonly store: ModuleStore,
@@ -24,6 +31,10 @@ export class ModuleManager {
     private readonly prebuiltSources: Record<string, PrebuiltModuleSource> = {},
     private readonly onModulesChanged: () => void = () => {},
   ) {}
+
+  useIndexer(indexer: ModuleIndexer): void {
+    this.#indexModule = indexer
+  }
 
   async downloadModule(translationId: string): Promise<ModuleManifest> {
     const prebuilt = this.prebuiltSources[translationId]
@@ -85,7 +96,18 @@ export class ModuleManager {
       withModuleInstalled(settings, moduleId),
     )
     registerManifestBook(manifest)
+    await this.#buildSearchIndex(moduleId)
     this.onModulesChanged()
+  }
+
+  // A module that cannot be indexed here is still installed and usable: the
+  // first search against it builds the index the slow way instead.
+  async #buildSearchIndex(moduleId: string): Promise<void> {
+    try {
+      await this.#indexModule(moduleId)
+    } catch (error) {
+      console.error(`failed to index ${moduleId} after install`, error)
+    }
   }
 
   async #recordDeleted(moduleId: string): Promise<void> {

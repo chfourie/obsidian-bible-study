@@ -30,6 +30,9 @@ export type VerseSegment = {
   indent?: number
   psalmHeading?: boolean
   highlightSlot?: number
+  // Set on the words an entry asked the reader to emphasize — a search hit's
+  // matched words, which live only as long as the entry banner does.
+  emphasized?: boolean
   // The passage this stretch of text cites, when it is a book's ref span
   // (spec-books §8) — the reader turns it into a link.
   refs?: VerseRange[]
