@@ -323,22 +323,48 @@ const renderAttribution = (host: HTMLElement, view: PassageView): void => {
   })
 }
 
+// A book block has no chip (spec ticket #79): the citation line is the sole
+// nav target, styled the same but wired with the chip's own click/keyboard
+// activation and new-pane modifier handling.
+const renderNavigableAttribution = (
+  host: HTMLElement,
+  view: PassageView,
+  model: ReferenceRenderModel,
+  deps: ReferenceRenderDeps,
+): void => {
+  if (view.attribution === null) return
+  const attribution = host.createDiv({
+    cls: 'scripture-study-attribution scripture-study-attribution-nav',
+    text: view.attribution,
+    attr: { role: 'button', tabindex: 0 },
+  })
+  activateAsButton(attribution, (event) =>
+    deps.openReference(model, { newPane: opensInNewPane(event) }),
+  )
+}
+
 // Scripture's `block` gives each verse its own line; a book atom is already a
 // paragraph, so the same stack reads as prose instead (spec-books §4).
-const renderStackedAtoms =
-  (cls: string) =>
+const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
+  renderFallbackNotice(host, view)
+  for (const block of view.verses) {
+    renderSegments(host.createDiv({ cls: 'scripture-study-verse-line' }), block)
+  }
+  renderAttribution(host, view)
+}
+
+const renderBookParagraphs =
+  (model: ReferenceRenderModel, deps: ReferenceRenderDeps) =>
   (host: HTMLElement, view: PassageView): void => {
     renderFallbackNotice(host, view)
     for (const block of view.verses) {
-      renderSegments(host.createDiv({ cls }), block)
+      renderSegments(
+        host.createDiv({ cls: 'scripture-study-book-paragraph' }),
+        block,
+      )
     }
-    renderAttribution(host, view)
+    renderNavigableAttribution(host, view, model, deps)
   }
-
-const renderVerseLines = renderStackedAtoms('scripture-study-verse-line')
-const renderBookParagraphs = renderStackedAtoms(
-  'scripture-study-book-paragraph',
-)
 
 const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
@@ -359,15 +385,20 @@ const renderBlock = (
   sourcePath: string | null,
 ): Promise<void> => {
   const inline = model.display === 'inline'
+  // A book block's citation line is the nav target in place of the chip
+  // (ticket #79); scripture blocks and inline atoms keep the chip.
+  const isBookBlock = !inline && model.book !== null
   const block = parent.createDiv({
     cls: inline
       ? 'scripture-study-block scripture-study-inline-block'
       : 'scripture-study-block',
   })
-  const chipHolder = inline
-    ? block
-    : block.createDiv({ cls: 'scripture-study-block-ref' })
-  renderChip(chipHolder, model, deps)
+  if (!isBookBlock) {
+    const chipHolder = inline
+      ? block
+      : block.createDiv({ cls: 'scripture-study-block-ref' })
+    renderChip(chipHolder, model, deps)
+  }
   const host = inline
     ? block.createSpan({ cls: 'scripture-study-passage' })
     : block.createDiv({ cls: 'scripture-study-passage' })
@@ -375,7 +406,7 @@ const renderBlock = (
     ? renderVerseRun
     : model.book === null
       ? renderVerseLines
-      : renderBookParagraphs
+      : renderBookParagraphs(model, deps)
   const mounted = mountPassage(host, model, deps, renderPassage)
   if (deps.intersections) {
     renderIntersections(block, model, deps.intersections, sourcePath)

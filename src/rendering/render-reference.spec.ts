@@ -1046,6 +1046,64 @@ describe('renderReference book references', () => {
     ).toBe('Andrew Murray, Humility (1895), ch. 2, pars. 2-3')
   })
 
+  it('hides the chip on a book block, leaving the citation as the only nav target', async () => {
+    const { parent, deps } = setup(paragraphs('One.', 'Two.'))
+
+    await renderReference(parent, model('Humility 2:2-3 block'), deps)
+
+    const block = parent.querySelector('.scripture-study-block')
+    expect(block?.querySelector('.scripture-study-chip')).toBeNull()
+    const attribution = block?.querySelector('.scripture-study-attribution')
+    expect(attribution).not.toBeNull()
+    expect(attribution?.getAttribute('role')).toBe('button')
+    expect(attribution?.getAttribute('tabindex')).toBe('0')
+  })
+
+  it('opens the reader from clicking the book citation line', async () => {
+    const { parent, deps, openReference } = setup(paragraphs('One.'))
+
+    await renderReference(parent, model('Humility 2:2 block'), deps)
+
+    parent
+      .querySelector('.scripture-study-attribution')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(openReference).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceText: 'Humility ch. 2, par. 2' }),
+      { newPane: false },
+    )
+  })
+
+  it('asks for a new pane when the book citation line is Cmd/Ctrl-clicked', async () => {
+    const { parent, deps, openReference } = setup(paragraphs('One.'))
+
+    await renderReference(parent, model('Humility 2:2 block'), deps)
+
+    parent
+      .querySelector('.scripture-study-attribution')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }))
+
+    expect(openReference).toHaveBeenCalledWith(expect.anything(), {
+      newPane: true,
+    })
+  })
+
+  it('leaves the scripture block citation line inert, without the book nav affordance', async () => {
+    const attributed: Passage = {
+      ...passageOf('Remain.'),
+      attribution: 'Copyright © 1982, Thomas Nelson',
+    } as Passage
+    const { parent, deps, openReference } = setup(attributed)
+
+    await renderReference(parent, model('John 15:4 block'), deps)
+
+    const attribution = parent.querySelector('.scripture-study-attribution')
+    expect(attribution?.getAttribute('role')).toBeNull()
+    attribution?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(openReference).not.toHaveBeenCalled()
+    expect(parent.querySelector('.scripture-study-chip')).not.toBeNull()
+  })
+
   // Cues bind under the edition code filling the translation slot, so they
   // paint the book's own text (spec-books §3).
   it('paints a highlight cue over the book text', async () => {
