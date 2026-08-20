@@ -26,6 +26,7 @@ import {
   type ReaderBook,
   type ReaderBookSection,
   type ReaderBookSource,
+  type ReaderNavTarget,
   type ReaderPaneDeps,
   type ReaderPosition,
   type ReaderToggles,
@@ -280,14 +281,14 @@ describe('opening without an entry reference', () => {
 })
 
 describe('entry banner dismissal', () => {
-  it('hides the banner but keeps the highlight', async () => {
+  it('hides the banner and clears the highlight', async () => {
     const model = modelWith()
     await model.openAt(ref('John 15:4-5'), 'web')
 
     model.dismissBanner()
 
     expect(model.view.banner).toBe(null)
-    expect(model.view.rows[3].highlighted).toBe(true)
+    expect(model.view.rows.every((row) => !row.highlighted)).toBe(true)
   })
 })
 
@@ -333,13 +334,15 @@ describe('entry emphasis spans', () => {
     expect(emphasized(model)).toEqual([])
   })
 
+  // Dismissing the banner drops the whole entry marking: the word emphasis
+  // and the verse highlight the banner announced.
   it('clears the emphasis when the entry banner is dismissed', async () => {
     const model = await openEmphasized()
 
     model.dismissBanner()
 
     expect(emphasized(model)).toEqual([])
-    expect(model.view.rows[3].highlighted).toBe(true)
+    expect(model.view.rows[3].highlighted).toBe(false)
   })
 
   it('clears the emphasis once the user navigates away', async () => {
@@ -633,6 +636,7 @@ describe('verse details', () => {
       ],
       strongs: [],
       strongsAttribution: null,
+      strongsTranslationId: null,
     })
   })
 
@@ -1424,12 +1428,14 @@ describe('opening the reader at a reference', () => {
 
 
 
-const strongsEntry = (strongs: string) => ({
-  strongs,
-  lemma: `lemma-${strongs}`,
-  transliteration: `translit-${strongs}`,
-  gloss: `gloss-${strongs}`,
-  definition: `definition of ${strongs}`,
+const strongsEntry = (family: string) => ({
+  family,
+  extendedNumber: family,
+  lemma: `lemma-${family}`,
+  transliteration: `translit-${family}`,
+  morphology: `morph-${family}`,
+  gloss: `gloss-${family}`,
+  definition: `definition of ${family}`,
 })
 
 const strongsDeps = (
@@ -1537,7 +1543,7 @@ describe("Strong's word lookup", () => {
     await model.selectWord(verseId, ['G3306', 'G1722'])
 
     const details = detailsOf(model)
-    expect(details.strongs.map((entry) => entry.strongs)).toEqual([
+    expect(details.strongs.map((entry) => entry.family)).toEqual([
       'G3306',
       'G1722',
     ])
@@ -1553,8 +1559,25 @@ describe("Strong's word lookup", () => {
     await model.selectWord(verseId, ['G2222'])
 
     expect(
-      detailsOf(model).strongs.map((entry) => entry.strongs),
+      detailsOf(model).strongs.map((entry) => entry.family),
     ).toEqual(['G2222'])
+  })
+
+  it('names the translation the tapped word was tagged in', async () => {
+    const model = await openedModel()
+
+    await model.selectWord(makeVerseId(43, 15, 4), ['G3306'])
+
+    expect(detailsOf(model).strongsTranslationId).toBe('bsb')
+  })
+
+  it('names no translation for a plain verse selection', async () => {
+    const model = await openedModel()
+    await model.selectWord(makeVerseId(43, 15, 4), ['G3306'])
+
+    await model.selectVerse(makeVerseId(43, 15, 5))
+
+    expect(detailsOf(model).strongsTranslationId).toBeNull()
   })
 
   it('keeps a plain verse selection free of dictionary entries', async () => {
@@ -3141,6 +3164,16 @@ describe('ReaderPaneModel book mode', () => {
     expect(model.view.banner).toBe('Opened at Humility ch. 1, par. 2')
   })
 
+  it('hides the banner and clears the paragraph highlight on dismissal', async () => {
+    const model = bookModelWith()
+    await model.openAt(bookRef(1, 2, 3), null)
+
+    model.dismissBanner()
+
+    expect(model.view.banner).toBe(null)
+    expect(model.view.rows.every((row) => !row.highlighted)).toBe(true)
+  })
+
   it('names an unnamed section by its display name in the banner', async () => {
     const model = bookModelWith()
 
@@ -3216,7 +3249,7 @@ describe('ReaderPaneModel book mode', () => {
     ])
   })
 
-  it("shows the selected paragraph's citation and text instead of translations", async () => {
+  it("shows the selected paragraph's citation instead of translations", async () => {
     const model = bookModelWith()
     model.setDetailsWanted(true)
     await model.openPosition({ book: HUMILITY, chapter: 1 })
@@ -3226,13 +3259,11 @@ describe('ReaderPaneModel book mode', () => {
     expect(detailsOf(model)).toEqual({
       verseId: makeVerseId(HUMILITY, 1, 2),
       title: 'Humility ch. 1, par. 2',
-      book: {
-        citation: 'Andrew Murray, Humility (1895), ch. 1, par. 2',
-        text: 'And so pride is the root.',
-      },
+      book: { citation: 'Andrew Murray, Humility (1895), ch. 1, par. 2' },
       translations: [],
       strongs: [],
       strongsAttribution: null,
+      strongsTranslationId: null,
     })
   })
 
@@ -3247,8 +3278,8 @@ describe('ReaderPaneModel book mode', () => {
 
     const details = detailsOf(model)
     expect(details.title).toBe('Humility ch. 1, pars. 2-3')
-    expect(details.book?.text).toBe(
-      'And so pride is the root. Humility is the only soil.',
+    expect(details.book?.citation).toBe(
+      'Andrew Murray, Humility (1895), ch. 1, pars. 2-3',
     )
   })
 
@@ -3402,7 +3433,9 @@ describe('ref spans', () => {
 
   // Every section of the book reads the same, so a Note pointer's target
   // renders as readily as the paragraph that points at it.
-  const citingBookModel = (): ReaderPaneModel =>
+  const citingBookModel = (
+    overrides: Partial<ReaderPaneDeps> = {},
+  ): ReaderPaneModel =>
     bookModelWith({
       passages: {
         passage: async (reference, translationId) => {
@@ -3431,6 +3464,7 @@ describe('ref spans', () => {
           { ...CROWNS, refs: [{ start: 0, end: 11, ranges: [JOHN_5_30] }] },
         ],
       },
+      ...overrides,
     })
 
   it('surfaces a paragraph ref span as a segment property', async () => {
@@ -3492,6 +3526,42 @@ describe('ref spans', () => {
     expect(visited).toEqual([{ book: 43, chapter: 5 }])
   })
 
+  // A mod-clicked citation travels the same new-tab seam every other nav
+  // target does, so the book pane keeps its place (tickets #78/#75 follow-up).
+  // It carries its entry reference along, so the spawned tab lands exactly
+  // where a plain click would — highlighted and bannered.
+  it('spawns a tab at a mod-clicked citation and leaves the book pane put', async () => {
+    const opened: ReaderNavTarget[] = []
+    const model = citingBookModel({ newTab: (target) => opened.push(target) })
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    await model.openRefSpan([JOHN_5_30], { newTab: true })
+
+    expect(opened).toEqual([
+      {
+        position: { book: 43, chapter: 5 },
+        entry: { book: 43, ranges: [JOHN_5_30] },
+      },
+    ])
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
+  })
+
+  it('spawns a tab at a mod-clicked Note pointer', async () => {
+    const opened: ReaderNavTarget[] = []
+    const model = citingBookModel({ newTab: (target) => opened.push(target) })
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    await model.openRefSpan([NOTE_A], { newTab: true })
+
+    expect(opened).toEqual([
+      {
+        position: { book: HUMILITY, chapter: 13 },
+        entry: { book: HUMILITY, ranges: [NOTE_A] },
+      },
+    ])
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
+  })
+
   it('ignores a span with no ranges', async () => {
     const model = citingBookModel()
     await model.openPosition({ book: HUMILITY, chapter: 1 })
@@ -3499,5 +3569,75 @@ describe('ref spans', () => {
     await model.openRefSpan([])
 
     expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
+  })
+})
+
+describe('opening a nav target in a new tab', () => {
+  beforeEach(() => {
+    registerBookVersification({
+      book: HUMILITY,
+      sections: HUMILITY_SECTIONS.map(({ chapter }) => ({
+        chapter,
+        paragraphs: 20,
+      })),
+    })
+    registerBook(HUMILITY_REGISTRATION)
+  })
+
+  afterEach(() => {
+    deregisterBookVersification(HUMILITY)
+    deregisterBook(HUMILITY)
+  })
+
+  const modelSpawning = (opened: ReaderNavTarget[]): ReaderPaneModel =>
+    bookModelWith({ newTab: (target) => opened.push(target) })
+
+  // Tree and chapter nav carry no entry of their own, so their tabs open
+  // plain — exactly as the same move does in place.
+  it('spawns a tab at the target and leaves this pane where it stands', async () => {
+    const opened: ReaderNavTarget[] = []
+    const model = modelSpawning(opened)
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.goTo(HUMILITY, 0, { newTab: true })
+
+    expect(opened).toEqual([{ position: { book: HUMILITY, chapter: 0 } }])
+    expect(model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(model.view.book).toBeNull()
+  })
+
+  it('keeps a new-tab target out of this pane history', async () => {
+    const opened: ReaderNavTarget[] = []
+    const visited: ReaderPosition[] = []
+    const model = modelSpawning(opened)
+    await model.openAt(ref('John 15:1'), 'web')
+    model.useNavigation(async (position, open) => {
+      visited.push(position)
+      await open()
+    })
+
+    await model.goTo(1, 1, { newTab: true })
+
+    expect(visited).toEqual([])
+  })
+
+  it('spawns a tab at a tree book node instead of expanding it', async () => {
+    const opened: ReaderNavTarget[] = []
+    const model = modelSpawning(opened)
+    await model.openAt(ref('John 15:1'), 'web')
+
+    model.browseBook(10, { newTab: true })
+
+    expect(opened).toEqual([{ position: { book: 10, chapter: 1 } }])
+    expect(model.view.treeBook).toBe(43)
+  })
+
+  it('navigates in place when the shell offers no new tab', async () => {
+    const model = bookModelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.goTo(1, 1, { newTab: true })
+
+    expect(model.view.position).toEqual({ book: 1, chapter: 1 })
   })
 })

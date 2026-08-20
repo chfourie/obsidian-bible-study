@@ -6,11 +6,18 @@ import type {
 } from '../cross-references'
 import type { Reference } from '../reference'
 import type { VerseSegment } from '../rendering'
+import type { NavigationOptions } from './reference-navigator'
 
 export type StrongsEntryView = {
-  strongs: string
+  // The Strong's Family the entry answers for — the number a tagged
+  // translation carries.
+  family: string
+  // The extended number the entry actually is, which for a disambiguated
+  // family differs from the number asked for ('H0001' → 'H0001G').
+  extendedNumber: string
   lemma: string
   transliteration: string
+  morphology: string
   gloss: string
   definition: string
 }
@@ -39,11 +46,11 @@ export type ChapterMentionView = {
   labels: string[]
 }
 
-// A selected span of book paragraphs: the full citation and the prose itself
-// stand where a scripture selection stacks its translations (spec-books §5).
+// A selected span of book paragraphs: the paragraphs themselves are already
+// on screen in the reader, so only their full citation stands where a
+// scripture selection stacks its translations (spec-books §5).
 export type BookDetailsView = {
   citation: string
-  text: string
 }
 
 // The selected span's details: each translation carries the text of the whole
@@ -56,6 +63,9 @@ export type VerseDetailsView = {
   translations: TranslationRowView[]
   strongs: StrongsEntryView[]
   strongsAttribution: string | null
+  // The translation the tapped word was tagged in, non-null exactly while
+  // there are entries — the concordance a word study opened here reads.
+  strongsTranslationId: string | null
 }
 
 // The strip that builds a cross-reference: members, description and the
@@ -83,7 +93,7 @@ export type StudyMaterial = {
   // Names the tab this material comes from — the reader's book and chapter.
   title: string
   // True while the tab reads a non-biblical book. A book has exactly one
-  // layer, so its paragraph details take the place of the Translations tab
+  // layer, so its paragraph details take the place of the Selection tab
   // rather than living under one (spec-books §5).
   bookMode: boolean
   selectedVerseId: number | null
@@ -144,6 +154,29 @@ export interface StudyMaterialSource {
   confirmDeleteCrossReference(): void
   cancelDeleteCrossReference(): void
   deleteCrossReference(): Promise<void>
+}
+
+// Opens the Word Study Panel on an extended Strong's number, so a surface
+// showing a Strong's entry card never touches a workspace leaf itself. A plain
+// activation retargets the most-recently-focused panel; a Cmd/Ctrl-activation
+// asks for a new one.
+export interface WordStudyOpener {
+  openWordStudy(
+    strongsNumber: string,
+    options?: WordStudyOptions,
+  ): Promise<void>
+}
+
+// Opening a word study carries the translation the tapped word came from: the
+// concordance is per-translation, and this is the one the reader was in.
+export type WordStudyOptions = NavigationOptions & {
+  translationId?: string | null
+}
+
+// Stands in until the word study feature is wired up: entry cards still render,
+// but lead nowhere.
+export const NO_WORD_STUDY: WordStudyOpener = {
+  openWordStudy: async () => {},
 }
 
 // Resolves a focused tab to its study material, so a surface holding workspace

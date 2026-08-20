@@ -105,6 +105,20 @@ export type ReaderStrongsDeps = {
 
 export type ReaderPosition = { book: number; chapter: number }
 
+// What a nav face asks for beyond the target itself. Views translate the
+// platform modifier into this intent, so the model never sees an event.
+export type ReaderNavIntent = { newTab?: boolean }
+
+// Where a mod-clicked nav target lands: the shell opens a fresh reader leaf
+// there and leaves this pane untouched. A model without a shell has no leaf
+// to spawn, so its targets simply open in place. A target that entered from a
+// reference — a citation — carries it along, so the spawned tab arrives as the
+// same click would in place: passage highlighted, entry banner. Targets
+// without one (tree and chapter nav) open plain, as they do in place.
+export type ReaderNavTarget = { position: ReaderPosition; entry?: Reference }
+
+export type ReaderNewTab = (target: ReaderNavTarget) => void
+
 // How a chapter move reaches the screen. The pane's shell routes user
 // navigation through Obsidian's per-pane history and calls `open` back when
 // the new position arrives; a model without a shell opens straight away.
@@ -135,6 +149,7 @@ export type ReaderPaneDeps = {
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
   strongs: ReaderStrongsDeps
   books?: ReaderBookSource
+  newTab?: ReaderNewTab
   firstRun?: ReaderFirstRunDeps
   clipboard?: ReaderClipboard
 }
@@ -310,7 +325,13 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #strongsAvailable = false
   #installingSuggested = false
   #installError: string | null = null
-  #wordStrongs: { verseId: number; numbers: string[] } | null = null
+  // A tapped word remembers the translation it was tagged in: the word study
+  // it opens reads that translation's concordance.
+  #wordStrongs: {
+    verseId: number
+    numbers: string[]
+    translationId: string | null
+  } | null = null
   // The collection basket is pane-scoped and in-memory: a closed pane
   // releases its model and the half-built cross-reference with it.
   #collection: {
@@ -449,7 +470,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       book: book === null ? null : this.#bookView(book),
       title: this.#title(),
       position: this.#position,
-      rows: this.#rows,
+      rows: this.#viewRows(),
       translations:
         book !== null
           ? []
@@ -480,6 +501,15 @@ export class ReaderPaneModel implements StudyMaterialSource {
           ? null
           : `Opened at ${referenceLabel(this.#entry)}`,
     }
+  }
+
+  // The entry highlight rides along with its banner: dismissing the banner
+  // dismisses the highlight too, in both scripture and book mode.
+  #viewRows(): VerseRowView[] {
+    if (!this.#bannerDismissed) return this.#rows
+    return this.#rows.map((row) =>
+      row.highlighted ? { ...row, highlighted: false } : row,
+    )
   }
 
   #bookHere(): ReaderBook | null {
@@ -567,16 +597,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // A citation tapped in book prose. Scripture targets land in the reader as
   // any other entry does — current translation, passage highlighted, entry
   // banner — and a Note pointer's own-book target arrives the same way, so
-  // the reader simply stays in the book (spec-books §8).
-  async openRefSpan(ranges: readonly VerseRange[]): Promise<void> {
+  // the reader simply stays in the book (spec-books §8). A mod-clicked
+  // citation spawns its own tab instead, like every other nav target.
+  async openRefSpan(
+    ranges: readonly VerseRange[],
+    intent: ReaderNavIntent = {},
+  ): Promise<void> {
     if (ranges.length === 0) return
-    await this.openAt(
-      {
-        book: decodeVerseId(ranges[0].startId).book,
-        ranges: ranges.map((range) => ({ ...range })),
-      },
-      null,
-    )
+    const { book, chapter } = decodeVerseId(ranges[0].startId)
+    const entry = { book, ranges: ranges.map((range) => ({ ...range })) }
+    if (this.#spawnedTab({ position: { book, chapter }, entry }, intent)) return
+    await this.openAt(entry, null)
   }
 
   // Opens without touching the pane's history — the shell applies restored
@@ -596,9 +627,18 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#position = { ...position }
   }
 
-  browseBook(book: number): void {
+  browseBook(book: number, intent: ReaderNavIntent = {}): void {
+    if (this.#spawnedTab({ position: { book, chapter: 1 } }, intent)) return
     this.#browsedBook = this.#browsedBook === book ? null : book
     this.#notify()
+  }
+
+  // Whether the target went to a tab of its own. A pane with no shell to
+  // spawn one falls through to navigating in place.
+  #spawnedTab(target: ReaderNavTarget, intent: ReaderNavIntent): boolean {
+    if (intent.newTab !== true || this.deps.newTab === undefined) return false
+    this.deps.newTab(target)
+    return true
   }
 
   async installSuggestedTranslation(): Promise<void> {
@@ -631,7 +671,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   // The user's own chapter move: unlike openPosition it walks the pane's
   // navigation history.
-  async goTo(book: number, chapter: number): Promise<void> {
+  async goTo(
+    book: number,
+    chapter: number,
+    intent: ReaderNavIntent = {},
+  ): Promise<void> {
+    if (this.#spawnedTab({ position: { book, chapter } }, intent)) return
     await this.#navigate({ book, chapter }, () =>
       this.openPosition({ book, chapter }),
     )
@@ -685,7 +730,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async selectWord(verseId: number, strongsNumbers: string[]): Promise<void> {
-    this.#wordStrongs = { verseId, numbers: strongsNumbers }
+    this.#wordStrongs = {
+      verseId,
+      numbers: strongsNumbers,
+      translationId: this.#translationId,
+    }
     this.#select(verseId, 'word')
     await this.#refreshDetails()
   }
@@ -970,20 +1019,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
     await this.#loadDetails(key)
   }
 
-  // The selected paragraphs are already on screen, so a book's details read
-  // the rows in hand rather than fetching the passage a second time.
+  // The selected paragraphs are already on screen, so a book's details carry
+  // their citation alone rather than repeating the prose beside it.
   #bookDetails(reference: Reference): BookDetailsView | null {
     const citation = bookCitation(reference)
     if (citation === null) return null
-    const selected = this.#rows.filter((row) =>
-      reference.ranges.some((range) => rangeContains(range, row.verseId)),
-    )
-    return {
-      citation: citation.attribution,
-      text: joinedSegments(selected)
-        .map((segment) => segment.text)
-        .join(''),
-    }
+    return { citation: citation.attribution }
   }
 
   async #loadDetails(key: string): Promise<void> {
@@ -993,7 +1034,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#loadingDetailsKey = key
     try {
       // A book has exactly one layer, so its details carry the paragraph's
-      // own citation and prose instead of translation rows (spec-books §5).
+      // own citation instead of translation rows (spec-books §5).
       const layers = this.#bookHere() === null ? this.#available : []
       const book = this.#bookDetails(reference)
       const translations = await Promise.all(
@@ -1030,6 +1071,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
         strongs,
         strongsAttribution:
           strongs.length > 0 ? this.deps.strongs.attribution : null,
+        strongsTranslationId:
+          strongs.length > 0 ? (this.#wordStrongs?.translationId ?? null) : null,
       }
       this.#loadedDetailsKey = key
       this.#notify()

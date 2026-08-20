@@ -1,3 +1,4 @@
+import type { ConcordanceIndex } from './concordance-index'
 import type { ModuleManifest } from './module-manifest'
 import type { RefSpan, VerseContent } from './verse-content'
 
@@ -19,6 +20,9 @@ export type NormalizedModule = {
   manifest: ModuleManifest
   books: Map<number, BookContent>
   epigraphs?: ModuleEpigraphs
+  // Tagged Translations only, and derivable from the books beside it — a
+  // module that arrives without one is indexed on the way into storage.
+  concordance?: ConcordanceIndex
 }
 
 export type SourceInfo = {

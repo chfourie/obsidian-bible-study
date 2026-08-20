@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
 import { BollsClient } from './bolls-client'
 import { BOLLS_CATALOG_SNAPSHOT } from './bolls-catalog-snapshot'
+import { MODULE_FORMAT_VERSION } from './module-manifest'
 
 const LANGUAGES_URL = 'https://bolls.life/static/bolls/app/views/languages.json'
 
@@ -171,7 +172,7 @@ describe('BollsClient as module source', () => {
       // Independently computed: echo -n '<dump>' | shasum -a 256
       sourceChecksum:
         '3e2ba7aeb0e9b8f771ffaf11d89748871d4e8fe60cdc9837c84975926b77e058',
-      formatVersion: 2,
+      formatVersion: MODULE_FORMAT_VERSION,
       capabilities: { strongsTagged: true },
     })
     expect(module.books.get(43)).toEqual({

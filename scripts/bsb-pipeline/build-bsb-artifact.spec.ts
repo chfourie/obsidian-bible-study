@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
 import { makeVerseId } from '../../src/reference/verse-id'
 import { buildBsbArtifact, sha256Hex } from './build-bsb-artifact'
 
@@ -14,7 +15,7 @@ describe('buildBsbArtifact', () => {
       name: 'Berean Standard Bible',
       language: 'English',
       license: 'Public Domain',
-      formatVersion: 2,
+      formatVersion: MODULE_FORMAT_VERSION,
       capabilities: {
         strongsTagged: true,
         redLetter: true,

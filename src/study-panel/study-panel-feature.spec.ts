@@ -5,6 +5,7 @@ import type {
   StudyMaterial,
   StudyMaterialProvider,
   StudyMaterialSource,
+  WordStudyOpener,
 } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
@@ -116,6 +117,7 @@ const fakeStudyMaterial = () => {
 const harness = (
   notes: Record<string, string> = {},
   settings: Partial<ScriptureStudySettings> = {},
+  options: { wordStudy?: WordStudyOpener } = {},
 ) => {
   const readGates: Record<string, Promise<void>> = {}
   const leaves: FakeLeaf[] = []
@@ -187,6 +189,7 @@ const harness = (
   const feature = new StudyPanelFeature(plugin, fakeStore(), {
     studyMaterial,
     index,
+    wordStudy: options.wordStudy,
   })
   feature.useSettings({
     ...DEFAULT_SETTINGS,
@@ -510,6 +513,30 @@ describe('StudyPanelFeature entry points', () => {
     ])
   })
 
+  it('sends a Strong\'s entry card to the Word Study Panel through the contract', async () => {
+    const opened: [string, boolean | undefined][] = []
+    const { feature } = harness({}, {}, {
+      wordStudy: {
+        openWordStudy: async (strongsNumber, options) => {
+          opened.push([strongsNumber, options?.newPane])
+        },
+      },
+    })
+
+    await feature.openWordStudy('G0026')
+    await feature.openWordStudy('G0026', { newPane: true })
+
+    expect(opened).toEqual([
+      ['G0026', undefined],
+      ['G0026', true],
+    ])
+  })
+
+  it('leads nowhere while no word study is wired up', async () => {
+    const { feature } = harness()
+    await expect(feature.openWordStudy('G0026')).resolves.toBeUndefined()
+  })
+
   it('recognizes well-known translation tokens when extracting', async () => {
     const { feature, commands, leaves, openFile } = harness({
       'a.md': '{John 15:1 kjv}',
@@ -718,17 +745,17 @@ describe('StudyPanelFeature entry points', () => {
     await flushAsync()
     const first = focusReader()
     const view = panelView(leaves[0])
-    view.model.selectSubTab('translations')
+    view.model.selectSubTab('selection')
     const second = focusReader()
 
-    expect(view.model.view.subTab).toBe('study')
+    expect(view.model.view.subTab).toBe('chapter')
 
     focusTab(first.leaf)
-    expect(view.model.view.subTab).toBe('translations')
+    expect(view.model.view.subTab).toBe('selection')
     expect(first.detailsWanted()).toBe(true)
 
     focusTab(second.leaf)
-    expect(view.model.view.subTab).toBe('study')
+    expect(view.model.view.subTab).toBe('chapter')
     expect(first.detailsWanted()).toBe(false)
   })
 
@@ -741,10 +768,10 @@ describe('StudyPanelFeature entry points', () => {
     const view = panelView(leaves[0])
 
     reader.select(makeVerseId(43, 15, 1))
-    expect(view.model.view.subTab).toBe('study')
+    expect(view.model.view.subTab).toBe('chapter')
 
     reader.tapWord(makeVerseId(43, 15, 1))
-    expect(view.model.view.subTab).toBe('translations')
+    expect(view.model.view.subTab).toBe('selection')
   })
 
   it('opens on the translations tab when a word is tapped with the panel closed', async () => {
@@ -759,7 +786,7 @@ describe('StudyPanelFeature entry points', () => {
     commands[0].callback()
     await flushAsync()
 
-    expect(panelView(leaves[0]).model.view.subTab).toBe('translations')
+    expect(panelView(leaves[0]).model.view.subTab).toBe('selection')
   })
 
   it('keeps two tabs on the same note independent', async () => {

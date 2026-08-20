@@ -10,6 +10,7 @@ import {
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
 import { READER_VIEW_TYPE, ReaderFeature } from './reader-feature'
+import type { ReaderPaneModel } from './reader-pane-model'
 import { ReaderView } from './reader-view'
 
 const manifest = (id: string): ModuleManifest => ({
@@ -55,7 +56,7 @@ const harness = (
   const leaves: FakeLeaf[] = []
   let factory: ((leaf: WorkspaceLeaf) => unknown) | null = null
   const revealLeaf = vi.fn(async () => {})
-  const commands: { id: string; callback: () => void }[] = []
+  const commands: { id: string; name: string; callback: () => void }[] = []
   const ribbons: { icon: string; title: string; callback: () => void }[] = []
   const workspace = {
     getLeavesOfType: (type: string) =>
@@ -82,7 +83,11 @@ const harness = (
     registerView: (_type: string, viewFactory: (leaf: WorkspaceLeaf) => unknown) => {
       factory = viewFactory
     },
-    addCommand: (command: { id: string; callback: () => void }) => {
+    addCommand: (command: {
+      id: string
+      name: string
+      callback: () => void
+    }) => {
       commands.push(command)
       return command
     },
@@ -108,6 +113,9 @@ const ref = (text: string): Reference => {
   return parsed.reference
 }
 
+const highlightedLabels = (model: ReaderPaneModel): string[] =>
+  model.view.rows.filter((row) => row.highlighted).map((row) => row.label)
+
 const flushAsync = async (): Promise<void> => {
   await new Promise((resolve) => window.setTimeout(resolve, 0))
 }
@@ -120,6 +128,34 @@ describe('ReaderFeature entry points', () => {
 
     expect(commands.map((command) => command.id)).toEqual(['open-reader'])
     expect(ribbons).toHaveLength(0)
+  })
+
+  it('names the reader entry point for the scripture side it always opens', async () => {
+    const { feature, commands } = harness()
+
+    await feature.load()
+
+    expect(commands[0].name).toBe('Open scripture reader')
+  })
+
+  it('opens the reader in a tab of its own when the modifier asks', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('Genesis 1:1'), 'web')
+    await flushAsync()
+
+    await feature.openReader({ newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: 1,
+      chapter: 1,
+    })
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 1,
+      chapter: 1,
+    })
   })
 
   it('opens a reader leaf at the navigated reference', async () => {
@@ -289,6 +325,59 @@ describe('ReaderFeature entry points', () => {
       book: 43,
       chapter: 15,
     })
+  })
+
+  // A mod-clicked nav target: the pane asks its shell for a tab of its own
+  // and stays where it stands (ticket #78).
+  it('opens a nav target in a reader tab of its own', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const first = leaves[0].view as ReaderView
+
+    await first.model.goTo(1, 1, { newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: 1,
+      chapter: 1,
+    })
+    expect(first.model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(leaves[0].canGoBack).toBe(false)
+  })
+
+  // A mod-clicked citation must land in its new tab exactly as a plain click
+  // lands in place: the cited passage highlighted under its entry banner.
+  it('opens a mod-clicked citation in a tab of its own, highlighted and bannered', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const first = leaves[0].view as ReaderView
+
+    await first.model.openRefSpan(ref('John 15:1').ranges, { newTab: true })
+    await flushAsync()
+
+    const spawned = (leaves[1].view as ReaderView).model
+    expect(spawned.view.banner).toBe('Opened at John 15:1')
+    expect(highlightedLabels(spawned)).toEqual(['1'])
+    expect(first.model.view.position).toEqual({ book: 43, chapter: 15 })
+  })
+
+  it('highlights and banners a reference opened in a pane of its own', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    feature.openReference(ref('John 15:1'), 'web', { newPane: true })
+    await flushAsync()
+
+    const spawned = (leaves[1].view as ReaderView).model
+    expect(spawned.view.banner).toBe('Opened at John 15:1')
+    expect(highlightedLabels(spawned)).toEqual(['1'])
   })
 
   it('restores a saved chapter without recording it in the pane history', async () => {
@@ -966,7 +1055,70 @@ describe('ReaderFeature book mode', () => {
     expect(view.banner).toBe('Opened at Humility ch. 1, par. 2')
   })
 
-  it('reopens the command entry point at the last book position', async () => {
+  // What the ribbon panel's Books section renders and activates (ticket #78).
+  it('lists the installed books for the ribbon menu', async () => {
+    const { feature } = harness({}, { store: bookStore() })
+    await feature.load()
+
+    expect((await feature.installedBooks()).map((book) => book.title)).toEqual([
+      'Humility',
+    ])
+  })
+
+  it('opens a book at its first section in the reader already open', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    expect(leaves).toHaveLength(1)
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 0,
+    })
+  })
+
+  it('opens a book at the last position the reader held inside it', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(bookReference(1, 1), null)
+    await flushAsync()
+
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 1,
+    })
+  })
+
+  it('opens a book in a reader tab of its own when asked', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    await feature.openBook(HUMILITY, { newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 0,
+    })
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+  })
+
+  // The reader entry point names the scripture side and always lands there,
+  // however deep in a book the reader was left (tickets #78/#75 follow-up).
+  it('reopens the command entry point on the scripture side, not the book', async () => {
     const { feature, leaves, commands } = harness({}, { store: bookStore() })
     await feature.load()
     feature.openReference(bookReference(1, 1), null)
@@ -977,10 +1129,61 @@ describe('ReaderFeature book mode', () => {
     await flushAsync()
 
     const reopened = leaves[1].view as ReaderView
-    expect(reopened.model.view.position).toEqual({
-      book: HUMILITY,
-      chapter: 1,
-    })
+    expect(reopened.model.view.position).toEqual({ book: 43, chapter: 1 })
     expect(reopened.model.view.banner).toBe(null)
+  })
+
+  it('moves a reader left inside a book back to the last scripture position', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    await feature.openReader()
+    await flushAsync()
+
+    expect(leaves).toHaveLength(1)
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+  })
+
+  it('leaves a reader already on the scripture side where it stands', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+
+    await feature.openReader()
+    await flushAsync()
+
+    expect(view.model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(view.model.view.banner).toBe('Opened at John 15:1')
+  })
+
+  it('opens the scripture side in its own tab while the book pane stays put', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    await feature.openReader({ newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 0,
+    })
   })
 })

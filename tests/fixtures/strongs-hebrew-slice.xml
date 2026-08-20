@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lexicon xmlns="http://openscriptures.github.com/morphhb/namespace">
+<entry id="H1">
+<w pos="n-m" pron="awb" xlit="ʼâb" xml:lang="heb">אָב</w>
+<source>a primitive word;</source>
+<meaning><def>father</def></meaning>
+<usage>chief, (fore-) father(-less).</usage>
+</entry>
+<entry id="H2">
+<w pos="n-m" pron="ab" xlit="ʼab" xml:lang="arc">אַב</w>
+<source>(Aramaic) corresponding to <w src="H1">1</w></source>
+<usage>father.</usage>
+</entry>
+<entry id="H3">
+<w pos="n-m" pron="abe" xlit="ʼêb" xml:lang="heb">אֵב</w>
+<source>from the same as <w src="H24">24</w>;</source>
+<meaning>a <def>green plant</def></meaning>
+<usage>greenness, fruit.</usage>
+</entry>
+<entry id="H6">
+<w pos="v" pron="aw-bad'" xlit="ʼâbad" xml:lang="heb">אָבַד</w>
+<source>a primitive root;</source>
+<usage>break, destroy.</usage>
+</entry>
+<entry id="H10">
+<w pos="n-f" pron="ab-ee-yaw'" xlit="ʼĂbîyâh" xml:lang="heb">אֲבִיָּה</w>
+<source>from <w src="H1">1</w> and <w src="H3050">3050</w>;</source>
+<usage>Abiah, Abijah.</usage>
+</entry>
+</lexicon>

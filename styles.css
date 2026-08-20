@@ -303,6 +303,17 @@ body {
   font-size: var(--font-smallest);
 }
 
+/* A book block hides its chip; the citation line is the nav target instead
+   (spec-books §4, ticket #79). Styling stays identical, plus the pointer
+   affordance. */
+.scripture-study-attribution-nav {
+  cursor: pointer;
+}
+
+.scripture-study-attribution-nav:hover {
+  text-decoration: underline;
+}
+
 /* ---- In-note intersection surface (spec §5) ---------------------------- */
 
 .scripture-study-intersections {

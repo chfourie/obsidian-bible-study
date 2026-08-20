@@ -17,13 +17,14 @@ import {
   isTranslationManifest,
   type ModuleStore,
 } from '../modules'
-import type { Reference } from '../reference'
+import { isNonBiblicalBook, type Reference } from '../reference'
 import { ModulePassageSource, PassageRepository } from '../rendering'
 import type { VaultReferenceIndex } from '../vault-index'
 import {
   ReaderPaneModel,
   type ReaderBook,
   type ReaderFirstRunDeps,
+  type ReaderNavTarget,
   type ReaderPosition,
   type ReaderStrongsDeps,
   type ReaderTranslation,
@@ -62,6 +63,10 @@ export class ReaderFeature
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeCrossReferences: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
+  // Books and scripture share one reader but not one entry point: the reader
+  // entry always lands on the scripture side, so where scripture was left
+  // outlives however far into a book the reader has since wandered.
+  #lastScripturePosition: ReaderPosition = DEFAULT_POSITION
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
   readonly #crossReferences: CrossReferenceCatalog
@@ -104,7 +109,7 @@ export class ReaderFeature
     )
     this.plugin.addCommand({
       id: 'open-reader',
-      name: 'Open reader',
+      name: 'Open scripture reader',
       callback: () => void this.openReader(),
     })
   }
@@ -134,7 +139,7 @@ export class ReaderFeature
   // A book's manifest carries its own contents table, so the reader learns
   // which books exist the same way everything else does — from what is
   // installed (ADR 0002).
-  async #installedBooks(): Promise<ReaderBook[]> {
+  async installedBooks(): Promise<ReaderBook[]> {
     return (await this.store.installedManifests())
       .filter(isBookManifest)
       .map((manifest) => ({
@@ -198,10 +203,11 @@ export class ReaderFeature
           readAnnotationDetails(this.plugin.app.vault, file),
         strongs: this.#strongs,
         books: {
-          installed: () => this.#installedBooks(),
+          installed: () => this.installedBooks(),
           epigraphs: async (editionId, chapter) =>
             (await this.store.epigraphs(editionId))[chapter] ?? [],
         },
+        newTab: (target) => void this.#openInNewTab(target),
         firstRun: this.#firstRun,
       },
       {
@@ -219,6 +225,8 @@ export class ReaderFeature
     )
     model.subscribe(() => {
       this.#lastPosition = model.view.position
+      if (!isNonBiblicalBook(model.view.position.book))
+        this.#lastScripturePosition = model.view.position
     })
     this.#models.add(model)
     return model
@@ -266,15 +274,60 @@ export class ReaderFeature
     }, options)
   }
 
-  async openReader(): Promise<void> {
-    const workspace = this.plugin.app.workspace
-    const existing = workspace.getLeavesOfType(READER_VIEW_TYPE)[0]
-    if (existing) {
-      await workspace.revealLeaf(existing)
+  // The seam a mod-clicked nav target travels: a fresh leaf opened straight
+  // at the target, so it starts its own history there and the pane that asked
+  // keeps both its position and its history. A target carrying an entry
+  // reference opens through it, landing the new tab where the same click
+  // lands in place — passage highlighted, entry banner.
+  async #openInNewTab(target: ReaderNavTarget): Promise<void> {
+    await this.#withReaderView(
+      (view) =>
+        target.entry === undefined
+          ? view.model.openPosition(target.position)
+          : view.model.openAt(target.entry, null),
+      { newPane: true },
+    )
+  }
+
+  // The ribbon panel's Books entry point: a book the reader has already been
+  // inside reopens where it was left, any other opens at its first section —
+  // front matter wherever the work has any.
+  async openBook(
+    book: number,
+    options: { newTab?: boolean } = {},
+  ): Promise<void> {
+    const position = await this.#bookPosition(book)
+    if (position === null) return
+    if (options.newTab === true) {
+      await this.#openInNewTab({ position })
       return
     }
-    const lastPosition = this.#lastPosition
-    await this.#withReaderView((view) => view.model.openPosition(lastPosition))
+    await this.#withReaderView((view) => view.model.openPosition(position))
+  }
+
+  async #bookPosition(book: number): Promise<ReaderPosition | null> {
+    if (this.#lastPosition.book === book) return this.#lastPosition
+    const installed = (await this.installedBooks()).find(
+      (candidate) => candidate.number === book,
+    )
+    if (installed === undefined) return null
+    return { book, chapter: installed.sections[0]?.chapter ?? 1 }
+  }
+
+  // The reader entry point, wherever it is triggered from: always the
+  // scripture side, at the position scripture was last left. A reader already
+  // showing scripture keeps its place; one left inside a book comes back out.
+  async openReader(options: { newTab?: boolean } = {}): Promise<void> {
+    const position = this.#lastScripturePosition
+    if (options.newTab === true) {
+      await this.#openInNewTab({ position })
+      return
+    }
+    await this.#withReaderView(async (view) => {
+      if (view.model.opened && !isNonBiblicalBook(view.model.view.position.book))
+        return
+      await view.model.openPosition(position)
+    })
   }
 
   async #withReaderView(

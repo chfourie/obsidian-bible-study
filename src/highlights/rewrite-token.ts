@@ -1,6 +1,7 @@
 import {
   formatHighlightCue,
   isHighlightCueToken,
+  isNonBiblicalBook,
   matchBook,
   parseReference,
   type HighlightCue,
@@ -72,9 +73,14 @@ export const rewriteHighlightToken = (
   const tokens = tokensOf(tokenText)
   const body = withoutCueTokens(tokenText, tokens)
   // A cue's offsets index one translation's text, so the first cue pins the
-  // translation the reader was looking at.
+  // translation the reader was looking at. A book has exactly one layer, so
+  // there is nothing to pin.
   const pin =
-    cues.length > 0 && parsed.translation === null ? options.translation : null
+    cues.length > 0 &&
+    parsed.translation === null &&
+    !isNonBiblicalBook(parsed.reference.book)
+      ? options.translation
+      : null
   const pinned = pin ? withTranslationAfterSpec(body, tokens, pin) : body
   const tail = cueTail(cues, parsed.reference)
   // Everything outside the cue tail is the user's text, trailing spaces and all.

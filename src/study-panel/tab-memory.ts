@@ -2,7 +2,7 @@ import type { StudySubTab } from '../study-material'
 
 // What the Study Panel remembers about one tab it follows: the sub-tab it
 // last showed, the passage entries unfolded under it, and the translation
-// blocks collapsed on the Translations tab. Entries start folded and
+// blocks collapsed on the Selection tab. Entries start folded and
 // translations start open, so each set holds the departures worth
 // remembering.
 export type StudyTabState = {
@@ -12,7 +12,7 @@ export type StudyTabState = {
 }
 
 export const freshTabState = (): StudyTabState => ({
-  subTab: 'study',
+  subTab: 'chapter',
   expanded: new Set(),
   collapsedTranslations: new Set(),
 })

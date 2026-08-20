@@ -3,6 +3,7 @@ import {
   deregisterManifestBook,
   registerManifestBook,
 } from './book-registration'
+import { withModuleInstalled, withModuleRemoved } from './module-installation'
 import type { ModuleManifest } from './module-manifest'
 import type { ModuleStore } from './module-store'
 import type { PrebuiltModuleSource } from './prebuilt-module-source'
@@ -92,12 +93,7 @@ export class ModuleManager {
     manifest: ModuleManifest,
   ): Promise<void> {
     await this.settingsStore.updateSettings((settings) =>
-      settings.installedModuleIds.includes(moduleId)
-        ? settings
-        : {
-            ...settings,
-            installedModuleIds: [...settings.installedModuleIds, moduleId],
-          },
+      withModuleInstalled(settings, moduleId),
     )
     registerManifestBook(manifest)
     await this.#buildSearchIndex(moduleId)
@@ -115,11 +111,8 @@ export class ModuleManager {
   }
 
   async #recordDeleted(moduleId: string): Promise<void> {
-    await this.settingsStore.updateSettings((settings) => ({
-      ...settings,
-      installedModuleIds: settings.installedModuleIds.filter(
-        (id) => id !== moduleId,
-      ),
-    }))
+    await this.settingsStore.updateSettings((settings) =>
+      withModuleRemoved(settings, moduleId),
+    )
   }
 }

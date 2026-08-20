@@ -1,4 +1,11 @@
 import { decodeVerseId } from '../reference'
+import {
+  CONCORDANCE_INDEX_VERSION,
+  buildConcordanceIndex,
+  occurrencesOf,
+  type ConcordanceIndex,
+  type VerseOccurrences,
+} from './concordance-index'
 import type { ModuleDataDir } from './module-data-dir'
 import type { ModuleManifest } from './module-manifest'
 import type {
@@ -32,6 +39,9 @@ const epigraphsPath = (moduleId: string): string =>
 const searchIndexPath = (moduleId: string): string =>
   `${moduleDir(moduleId)}/search-index.json`
 
+const concordancePath = (moduleId: string): string =>
+  `${moduleDir(moduleId)}/concordance.json`
+
 const parseOrNull = <T>(content: string): T | null => {
   try {
     return JSON.parse(content) as T
@@ -40,11 +50,32 @@ const parseOrNull = <T>(content: string): T | null => {
   }
 }
 
+// The index as it sits on disk, stamped with the derivation that built it so a
+// plugin that counts differently can rebuild it in place.
+type StoredConcordance = { version: number; index: ConcordanceIndex }
+
+// An index written before the stamp existed: readable as it stands — its bare
+// verse ids are one occurrence each — but due a rebuild.
+const asStored = (parsed: unknown): StoredConcordance =>
+  parsed !== null && typeof parsed === 'object' && 'index' in parsed
+    ? (parsed as StoredConcordance)
+    : { version: 0, index: (parsed ?? {}) as ConcordanceIndex }
+
 export class ModuleStore {
+  // The last concordance read, held whole: a word study asks for one family
+  // after another out of the same translation.
+  #concordance: { moduleId: string; index: ConcordanceIndex } | null = null
+
   constructor(private readonly dataDir: ModuleDataDir) {}
 
   async saveModule(module: NormalizedModule): Promise<void> {
     await this.dataDir.removeDir(moduleDir(module.manifest.id))
+    if (module.manifest.capabilities.strongsTagged) {
+      await this.saveConcordance(
+        module.manifest.id,
+        module.concordance ?? buildConcordanceIndex(module.books),
+      )
+    }
     for (const [book, content] of module.books) {
       await this.dataDir.writeTextFile(
         bookPath(module.manifest.id, book),
@@ -93,6 +124,56 @@ export class ModuleStore {
     return content === null ? null : parseOrNull<BookContent>(content)
   }
 
+  // Every verse of one Tagged Translation where a Strong's Family is tagged,
+  // in canon order, each with the occurrences that verse holds. Extended
+  // numbers answer under their family on both sides: the tagging's and the
+  // caller's.
+  async occurrences(
+    moduleId: string,
+    strongsNumber: string,
+  ): Promise<VerseOccurrences[]> {
+    return occurrencesOf(await this.#concordanceIndex(moduleId), strongsNumber)
+  }
+
+  // Which derivation built the stored index, 0 where none is stored at all.
+  async concordanceVersion(moduleId: string): Promise<number> {
+    const content = await this.dataDir.readTextFile(concordancePath(moduleId))
+    if (content === null) return 0
+    return asStored(parseOrNull<unknown>(content)).version
+  }
+
+  async saveConcordance(
+    moduleId: string,
+    index: ConcordanceIndex,
+  ): Promise<void> {
+    const stored: StoredConcordance = {
+      version: CONCORDANCE_INDEX_VERSION,
+      index,
+    }
+    await this.dataDir.writeTextFile(
+      concordancePath(moduleId),
+      JSON.stringify(stored),
+    )
+    if (this.#concordance?.moduleId === moduleId) this.#concordance = null
+  }
+
+  async saveManifest(manifest: ModuleManifest): Promise<void> {
+    await this.dataDir.writeTextFile(
+      manifestPath(manifest.id),
+      JSON.stringify(manifest, null, 2),
+    )
+  }
+
+  async #concordanceIndex(moduleId: string): Promise<ConcordanceIndex> {
+    const held = this.#concordance
+    if (held !== null && held.moduleId === moduleId) return held.index
+    const content = await this.dataDir.readTextFile(concordancePath(moduleId))
+    const index =
+      content === null ? {} : asStored(parseOrNull<unknown>(content)).index
+    this.#concordance = { moduleId, index }
+    return index
+  }
+
   async manifest(moduleId: string): Promise<ModuleManifest | null> {
     const content = await this.dataDir.readTextFile(manifestPath(moduleId))
     return content === null ? null : parseOrNull<ModuleManifest>(content)
@@ -100,6 +181,7 @@ export class ModuleStore {
 
   async deleteModule(moduleId: string): Promise<void> {
     await this.dataDir.removeDir(moduleDir(moduleId))
+    if (this.#concordance?.moduleId === moduleId) this.#concordance = null
   }
 
   async installedManifests(): Promise<ModuleManifest[]> {

@@ -1,10 +1,10 @@
-import type { NavigationOptions } from '../contracts'
+import type { NavigationOptions, WordStudyOptions } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 
 // The tab a surface shows a reader's study material under: the chapter's
-// study sections, or the selection's translations.
-export type StudySubTab = 'study' | 'translations'
+// study sections, or the selection's details.
+export type StudySubTab = 'chapter' | 'selection'
 
 // What a surface rendering study material — the Study Panel — must be able to
 // do on the workspace around it. Everything that acts on the material itself
@@ -18,6 +18,10 @@ export type StudyMaterialHost = {
   // Opens the annotation prompt with the given reference typed in, letting
   // the user adjust it before the note is created.
   promptAnnotate: (prefill: Reference) => void
+  // Sends an extended Strong's number to the Word Study Panel: plainly, it
+  // retargets the most-recently-focused panel; with the new-pane modifier, it
+  // opens another beside it.
+  openWordStudy: (strongsNumber: string, options?: WordStudyOptions) => void
   renderMarkdown: (
     el: HTMLElement,
     markdown: string,

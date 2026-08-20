@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS, SettingsStore } from '../data-access'
 import {
   ModulesFeature,
   ObsidianModuleDataDir,
+  reindexConcordances,
   SUGGESTED_FIRST_TRANSLATION,
 } from '../modules'
 import { ReaderFeature } from '../reader'
@@ -15,11 +16,15 @@ import { SearchFeature } from '../search'
 import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
-  StepBibleLexiconClient,
+  LSJ_ATTRIBUTION,
+  LsjLexicon,
   STRONGS_ATTRIBUTION,
+  STRONGS_ETYMOLOGY_ATTRIBUTION,
+  StrongsLexiconClient,
   StrongsDictionaries,
 } from '../strongs'
 import { VaultIndexFeature } from '../vault-index'
+import { moduleConcordance, WordStudyFeature } from '../word-study'
 import { PluginFeatureSet } from './plugin-feature-set'
 
 export default class ScriptureStudyPlugin extends Plugin {
@@ -33,7 +38,12 @@ export default class ScriptureStudyPlugin extends Plugin {
   )
   readonly strongsDictionaries = new StrongsDictionaries(
     new ObsidianModuleDataDir(this),
-    new StepBibleLexiconClient(),
+    new StrongsLexiconClient(),
+    this.settingsStore,
+  )
+  readonly lsjLexicon = new LsjLexicon(
+    new ObsidianModuleDataDir(this),
+    new StrongsLexiconClient(),
     this.settingsStore,
   )
   readonly installSuggestedTranslation = async (): Promise<void> => {
@@ -72,10 +82,43 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     this.#firstRun,
   )
+  readonly wordStudy = new WordStudyFeature(this, {
+    dictionary: {
+      installed: () => this.strongsDictionaries.isInstalled(),
+      entryFor: async (strongsNumber) => {
+        const found = await this.strongsDictionaries.studyEntryFor(strongsNumber)
+        return found === null
+          ? null
+          : {
+              ...found,
+              entry: {
+                ...found.entry,
+                definition: formatDefinition(found.entry.definition),
+              },
+            }
+      },
+      familySiblings: (strongsNumber) =>
+        this.strongsDictionaries.familySiblingsOf(strongsNumber),
+      install: () => this.strongsDictionaries.install(),
+      attribution: STRONGS_ATTRIBUTION,
+      etymologyAttribution: STRONGS_ETYMOLOGY_ATTRIBUTION,
+    },
+    concordance: moduleConcordance(this.modules.store),
+    lsj: {
+      installed: () => this.lsjLexicon.isInstalled(),
+      entryFor: async (strongsNumber) => {
+        const entry = await this.lsjLexicon.entryFor(strongsNumber)
+        return entry === null ? null : formatDefinition(entry)
+      },
+      install: () => this.lsjLexicon.install(),
+      attribution: LSJ_ATTRIBUTION,
+    },
+  })
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
     crossReferences: this.crossReferences.store,
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
+    wordStudy: this.wordStudy,
   })
   readonly search = new SearchFeature(
     this,
@@ -88,11 +131,14 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.settingsStore,
     this.modules,
     this.strongsDictionaries,
+    this.lsjLexicon,
   )
   readonly ribbonMenu = new RibbonMenuFeature(this, {
-    openReader: () => this.reader.openReader(),
+    openReader: (options) => this.reader.openReader(options),
     openStudyPanel: () => this.studyPanel.openPanel(),
     openSearch: () => this.search.openPane(),
+    installedBooks: () => this.reader.installedBooks(),
+    openBook: (book, options) => this.reader.openBook(book, options),
   })
 
   constructor(app: App, manifest: PluginManifest) {
@@ -101,6 +147,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.studyPanel.useNavigator(this.reader)
     this.search.useNavigator(this.reader)
     this.modules.manager.useIndexer(this.search.indexModule)
+    this.wordStudy.useNavigator(this.reader)
     this.studyPanel.useAnnotationPrompt((prefill) =>
       this.annotations.promptAnnotation(prefill),
     )
@@ -110,6 +157,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.#features.addFeature(this.reader)
     this.#features.addFeature(this.studyPanel)
     this.#features.addFeature(this.search)
+    this.#features.addFeature(this.wordStudy)
     this.#features.addFeature(this.rendering)
     this.#features.addFeature(this.annotations)
     this.#features.addFeature(this.settingsTab)
@@ -125,6 +173,13 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.#settings = await this.settingsStore.loadSettings()
     this.#features.useSettings(this.#settings)
     await this.#features.load()
+    // Offline or interrupted, the module simply stays on its old format and
+    // the next load tries again — never a reason to fail the plugin's own.
+    void this.strongsDictionaries.rebuildIfOutdated().catch(() => {})
+    // A Tagged Translation installed before the Concordance Index existed is
+    // re-indexed from the tagging it already carries — no download involved,
+    // so an interrupted pass simply runs again on the next load.
+    void reindexConcordances(this.modules.store).catch(() => {})
   }
 
   readonly onExternalSettingsChange = async (): Promise<void> => {

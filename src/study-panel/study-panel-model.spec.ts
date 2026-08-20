@@ -128,6 +128,7 @@ const fakeStudyMaterial = () => {
           })),
           strongs: [],
           strongsAttribution: null,
+          strongsTranslationId: null,
         },
       }
       listeners.forEach((listener) => listener())
@@ -197,7 +198,7 @@ describe('StudyPanelModel', () => {
       annotations: [],
       mentions: [],
       studyMaterial: null,
-      subTab: 'study',
+      subTab: 'chapter',
       folded: new Set(),
       collapsedTranslations: new Set(),
     })
@@ -438,7 +439,7 @@ describe('StudyPanelModel', () => {
       annotations: [],
       mentions: [],
       studyMaterial: null,
-      subTab: 'study',
+      subTab: 'chapter',
       folded: new Set(),
       collapsedTranslations: new Set(),
     })
@@ -1001,7 +1002,7 @@ describe('cross-references in the Study Panel', () => {
     it('starts on the study tab', () => {
       const panel = model(fakeSource().source)
 
-      expect(panel.view.subTab).toBe('study')
+      expect(panel.view.subTab).toBe('chapter')
     })
 
     it('switches sub-tabs and writes the choice into the followed tab state', () => {
@@ -1009,10 +1010,10 @@ describe('cross-references in the Study Panel', () => {
       const state = freshTabState()
       panel.useTabState(state)
 
-      panel.selectSubTab('translations')
+      panel.selectSubTab('selection')
 
-      expect(panel.view.subTab).toBe('translations')
-      expect(state.subTab).toBe('translations')
+      expect(panel.view.subTab).toBe('selection')
+      expect(state.subTab).toBe('selection')
     })
 
     it('ignores re-selecting the sub-tab already shown', () => {
@@ -1020,7 +1021,7 @@ describe('cross-references in the Study Panel', () => {
       let notified = 0
       panel.subscribe(() => notified++)
 
-      panel.selectSubTab('study')
+      panel.selectSubTab('chapter')
 
       expect(notified).toBe(0)
     })
@@ -1032,10 +1033,10 @@ describe('cross-references in the Study Panel', () => {
       panel.useTabState(freshTabState())
       expect(reader.detailsWanted()).toBe(false)
 
-      panel.selectSubTab('translations')
+      panel.selectSubTab('selection')
       expect(reader.detailsWanted()).toBe(true)
 
-      panel.selectSubTab('study')
+      panel.selectSubTab('chapter')
       expect(reader.detailsWanted()).toBe(false)
     })
 
@@ -1043,7 +1044,7 @@ describe('cross-references in the Study Panel', () => {
       const panel = model(fakeSource().source)
       const reader = fakeStudyMaterial()
       const state = freshTabState()
-      state.subTab = 'translations'
+      state.subTab = 'selection'
 
       panel.showStudyMaterial(reader.source)
       panel.useTabState(state)
@@ -1055,7 +1056,7 @@ describe('cross-references in the Study Panel', () => {
       const panel = model(fakeSource().source)
       const reader = fakeStudyMaterial()
       const state = freshTabState()
-      state.subTab = 'translations'
+      state.subTab = 'selection'
       panel.showStudyMaterial(reader.source)
       panel.useTabState(state)
 
@@ -1072,7 +1073,7 @@ describe('cross-references in the Study Panel', () => {
       panel.showStudyMaterial(reader.source)
       panel.useTabState(freshTabState())
 
-      expect(panel.view.subTab).toBe('study')
+      expect(panel.view.subTab).toBe('chapter')
       expect(reader.detailsWanted()).toBe(true)
     })
   })

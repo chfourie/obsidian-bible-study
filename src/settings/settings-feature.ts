@@ -1,7 +1,7 @@
 import type { Plugin } from 'obsidian'
 import { PluginFeature, type SettingsStore } from '../data-access'
 import type { ModulesFeature } from '../modules'
-import type { StrongsDictionaries } from '../strongs'
+import type { LsjLexicon, StrongsDictionaries } from '../strongs'
 import {
   applyHighlightPaletteVariables,
   removeHighlightPaletteVariables,
@@ -18,6 +18,7 @@ export class SettingsFeature extends PluginFeature {
     settingsStore: SettingsStore,
     modules: ModulesFeature,
     strongs: StrongsDictionaries,
+    lsj: LsjLexicon,
   ) {
     super(plugin)
     this.model = new SettingsTabModel({
@@ -32,6 +33,7 @@ export class SettingsFeature extends PluginFeature {
       modulesWithUpdates: () =>
         modules.manager.modulesWithUpdates().catch((): string[] => []),
       strongs,
+      lsj,
     })
   }
 

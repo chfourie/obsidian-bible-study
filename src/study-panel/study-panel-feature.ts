@@ -1,12 +1,15 @@
 import { TFile, WorkspaceLeaf, type Plugin } from 'obsidian'
 import {
   NO_STUDY_MATERIAL,
+  NO_WORD_STUDY,
   NOOP_REFERENCE_NAVIGATOR,
   type NavigationOptions,
   type ReferenceNavigator,
   type SelectionKind,
   type StudyMaterialProvider,
   type StudyMaterialSource,
+  type WordStudyOpener,
+  type WordStudyOptions,
 } from '../contracts'
 import {
   INERT_CROSS_REFERENCE_CATALOG,
@@ -48,6 +51,7 @@ export type StudyPanelFeatureOptions = {
   crossReferences?: CrossReferenceCatalog
   studyMaterial?: StudyMaterialProvider
   index?: StudyPanelVaultIndex
+  wordStudy?: WordStudyOpener
 }
 
 // The focused leaf's note, when it shows one. Reader tabs are not file views,
@@ -76,6 +80,7 @@ export class StudyPanelFeature extends PluginFeature {
   #unread: WorkspaceLeaf | null = null
   readonly #tabs = new TabMemory<WorkspaceLeaf>()
   readonly #index: StudyPanelVaultIndex
+  readonly #wordStudy: WordStudyOpener
   #unsubscribeCrossReferences: (() => void) | null = null
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeSelection: (() => void) | null = null
@@ -95,6 +100,7 @@ export class StudyPanelFeature extends PluginFeature {
     this.#crossReferences =
       options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
     this.#index = options.index ?? INERT_VAULT_INDEX
+    this.#wordStudy = options.wordStudy ?? NO_WORD_STUDY
   }
 
   override async load(): Promise<void> {
@@ -233,6 +239,13 @@ export class StudyPanelFeature extends PluginFeature {
     this.#navigator.openReference(reference, translationId, options)
   }
 
+  async openWordStudy(
+    strongsNumber: string,
+    options?: WordStudyOptions,
+  ): Promise<void> {
+    await this.#wordStudy.openWordStudy(strongsNumber, options)
+  }
+
   async openPanel(): Promise<void> {
     const workspace = this.plugin.app.workspace
     const existing = workspace.getLeavesOfType(STUDY_PANEL_VIEW_TYPE)[0]
@@ -310,14 +323,14 @@ export class StudyPanelFeature extends PluginFeature {
   }
 
   // A verse pick leaves the remembered sub-tab standing; a Strong's word tap
-  // switches to the Translations tab, the only place its entries render.
+  // switches to the Selection tab, the only place its entries render.
   #selected(kind: SelectionKind): void {
     if (this.settings.revealPanelOnSelection) void this.openPanel()
     if (kind !== 'word') return
-    this.#models.forEach((model) => model.selectSubTab('translations'))
+    this.#models.forEach((model) => model.selectSubTab('selection'))
     // The panel may not exist yet; its model reads the tab state on creation.
     const state = this.#followedState()
-    if (state !== null) state.subTab = 'translations'
+    if (state !== null) state.subTab = 'selection'
   }
 
   #followedState(): StudyTabState | null {
