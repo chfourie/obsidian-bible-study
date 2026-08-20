@@ -1,0 +1,96 @@
+import { readFileSync } from 'node:fs'
+import { describe, expect, it } from 'vitest'
+import {
+  type BookRegistryEntry,
+  assertRegisteredBook,
+  parseBookRegistry,
+} from './book-registry'
+
+const humility: BookRegistryEntry = {
+  bookNumber: 101,
+  title: 'Humility',
+  author: 'Andrew Murray',
+  moduleId: 'hum-m1895',
+  editionCode: 'HUM-M1895',
+}
+
+const registryJson = (entries: unknown) => JSON.stringify(entries)
+
+describe('parseBookRegistry', () => {
+  it('reads the append-only list of registered books', () => {
+    expect(parseBookRegistry(registryJson([humility]))).toEqual([humility])
+  })
+
+  it('rejects a reused book number', () => {
+    const clash = { ...humility, moduleId: 'oth-m1900', editionCode: 'OTH' }
+    expect(() => parseBookRegistry(registryJson([humility, clash]))).toThrow(
+      /book number 101/i,
+    )
+  })
+
+  it('rejects a reused module id', () => {
+    const clash = { ...humility, bookNumber: 102, editionCode: 'OTH' }
+    expect(() => parseBookRegistry(registryJson([humility, clash]))).toThrow(
+      /module id hum-m1895/i,
+    )
+  })
+
+  it('rejects a reused edition code', () => {
+    const clash = { ...humility, bookNumber: 102, moduleId: 'oth-m1900' }
+    expect(() => parseBookRegistry(registryJson([humility, clash]))).toThrow(
+      /edition code HUM-M1895/i,
+    )
+  })
+
+  it('rejects a book number inside the scripture and reserved ranges', () => {
+    expect(() =>
+      parseBookRegistry(registryJson([{ ...humility, bookNumber: 66 }])),
+    ).toThrow(/101/)
+  })
+
+  it('rejects an entry missing a required field', () => {
+    const { author: _author, ...incomplete } = humility
+    expect(() => parseBookRegistry(registryJson([incomplete]))).toThrow(
+      /author/i,
+    )
+  })
+
+  it('rejects a registry that is not a list', () => {
+    expect(() => parseBookRegistry(registryJson(humility))).toThrow(/list/i)
+  })
+})
+
+describe('assertRegisteredBook', () => {
+  const registry = [humility]
+
+  it('accepts a registration matching its registry entry', () => {
+    expect(() => assertRegisteredBook(humility, registry)).not.toThrow()
+  })
+
+  it('fails when the module id is unregistered', () => {
+    expect(() =>
+      assertRegisteredBook({ ...humility, moduleId: 'unknown' }, registry),
+    ).toThrow(/unknown/)
+  })
+
+  it.each([
+    ['bookNumber', { bookNumber: 102 }],
+    ['title', { title: 'Humility: The Beauty of Holiness' }],
+    ['author', { author: 'A. Murray' }],
+    ['editionCode', { editionCode: 'HUM-1895' }],
+  ])('fails when %s disagrees with the registry', (field, override) => {
+    expect(() =>
+      assertRegisteredBook({ ...humility, ...override }, registry),
+    ).toThrow(new RegExp(field, 'i'))
+  })
+})
+
+describe('scripts/book-registry.json', () => {
+  const registry = parseBookRegistry(
+    readFileSync('scripts/book-registry.json', 'utf8'),
+  )
+
+  it('registers Humility as book 101', () => {
+    expect(registry).toContainEqual(humility)
+  })
+})
