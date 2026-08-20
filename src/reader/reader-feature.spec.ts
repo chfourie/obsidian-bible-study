@@ -10,6 +10,7 @@ import {
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
 import { READER_VIEW_TYPE, ReaderFeature } from './reader-feature'
+import type { ReaderPaneModel } from './reader-pane-model'
 import { ReaderView } from './reader-view'
 
 const manifest = (id: string): ModuleManifest => ({
@@ -111,6 +112,9 @@ const ref = (text: string): Reference => {
   if (parsed === null) throw new Error(`unparseable reference: ${text}`)
   return parsed.reference
 }
+
+const highlightedLabels = (model: ReaderPaneModel): string[] =>
+  model.view.rows.filter((row) => row.highlighted).map((row) => row.label)
 
 const flushAsync = async (): Promise<void> => {
   await new Promise((resolve) => window.setTimeout(resolve, 0))
@@ -325,6 +329,38 @@ describe('ReaderFeature entry points', () => {
     })
     expect(first.model.view.position).toEqual({ book: 43, chapter: 15 })
     expect(leaves[0].canGoBack).toBe(false)
+  })
+
+  // A mod-clicked citation must land in its new tab exactly as a plain click
+  // lands in place: the cited passage highlighted under its entry banner.
+  it('opens a mod-clicked citation in a tab of its own, highlighted and bannered', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const first = leaves[0].view as ReaderView
+
+    await first.model.openRefSpan(ref('John 15:1').ranges, { newTab: true })
+    await flushAsync()
+
+    const spawned = (leaves[1].view as ReaderView).model
+    expect(spawned.view.banner).toBe('Opened at John 15:1')
+    expect(highlightedLabels(spawned)).toEqual(['1'])
+    expect(first.model.view.position).toEqual({ book: 43, chapter: 15 })
+  })
+
+  it('highlights and banners a reference opened in a pane of its own', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+
+    feature.openReference(ref('John 15:1'), 'web', { newPane: true })
+    await flushAsync()
+
+    const spawned = (leaves[1].view as ReaderView).model
+    expect(spawned.view.banner).toBe('Opened at John 15:1')
+    expect(highlightedLabels(spawned)).toEqual(['1'])
   })
 
   it('restores a saved chapter without recording it in the pane history', async () => {

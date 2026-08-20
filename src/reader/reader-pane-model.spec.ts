@@ -26,6 +26,7 @@ import {
   type ReaderBook,
   type ReaderBookSection,
   type ReaderBookSource,
+  type ReaderNavTarget,
   type ReaderPaneDeps,
   type ReaderPosition,
   type ReaderToggles,
@@ -3438,25 +3439,37 @@ describe('ref spans', () => {
 
   // A mod-clicked citation travels the same new-tab seam every other nav
   // target does, so the book pane keeps its place (tickets #78/#75 follow-up).
+  // It carries its entry reference along, so the spawned tab lands exactly
+  // where a plain click would — highlighted and bannered.
   it('spawns a tab at a mod-clicked citation and leaves the book pane put', async () => {
-    const opened: ReaderPosition[] = []
-    const model = citingBookModel({ newTab: (position) => opened.push(position) })
+    const opened: ReaderNavTarget[] = []
+    const model = citingBookModel({ newTab: (target) => opened.push(target) })
     await model.openPosition({ book: HUMILITY, chapter: 1 })
 
     await model.openRefSpan([JOHN_5_30], { newTab: true })
 
-    expect(opened).toEqual([{ book: 43, chapter: 5 }])
+    expect(opened).toEqual([
+      {
+        position: { book: 43, chapter: 5 },
+        entry: { book: 43, ranges: [JOHN_5_30] },
+      },
+    ])
     expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
   })
 
   it('spawns a tab at a mod-clicked Note pointer', async () => {
-    const opened: ReaderPosition[] = []
-    const model = citingBookModel({ newTab: (position) => opened.push(position) })
+    const opened: ReaderNavTarget[] = []
+    const model = citingBookModel({ newTab: (target) => opened.push(target) })
     await model.openPosition({ book: HUMILITY, chapter: 1 })
 
     await model.openRefSpan([NOTE_A], { newTab: true })
 
-    expect(opened).toEqual([{ book: HUMILITY, chapter: 13 }])
+    expect(opened).toEqual([
+      {
+        position: { book: HUMILITY, chapter: 13 },
+        entry: { book: HUMILITY, ranges: [NOTE_A] },
+      },
+    ])
     expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
   })
 
@@ -3487,23 +3500,25 @@ describe('opening a nav target in a new tab', () => {
     deregisterBook(HUMILITY)
   })
 
-  const modelSpawning = (opened: ReaderPosition[]): ReaderPaneModel =>
-    bookModelWith({ newTab: (position) => opened.push(position) })
+  const modelSpawning = (opened: ReaderNavTarget[]): ReaderPaneModel =>
+    bookModelWith({ newTab: (target) => opened.push(target) })
 
+  // Tree and chapter nav carry no entry of their own, so their tabs open
+  // plain — exactly as the same move does in place.
   it('spawns a tab at the target and leaves this pane where it stands', async () => {
-    const opened: ReaderPosition[] = []
+    const opened: ReaderNavTarget[] = []
     const model = modelSpawning(opened)
     await model.openAt(ref('John 15:1'), 'web')
 
     await model.goTo(HUMILITY, 0, { newTab: true })
 
-    expect(opened).toEqual([{ book: HUMILITY, chapter: 0 }])
+    expect(opened).toEqual([{ position: { book: HUMILITY, chapter: 0 } }])
     expect(model.view.position).toEqual({ book: 43, chapter: 15 })
     expect(model.view.book).toBeNull()
   })
 
   it('keeps a new-tab target out of this pane history', async () => {
-    const opened: ReaderPosition[] = []
+    const opened: ReaderNavTarget[] = []
     const visited: ReaderPosition[] = []
     const model = modelSpawning(opened)
     await model.openAt(ref('John 15:1'), 'web')
@@ -3518,13 +3533,13 @@ describe('opening a nav target in a new tab', () => {
   })
 
   it('spawns a tab at a tree book node instead of expanding it', async () => {
-    const opened: ReaderPosition[] = []
+    const opened: ReaderNavTarget[] = []
     const model = modelSpawning(opened)
     await model.openAt(ref('John 15:1'), 'web')
 
     model.browseBook(10, { newTab: true })
 
-    expect(opened).toEqual([{ book: 10, chapter: 1 }])
+    expect(opened).toEqual([{ position: { book: 10, chapter: 1 } }])
     expect(model.view.treeBook).toBe(43)
   })
 
