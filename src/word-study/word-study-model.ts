@@ -296,6 +296,38 @@ const errorMessage = (error: unknown): string =>
 const isGreek = (strongsNumber: string): boolean =>
   strongsNumber.startsWith('G')
 
+// The state behind one inline install affordance: busy while it runs, and the
+// error it came back with in place of the module it was asked for.
+class InlineInstall {
+  #busy = false
+  #error: string | null = null
+
+  constructor(private readonly notify: () => void) {}
+
+  get view(): WordStudyInstall {
+    return { busy: this.#busy, error: this.#error }
+  }
+
+  // False where the install never ran or never finished, so the caller reloads
+  // only what an install has actually changed.
+  async run(install: () => Promise<void>): Promise<boolean> {
+    if (this.#busy) return false
+    this.#busy = true
+    this.#error = null
+    this.notify()
+    try {
+      await install()
+    } catch (error) {
+      this.#busy = false
+      this.#error = errorMessage(error)
+      this.notify()
+      return false
+    }
+    this.#busy = false
+    return true
+  }
+}
+
 export class WordStudyModel {
   #number: string | null = null
   #status: WordStudyStatus = 'empty'
@@ -303,8 +335,7 @@ export class WordStudyModel {
   // Null while the dictionaries cannot say at all, as when the module is
   // missing.
   #familySiblings: string[] | null = null
-  #installing = false
-  #installError: string | null = null
+  readonly #install = new InlineInstall(() => this.#notify())
   #loadToken = 0
   // Null exactly where the panel carries no LSJ section at all.
   #lsjStatus: LsjSectionView['status'] | null = null
@@ -312,8 +343,7 @@ export class WordStudyModel {
   // Remembered for as long as the panel lives: a reader who opened the LSJ
   // entry once means it for the numbers they go on to study.
   #lsjExpanded = false
-  #lsjInstalling = false
-  #lsjInstallError: string | null = null
+  readonly #lsjInstall = new InlineInstall(() => this.#notify())
   // The concordance settles on its own token: switching translations re-reads
   // the occurrences without disturbing the entry already on screen.
   #concordanceToken = 0
@@ -350,10 +380,7 @@ export class WordStudyModel {
       attribution: found === null ? null : this.deps.dictionary.attribution,
       etymologyAttribution:
         etymology === null ? null : this.deps.dictionary.etymologyAttribution,
-      install:
-        this.#status === 'no-dictionary'
-          ? { busy: this.#installing, error: this.#installError }
-          : null,
+      install: this.#status === 'no-dictionary' ? this.#install.view : null,
       lsj: this.#lsjView(),
     }
   }
@@ -365,10 +392,7 @@ export class WordStudyModel {
       status,
       expanded: this.#lsjExpanded,
       entry: status === 'ok' ? this.#lsjEntry : null,
-      install:
-        status === 'not-installed'
-          ? { busy: this.#lsjInstalling, error: this.#lsjInstallError }
-          : null,
+      install: status === 'not-installed' ? this.#lsjInstall.view : null,
       attribution: status === 'ok' ? this.#lsjSource().attribution : null,
     }
   }
@@ -470,40 +494,21 @@ export class WordStudyModel {
   }
 
   async installLsj(): Promise<void> {
-    if (this.#lsjInstalling) return
     const number = this.#number
     if (number === null) return
-    this.#lsjInstalling = true
-    this.#lsjInstallError = null
-    this.#notify()
-    try {
-      await this.#lsjSource().install()
-    } catch (error) {
-      this.#lsjInstalling = false
-      this.#lsjInstallError = errorMessage(error)
-      this.#notify()
-      return
-    }
-    this.#lsjInstalling = false
+    const installed = await this.#lsjInstall.run(() =>
+      this.#lsjSource().install(),
+    )
+    if (!installed) return
     this.#lsjExpanded = true
     await this.#loadLsj(number, this.#loadToken)
   }
 
   async installDictionary(): Promise<void> {
-    if (this.#installing) return
-    this.#installing = true
-    this.#installError = null
-    this.#notify()
-    try {
-      await this.deps.dictionary.install()
-    } catch (error) {
-      this.#installing = false
-      this.#installError = errorMessage(error)
-      this.#notify()
-      return
-    }
-    this.#installing = false
-    await this.#load()
+    const installed = await this.#install.run(() =>
+      this.deps.dictionary.install(),
+    )
+    if (installed) await this.#load()
   }
 
   // A number that arrived while an earlier one was still loading wins: only

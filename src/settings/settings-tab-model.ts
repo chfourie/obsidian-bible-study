@@ -86,6 +86,50 @@ export type SettingsTabView = {
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
+// One optional module as its switch: whether it is installed, and whether a
+// flip of it is in flight or came back with an error.
+class OptionalModuleSwitch {
+  #installed = false
+  #busy = false
+  #error: string | null = null
+
+  constructor(
+    private readonly module: OptionalModule,
+    private readonly notify: () => void,
+  ) {}
+
+  get installed(): boolean {
+    return this.#installed
+  }
+
+  get busy(): boolean {
+    return this.#busy
+  }
+
+  get error(): string | null {
+    return this.#error
+  }
+
+  async refresh(): Promise<void> {
+    this.#installed = await this.module.isInstalled()
+  }
+
+  // Leaves the switch settled but silent: the caller reloads the rest of the
+  // settings and notifies once for both.
+  async setEnabled(enabled: boolean): Promise<void> {
+    this.#busy = true
+    this.#error = null
+    this.notify()
+    try {
+      if (enabled) await this.module.install()
+      else await this.module.remove()
+    } catch (error) {
+      this.#error = errorMessage(error)
+    }
+    this.#busy = false
+  }
+}
+
 export class SettingsTabModel {
   #settings: ScriptureStudySettings = DEFAULT_SETTINGS
   #manifests: ModuleManifest[] = []
@@ -94,14 +138,14 @@ export class SettingsTabModel {
   readonly #busy = new Map<string, 'downloading' | 'removing'>()
   readonly #errors = new Map<string, string>()
   readonly #listeners = new Set<() => void>()
-  #strongsInstalled = false
-  #strongsBusy = false
-  #strongsError: string | null = null
-  #lsjInstalled = false
-  #lsjBusy = false
-  #lsjError: string | null = null
+  readonly #strongs: OptionalModuleSwitch
+  readonly #lsj: OptionalModuleSwitch
 
-  constructor(private readonly deps: SettingsTabDeps) {}
+  constructor(private readonly deps: SettingsTabDeps) {
+    const notify = (): void => this.#notify()
+    this.#strongs = new OptionalModuleSwitch(deps.strongs, notify)
+    this.#lsj = new OptionalModuleSwitch(deps.lsj, notify)
+  }
 
   subscribe(listener: () => void): () => void {
     this.#listeners.add(listener)
@@ -137,8 +181,8 @@ export class SettingsTabModel {
   async #loadLocal(): Promise<void> {
     this.#settings = await this.deps.settingsStore.loadSettings()
     this.#manifests = await this.deps.installedManifests()
-    this.#strongsInstalled = await this.deps.strongs.isInstalled()
-    this.#lsjInstalled = await this.deps.lsj.isInstalled()
+    await this.#strongs.refresh()
+    await this.#lsj.refresh()
   }
 
   async #loadCatalog(): Promise<void> {
@@ -161,30 +205,12 @@ export class SettingsTabModel {
   }
 
   async setStrongsEnabled(enabled: boolean): Promise<void> {
-    this.#strongsBusy = true
-    this.#strongsError = null
-    this.#notify()
-    try {
-      if (enabled) await this.deps.strongs.install()
-      else await this.deps.strongs.remove()
-    } catch (error) {
-      this.#strongsError = errorMessage(error)
-    }
-    this.#strongsBusy = false
+    await this.#strongs.setEnabled(enabled)
     await this.refreshLocal()
   }
 
   async setLsjEnabled(enabled: boolean): Promise<void> {
-    this.#lsjBusy = true
-    this.#lsjError = null
-    this.#notify()
-    try {
-      if (enabled) await this.deps.lsj.install()
-      else await this.deps.lsj.remove()
-    } catch (error) {
-      this.#lsjError = errorMessage(error)
-    }
-    this.#lsjBusy = false
+    await this.#lsj.setEnabled(enabled)
     await this.refreshLocal()
   }
 
@@ -229,12 +255,12 @@ export class SettingsTabModel {
       languages: [
         ...new Set(this.#catalog.map((entry) => entry.language)),
       ].sort(),
-      strongsInstalled: this.#strongsInstalled,
-      strongsBusy: this.#strongsBusy,
-      strongsError: this.#strongsError,
-      lsjInstalled: this.#lsjInstalled,
-      lsjBusy: this.#lsjBusy,
-      lsjError: this.#lsjError,
+      strongsInstalled: this.#strongs.installed,
+      strongsBusy: this.#strongs.busy,
+      strongsError: this.#strongs.error,
+      lsjInstalled: this.#lsj.installed,
+      lsjBusy: this.#lsj.busy,
+      lsjError: this.#lsj.error,
       taggedTranslationInstalled: this.#manifests.some(
         (installed) => installed.capabilities.strongsTagged,
       ),
