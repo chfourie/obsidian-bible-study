@@ -5,8 +5,12 @@ import {
   type SettingsStore,
 } from '../data-access'
 import {
+  BOOK_CATALOGUE,
   MODULE_FORMAT_VERSION,
+  isBookManifest,
   isTranslationManifest,
+  type BookCatalogueEntry,
+  type BookManifest,
   type ModuleManifest,
 } from '../modules'
 
@@ -45,12 +49,26 @@ export type TranslationRowView = {
   strongsTagged: boolean
 }
 
+// Books need no language filter and carry no Strong's data, so their row
+// view is the translation row minus those two concerns (spec-books §7).
+export type BookRowView = {
+  id: string
+  title: string
+  author: string
+  editionCode: string
+  installed: boolean
+  busy: 'downloading' | 'removing' | null
+  error: string | null
+  updateAvailable: boolean
+}
+
 export type SettingsTabView = {
   settings: ScriptureStudySettings
   defaultTranslationOptions: TranslationOption[]
   fallbackTranslationOptions: TranslationOption[]
   noTranslationsAvailable: boolean
   rows: TranslationRowView[]
+  bookRows: BookRowView[]
   languages: string[]
   strongsInstalled: boolean
   strongsBusy: boolean
@@ -97,6 +115,12 @@ export class SettingsTabModel {
 
   async refreshCatalog(): Promise<void> {
     await this.#loadCatalog()
+    this.#notify()
+  }
+
+  // Books need update detection without the bolls catalogue behind it.
+  async refreshUpdates(): Promise<void> {
+    this.#updates = await this.deps.modulesWithUpdates()
     this.#notify()
   }
 
@@ -176,6 +200,7 @@ export class SettingsTabModel {
       fallbackTranslationOptions: this.#installedTranslationOptions(),
       noTranslationsAvailable: defaultTranslationOptions.length === 0,
       rows: this.#downloadableRows(),
+      bookRows: this.#bookRows(),
       languages: [
         ...new Set(this.#catalog.map((entry) => entry.language)),
       ].sort(),
@@ -227,6 +252,52 @@ export class SettingsTabModel {
           ('strongsTagged' in entry && entry.strongsTagged === true),
       }
     })
+  }
+
+  // The compiled-in catalogue first, then any installed edition it no longer
+  // carries — a re-cut edition coexists rather than vanishing from settings.
+  #bookRows(): BookRowView[] {
+    const installedBooks = this.#manifests.filter(isBookManifest)
+    const catalogued = BOOK_CATALOGUE.map((entry) =>
+      this.#bookRow(
+        entry,
+        installedBooks.find((installed) => installed.id === entry.moduleId),
+      ),
+    )
+    const cataloguedIds = BOOK_CATALOGUE.map((entry) => entry.moduleId)
+    const uncatalogued = installedBooks
+      .filter((installed) => !cataloguedIds.includes(installed.id))
+      .map((installed) =>
+        this.#bookRow(
+          {
+            moduleId: installed.id,
+            title: installed.name,
+            author: installed.book.author,
+            editionCode: installed.book.editionCode,
+          },
+          installed,
+        ),
+      )
+    return [...catalogued, ...uncatalogued]
+  }
+
+  #bookRow(
+    entry: Pick<
+      BookCatalogueEntry,
+      'moduleId' | 'title' | 'author' | 'editionCode'
+    >,
+    installed: BookManifest | undefined,
+  ): BookRowView {
+    return {
+      id: entry.moduleId,
+      title: entry.title,
+      author: entry.author,
+      editionCode: entry.editionCode,
+      installed: installed !== undefined,
+      busy: this.#busy.get(entry.moduleId) ?? null,
+      error: this.#errors.get(entry.moduleId) ?? null,
+      updateAvailable: this.#updates.includes(entry.moduleId),
+    }
   }
 
   #installedTranslationOptions(): TranslationOption[] {

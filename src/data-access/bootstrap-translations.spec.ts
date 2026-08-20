@@ -59,6 +59,16 @@ describe('applyTranslationBootstrap', () => {
     expect(settings.fallbackTranslationId).toBe(null)
   })
 
+  it('never counts an installed book module as a translation', () => {
+    const settings = applyTranslationBootstrap({
+      ...DEFAULT_SETTINGS,
+      installedModuleIds: ['hum-m1895'],
+    })
+
+    expect(settings.defaultTranslationId).toBe(null)
+    expect(settings.fallbackTranslationId).toBe(null)
+  })
+
   it('drops a legacy online default that no installed module backs', () => {
     const settings = applyTranslationBootstrap({
       ...DEFAULT_SETTINGS,

@@ -982,3 +982,120 @@ describe('ScriptureStudySettingTab unsaved text input', () => {
     expect(hasSettingNamed(container, "Enable Strong's")).toBe(true)
   })
 })
+
+const bookManifest = (): ModuleManifest => ({
+  ...moduleManifest('hum-m1895', 'Humility'),
+  kind: 'book',
+  book: {
+    number: 101,
+    editionCode: 'HUM-M1895',
+    author: 'Andrew Murray',
+    year: 1895,
+    abbreviation: 'Hum',
+    sections: [{ chapter: 0, name: 'Preface', paragraphs: 4 }],
+  },
+})
+
+describe('ScriptureStudySettingTab books section', () => {
+  it('lists the book beside its author with the edition code', async () => {
+    const { container } = await setup({}, { page: 'Books' })
+
+    const row = settingNamed(container, 'Humility — Andrew Murray')
+    expect(row.querySelector('.setting-item-description')?.textContent).toBe(
+      'HUM-M1895',
+    )
+  })
+
+  it('offers no language filter and no Strong\'s badge', async () => {
+    const { container } = await setup(
+      { installedManifests: async () => [bookManifest()] },
+      { page: 'Books' },
+    )
+
+    expect(hasSettingNamed(container, 'Language')).toBe(false)
+    expect(container.querySelector('.scripture-study-strongs-badge')).toBeNull()
+  })
+
+  it('downloads the book from the row button, showing progress', async () => {
+    let resolveDownload: () => void = () => {}
+    const downloadModule = vi.fn(
+      () => new Promise<void>((resolve) => (resolveDownload = resolve)),
+    )
+    const { container } = await setup({ downloadModule }, { page: 'Books' })
+
+    const button = settingNamed(container, 'Humility').querySelector('button')
+    expect(button?.textContent).toBe('Download')
+
+    button?.click()
+
+    expect(
+      settingNamed(container, 'Humility').querySelector('button')?.textContent,
+    ).toBe('Downloading…')
+    expect(downloadModule).toHaveBeenCalledWith('hum-m1895')
+
+    resolveDownload()
+    await flushAsync()
+  })
+
+  it('offers Update and Delete on an installed book with an update', async () => {
+    const deleteModule = vi.fn(async () => {})
+    const { container } = await setup(
+      {
+        storedSettings: { installedModuleIds: ['hum-m1895'] },
+        installedManifests: async () => [bookManifest()],
+        modulesWithUpdates: async () => ['hum-m1895'],
+        deleteModule,
+      },
+      { page: 'Books' },
+    )
+
+    const buttons = [
+      ...settingNamed(container, 'Humility').querySelectorAll('button'),
+    ]
+    expect(buttons.map((button) => button.textContent)).toEqual([
+      'Update',
+      'Delete',
+    ])
+
+    buttons[1].click()
+    await flushAsync()
+
+    expect(deleteModule).toHaveBeenCalledWith('hum-m1895')
+  })
+
+  it('surfaces a failed book download on its row', async () => {
+    const { container } = await setup(
+      {
+        downloadModule: vi.fn(async () => {
+          throw new Error('release not published')
+        }),
+      },
+      { page: 'Books' },
+    )
+
+    settingNamed(container, 'Humility').querySelector('button')?.click()
+    await flushAsync()
+
+    expect(
+      settingNamed(container, 'Humility').querySelector(
+        '.scripture-study-settings-error',
+      )?.textContent,
+    ).toBe('release not published')
+  })
+
+  it('keeps the installed book out of the Translations list and both pickers', async () => {
+    const { container } = await setup({
+      storedSettings: { installedModuleIds: ['web', 'hum-m1895'] },
+      installedManifests: async () => [
+        moduleManifest('web', 'World English Bible'),
+        bookManifest(),
+      ],
+    })
+
+    const options = [
+      ...dropdownOf(settingNamed(container, 'Default translation')).options,
+    ].map((option) => option.value)
+    expect(options).toEqual(['web'])
+    expect(hasSettingNamed(container, 'Humility')).toBe(false)
+  })
+})

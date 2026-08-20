@@ -1,5 +1,12 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App, type PluginManifest } from 'obsidian'
+import type { ModuleManifest } from '../modules'
+import {
+  chapterCount,
+  deregisterBookVersification,
+  isValidVerseId,
+  makeVerseId,
+} from '../reference'
 import ScriptureStudyPlugin from './scripture-study-plugin'
 
 const manifest: PluginManifest = {
@@ -113,5 +120,77 @@ describe('ScriptureStudyPlugin same-device settings changes', () => {
     plugin.annotations.prefillRefText()
 
     expect(prefillReference).toHaveBeenCalled()
+  })
+})
+
+const HUMILITY_BOOK = 101
+
+const humilityManifest: ModuleManifest = {
+  id: 'hum-m1895',
+  name: 'Humility',
+  language: 'English',
+  license: 'Public Domain',
+  source: 'test',
+  sourceChecksum: 'sha-hum-1',
+  formatVersion: 2,
+  kind: 'book',
+  capabilities: { strongsTagged: false },
+  book: {
+    number: HUMILITY_BOOK,
+    editionCode: 'HUM-M1895',
+    author: 'Andrew Murray',
+    year: 1895,
+    abbreviation: 'Hum',
+    sections: [
+      { chapter: 0, name: 'Preface', paragraphs: 4 },
+      { chapter: 1, name: 'The Glory of the Creature', paragraphs: 9 },
+    ],
+  },
+}
+
+describe('ScriptureStudyPlugin book module wiring', () => {
+  afterEach(() => deregisterBookVersification(HUMILITY_BOOK))
+
+  it('registers the versification of every installed book at load', async () => {
+    const plugin = pluginWithStorage()
+    vi.spyOn(plugin.modules.store, 'installedManifests').mockResolvedValue([
+      humilityManifest,
+    ])
+
+    await plugin.modules.load()
+
+    expect(chapterCount(HUMILITY_BOOK)).toBe(2)
+    expect(isValidVerseId(makeVerseId(HUMILITY_BOOK, 1, 9))).toBe(true)
+  })
+
+  it('survives a malformed section table instead of failing plugin load', async () => {
+    const plugin = pluginWithStorage()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(plugin.modules.store, 'installedManifests').mockResolvedValue([
+      { ...humilityManifest, book: { ...humilityManifest.book!, sections: [] } },
+    ])
+
+    await expect(plugin.modules.load()).resolves.toBeUndefined()
+    expect(chapterCount(HUMILITY_BOOK)).toBe(0)
+  })
+
+  it('deregisters the book and reindexes the vault on uninstall', async () => {
+    const plugin = pluginWithStorage()
+    vi.spyOn(plugin.modules.store, 'installedManifests').mockResolvedValue([
+      humilityManifest,
+    ])
+    vi.spyOn(plugin.modules.store, 'manifest').mockResolvedValue(
+      humilityManifest,
+    )
+    vi.spyOn(plugin.modules.store, 'deleteModule').mockResolvedValue()
+    const reindex = vi
+      .spyOn(plugin.vaultIndex, 'reindexVault')
+      .mockResolvedValue()
+    await plugin.modules.load()
+
+    await plugin.modules.manager.deleteModule('hum-m1895')
+
+    expect(chapterCount(HUMILITY_BOOK)).toBe(0)
+    expect(reindex).toHaveBeenCalled()
   })
 })

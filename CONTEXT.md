@@ -36,7 +36,7 @@ The scripture content a reference resolves to in a specific translation: referen
 A specific bible text (e.g. NIV, WEB) whose content is projected onto the Canonical Grid.
 
 ### Module
-A downloadable, locally-stored data bundle — a full translation download or the Strong's Dictionaries. The unit of storage and settings management. Lives in the plugin data dir (never vault files, never synced); stored in normalized form: per-book JSON keyed by verse id, plus a manifest (metadata, license string, source checksum, format version).
+A downloadable, locally-stored data bundle — a full translation download, the Strong's Dictionaries, or a Book. The unit of storage and settings management. Lives in the plugin data dir (never vault files, never synced); stored in normalized form: per-book JSON keyed by verse id, plus a manifest (metadata, license string, source checksum, format version). The manifest's `kind` discriminates: a `book` module also carries a `book` sub-object whose section table is that Book's versification data, and its id is its Edition Code lowercased.
 
 ### Tier
 Superseded in v1.1: every translation is a downloadable Module sourced from the bolls.life catalogue (or the BSB release artifact). The online tier and its passage cache were removed with API.Bible.
