@@ -568,14 +568,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // A citation tapped in book prose. Scripture targets land in the reader as
   // any other entry does — current translation, passage highlighted, entry
   // banner — and a Note pointer's own-book target arrives the same way, so
-  // the reader simply stays in the book (spec-books §8).
-  async openRefSpan(ranges: readonly VerseRange[]): Promise<void> {
+  // the reader simply stays in the book (spec-books §8). A mod-clicked
+  // citation spawns its own tab instead, like every other nav target.
+  async openRefSpan(
+    ranges: readonly VerseRange[],
+    intent: ReaderNavIntent = {},
+  ): Promise<void> {
     if (ranges.length === 0) return
+    const { book, chapter } = decodeVerseId(ranges[0].startId)
+    if (this.#spawnedTab({ book, chapter }, intent)) return
     await this.openAt(
-      {
-        book: decodeVerseId(ranges[0].startId).book,
-        ranges: ranges.map((range) => ({ ...range })),
-      },
+      { book, ranges: ranges.map((range) => ({ ...range })) },
       null,
     )
   }

@@ -96,7 +96,7 @@
     refs: VerseRange[],
   ): void => {
     event.stopPropagation()
-    void model.openRefSpan(refs)
+    void model.openRefSpan(refs, navIntent(event))
   }
 
   const inSelectionSpan = (verseId: number): boolean => {

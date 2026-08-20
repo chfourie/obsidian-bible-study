@@ -84,7 +84,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.strongsDictionaries,
   )
   readonly ribbonMenu = new RibbonMenuFeature(this, {
-    openReader: () => this.reader.openReader(),
+    openReader: (options) => this.reader.openReader(options),
     openStudyPanel: () => this.studyPanel.openPanel(),
     installedBooks: () => this.reader.installedBooks(),
     openBook: (book, options) => this.reader.openBook(book, options),

@@ -55,7 +55,7 @@ const harness = (
   const leaves: FakeLeaf[] = []
   let factory: ((leaf: WorkspaceLeaf) => unknown) | null = null
   const revealLeaf = vi.fn(async () => {})
-  const commands: { id: string; callback: () => void }[] = []
+  const commands: { id: string; name: string; callback: () => void }[] = []
   const ribbons: { icon: string; title: string; callback: () => void }[] = []
   const workspace = {
     getLeavesOfType: (type: string) =>
@@ -82,7 +82,11 @@ const harness = (
     registerView: (_type: string, viewFactory: (leaf: WorkspaceLeaf) => unknown) => {
       factory = viewFactory
     },
-    addCommand: (command: { id: string; callback: () => void }) => {
+    addCommand: (command: {
+      id: string
+      name: string
+      callback: () => void
+    }) => {
       commands.push(command)
       return command
     },
@@ -120,6 +124,34 @@ describe('ReaderFeature entry points', () => {
 
     expect(commands.map((command) => command.id)).toEqual(['open-reader'])
     expect(ribbons).toHaveLength(0)
+  })
+
+  it('names the reader entry point for the scripture side it always opens', async () => {
+    const { feature, commands } = harness()
+
+    await feature.load()
+
+    expect(commands[0].name).toBe('Open scripture reader')
+  })
+
+  it('opens the reader in a tab of its own when the modifier asks', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('Genesis 1:1'), 'web')
+    await flushAsync()
+
+    await feature.openReader({ newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: 1,
+      chapter: 1,
+    })
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 1,
+      chapter: 1,
+    })
   })
 
   it('opens a reader leaf at the navigated reference', async () => {
@@ -1031,7 +1063,9 @@ describe('ReaderFeature book mode', () => {
     })
   })
 
-  it('reopens the command entry point at the last book position', async () => {
+  // The reader entry point names the scripture side and always lands there,
+  // however deep in a book the reader was left (tickets #78/#75 follow-up).
+  it('reopens the command entry point on the scripture side, not the book', async () => {
     const { feature, leaves, commands } = harness({}, { store: bookStore() })
     await feature.load()
     feature.openReference(bookReference(1, 1), null)
@@ -1042,10 +1076,61 @@ describe('ReaderFeature book mode', () => {
     await flushAsync()
 
     const reopened = leaves[1].view as ReaderView
-    expect(reopened.model.view.position).toEqual({
-      book: HUMILITY,
-      chapter: 1,
-    })
+    expect(reopened.model.view.position).toEqual({ book: 43, chapter: 1 })
     expect(reopened.model.view.banner).toBe(null)
+  })
+
+  it('moves a reader left inside a book back to the last scripture position', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    await feature.openReader()
+    await flushAsync()
+
+    expect(leaves).toHaveLength(1)
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+  })
+
+  it('leaves a reader already on the scripture side where it stands', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+
+    await feature.openReader()
+    await flushAsync()
+
+    expect(view.model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(view.model.view.banner).toBe('Opened at John 15:1')
+  })
+
+  it('opens the scripture side in its own tab while the book pane stays put', async () => {
+    const { feature, leaves } = harness({}, { store: bookStore() })
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+
+    await feature.openReader({ newTab: true })
+    await flushAsync()
+
+    expect(leaves).toHaveLength(2)
+    expect((leaves[1].view as ReaderView).model.view.position).toEqual({
+      book: 43,
+      chapter: 15,
+    })
+    expect((leaves[0].view as ReaderView).model.view.position).toEqual({
+      book: HUMILITY,
+      chapter: 0,
+    })
   })
 })
