@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { FakeSearchIndexSource } from '../../tests/fixtures/fake-search-index-source'
 import type { NavigationOptions } from '../contracts'
 import type { BookContent } from '../modules'
 import { BOOKS, makeVerseId, type Reference } from '../reference'
+import { SearchEngine } from './search-engine'
 import {
   SearchPaneModel,
   type SearchPaneDeps,
   type SearchTranslation,
 } from './search-pane-model'
 import type { SearchQuery } from './search-query'
-import { scanModule, type SearchContentSource } from './search-scan'
 
 const verses = (
   book: number,
@@ -35,20 +36,6 @@ const WEB_CONTENT: Record<number, BookContent> = {
   }),
 }
 
-// The module store seen through the one query the search makes of it.
-const fakeModuleStore = (
-  content: Record<string, Record<number, BookContent>> = { web: WEB_CONTENT },
-) => {
-  const reads: string[] = []
-  const source: SearchContentSource = {
-    bookContent: async (moduleId, book) => {
-      reads.push(`${moduleId}/${book}`)
-      return content[moduleId]?.[book] ?? null
-    },
-  }
-  return { source, reads }
-}
-
 type Opened = {
   reference: Reference
   translationId: string
@@ -57,23 +44,31 @@ type Opened = {
 
 const harness = (
   translation: SearchTranslation | null = { id: 'web', label: 'WEB' },
-  content?: Record<string, Record<number, BookContent>>,
+  content: Record<string, Record<number, BookContent>> = { web: WEB_CONTENT },
 ) => {
-  const store = fakeModuleStore(content)
+  const source = new FakeSearchIndexSource(content)
+  const engine = new SearchEngine(
+    source,
+    BOOKS.map((book) => book.id),
+  )
   const opened: Opened[] = []
   const searches: SearchQuery[] = []
-  const scriptureBooks = BOOKS.map((book) => book.id)
   const deps: SearchPaneDeps = {
     translation: () => translation,
-    search: (moduleId, query) => {
+    search: (moduleId, query, onProgress) => {
       searches.push(query)
-      return scanModule(store.source, moduleId, scriptureBooks, query)
+      return engine.search(moduleId, query, onProgress)
     },
     openHit: (reference, translationId, options) => {
       opened.push({ reference, translationId, options })
     },
   }
-  return { model: new SearchPaneModel(deps), opened, searches, reads: store.reads }
+  return {
+    model: new SearchPaneModel(deps),
+    opened,
+    searches,
+    reads: source.contentReads,
+  }
 }
 
 const bookSummary = (model: SearchPaneModel) =>
@@ -211,6 +206,39 @@ describe('SearchPaneModel', () => {
     expect(model.view.status).toBe('searching')
     await running
     expect(model.view.status).toBe('ok')
+  })
+
+  it('shows the module being indexed before the first search’s results', async () => {
+    const { model } = harness()
+    const seen: string[] = []
+    model.subscribe(() => seen.push(model.view.status))
+    model.setQuery('vine')
+    await model.submit()
+    expect(seen).toContain('indexing')
+    expect(model.view.status).toBe('ok')
+    expect(model.view.indexing).toBeNull()
+  })
+
+  it('shows how far the indexing has got', async () => {
+    const { model } = harness()
+    const progress: (number | null)[] = []
+    model.subscribe(() => progress.push(model.view.indexing?.done ?? null))
+    model.setQuery('vine')
+    await model.submit()
+    expect(progress).toContain(0)
+    expect(progress).toContain(BOOKS.length)
+  })
+
+  it('indexes only once, however many queries are submitted', async () => {
+    const { model } = harness()
+    model.setQuery('vine')
+    await model.submit()
+    const seen: string[] = []
+    model.subscribe(() => seen.push(model.view.status))
+    model.setQuery('earth')
+    await model.submit()
+    expect(seen).not.toContain('indexing')
+    expect(labels(model)).toEqual(['Genesis 1:1', 'Genesis 1:2'])
   })
 
   it('keeps only the newest submission’s results', async () => {

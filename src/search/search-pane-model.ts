@@ -1,5 +1,6 @@
 import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
+import type { IndexBuildProgress } from './search-index-store'
 import {
   isEmptyQuery,
   parseSearchQuery,
@@ -21,7 +22,11 @@ export type SearchTranslation = {
 
 export type SearchPaneDeps = {
   translation: () => SearchTranslation | null
-  search: (moduleId: string, query: SearchQuery) => Promise<SearchHit[]>
+  search: (
+    moduleId: string,
+    query: SearchQuery,
+    onProgress: (progress: IndexBuildProgress) => void,
+  ) => Promise<SearchHit[]>
   openHit: (
     reference: Reference,
     translationId: string,
@@ -32,6 +37,7 @@ export type SearchPaneDeps = {
 export type SearchPaneStatus =
   | 'idle'
   | 'searching'
+  | 'indexing'
   | 'no-translation'
   | 'no-results'
   | 'ok'
@@ -43,6 +49,8 @@ export type SearchPaneViewState = {
   translationLabel: string | null
   // The query the results on screen came from, null while none has run.
   submittedQuery: string | null
+  // How far the module's index has been built, only while one is being built.
+  indexing: IndexBuildProgress | null
   totalHits: number
   books: SearchBookView[]
 }
@@ -52,6 +60,7 @@ export class SearchPaneModel {
   #submittedQuery: string | null = null
   #status: SearchPaneStatus = 'idle'
   #books: SearchBookView[] = []
+  #indexing: IndexBuildProgress | null = null
   #totalHits = 0
   #searchToken = 0
   readonly #listeners = new Set<() => void>()
@@ -69,6 +78,7 @@ export class SearchPaneModel {
       status: this.#status,
       translationLabel: this.deps.translation()?.label ?? null,
       submittedQuery: this.#submittedQuery,
+      indexing: this.#indexing,
       totalHits: this.#totalHits,
       books: this.#books,
     }
@@ -99,7 +109,13 @@ export class SearchPaneModel {
       return
     }
     this.#settle('searching')
-    const hits = await this.deps.search(translation.id, query)
+    // A module met without a valid index is built one before it can answer;
+    // the pane says so, and how far it has got, until the results land.
+    const hits = await this.deps.search(translation.id, query, (progress) => {
+      if (token !== this.#searchToken) return
+      this.#indexing = progress
+      this.#settle('indexing')
+    })
     // A submission overtaken while it ran leaves the newer one's results
     // standing.
     if (token !== this.#searchToken) return
@@ -122,6 +138,7 @@ export class SearchPaneModel {
   }
 
   #settle(status: SearchPaneStatus): void {
+    if (status !== 'indexing') this.#indexing = null
     this.#status = status
     this.#notify()
   }

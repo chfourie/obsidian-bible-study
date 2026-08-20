@@ -5,6 +5,7 @@ book. Activating a hit opens the reader at that verse.
 -->
 <script lang="ts">
   import { activate, opensInNewPane } from '../ui'
+  import type { IndexBuildProgress } from './search-index-store'
   import type { SearchPaneModel } from './search-pane-model'
   import type { SearchHitView } from './search-results'
 
@@ -18,6 +19,11 @@ book. Activating a hit opens the reader at that verse.
       view = model.view
     }),
   )
+
+  const indexedPercent = (progress: IndexBuildProgress | null): number =>
+    progress === null || progress.total === 0
+      ? 0
+      : Math.round((progress.done / progress.total) * 100)
 
   const submitOnEnter = (event: KeyboardEvent): void => {
     if (event.key !== 'Enter') return
@@ -53,6 +59,12 @@ book. Activating a hit opens the reader at that verse.
       <p class="bss-empty">No translation installed.</p>
     {:else if view.status === 'searching'}
       <p class="bss-empty">Searching…</p>
+    {:else if view.status === 'indexing'}
+      <p class="bss-empty">
+        Indexing {view.translationLabel} for search… {indexedPercent(
+          view.indexing,
+        )}%
+      </p>
     {:else if view.status === 'no-results'}
       <p class="bss-empty">Nothing found for {view.submittedQuery}.</p>
     {:else}

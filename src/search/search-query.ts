@@ -58,7 +58,9 @@ const phraseSpans = (tokens: TextToken[], words: string[]): MatchSpan[] => {
   return spans
 }
 
-const mergeSpans = (spans: MatchSpan[]): MatchSpan[] => {
+// Overlapping emphasis is one emphasized run: whichever terms found them, the
+// spans a hit carries are sorted, merged and non-overlapping.
+export const mergeMatchSpans = (spans: MatchSpan[]): MatchSpan[] => {
   const sorted = [...spans].sort((a, b) => a.start - b.start || a.end - b.end)
   const merged: MatchSpan[] = []
   for (const span of sorted) {
@@ -86,7 +88,7 @@ export const matchTokens = (
     if (found.length === 0) return null
     spans.push(...found)
   }
-  return mergeSpans(spans)
+  return mergeMatchSpans(spans)
 }
 
 // The spans every term of the query matched, in text order, or null when the

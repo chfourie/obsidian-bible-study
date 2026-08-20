@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
+import { FakeSearchIndexSource } from '../../tests/fixtures/fake-search-index-source'
 import type { NavigationOptions, ReferenceNavigator } from '../contracts'
 import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
 import type { ModuleStore } from '../modules'
@@ -12,11 +13,8 @@ type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 type FakeCommand = { id: string; name: string; callback: () => void }
 
 const fakeStore = (): ModuleStore =>
-  ({
-    bookContent: async (moduleId: string, book: number) =>
-      moduleId === 'web' && book === 43
-        ? { [makeVerseId(43, 15, 1)]: 'I am the true vine.' }
-        : null,
+  new FakeSearchIndexSource({
+    web: { 43: { [makeVerseId(43, 15, 1)]: 'I am the true vine.' } },
   }) as unknown as ModuleStore
 
 const harness = (settings: Partial<ScriptureStudySettings> = {}) => {

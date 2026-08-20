@@ -1,10 +1,5 @@
 import { verseTextOf, type BookContent } from '../modules'
-import {
-  isEmptyQuery,
-  matchSearchQuery,
-  type MatchSpan,
-  type SearchQuery,
-} from './search-query'
+import type { MatchSpan } from './search-query'
 
 // One atom whose text satisfies the query, carrying the whole text and the
 // spans that matched — the pane emphasizes them and the reader will take
@@ -15,38 +10,24 @@ export type SearchHit = {
   spans: MatchSpan[]
 }
 
-// All the scan asks of module storage. ModuleStore satisfies it as it
-// stands, and the persistent index will answer the same queries from beside
-// this seam rather than through it.
+// One indexable unit of a module: an atom id and the text the index holds for
+// it, so a hit needs no further reading of module content.
+export type ModuleAtom = {
+  verseId: number
+  text: string
+}
+
+// All the index build asks of module storage. ModuleStore satisfies it as it
+// stands, and nothing but the build reads through it any more.
 export type SearchContentSource = {
   bookContent: (moduleId: string, book: number) => Promise<BookContent | null>
 }
 
-const bookHits = (content: BookContent, query: SearchQuery): SearchHit[] =>
+// A book's atoms in verse-id order, whatever order they are stored in — the
+// order decides the index's atom numbering, and with it the order hits come
+// back in.
+export const bookAtoms = (content: BookContent): ModuleAtom[] =>
   Object.keys(content)
     .map(Number)
     .sort((a, b) => a - b)
-    .flatMap((verseId) => {
-      const text = verseTextOf(content[verseId])
-      const spans = matchSearchQuery(text, query)
-      return spans === null ? [] : [{ verseId, text, spans }]
-    })
-
-// A direct scan of the module's stored content, book by book in the order
-// given, hits within a book in verse-id order — Canonical Grid order overall
-// as long as the books are handed over in it.
-export const scanModule = async (
-  source: SearchContentSource,
-  moduleId: string,
-  books: readonly number[],
-  query: SearchQuery,
-): Promise<SearchHit[]> => {
-  if (isEmptyQuery(query)) return []
-  const hits: SearchHit[] = []
-  for (const book of books) {
-    const content = await source.bookContent(moduleId, book)
-    if (content === null) continue
-    hits.push(...bookHits(content, query))
-  }
-  return hits
-}
+    .map((verseId) => ({ verseId, text: verseTextOf(content[verseId]) }))

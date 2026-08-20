@@ -8,25 +8,24 @@ import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
 import { BOOKS, type Reference } from '../reference'
 import { resolveFallbackTranslationId } from '../rendering'
+import { SearchEngine } from './search-engine'
 import { SearchPaneModel, type SearchTranslation } from './search-pane-model'
 import { SEARCH_PANE_VIEW_TYPE, SearchPaneView } from './search-pane-view'
-import { scanModule } from './search-scan'
 
 export { SEARCH_PANE_VIEW_TYPE } from './search-pane-view'
 
-// Canonical Grid order is the order the scan walks: OT 1-39 then NT 40-66.
-// Books (≥ 101) join this list when the scope picker can select them.
+// Canonical Grid order is the order the index build walks: OT 1-39 then NT
+// 40-66. Books (≥ 101) join this list when the scope picker can select them.
 const SCRIPTURE_BOOKS: readonly number[] = BOOKS.map((book) => book.id)
 
 export class SearchFeature extends PluginFeature {
   readonly #models = new Set<SearchPaneModel>()
+  readonly #engine: SearchEngine
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
 
-  constructor(
-    plugin: Plugin,
-    private readonly store: ModuleStore,
-  ) {
+  constructor(plugin: Plugin, store: ModuleStore) {
     super(plugin)
+    this.#engine = new SearchEngine(store, SCRIPTURE_BOOKS)
   }
 
   override async load(): Promise<void> {
@@ -55,8 +54,8 @@ export class SearchFeature extends PluginFeature {
   createModel(): SearchPaneModel {
     const model = new SearchPaneModel({
       translation: () => this.#translation(),
-      search: (moduleId, query) =>
-        scanModule(this.store, moduleId, SCRIPTURE_BOOKS, query),
+      search: (moduleId, query, onProgress) =>
+        this.#engine.search(moduleId, query, onProgress),
       openHit: (
         reference: Reference,
         translationId: string,
