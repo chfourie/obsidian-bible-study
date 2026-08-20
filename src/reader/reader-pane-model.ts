@@ -995,20 +995,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
     await this.#loadDetails(key)
   }
 
-  // The selected paragraphs are already on screen, so a book's details read
-  // the rows in hand rather than fetching the passage a second time.
+  // The selected paragraphs are already on screen, so a book's details carry
+  // their citation alone rather than repeating the prose beside it.
   #bookDetails(reference: Reference): BookDetailsView | null {
     const citation = bookCitation(reference)
     if (citation === null) return null
-    const selected = this.#rows.filter((row) =>
-      reference.ranges.some((range) => rangeContains(range, row.verseId)),
-    )
-    return {
-      citation: citation.attribution,
-      text: joinedSegments(selected)
-        .map((segment) => segment.text)
-        .join(''),
-    }
+    return { citation: citation.attribution }
   }
 
   async #loadDetails(key: string): Promise<void> {
@@ -1018,7 +1010,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#loadingDetailsKey = key
     try {
       // A book has exactly one layer, so its details carry the paragraph's
-      // own citation and prose instead of translation rows (spec-books §5).
+      // own citation instead of translation rows (spec-books §5).
       const layers = this.#bookHere() === null ? this.#available : []
       const book = this.#bookDetails(reference)
       const translations = await Promise.all(

@@ -240,9 +240,6 @@
           <option value={String(section.chapter)}>{section.name}</option>
         {/each}
       </select>
-      <span class="bsr-spacer"></span>
-      <button type="button" class="bsr-step" disabled={!view.hasPreviousChapter} onclick={() => void model.previousChapter()}>‹ Previous</button>
-      <button type="button" class="bsr-step" disabled={!view.hasNextChapter} onclick={() => void model.nextChapter()}>Next ›</button>
     </div>
   {:else if view.toggles.nav === 'breadcrumb'}
     <div class="bsr-crumb">
@@ -257,9 +254,6 @@
           <option value={String(chapter)}>{chapter}</option>
         {/each}
       </select>
-      <span class="bsr-spacer"></span>
-      <button type="button" class="bsr-step" disabled={!view.hasPreviousChapter} onclick={() => void model.previousChapter()}>‹ Previous</button>
-      <button type="button" class="bsr-step" disabled={!view.hasNextChapter} onclick={() => void model.nextChapter()}>Next ›</button>
     </div>
   {/if}
 
@@ -305,6 +299,23 @@
     {/if}
 
     <div class="bsr-content">
+      <div class="bsr-title-bar">
+        <button
+          type="button"
+          class="bsr-chapter-step"
+          aria-label={view.book !== null ? 'Previous section' : 'Previous chapter'}
+          disabled={!view.hasPreviousChapter}
+          onclick={() => void model.previousChapter()}
+        >‹</button>
+        <h1 class="bsr-title">{view.book !== null ? view.book.sectionName : view.title}</h1>
+        <button
+          type="button"
+          class="bsr-chapter-step"
+          aria-label={view.book !== null ? 'Next section' : 'Next chapter'}
+          disabled={!view.hasNextChapter}
+          onclick={() => void model.nextChapter()}
+        >›</button>
+      </div>
       <div class="bsr-scroll" style:font-size={contentFontSize}>
         <div class="bsr-inner" class:bsr-book={view.book !== null}>
           {#if view.book !== null}
@@ -319,26 +330,6 @@
                   >—{#each epigraph.attribution as segment, part (part)}{@render citedText(segment)}{/each}</span>
               </div>
             {/each}
-          {:else}
-            <div class="bsr-title-row">
-              <h1 class="bsr-title">{view.title}</h1>
-              <span class="bsr-title-nav">
-                <button
-                  type="button"
-                  class="bsr-chapter-step"
-                  aria-label="Previous chapter"
-                  disabled={!view.hasPreviousChapter}
-                  onclick={() => void model.previousChapter()}
-                >‹</button>
-                <button
-                  type="button"
-                  class="bsr-chapter-step"
-                  aria-label="Next chapter"
-                  disabled={!view.hasNextChapter}
-                  onclick={() => void model.nextChapter()}
-                >›</button>
-              </span>
-            </div>
           {/if}
 
           {#if view.status === 'loading'}
@@ -504,10 +495,6 @@
     border-color: var(--text-accent);
   }
 
-  .bsr-spacer {
-    flex: 1;
-  }
-
   .bsr-trans {
     position: relative;
     flex: 1;
@@ -642,21 +629,18 @@
     margin: 0 auto;
   }
 
-  .bsr-title-row {
+  .bsr-title-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 0 0 12px;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--background-modifier-border);
   }
 
   .bsr-title {
     font-size: var(--h3-size);
     margin: 0;
-  }
-
-  .bsr-title-nav {
-    display: inline-flex;
-    gap: 2px;
   }
 
   .bsr-chapter-step {

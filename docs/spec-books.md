@@ -48,7 +48,7 @@ Visual reference: [book-reader-prototype](../prototypes/book-reader-prototype) (
 - **Reaching a book** (ticket #78): the trees and the breadcrumb stay as above — the crossing point is the ribbon icon's options panel, which lists every installed book in a **Books** section (absent when none is installed). Activating an entry opens the book in the reader tab already open, at the last position that reader held inside it or else its first section; Cmd/Ctrl-activating opens it in a reader tab of its own. The same modifier opens any reader tree node in its own tab.
 - **Options**: Nav + font size + **Para numbers (On/Hover, default Hover)**; Layout, Red letter, and Strong's are hidden for books. Single non-switchable edition pill (`Humility 1895`) replaces the translation switcher.
 - **Per-device option defaults (scripture reader included)**: reader option global defaults split into desktop and mobile values; in-pane switching unchanged. Motivation: tree on desktop, breadcrumb on mobile.
-- **Study Panel**, paragraph details: chip locator + full citation + the paragraph's text; no Translations tab (a book has exactly one layer). Same chapter-scoped sections as scripture (§6).
+- **Study Panel**, paragraph details: chip locator + full citation (the paragraph's own text stays in the reader, unrepeated); no Selection tab (a book has exactly one layer). Same chapter-scoped sections as scripture (§6).
 - **Copy formatted reference**: a reader action (scripture *and* books) copying a paste-ready `{...}` reference for the selected verse/paragraph range — especially valuable for sections without printed numbers.
 
 ## 6. Cross-references, vault index & Study Panel

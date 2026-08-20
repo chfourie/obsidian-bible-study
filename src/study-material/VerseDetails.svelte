@@ -96,7 +96,6 @@ controls beside the selection's title.
 </div>
 
 {#if details.book !== null}
-  <p class="bsm-book-text">{details.book.text}</p>
   <p class="bsm-book-citation">{details.book.citation}</p>
 {/if}
 
@@ -206,13 +205,6 @@ controls beside the selection's title.
     color: var(--text-accent);
     background: none;
     box-shadow: none;
-  }
-
-  /* A paragraph reads as prose, not as a stacked translation row. */
-  .bsm-book-text {
-    margin: 0 0 4px;
-    line-height: var(--line-height-normal);
-    user-select: text;
   }
 
   .bsm-book-citation {

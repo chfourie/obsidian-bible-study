@@ -39,11 +39,11 @@ export type ChapterMentionView = {
   labels: string[]
 }
 
-// A selected span of book paragraphs: the full citation and the prose itself
-// stand where a scripture selection stacks its translations (spec-books §5).
+// A selected span of book paragraphs: the paragraphs themselves are already
+// on screen in the reader, so only their full citation stands where a
+// scripture selection stacks its translations (spec-books §5).
 export type BookDetailsView = {
   citation: string
-  text: string
 }
 
 // The selected span's details: each translation carries the text of the whole
@@ -83,7 +83,7 @@ export type StudyMaterial = {
   // Names the tab this material comes from — the reader's book and chapter.
   title: string
   // True while the tab reads a non-biblical book. A book has exactly one
-  // layer, so its paragraph details take the place of the Translations tab
+  // layer, so its paragraph details take the place of the Selection tab
   // rather than living under one (spec-books §5).
   bookMode: boolean
   selectedVerseId: number | null

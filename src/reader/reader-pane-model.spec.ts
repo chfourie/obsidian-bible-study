@@ -3158,7 +3158,7 @@ describe('ReaderPaneModel book mode', () => {
     ])
   })
 
-  it("shows the selected paragraph's citation and text instead of translations", async () => {
+  it("shows the selected paragraph's citation instead of translations", async () => {
     const model = bookModelWith()
     model.setDetailsWanted(true)
     await model.openPosition({ book: HUMILITY, chapter: 1 })
@@ -3168,10 +3168,7 @@ describe('ReaderPaneModel book mode', () => {
     expect(detailsOf(model)).toEqual({
       verseId: makeVerseId(HUMILITY, 1, 2),
       title: 'Humility ch. 1, par. 2',
-      book: {
-        citation: 'Andrew Murray, Humility (1895), ch. 1, par. 2',
-        text: 'And so pride is the root.',
-      },
+      book: { citation: 'Andrew Murray, Humility (1895), ch. 1, par. 2' },
       translations: [],
       strongs: [],
       strongsAttribution: null,
@@ -3189,8 +3186,8 @@ describe('ReaderPaneModel book mode', () => {
 
     const details = detailsOf(model)
     expect(details.title).toBe('Humility ch. 1, pars. 2-3')
-    expect(details.book?.text).toBe(
-      'And so pride is the root. Humility is the only soil.',
+    expect(details.book?.citation).toBe(
+      'Andrew Murray, Humility (1895), ch. 1, pars. 2-3',
     )
   })
 
