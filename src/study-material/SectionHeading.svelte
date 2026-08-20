@@ -1,19 +1,20 @@
 <!--
-A labelled section of study material with its single add action, which stays
-out of the way until the heading line is hovered.
+A labelled section of study material, optionally carrying its single add
+action, which stays out of the way until the heading line is hovered.
+Sections without an add action render the bare heading.
 -->
 <script lang="ts">
   import { setIcon } from 'obsidian'
 
   let {
     label,
-    action,
-    onAdd,
+    action = '',
+    onAdd = null,
     disabled = false,
   }: {
     label: string
-    action: string
-    onAdd: () => void
+    action?: string
+    onAdd?: (() => void) | null
     disabled?: boolean
   } = $props()
 
@@ -24,14 +25,16 @@ out of the way until the heading line is hovered.
 
 <div class="bsm-section-head">
   <span class="bsm-group-label">{label}</span>
-  <button
-    type="button"
-    class="bsm-section-add"
-    aria-label={action}
-    title={action}
-    {disabled}
-    onclick={onAdd}
-  ><span class="bsm-section-add-icon" use:icon={'circle-plus'}></span></button>
+  {#if onAdd !== null}
+    <button
+      type="button"
+      class="bsm-section-add"
+      aria-label={action}
+      title={action}
+      {disabled}
+      onclick={onAdd}
+    ><span class="bsm-section-add-icon" use:icon={'circle-plus'}></span></button>
+  {/if}
 </div>
 
 <style>

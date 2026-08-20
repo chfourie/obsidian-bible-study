@@ -26,10 +26,11 @@ import {
   type Reference,
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
-import type {
-  ExtractedOccurrence,
-  Occurrence,
-  OccurrenceGroup,
+import {
+  noteTitle,
+  type ExtractedOccurrence,
+  type Occurrence,
+  type OccurrenceGroup,
 } from '../vault-index'
 import { freshTabState, type StudyTabState } from './tab-memory'
 
@@ -117,11 +118,6 @@ const verseLabels = (verses: PassageVerse[]): (string | null)[] => {
   return locations.map((location) =>
     multiChapter ? `${location.chapter}:${location.verse}` : `${location.verse}`,
   )
-}
-
-const noteName = (file: string): string => {
-  const base = file.split('/').pop() ?? file
-  return base.replace(/\.[^.]+$/, '')
 }
 
 type PanelReference = { reference: Reference; translation: string | null }
@@ -255,7 +251,7 @@ export class StudyPanelModel {
   #title(): string | null {
     if (this.#studySource !== null) return this.#studySource.studyMaterial.title
     if (this.#file === null) return null
-    return noteName(this.#file)
+    return noteTitle(this.#file)
   }
 
   #status(): StudyPanelStatus {

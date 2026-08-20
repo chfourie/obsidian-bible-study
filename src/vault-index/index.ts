@@ -1,4 +1,5 @@
 export * from './extract-occurrences'
+export * from './note-title'
 export * from './note-vault'
 export * from './obsidian-note-vault'
 export * from './occurrence'

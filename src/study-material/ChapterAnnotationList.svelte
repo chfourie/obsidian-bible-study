@@ -31,16 +31,12 @@ heading instead, and the whole section hides itself when empty.
   }
 </script>
 
-{#if annotate !== null}
+{#if annotate !== null || items.length > 0}
   <SectionHeading
     label="Annotations"
     action="Annotate the selection or chapter"
     onAdd={annotate}
   />
-{:else if items.length > 0}
-  <div class="bsm-section-head">
-    <span class="bsm-group-label">Annotations</span>
-  </div>
 {/if}
 {#if items.length === 0}
   {#if annotate !== null}
@@ -66,21 +62,6 @@ heading instead, and the whole section hides itself when empty.
 {/if}
 
 <style>
-  /* The bare heading matches SectionHeading's, minus the add action. */
-  .bsm-section-head {
-    display: flex;
-    align-items: center;
-    margin-top: 16px;
-  }
-
-  .bsm-group-label {
-    display: block;
-    font-size: var(--font-smallest);
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
   .bsm-chapter-anno-empty {
     color: var(--text-faint);
     font-size: var(--font-ui-small);

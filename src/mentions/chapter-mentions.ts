@@ -5,15 +5,11 @@ import {
   type Reference,
   type VerseRange,
 } from '../reference'
+import { noteTitle } from '../vault-index'
 
 export type ChapterMentionSource = {
   file: string
   references: Reference[]
-}
-
-const noteTitle = (file: string): string => {
-  const basename = file.split('/').pop() ?? file
-  return basename.replace(/\.md$/, '')
 }
 
 // Mentions read in scripture order: each sits where its first range inside

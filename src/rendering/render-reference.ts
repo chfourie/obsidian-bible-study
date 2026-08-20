@@ -2,7 +2,7 @@ import { setIcon } from 'obsidian'
 import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
 import { opensInNewPane } from '../ui'
-import type { OccurrenceGroup } from '../vault-index'
+import { noteTitle, type OccurrenceGroup } from '../vault-index'
 import type { HighlightEditContext } from './highlight-editing'
 import type { Passage, PassageSource } from './module-passage-source'
 import { VERSE_TEXT_CLASS } from './passage-selection'
@@ -75,11 +75,6 @@ const renderChip = (
   activateAsButton(chip, (event) =>
     deps.openReference(model, { newPane: opensInNewPane(event) }),
   )
-}
-
-const noteTitle = (file: string): string => {
-  const basename = file.split('/').pop() ?? file
-  return basename.replace(/\.md$/, '')
 }
 
 // The in-note intersection surface (spec §5): a count indicator beside the

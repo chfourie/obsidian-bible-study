@@ -6,6 +6,7 @@ derived, so the section offers no add action and hides itself when empty.
 -->
 <script lang="ts">
   import type { ChapterMentionView } from '../contracts'
+  import SectionHeading from './SectionHeading.svelte'
   import type { StudyMaterialHost } from './study-material-host'
 
   let {
@@ -18,9 +19,7 @@ derived, so the section offers no add action and hides itself when empty.
 </script>
 
 {#if items.length > 0}
-  <div class="bsm-section-head">
-    <span class="bsm-group-label">Mentions</span>
-  </div>
+  <SectionHeading label="Mentions" />
   <ul class="bsm-chapter-mention-list">
     {#each items as item (item.file)}
       <li class="bsm-chapter-mention-item">
@@ -36,20 +35,6 @@ derived, so the section offers no add action and hides itself when empty.
 {/if}
 
 <style>
-  .bsm-section-head {
-    display: flex;
-    align-items: center;
-    margin-top: 16px;
-  }
-
-  .bsm-group-label {
-    display: block;
-    font-size: var(--font-smallest);
-    color: var(--text-faint);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
   .bsm-chapter-mention-list {
     margin: 4px 0;
     padding-left: 1.2em;
