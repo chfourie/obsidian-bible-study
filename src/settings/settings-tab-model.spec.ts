@@ -374,13 +374,19 @@ describe('SettingsTabModel settings mutations', () => {
     await model.updateSettings((settings) => ({
       ...settings,
       defaultTranslationId: 'bsb',
-      readerNavDefault: 'breadcrumb',
+      readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
     }))
 
     const settings = await settingsStore.loadSettings()
     expect(settings.defaultTranslationId).toBe('bsb')
-    expect(settings.readerNavDefault).toBe('breadcrumb')
-    expect(model.view.settings.readerNavDefault).toBe('breadcrumb')
+    expect(settings.readerNavDefault).toEqual({
+      desktop: 'breadcrumb',
+      mobile: 'tree',
+    })
+    expect(model.view.settings.readerNavDefault).toEqual({
+      desktop: 'breadcrumb',
+      mobile: 'tree',
+    })
   })
 })
 

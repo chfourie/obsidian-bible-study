@@ -1,4 +1,5 @@
 export * from './scripture-study-settings.type'
 export * from './bootstrap-translations'
+export * from './migrate-reader-defaults'
 export * from './plugin-feature'
 export * from './settings-store'

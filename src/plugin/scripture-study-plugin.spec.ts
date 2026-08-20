@@ -52,11 +52,13 @@ describe('ScriptureStudyPlugin same-device settings changes', () => {
 
     await plugin.settingsStore.updateSettings((settings) => ({
       ...settings,
-      readerNavDefault: 'breadcrumb',
+      readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
     }))
 
     expect(useSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ readerNavDefault: 'breadcrumb' }),
+      expect.objectContaining({
+        readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
+      }),
     )
   })
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { WorkspaceLeaf, type Plugin, type View } from 'obsidian'
+import { Platform, WorkspaceLeaf, type Plugin, type View } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
@@ -721,14 +721,14 @@ describe('ReaderFeature entry points', () => {
     expect(feature.prefillReference()).toBe(null)
   })
 
-  it('seeds new panes with the reader toggle defaults from settings', async () => {
+  it('seeds new panes with the desktop reader toggle defaults from settings', async () => {
     const { feature, leaves } = harness()
     feature.useSettings({
       ...DEFAULT_SETTINGS,
       defaultTranslationId: 'web',
-      readerNavDefault: 'breadcrumb',
-      readerLayoutDefault: 'continuous',
-      readerStrongsDefault: 'on',
+      readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
+      readerLayoutDefault: { desktop: 'continuous', mobile: 'verse-per-line' },
+      readerStrongsDefault: { desktop: 'on', mobile: 'off' },
       derivedRedLetter: true,
     })
     await feature.load()
@@ -743,6 +743,35 @@ describe('ReaderFeature entry points', () => {
       strongs: 'on',
       redLetter: 'on',
     })
+  })
+
+  it('seeds new panes with the mobile reader toggle defaults on a mobile device', async () => {
+    const { feature, leaves } = harness()
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
+      readerLayoutDefault: { desktop: 'continuous', mobile: 'verse-per-line' },
+      readerStrongsDefault: { desktop: 'on', mobile: 'off' },
+    })
+    Platform.isMobile = true
+    try {
+      await feature.load()
+
+      feature.openReference(ref('John 15:1'), 'web')
+      await flushAsync()
+
+      const view = leaves[0].view as ReaderView
+      expect(view.model.view.toggles).toEqual(
+        expect.objectContaining({
+          nav: 'tree',
+          layout: 'verse-per-line',
+          strongs: 'off',
+        }),
+      )
+    } finally {
+      Platform.isMobile = false
+    }
   })
 })
 

@@ -34,15 +34,26 @@ export const defaultHighlightPalette = (): HighlightPalette => ({
   dark: [...SHIPPED_HIGHLIGHT_HUES],
 })
 
+// Every reader option with a global settings default is seeded per device —
+// a new pane picks its slot by the device it opens on; in-pane switching
+// never writes back to either slot.
+export type ReaderDevice = 'desktop' | 'mobile'
+export type PerDeviceDefault<T> = Record<ReaderDevice, T>
+
+export const perDeviceDefault = <T>(value: T): PerDeviceDefault<T> => ({
+  desktop: value,
+  mobile: value,
+})
+
 export type ScriptureStudySettings = {
   installedModuleIds: string[]
   defaultTranslationId: string | null
   fallbackTranslationId: string | null
   languageFilter: string
   derivedRedLetter: boolean
-  readerNavDefault: 'tree' | 'breadcrumb'
-  readerLayoutDefault: 'verse-per-line' | 'continuous'
-  readerStrongsDefault: 'off' | 'on'
+  readerNavDefault: PerDeviceDefault<'tree' | 'breadcrumb'>
+  readerLayoutDefault: PerDeviceDefault<'verse-per-line' | 'continuous'>
+  readerStrongsDefault: PerDeviceDefault<'off' | 'on'>
   readerFontScalePercent: number
   revealPanelOnSelection: boolean
   annotationsFolder: string
@@ -58,9 +69,9 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   fallbackTranslationId: null,
   languageFilter: 'English',
   derivedRedLetter: false,
-  readerNavDefault: 'tree',
-  readerLayoutDefault: 'verse-per-line',
-  readerStrongsDefault: 'off',
+  readerNavDefault: perDeviceDefault('tree'),
+  readerLayoutDefault: perDeviceDefault('verse-per-line'),
+  readerStrongsDefault: perDeviceDefault('off'),
   readerFontScalePercent: FONT_SCALE_DEFAULT,
   revealPanelOnSelection: true,
   annotationsFolder: 'Annotations',
