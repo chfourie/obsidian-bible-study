@@ -1,5 +1,5 @@
 import type { ModuleManifest } from './module-manifest'
-import type { VerseContent } from './verse-content'
+import type { RefSpan, VerseContent } from './verse-content'
 
 export type BookContent = Record<number, VerseContent>
 
@@ -8,6 +8,9 @@ export type BookContent = Record<number, VerseContent>
 export type Epigraph = {
   quote: string
   attribution: string
+  // The live citations in the attribution line, addressed by character offset
+  // into it the way an atom's own ref spans are (spec-books §8).
+  refs?: RefSpan[]
 }
 
 export type ModuleEpigraphs = Record<number, Epigraph[]>

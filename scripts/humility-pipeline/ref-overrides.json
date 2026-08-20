@@ -1,0 +1,30 @@
+{
+  "comment": "Hand-kept corrections to the citations parse-ref-spans.ts cannot carry on its own (spec-books §8). `at` is chapter.paragraph, or chapter.eN for a section's Nth epigraph; `text` must still match its atom exactly once or the build fails. `note` is documentation only.",
+  "fix": [
+    {
+      "at": "4.4",
+      "text": "Luke 9:46",
+      "reference": "Luke 9:46",
+      "note": "The one citation Murray sets in arabic chapter:verse instead of his usual roman."
+    },
+    {
+      "at": "4.4",
+      "text": "Matt. 18:3",
+      "reference": "Matthew 18:3",
+      "note": "Second half of the same arabic-style bracket."
+    },
+    {
+      "at": "4.6",
+      "text": "Matt. xxxiii. 11",
+      "reference": "Matthew 23:11",
+      "note": "Transcribed numeral gained an x: Matthew has no chapter 33, and the quotation is Matt. 23:11."
+    },
+    {
+      "at": "11.e1",
+      "text": "2 COR. xii. 9. 10.",
+      "reference": "2 Corinthians 12:9-10",
+      "note": "The verse list lost its comma to a period, so the scanner reaches only verse 9."
+    }
+  ],
+  "suppress": []
+}

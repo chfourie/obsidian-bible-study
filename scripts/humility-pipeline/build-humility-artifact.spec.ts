@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../../src/reference/verse-id'
 import type { BookRegistryEntry } from './book-registry'
-import { buildHumilityArtifact, sha256Hex } from './build-humility-artifact'
+import {
+  buildHumilityArtifact,
+  refSpanCounts,
+  sha256Hex,
+} from './build-humility-artifact'
 
 const source = readFileSync('tests/fixtures/humility-slice.txt', 'utf8')
 
@@ -69,6 +73,39 @@ describe('buildHumilityArtifact', () => {
     expect(artifact.epigraphs[0]).toBeUndefined()
   })
 
+  it('carries a refs channel beside the prose of a citing paragraph', () => {
+    const paragraph = artifact.books[101][makeVerseId(101, 1, 2)]
+    expect(
+      paragraph.refs?.map((span) => paragraph.text.slice(span.start, span.end)),
+    ).toEqual(['John v. 30', 'See Note A.'])
+    expect(paragraph.refs?.[0].ranges).toEqual([
+      { startId: makeVerseId(43, 5, 30), endId: makeVerseId(43, 5, 30) },
+    ])
+  })
+
+  it('points a Note pointer at the note section of the book itself', () => {
+    const paragraph = artifact.books[101][makeVerseId(101, 1, 2)]
+    expect(paragraph.refs?.[1].ranges).toEqual([
+      { startId: makeVerseId(101, 13, 1), endId: makeVerseId(101, 13, 1) },
+    ])
+  })
+
+  it('carries a refs channel on the epigraph attribution', () => {
+    const [epigraph] = artifact.epigraphs[1]
+    expect(
+      epigraph.refs?.map((span) =>
+        epigraph.attribution.slice(span.start, span.end),
+      ),
+    ).toEqual(['REV. iv. 11'])
+  })
+
+  it('leaves the stored prose free of any reference grammar', () => {
+    expect(artifact.books[101][makeVerseId(101, 1, 2)].text).toBe(
+      "And so pride, or the loss of this humility, is the root of every sin." +
+        " 'I seek not Mine own will' (John v. 30). (See Note A.)",
+    )
+  })
+
   it('leaves no Project Gutenberg trace in the serialized artifact', () => {
     expect(JSON.stringify(artifact).toLowerCase()).not.toContain('gutenberg')
   })
@@ -81,6 +118,19 @@ describe('buildHumilityArtifact', () => {
 
   it('fails the build when the book is not registered at all', () => {
     expect(() => buildHumilityArtifact(source, [])).toThrow(/hum-m1895/)
+  })
+})
+
+describe('refSpanCounts', () => {
+  it('counts the paragraph and epigraph spans of every section', () => {
+    expect([...refSpanCounts(buildHumilityArtifact(source, registry))]).toEqual([
+      [0, 0],
+      [1, 3],
+      [2, 2],
+      [13, 0],
+      [14, 0],
+      [15, 0],
+    ])
   })
 })
 

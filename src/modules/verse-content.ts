@@ -1,7 +1,19 @@
+import type { VerseRange } from '../reference'
+
 export type TagSpan = {
   start: number
   end: number
   strongs: string[]
+}
+
+// A live reference the build found inside an atom's stored text: the span of
+// the author's own citation plus the ranges it resolves to, pre-normalized
+// onto the target book's grid (spec-books §8). Stored prose stays clean —
+// the reader parses nothing.
+export type RefSpan = {
+  start: number
+  end: number
+  ranges: VerseRange[]
 }
 
 // A plain character range into the verse text — the shape shared by the
@@ -31,6 +43,7 @@ export type StructuredVerse = {
   lines?: VerseLine[]
   red?: FormatSpan[]
   supplied?: FormatSpan[]
+  refs?: RefSpan[]
 }
 
 export type TaggedVerse = StructuredVerse & { tags: TagSpan[] }
@@ -55,3 +68,6 @@ export const verseRedLetterOf = (content: VerseContent): FormatSpan[] =>
 
 export const verseSuppliedOf = (content: VerseContent): FormatSpan[] =>
   isStructuredVerse(content) ? (content.supplied ?? []) : []
+
+export const verseRefsOf = (content: VerseContent): RefSpan[] =>
+  isStructuredVerse(content) ? (content.refs ?? []) : []

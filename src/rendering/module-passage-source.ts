@@ -7,6 +7,7 @@ import type {
 import {
   verseLinesOf,
   verseRedLetterOf,
+  verseRefsOf,
   verseSuppliedOf,
   verseTagsOf,
   verseTextOf,
@@ -15,6 +16,7 @@ import {
   enumerateVerseIds,
   redLetterCueOf,
   type Reference,
+  type VerseRange,
 } from '../reference'
 import { derivedRedSpan } from './derived-red-span'
 
@@ -28,6 +30,9 @@ export type VerseSegment = {
   indent?: number
   psalmHeading?: boolean
   highlightSlot?: number
+  // The passage this stretch of text cites, when it is a book's ref span
+  // (spec-books §8) — the reader turns it into a link.
+  refs?: VerseRange[]
 }
 
 export type PassageVerse = {
@@ -67,18 +72,24 @@ const covering = (
 ): boolean =>
   spans.some((span) => span.start <= start && end <= span.end)
 
-const verseSegments = (
+export const verseSegments = (
   verse: VerseContent,
   redSpans: FormatSpan[],
 ): VerseSegment[] => {
   const text = verseTextOf(verse)
   const orderedTags = [...verseTagsOf(verse)].sort((a, b) => a.start - b.start)
   const suppliedSpans = verseSuppliedOf(verse)
+  const refSpans = verseRefsOf(verse)
   const lines = [...verseLinesOf(verse)]
     .filter((line) => line.start < text.length)
     .sort((a, b) => a.start - b.start)
   const cuts = new Set([0, text.length, ...lines.map((line) => line.start)])
-  for (const span of [...orderedTags, ...redSpans, ...suppliedSpans]) {
+  for (const span of [
+    ...orderedTags,
+    ...redSpans,
+    ...suppliedSpans,
+    ...refSpans,
+  ]) {
     cuts.add(span.start)
     cuts.add(span.end)
   }
@@ -96,6 +107,10 @@ const verseSegments = (
     }
     if (covering(suppliedSpans, start, end)) segment.supplied = true
     if (tag !== undefined) segment.strongs = tag.strongs
+    const ref = refSpans.find(
+      (candidate) => candidate.start <= start && end <= candidate.end,
+    )
+    if (ref !== undefined) segment.refs = ref.ranges
     const line = [...lines]
       .reverse()
       .find((candidate) => candidate.start <= start)

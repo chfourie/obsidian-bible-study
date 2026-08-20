@@ -24,6 +24,7 @@ import {
   type ReaderBookSection,
   type ReaderBookSource,
   type ReaderPaneDeps,
+  type ReaderPosition,
   type ReaderToggles,
 } from './reader-pane-model'
 
@@ -2879,7 +2880,12 @@ describe('ReaderPaneModel book mode', () => {
     expect(view.book?.title).toBe('Humility')
     expect(view.book?.author).toBe('Andrew Murray')
     expect(view.book?.sectionName).toBe('The Glory of the Creature')
-    expect(view.book?.epigraphs).toEqual([CROWNS])
+    expect(view.book?.epigraphs).toEqual([
+      {
+        quote: CROWNS.quote,
+        attribution: [{ text: 'Rev. iv. 11', redLetter: false }],
+      },
+    ])
     expect(view.rows.map((row) => row.label)).toEqual(['1', '2', '3'])
   })
 
@@ -3019,5 +3025,124 @@ describe('ReaderPaneModel book mode', () => {
     await model.openPosition({ book: HUMILITY, chapter: 1 })
 
     expect(model.view.status).toBe('ok')
+  })
+
+  // Murray's own citations are live links in the prose (spec-books §8): the
+  // module ships them as a refs channel, the pane surfaces them per segment,
+  // and tapping one is an ordinary reader entry.
+  describe('ref spans', () => {
+    const JOHN_5_30 = {
+      startId: makeVerseId(43, 5, 30),
+      endId: makeVerseId(43, 5, 30),
+    }
+    const NOTE_A = {
+      startId: makeVerseId(HUMILITY, 13, 1),
+      endId: makeVerseId(HUMILITY, 13, 2),
+    }
+
+    const scripture = passageSourceOver({
+      web: { [makeVerseId(43, 5, 30)]: 'I can of Myself do nothing.' },
+    })
+
+    // Every section of the book reads the same, so a Note pointer's target
+    // renders as readily as the paragraph that points at it.
+    const citingBookModel = (): ReaderPaneModel =>
+      bookModelWith({
+        passages: {
+          passage: async (reference, translationId) => {
+            if (translationId !== 'hum-m1895')
+              return scripture.passage(reference, translationId)
+            return {
+              status: 'ok',
+              attribution: null,
+              verses: [
+                {
+                  verseId: reference.ranges[0].startId,
+                  segments: [
+                    { text: 'He said ', redLetter: false },
+                    { text: 'John v. 30', redLetter: false, refs: [JOHN_5_30] },
+                    { text: ' and ', redLetter: false },
+                    { text: 'See Note A.', redLetter: false, refs: [NOTE_A] },
+                  ],
+                },
+              ],
+            }
+          },
+        },
+        books: {
+          installed: async () => [humility()],
+          epigraphs: async () => [
+            { ...CROWNS, refs: [{ start: 0, end: 11, ranges: [JOHN_5_30] }] },
+          ],
+        },
+      })
+
+    it('surfaces a paragraph ref span as a segment property', async () => {
+      const model = citingBookModel()
+
+      await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+      expect(
+        model.view.rows[0].segments.map((segment) => segment.refs),
+      ).toEqual([undefined, [JOHN_5_30], undefined, [NOTE_A]])
+    })
+
+    it('surfaces an epigraph ref span over the attribution line', async () => {
+      const model = citingBookModel()
+
+      await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+      expect(model.view.book?.epigraphs[0].attribution).toEqual([
+        { text: 'Rev. iv. 11', redLetter: false, refs: [JOHN_5_30] },
+      ])
+    })
+
+    it('opens the scripture reader at the cited passage, highlighted and bannered', async () => {
+      const model = citingBookModel()
+      await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+      await model.openRefSpan([JOHN_5_30])
+
+      expect(model.view.position).toEqual({ book: 43, chapter: 5 })
+      expect(model.view.book).toBeNull()
+      expect(
+        model.view.rows.filter((row) => row.highlighted).map((row) => row.label),
+      ).toEqual(['30'])
+      expect(model.view.banner).toBe('Opened at John 5:30')
+    })
+
+    it('keeps a Note pointer inside the book reader', async () => {
+      const model = citingBookModel()
+      await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+      await model.openRefSpan([NOTE_A])
+
+      expect(model.view.position).toEqual({ book: HUMILITY, chapter: 13 })
+      expect(model.view.book?.sectionName).toBe('Note A')
+      expect(model.view.banner).toBe('Opened at Humility 13:1-2')
+    })
+
+    it('walks the pane history like any other reader move', async () => {
+      const visited: ReaderPosition[] = []
+      const model = citingBookModel()
+      model.useNavigation(async (position, open) => {
+        visited.push(position)
+        await open()
+      })
+      await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+      await model.openRefSpan([JOHN_5_30])
+
+      expect(visited).toEqual([{ book: 43, chapter: 5 }])
+    })
+
+    it('ignores a span with no ranges', async () => {
+      const model = citingBookModel()
+      await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+      await model.openRefSpan([])
+
+      expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
+    })
   })
 })
