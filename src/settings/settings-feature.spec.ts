@@ -22,7 +22,12 @@ const setup = () => {
   const modules = new ModulesFeature(plugin, settingsStore)
   const strongs = new StrongsDictionaries(
     new ObsidianModuleDataDir(plugin),
-    { fetchHebrew: async () => '', fetchGreek: async () => '' },
+    {
+      fetchHebrew: async () => '',
+      fetchGreek: async () => '',
+      fetchHebrewDerivations: async () => '',
+      fetchGreekDerivations: async () => '',
+    },
     settingsStore,
   )
   const feature = new SettingsFeature(plugin, settingsStore, modules, strongs)

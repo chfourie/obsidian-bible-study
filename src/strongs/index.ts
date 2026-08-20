@@ -1,5 +1,6 @@
 export * from './format-definition'
 export * from './lexicon-source'
+export * from './parse-derivations'
 export * from './parse-lexicon'
-export * from './stepbible-lexicon-client'
 export * from './strongs-dictionaries'
+export * from './strongs-lexicon-client'

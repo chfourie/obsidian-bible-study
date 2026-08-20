@@ -1,4 +1,18 @@
-import type { StrongsEntryView } from '../contracts'
+import {
+  NO_WORD_STUDY,
+  type NavigationOptions,
+  type StrongsEntryView,
+  type WordStudyOpener,
+} from '../contracts'
+
+// One extended number's dictionary entry as the panel studies it: the entry
+// itself, the rest of its Strong's Family, and the Strong's 1890 derivation
+// the brief lexicons carry none of.
+export type WordStudyEntry = {
+  entry: StrongsEntryView
+  siblings: string[]
+  derivation: string | null
+}
 
 // The Strong's Dictionaries seen from the Word Study Panel: one entry per
 // extended number, and the install the panel offers while the module is
@@ -6,9 +20,11 @@ import type { StrongsEntryView } from '../contracts'
 // concordance is a later section, not this one.
 export type WordStudyDictionary = {
   installed: () => Promise<boolean>
-  entryFor: (strongsNumber: string) => Promise<StrongsEntryView | null>
+  entryFor: (strongsNumber: string) => Promise<WordStudyEntry | null>
   install: () => Promise<void>
   attribution: string
+  // Named separately because it belongs on screen only where a derivation is.
+  etymologyAttribution: string
 }
 
 // Stands in when the panel runs without the dictionaries wired up: every
@@ -18,9 +34,36 @@ export const INERT_WORD_STUDY_DICTIONARY: WordStudyDictionary = {
   entryFor: async () => null,
   install: async () => {},
   attribution: '',
+  etymologyAttribution: '',
 }
 
-export type WordStudyDeps = { dictionary: WordStudyDictionary }
+export type WordStudyDeps = {
+  dictionary: WordStudyDictionary
+  // How the panel's own links walk: the same opener the Study Panel's entry
+  // cards use, so a plain activation retargets and a modified one spawns.
+  opener?: WordStudyOpener
+}
+
+// A derivation as the panel renders it: plain stretches of text, and the
+// Strong's Numbers it cites, which are walkable.
+export type EtymologySegment = { text: string; number: string | null }
+
+const CITATION = /[HG]\d{4}[A-Za-z]?/g
+
+const etymologyOf = (derivation: string | null): EtymologySegment[] | null => {
+  if (derivation === null || derivation === '') return null
+  const segments: EtymologySegment[] = []
+  let read = 0
+  for (const citation of derivation.matchAll(CITATION)) {
+    const at = citation.index
+    if (at > read) segments.push({ text: derivation.slice(read, at), number: null })
+    segments.push({ text: citation[0], number: citation[0] })
+    read = at + citation[0].length
+  }
+  if (read < derivation.length)
+    segments.push({ text: derivation.slice(read), number: null })
+  return segments
+}
 
 export type WordStudyStatus =
   // A panel restored without a number, or one never given one.
@@ -43,7 +86,13 @@ export type WordStudyViewState = {
   title: string
   status: WordStudyStatus
   entry: StrongsEntryView | null
+  // The rest of the entry's Strong's Family, each one walkable.
+  siblings: string[]
+  // Non-null exactly while the 1890 dictionary states a derivation for the
+  // number under study.
+  etymology: EtymologySegment[] | null
   attribution: string | null
+  etymologyAttribution: string | null
   install: WordStudyInstall | null
 }
 
@@ -55,7 +104,7 @@ const errorMessage = (error: unknown): string =>
 export class WordStudyModel {
   #number: string | null = null
   #status: WordStudyStatus = 'empty'
-  #entry: StrongsEntryView | null = null
+  #found: WordStudyEntry | null = null
   #installing = false
   #installError: string | null = null
   #loadToken = 0
@@ -74,12 +123,18 @@ export class WordStudyModel {
   }
 
   get view(): WordStudyViewState {
+    const found = this.#found
+    const etymology = etymologyOf(found?.derivation ?? null)
     return {
       number: this.#number,
       title: this.#number ?? UNTITLED,
       status: this.#status,
-      entry: this.#entry,
-      attribution: this.#entry === null ? null : this.deps.dictionary.attribution,
+      entry: found?.entry ?? null,
+      siblings: found?.siblings ?? [],
+      etymology,
+      attribution: found === null ? null : this.deps.dictionary.attribution,
+      etymologyAttribution:
+        etymology === null ? null : this.deps.dictionary.etymologyAttribution,
       install:
         this.#status === 'no-dictionary'
           ? { busy: this.#installing, error: this.#installError }
@@ -90,9 +145,18 @@ export class WordStudyModel {
   async show(strongsNumber: string): Promise<void> {
     this.#number = strongsNumber
     this.#status = 'loading'
-    this.#entry = null
+    this.#found = null
     this.#notify()
     await this.#load()
+  }
+
+  // Walking an etymology citation or a family sibling is the same move the
+  // Study Panel's entry cards make: plain retargets, modified spawns.
+  async open(
+    strongsNumber: string,
+    options: NavigationOptions = {},
+  ): Promise<void> {
+    await (this.deps.opener ?? NO_WORD_STUDY).openWordStudy(strongsNumber, options)
   }
 
   async installDictionary(): Promise<void> {
@@ -121,14 +185,14 @@ export class WordStudyModel {
     if (!(await this.deps.dictionary.installed())) {
       if (token !== this.#loadToken) return
       this.#status = 'no-dictionary'
-      this.#entry = null
+      this.#found = null
       this.#notify()
       return
     }
-    const entry = await this.deps.dictionary.entryFor(number)
+    const found = await this.deps.dictionary.entryFor(number)
     if (token !== this.#loadToken) return
-    this.#entry = entry
-    this.#status = entry === null ? 'no-entry' : 'ok'
+    this.#found = found
+    this.#status = found === null ? 'no-entry' : 'ok'
     this.#notify()
   }
 

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
+import { MODULE_FORMAT_VERSION } from './module-manifest'
 import { normalizeBollsTranslation } from './normalize-bolls-translation'
 import type { BollsVerse } from './normalize-bolls-translation'
 import type { TaggedVerse } from './verse-content'
@@ -49,7 +50,7 @@ describe('normalizeBollsTranslation with plain texts', () => {
       license: '',
       source: 'https://bolls.life/static/translations/NKJV.json',
       sourceChecksum: 'abc123',
-      formatVersion: 2,
+      formatVersion: MODULE_FORMAT_VERSION,
       capabilities: { strongsTagged: false },
     })
   })

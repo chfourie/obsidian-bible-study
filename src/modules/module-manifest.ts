@@ -2,7 +2,10 @@
 // lines (poetry/paragraph structure), red (words of Christ), and supplied
 // (translator-added words). Purely additive — v1 modules load and render
 // unchanged, and readers ignore channels they don't know.
-export const MODULE_FORMAT_VERSION = 2
+// v3: the Strong's Dictionaries store entries at extended-number granularity,
+// with their family groupings, morphology, and Strong's 1890 derivations.
+// A v2 dictionary carries none of it, so installs rebuild on the bump.
+export const MODULE_FORMAT_VERSION = 3
 
 export type ModuleCapabilities = {
   strongsTagged: boolean

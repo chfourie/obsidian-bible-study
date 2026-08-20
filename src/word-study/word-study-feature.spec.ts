@@ -3,15 +3,23 @@ import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import type { StrongsEntryView } from '../contracts'
 import { DEFAULT_SETTINGS } from '../data-access'
 import { WordStudyFeature } from './word-study-feature'
-import type { WordStudyDictionary } from './word-study-model'
+import type { WordStudyDictionary, WordStudyEntry } from './word-study-model'
 import { WORD_STUDY_VIEW_TYPE, WordStudyView } from './word-study-view'
 
-const entry = (strongs: string): StrongsEntryView => ({
+const entryView = (strongs: string): StrongsEntryView => ({
   strongs,
+  variant: strongs,
   lemma: 'ἀγάπη',
   transliteration: 'agapē',
+  morphology: 'G:N-F',
   gloss: 'love',
   definition: 'love, affection, benevolence',
+})
+
+const entry = (strongs: string): WordStudyEntry => ({
+  entry: entryView(strongs),
+  siblings: strongs === 'H0001G' ? ['H0001H'] : [],
+  derivation: strongs === 'H0001G' ? 'from H3050;' : null,
 })
 
 const fakeDictionary = (
@@ -21,6 +29,7 @@ const fakeDictionary = (
   entryFor: async (number) => (numbers.includes(number) ? entry(number) : null),
   install: async () => {},
   attribution: 'Dictionary data: TBESH/TBESG (CC BY 4.0)',
+  etymologyAttribution: "Etymology: Strong's (1890, public domain)",
 })
 
 type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
@@ -222,6 +231,46 @@ describe('WordStudyFeature', () => {
     })
   })
 
+  it('offers the etymology and the family siblings of the number it shows', async () => {
+    const { feature, leaves } = harness({
+      dictionary: fakeDictionary(['H0001G', 'H0001H', 'H3050']),
+    })
+    await feature.load()
+    await feature.openWordStudy('H0001G')
+    expect(panel(leaves[0]).model.view).toMatchObject({
+      siblings: ['H0001H'],
+      etymology: [
+        { text: 'from ', number: null },
+        { text: 'H3050', number: 'H3050' },
+        { text: ';', number: null },
+      ],
+      etymologyAttribution: "Etymology: Strong's (1890, public domain)",
+    })
+  })
+
+  it('retargets the panel when a link inside it is activated plainly', async () => {
+    const { feature, leaves } = harness({
+      dictionary: fakeDictionary(['H0001G', 'H0001H', 'H3050']),
+    })
+    await feature.load()
+    await feature.openWordStudy('H0001G')
+    await panel(leaves[0]).model.open('H0001H')
+    expect(leaves).toHaveLength(1)
+    expect(panel(leaves[0]).model.view.number).toBe('H0001H')
+  })
+
+  it('spawns a second panel when a link inside it asks for a new pane', async () => {
+    const { feature, leaves } = harness({
+      dictionary: fakeDictionary(['H0001G', 'H0001H', 'H3050']),
+    })
+    await feature.load()
+    await feature.openWordStudy('H0001G')
+    await panel(leaves[0]).model.open('H3050', { newPane: true })
+    expect(leaves).toHaveLength(2)
+    expect(panel(leaves[0]).model.view.number).toBe('H0001G')
+    expect(panel(leaves[1]).model.view.number).toBe('H3050')
+  })
+
   it('degrades to an install affordance when the dictionaries are missing', async () => {
     const { feature, leaves } = harness({
       dictionary: {
@@ -229,6 +278,7 @@ describe('WordStudyFeature', () => {
         entryFor: async () => null,
         install: async () => {},
         attribution: '',
+        etymologyAttribution: '',
       },
     })
     await feature.load()

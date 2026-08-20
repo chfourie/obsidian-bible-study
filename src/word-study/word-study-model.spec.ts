@@ -1,19 +1,31 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { StrongsEntryView } from '../contracts'
-import { WordStudyModel } from './word-study-model'
+import { WordStudyModel, type WordStudyEntry } from './word-study-model'
 
-const entry = (strongs: string): StrongsEntryView => ({
+const entryView = (strongs: string): StrongsEntryView => ({
   strongs,
+  variant: strongs,
   lemma: 'ἀγάπη',
   transliteration: 'agapē',
+  morphology: 'G:N-F',
   gloss: 'love',
   definition: 'love, affection, benevolence',
+})
+
+const entry = (
+  strongs: string,
+  extras: Partial<Omit<WordStudyEntry, 'entry'>> = {},
+): WordStudyEntry => ({
+  entry: entryView(strongs),
+  siblings: [],
+  derivation: null,
+  ...extras,
 })
 
 // The dictionary module seen through the word study's own seam: installed or
 // not, and one entry per extended number.
 const fakeDictionary = (
-  entries: Record<string, StrongsEntryView> = {},
+  entries: Record<string, WordStudyEntry> = {},
   options: { installed?: boolean } = {},
 ) => {
   let installed = options.installed ?? true
@@ -44,13 +56,22 @@ const fakeDictionary = (
         installed = true
       },
       attribution: 'Dictionary data: TBESH/TBESG (CC BY 4.0)',
+      etymologyAttribution: "Etymology: Strong's (1890, public domain)",
     },
   }
 }
 
 const model = (...args: Parameters<typeof fakeDictionary>) => {
   const dictionary = fakeDictionary(...args)
-  return { dictionary, model: new WordStudyModel({ dictionary: dictionary.deps }) }
+  const openWordStudy = vi.fn(async () => {})
+  return {
+    dictionary,
+    openWordStudy,
+    model: new WordStudyModel({
+      dictionary: dictionary.deps,
+      opener: { openWordStudy },
+    }),
+  }
 }
 
 describe('WordStudyModel', () => {
@@ -73,14 +94,81 @@ describe('WordStudyModel', () => {
       status: 'ok',
       entry: {
         strongs: 'G0026',
+        variant: 'G0026',
         lemma: 'ἀγάπη',
         transliteration: 'agapē',
+        morphology: 'G:N-F',
         gloss: 'love',
         definition: 'love, affection, benevolence',
       },
       attribution: 'Dictionary data: TBESH/TBESG (CC BY 4.0)',
       install: null,
     })
+  })
+
+  it('lists the family siblings the entry can be walked to', async () => {
+    const { model: panel } = model({
+      H0001G: entry('H0001G', { siblings: ['H0001H', 'H0001I'] }),
+    })
+    await panel.show('H0001G')
+    expect(panel.view.siblings).toEqual(['H0001H', 'H0001I'])
+  })
+
+  it('leaves the siblings empty for an entry that stands alone', async () => {
+    const { model: panel } = model({ G0026: entry('G0026') })
+    await panel.show('G0026')
+    expect(panel.view.siblings).toEqual([])
+  })
+
+  it('breaks the derivation into text and the numbers it cites', async () => {
+    const { model: panel } = model({
+      H0010: entry('H0010', { derivation: 'from H0001 and H3050;' }),
+    })
+    await panel.show('H0010')
+    expect(panel.view.etymology).toEqual([
+      { text: 'from ', number: null },
+      { text: 'H0001', number: 'H0001' },
+      { text: ' and ', number: null },
+      { text: 'H3050', number: 'H3050' },
+      { text: ';', number: null },
+    ])
+  })
+
+  it('reads a derivation citing nothing as one plain stretch of text', async () => {
+    const { model: panel } = model({
+      H0001G: entry('H0001G', { derivation: 'a primitive word;' }),
+    })
+    await panel.show('H0001G')
+    expect(panel.view.etymology).toEqual([
+      { text: 'a primitive word;', number: null },
+    ])
+  })
+
+  it('names the etymology source only while an etymology is on screen', async () => {
+    const { model: panel } = model({
+      G0026: entry('G0026'),
+      H0010: entry('H0010', { derivation: 'from H0001;' }),
+    })
+    await panel.show('G0026')
+    expect(panel.view).toMatchObject({
+      etymology: null,
+      etymologyAttribution: null,
+    })
+    await panel.show('H0010')
+    expect(panel.view.etymologyAttribution).toBe(
+      "Etymology: Strong's (1890, public domain)",
+    )
+  })
+
+  it('walks to another number the way the activation asked for', async () => {
+    const { model: panel, openWordStudy } = model({ G0026: entry('G0026') })
+    await panel.show('G0026')
+    await panel.open('H0001H')
+    await panel.open('H0001I', { newPane: true })
+    expect(openWordStudy.mock.calls).toEqual([
+      ['H0001H', {}],
+      ['H0001I', { newPane: true }],
+    ])
   })
 
   it('names the number it is loading before the entry arrives', () => {

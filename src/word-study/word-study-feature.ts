@@ -40,7 +40,10 @@ export class WordStudyFeature
   }
 
   createModel(): WordStudyModel {
-    const model = new WordStudyModel({ dictionary: this.#dictionary })
+    const model = new WordStudyModel({
+      dictionary: this.#dictionary,
+      opener: this,
+    })
     this.#models.add(model)
     return model
   }

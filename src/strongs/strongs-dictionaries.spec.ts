@@ -1,7 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { SettingsStore } from '../data-access'
-import type { ModuleDataDir, ModuleManifest } from '../modules'
+import {
+  MODULE_FORMAT_VERSION,
+  type ModuleDataDir,
+  type ModuleManifest,
+} from '../modules'
 import type { LexiconSource } from './lexicon-source'
 import { STRONGS_DICTIONARIES_ID, StrongsDictionaries } from './strongs-dictionaries'
 
@@ -37,9 +41,20 @@ class InMemoryModuleDataDir implements ModuleDataDir {
   }
 }
 
+const hebrewDerivations = readFileSync(
+  'tests/fixtures/strongs-hebrew-slice.xml',
+  'utf8',
+)
+const greekDerivations = readFileSync(
+  'tests/fixtures/strongs-greek-slice.xml',
+  'utf8',
+)
+
 const fakeSource: LexiconSource = {
   fetchHebrew: async () => hebrewSlice,
   fetchGreek: async () => greekSlice,
+  fetchHebrewDerivations: async () => hebrewDerivations,
+  fetchGreekDerivations: async () => greekDerivations,
 }
 
 const inMemorySettingsStore = () => {
@@ -91,6 +106,42 @@ describe('StrongsDictionaries install', () => {
   })
 })
 
+describe('StrongsDictionaries format bump', () => {
+  it('rebuilds an install left behind by an older module format', async () => {
+    const { dataDir, dictionaries } = setup()
+    await dictionaries.install()
+    await dataDir.writeTextFile(
+      'modules/strongs-dictionaries/manifest.json',
+      JSON.stringify({ formatVersion: MODULE_FORMAT_VERSION - 1 }),
+    )
+    await dataDir.writeTextFile('modules/strongs-dictionaries/hebrew.json', '{}')
+
+    await dictionaries.rebuildIfOutdated()
+
+    expect((await dictionaries.entriesFor(['H0001']))[0].gloss).toBe('father')
+  })
+
+  it('leaves a current install alone', async () => {
+    const { dataDir, dictionaries } = setup()
+    await dictionaries.install()
+    const written = dataDir.files.get('modules/strongs-dictionaries/hebrew.json')
+
+    await dictionaries.rebuildIfOutdated()
+
+    expect(dataDir.files.get('modules/strongs-dictionaries/hebrew.json')).toBe(
+      written,
+    )
+  })
+
+  it('has nothing to rebuild when the module was never installed', async () => {
+    const { dataDir, dictionaries } = setup()
+
+    await dictionaries.rebuildIfOutdated()
+
+    expect(dataDir.files.size).toBe(0)
+  })
+})
+
 describe('StrongsDictionaries lookup', () => {
   it('serves entries for Hebrew and Greek numbers in the requested order', async () => {
     const { dictionaries } = setup()
@@ -116,6 +167,91 @@ describe('StrongsDictionaries lookup', () => {
     const { dictionaries } = setup()
 
     expect(await dictionaries.entriesFor(['H0001'])).toEqual([])
+  })
+
+  it('serves the kept columns beside the definition', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    const [entry] = await dictionaries.entriesFor(['H0002'])
+
+    expect(entry).toMatchObject({
+      strongs: 'H0002',
+      variant: 'H0002',
+      morphology: 'A:N-M',
+    })
+  })
+
+  it('answers a tagged translation asking by family with the first sub-entry', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    const [entry] = await dictionaries.entriesFor(['H0001'])
+
+    expect(entry).toMatchObject({ strongs: 'H0001', variant: 'H0001G' })
+  })
+
+  it('answers an extended number with the sub-entry it names', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    const [entry] = await dictionaries.entriesFor(['H0001I'])
+
+    expect(entry).toMatchObject({ variant: 'H0001I', gloss: 'father of' })
+  })
+})
+
+describe('StrongsDictionaries word study', () => {
+  it('names the siblings an extended number shares its family with', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    const study = await dictionaries.studyEntryFor('H0001H')
+
+    expect(study?.entry.variant).toBe('H0001H')
+    expect(study?.siblings).toEqual(['H0001G', 'H0001I'])
+  })
+
+  it('leaves a lone entry without siblings', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    expect((await dictionaries.studyEntryFor('H0002'))?.siblings).toEqual([])
+  })
+
+  it("carries the Strong's 1890 derivation of the family it belongs to", async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    expect((await dictionaries.studyEntryFor('H0001G'))?.derivation).toBe(
+      'a primitive word;',
+    )
+    expect((await dictionaries.studyEntryFor('H0002'))?.derivation).toBe(
+      '(Aramaic) corresponding to H0001',
+    )
+  })
+
+  it('carries derivations for Greek as well as Hebrew', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    expect((await dictionaries.studyEntryFor('G0004'))?.derivation).toBe(
+      'from G0001 (as a negative particle) and G0922;',
+    )
+  })
+
+  it('leaves the derivation empty where the 1890 dictionary states none', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    expect((await dictionaries.studyEntryFor('G0003'))?.derivation).toBe(null)
+  })
+
+  it('has nothing to study for a number no entry covers', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    expect(await dictionaries.studyEntryFor('H9999')).toBe(null)
   })
 })
 

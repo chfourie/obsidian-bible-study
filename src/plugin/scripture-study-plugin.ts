@@ -14,8 +14,9 @@ import { RibbonMenuFeature } from '../ribbon-menu'
 import { SettingsFeature } from '../settings'
 import {
   formatDefinition,
-  StepBibleLexiconClient,
   STRONGS_ATTRIBUTION,
+  STRONGS_ETYMOLOGY_ATTRIBUTION,
+  StrongsLexiconClient,
   StrongsDictionaries,
 } from '../strongs'
 import { VaultIndexFeature } from '../vault-index'
@@ -33,7 +34,7 @@ export default class ScriptureStudyPlugin extends Plugin {
   )
   readonly strongsDictionaries = new StrongsDictionaries(
     new ObsidianModuleDataDir(this),
-    new StepBibleLexiconClient(),
+    new StrongsLexiconClient(),
     this.settingsStore,
   )
   readonly installSuggestedTranslation = async (): Promise<void> => {
@@ -76,13 +77,20 @@ export default class ScriptureStudyPlugin extends Plugin {
     dictionary: {
       installed: () => this.strongsDictionaries.isInstalled(),
       entryFor: async (strongsNumber) => {
-        const [entry] = await this.strongsDictionaries.entriesFor([strongsNumber])
-        return entry === undefined
+        const found = await this.strongsDictionaries.studyEntryFor(strongsNumber)
+        return found === null
           ? null
-          : { ...entry, definition: formatDefinition(entry.definition) }
+          : {
+              ...found,
+              entry: {
+                ...found.entry,
+                definition: formatDefinition(found.entry.definition),
+              },
+            }
       },
       install: () => this.strongsDictionaries.install(),
       attribution: STRONGS_ATTRIBUTION,
+      etymologyAttribution: STRONGS_ETYMOLOGY_ATTRIBUTION,
     },
   })
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
@@ -133,6 +141,9 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.#settings = await this.settingsStore.loadSettings()
     this.#features.useSettings(this.#settings)
     await this.#features.load()
+    // Offline or interrupted, the module simply stays on its old format and
+    // the next load tries again — never a reason to fail the plugin's own.
+    void this.strongsDictionaries.rebuildIfOutdated().catch(() => {})
   }
 
   readonly onExternalSettingsChange = async (): Promise<void> => {

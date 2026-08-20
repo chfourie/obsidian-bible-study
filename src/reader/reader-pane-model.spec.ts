@@ -1358,8 +1358,10 @@ describe('opening the reader at a reference', () => {
 
 const strongsEntry = (strongs: string) => ({
   strongs,
+  variant: strongs,
   lemma: `lemma-${strongs}`,
   transliteration: `translit-${strongs}`,
+  morphology: `morph-${strongs}`,
   gloss: `gloss-${strongs}`,
   definition: `definition of ${strongs}`,
 })
