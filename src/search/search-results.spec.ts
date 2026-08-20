@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
-import { emphasizedSegments, groupHitsByBook } from './search-results'
+import {
+  HITS_SHOWN_PER_BOOK,
+  bookViews,
+  emphasizedSegments,
+  groupHitsByBook,
+} from './search-results'
 import type { SearchHit } from './search-scan'
 
 const hit = (verseId: number, text: string): SearchHit => ({
@@ -87,5 +92,71 @@ describe('groupHitsByBook', () => {
 
   it('has no groups for no hits', () => {
     expect(groupHitsByBook([])).toEqual([])
+  })
+})
+
+const johnHits = (count: number): SearchHit[] =>
+  Array.from({ length: count }, (_, index) =>
+    hit(makeVerseId(43, 15, index + 1), 'I am the vine.'),
+  )
+
+const johnGroups = (count: number) => groupHitsByBook(johnHits(count))
+
+describe('bookViews', () => {
+  it('shows every hit of a group within the cap', () => {
+    const [view] = bookViews(johnGroups(3), new Set(), new Set())
+    expect(view.hits).toHaveLength(3)
+    expect(view.count).toBe(3)
+    expect(view.hiddenHits).toBe(0)
+    expect(view.collapsed).toBe(false)
+  })
+
+  it('shows the cap and hides the rest of a longer group', () => {
+    const [view] = bookViews(
+      johnGroups(HITS_SHOWN_PER_BOOK + 4),
+      new Set(),
+      new Set(),
+    )
+    expect(view.hits).toHaveLength(HITS_SHOWN_PER_BOOK)
+    expect(view.count).toBe(HITS_SHOWN_PER_BOOK + 4)
+    expect(view.hiddenHits).toBe(4)
+  })
+
+  it('shows every hit of an expanded group', () => {
+    const [view] = bookViews(
+      johnGroups(HITS_SHOWN_PER_BOOK + 4),
+      new Set(),
+      new Set([43]),
+    )
+    expect(view.hits).toHaveLength(HITS_SHOWN_PER_BOOK + 4)
+    expect(view.hiddenHits).toBe(0)
+  })
+
+  it('shows no hits of a collapsed group, and still counts them', () => {
+    const [view] = bookViews(johnGroups(3), new Set([43]), new Set())
+    expect(view.collapsed).toBe(true)
+    expect(view.hits).toEqual([])
+    expect(view.count).toBe(3)
+    expect(view.hiddenHits).toBe(0)
+  })
+
+  it('collapses a group whose hits were expanded', () => {
+    const [view] = bookViews(
+      johnGroups(HITS_SHOWN_PER_BOOK + 4),
+      new Set([43]),
+      new Set([43]),
+    )
+    expect(view.hits).toEqual([])
+    expect(view.count).toBe(HITS_SHOWN_PER_BOOK + 4)
+  })
+
+  it('leaves the groups it is given otherwise as they are', () => {
+    const groups = groupHitsByBook([
+      hit(makeVerseId(1, 1, 1), 'In the beginning'),
+      hit(makeVerseId(43, 15, 1), 'I am the true vine.'),
+    ])
+    expect(bookViews(groups, new Set(), new Set()).map((view) => view.name)).toEqual(
+      ['Genesis', 'John'],
+    )
   })
 })

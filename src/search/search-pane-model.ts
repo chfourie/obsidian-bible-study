@@ -7,7 +7,9 @@ import {
   type SearchQuery,
 } from './search-query'
 import {
+  bookViews,
   groupHitsByBook,
+  type SearchBookGroup,
   type SearchBookView,
   type SearchHitView,
 } from './search-results'
@@ -81,7 +83,11 @@ export class SearchPaneModel {
   #query = ''
   #submittedQuery: string | null = null
   #status: SearchPaneStatus = 'idle'
-  #books: SearchBookView[] = []
+  #groups: SearchBookGroup[] = []
+  // Collapse and expansion live and die with the pane's current results: a new
+  // search starts every group open and capped again.
+  readonly #collapsedBooks = new Set<number>()
+  readonly #expandedBooks = new Set<number>()
   #indexing: IndexBuildProgress | null = null
   #indexingLabel: string | null = null
   #totalHits = 0
@@ -106,7 +112,7 @@ export class SearchPaneModel {
       indexing: this.#indexing,
       indexingLabel: this.#indexingLabel,
       totalHits: this.#totalHits,
-      books: this.#books,
+      books: bookViews(this.#groups, this.#collapsedBooks, this.#expandedBooks),
     }
   }
 
@@ -150,7 +156,9 @@ export class SearchPaneModel {
     const token = ++this.#searchToken
     const text = this.#query
     const query = parseSearchQuery(text)
-    this.#books = []
+    this.#groups = []
+    this.#collapsedBooks.clear()
+    this.#expandedBooks.clear()
     this.#totalHits = 0
     if (isEmptyQuery(query)) {
       this.#submittedQuery = null
@@ -185,9 +193,20 @@ export class SearchPaneModel {
     const scoped = hitsInTestament(hits, scope.testament).sort(
       (a, b) => a.verseId - b.verseId,
     )
-    this.#books = groupHitsByBook(scoped)
+    this.#groups = groupHitsByBook(scoped)
     this.#totalHits = scoped.length
     this.#settle(scoped.length === 0 ? 'no-results' : 'ok')
+  }
+
+  toggleBookCollapsed(book: number): void {
+    if (this.#collapsedBooks.has(book)) this.#collapsedBooks.delete(book)
+    else this.#collapsedBooks.add(book)
+    this.#notify()
+  }
+
+  expandBookHits(book: number): void {
+    this.#expandedBooks.add(book)
+    this.#notify()
   }
 
   // A Book carries its own edition rather than a translation, and the reader

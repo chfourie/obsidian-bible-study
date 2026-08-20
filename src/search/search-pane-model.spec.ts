@@ -10,6 +10,7 @@ import { BOOKS, makeVerseId, type Reference } from '../reference'
 import { SearchEngine } from './search-engine'
 import { SearchPaneModel, type SearchPaneDeps } from './search-pane-model'
 import type { SearchQuery } from './search-query'
+import { HITS_SHOWN_PER_BOOK } from './search-results'
 import {
   defaultStoredSearchScope,
   resolveSearchScope,
@@ -358,6 +359,120 @@ describe('SearchPaneModel', () => {
     unsubscribe()
     model.setQuery('other')
     expect(notifications).toBe(settled)
+  })
+})
+
+const LONG_BOOK_HITS = HITS_SHOWN_PER_BOOK + 4
+
+const longHarness = () =>
+  harness({
+    content: {
+      web: {
+        1: verses(1, 1, {
+          1: 'In the beginning God created the heavens and the earth.',
+        }),
+        43: verses(
+          43,
+          15,
+          Object.fromEntries(
+            Array.from({ length: LONG_BOOK_HITS }, (_, index) => [
+              index + 1,
+              'I am the vine.',
+            ]),
+          ),
+        ),
+      },
+    },
+  })
+
+const group = (model: SearchPaneModel, book: number) => {
+  const found = model.view.books.find((candidate) => candidate.book === book)
+  if (found === undefined) throw new Error(`no group for book ${book}`)
+  return found
+}
+
+describe('SearchPaneModel result list', () => {
+  it('shows the total across every book beside the groups', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    expect(model.view.totalHits).toBe(LONG_BOOK_HITS + 1)
+    expect(model.view.books).toHaveLength(2)
+  })
+
+  it('shows a long group up to the cap, saying how many more it hides', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    expect(group(model, 43).hits).toHaveLength(HITS_SHOWN_PER_BOOK)
+    expect(group(model, 43).hiddenHits).toBe(4)
+    expect(group(model, 43).count).toBe(LONG_BOOK_HITS)
+    expect(group(model, 1).hiddenHits).toBe(0)
+  })
+
+  it('reveals the rest of a capped group when it is expanded', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.expandBookHits(43)
+    expect(group(model, 43).hits).toHaveLength(LONG_BOOK_HITS)
+    expect(group(model, 43).hiddenHits).toBe(0)
+  })
+
+  it('collapses and expands a group, keeping its count either way', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.toggleBookCollapsed(43)
+    expect(group(model, 43).collapsed).toBe(true)
+    expect(group(model, 43).hits).toEqual([])
+    expect(group(model, 43).count).toBe(LONG_BOOK_HITS)
+    expect(model.view.totalHits).toBe(LONG_BOOK_HITS + 1)
+    model.toggleBookCollapsed(43)
+    expect(group(model, 43).collapsed).toBe(false)
+    expect(group(model, 43).hits).toHaveLength(HITS_SHOWN_PER_BOOK)
+  })
+
+  it('collapses one group without touching the others', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.toggleBookCollapsed(1)
+    expect(group(model, 1).collapsed).toBe(true)
+    expect(group(model, 43).collapsed).toBe(false)
+  })
+
+  it('tells its subscribers when a group is collapsed or expanded', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    let notifications = 0
+    model.subscribe(() => {
+      notifications += 1
+    })
+    model.toggleBookCollapsed(43)
+    model.expandBookHits(43)
+    expect(notifications).toBe(2)
+  })
+
+  it('starts a new search with every group expanded and capped again', async () => {
+    const { model } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.toggleBookCollapsed(1)
+    model.expandBookHits(43)
+    await model.submit()
+    expect(group(model, 1).collapsed).toBe(false)
+    expect(group(model, 43).hits).toHaveLength(HITS_SHOWN_PER_BOOK)
+  })
+
+  it('remembers no collapse or expansion beyond the pane', async () => {
+    const { model, stored } = longHarness()
+    model.setQuery('the')
+    await model.submit()
+    model.toggleBookCollapsed(43)
+    model.expandBookHits(1)
+    expect(stored()).toEqual(defaultStoredSearchScope())
   })
 })
 

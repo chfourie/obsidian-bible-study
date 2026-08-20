@@ -124,10 +124,18 @@ Activating a hit opens the reader at that verse or paragraph.
       </p>
       {#each view.books as group (group.book)}
         <section class="bss-book">
-          <div class="bss-book-head">
+          <button
+            type="button"
+            class="bss-book-head"
+            aria-expanded={!group.collapsed}
+            onclick={() => model.toggleBookCollapsed(group.book)}
+          >
+            <span class="bss-book-fold" class:bss-folded={group.collapsed}
+              >▾</span
+            >
             <span class="bss-book-name">{group.name}</span>
             <span class="bss-book-count">{group.count}</span>
-          </div>
+          </button>
           {#each group.hits as hit (hit.verseId)}
             <div
               role="button"
@@ -144,6 +152,15 @@ Activating a hit opens the reader at that verse or paragraph.
               >
             </div>
           {/each}
+          {#if group.hiddenHits > 0}
+            <button
+              type="button"
+              class="bss-more"
+              onclick={() => model.expandBookHits(group.book)}
+            >
+              Show {group.hiddenHits} more
+            </button>
+          {/if}
         </section>
       {/each}
     {/if}
@@ -257,14 +274,48 @@ Activating a hit opens the reader at that verse or paragraph.
     display: flex;
     align-items: baseline;
     gap: 0.35rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: var(--radius-s);
+    box-shadow: none;
+    background-color: transparent;
+    cursor: pointer;
+    text-align: left;
     font-size: var(--font-ui-small);
     font-weight: 600;
     color: var(--text-accent);
   }
 
+  .bss-book-head:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  .bss-book-fold {
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bss-book-fold.bss-folded {
+    display: inline-block;
+    transform: rotate(-90deg);
+  }
+
   .bss-book-count {
     color: var(--text-muted);
     font-weight: 400;
+  }
+
+  .bss-more {
+    align-self: flex-start;
+    padding: 0.1rem 0.3rem;
+    box-shadow: none;
+    background-color: transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    text-decoration: underline;
+  }
+
+  .bss-more:hover {
+    color: var(--text-normal);
   }
 
   .bss-hit {

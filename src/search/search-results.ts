@@ -21,13 +21,24 @@ export type SearchHitView = {
   segments: SearchHitSegment[]
 }
 
+// How many of a book's hits the list prints before the rest wait behind an
+// expander, so one crowded book cannot bury the books under it.
+export const HITS_SHOWN_PER_BOOK = 25
+
 // A book's hits under one heading, counted — hits arrive in Canonical Grid
 // order, so the groups come out in it too.
-export type SearchBookView = {
+export type SearchBookGroup = {
   book: number
   name: string
   count: number
   hits: SearchHitView[]
+}
+
+// A group as the list prints it: `hits` is what shows, `count` stays the whole
+// group's size, and `hiddenHits` is what the expander offers.
+export type SearchBookView = SearchBookGroup & {
+  collapsed: boolean
+  hiddenHits: number
 }
 
 export const emphasizedSegments = (
@@ -63,8 +74,8 @@ const hitView = (hit: SearchHit): SearchHitView => {
 
 export const groupHitsByBook = (
   hits: readonly SearchHit[],
-): SearchBookView[] => {
-  const groups: SearchBookView[] = []
+): SearchBookGroup[] => {
+  const groups: SearchBookGroup[] = []
   for (const hit of hits) {
     const book = decodeVerseId(hit.verseId).book
     let group = groups[groups.length - 1]
@@ -77,3 +88,24 @@ export const groupHitsByBook = (
   }
   return groups
 }
+
+// A collapsed group prints no hits at all; an expanded one prints past the cap.
+export const bookViews = (
+  groups: readonly SearchBookGroup[],
+  collapsed: ReadonlySet<number>,
+  expanded: ReadonlySet<number>,
+): SearchBookView[] =>
+  groups.map((group) => {
+    const isCollapsed = collapsed.has(group.book)
+    const hits = isCollapsed
+      ? []
+      : expanded.has(group.book)
+        ? group.hits
+        : group.hits.slice(0, HITS_SHOWN_PER_BOOK)
+    return {
+      ...group,
+      hits,
+      collapsed: isCollapsed,
+      hiddenHits: isCollapsed ? 0 : group.count - hits.length,
+    }
+  })
