@@ -20,6 +20,7 @@ import {
 } from '../cross-references'
 import { orderChapterAnnotations } from '../annotations'
 import { chapterMentionViews } from '../mentions'
+import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
 import type {
   AnnotationBlockView,
   ChapterAnnotationView,
@@ -202,6 +203,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #details: VerseDetailsView | null = null
   #chapterAnnotations: ChapterAnnotationView[] = []
   #chapterMentions: ChapterMentionView[] = []
+  #markers = new Map<number, VerseMarkerCounts>()
   #chapterMaterialToken = 0
   #attribution: string | null = null
   #bannerDismissed = false
@@ -742,24 +744,13 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async refreshOccurrences(): Promise<void> {
-    this.#rows = this.#rows.map((row) => ({
-      ...row,
-      ...this.#occurrenceCounts(row.verseId),
-    }))
-    this.#notify()
     await this.#loadChapterMaterial()
     const loadedVerseId = this.#details?.verseId
     if (loadedVerseId !== undefined) await this.#loadDetails(loadedVerseId)
   }
 
-  #occurrenceCounts(verseId: number): { annotations: number; mentions: number } {
-    const groups = this.deps.intersecting(
-      singleVerseReference(this.#position.book, verseId),
-    )
-    return {
-      annotations: groups.filter((occurrence) => occurrence.annotation).length,
-      mentions: groups.filter((occurrence) => !occurrence.annotation).length,
-    }
+  #markerCounts(verseId: number): { annotations: number; mentions: number } {
+    return this.#markers.get(verseId) ?? { annotations: 0, mentions: 0 }
   }
 
   async #loadDetails(verseId: number): Promise<void> {
@@ -806,12 +797,27 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   // One chapter-level intersection query feeds the panel's annotation and
-  // mention lists — no verse selection involved. The token retires a load the
-  // reader has navigated away from.
+  // mention lists and the verse markers — no verse selection involved. The
+  // token retires a load the reader has navigated away from.
   async #loadChapterMaterial(): Promise<void> {
     const token = ++this.#chapterMaterialToken
     const chapter = chapterReference(this.#position)
     const groups = this.deps.intersecting(chapter)
+    this.#markers = verseMarkers(
+      groups.map((group) => ({
+        file: group.file,
+        annotation: group.annotation,
+        references: group.occurrences.map(
+          (occurrence) => occurrence.reference,
+        ),
+      })),
+      chapter,
+    )
+    this.#rows = this.#rows.map((row) => ({
+      ...row,
+      ...this.#markerCounts(row.verseId),
+    }))
+    this.#notify()
     const mentions = chapterMentionViews(
       groups
         .filter((group) => !group.annotation)
@@ -931,7 +937,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       highlighted:
         this.#entry !== null &&
         this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),
-      ...this.#occurrenceCounts(verse.verseId),
+      ...this.#markerCounts(verse.verseId),
     }))
     this.#status = 'ok'
     this.#notify()

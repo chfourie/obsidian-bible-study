@@ -71,11 +71,6 @@
     return () => observer.disconnect()
   })
 
-  const verseMarks = (row: VerseRowView): { anno: boolean; mentions: number } => ({
-    anno: row.annotations > 0,
-    mentions: row.mentions,
-  })
-
   const onVerseClick = (event: MouseEvent, verseId: number): void => {
     if (event.shiftKey) model.extendSelectionTo(verseId)
     else void model.selectVerse(verseId)
@@ -141,9 +136,11 @@
         class="scripture-study-indent-{segment.indent}"
       >{@render segmentText(row, segment)}</span>{:else}{@render segmentText(row, segment)}{/if}
   {/each}
-  {#if verseMarks(row).anno}<span class="bsr-mark-anno" title="Annotation">●</span>{/if}
-  {#if verseMarks(row).mentions > 0}
-    <span class="bsr-mark-inter" title="{verseMarks(row).mentions} intersecting notes">◆{verseMarks(row).mentions > 1 ? verseMarks(row).mentions : ''}</span>
+  {#if row.annotations > 0}
+    <span class="bsr-mark-anno" title={row.annotations > 1 ? `${row.annotations} annotations` : 'Annotation'}>●{row.annotations > 1 ? row.annotations : ''}</span>
+  {/if}
+  {#if row.mentions > 0}
+    <span class="bsr-mark-inter" title="{row.mentions} intersecting notes">◆{row.mentions > 1 ? row.mentions : ''}</span>
   {/if}
 {/snippet}
 

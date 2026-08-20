@@ -105,10 +105,19 @@ const ref = (text: string): Reference => {
   return parsed.reference
 }
 
-const group = (file: string, annotation: boolean): OccurrenceGroup => ({
+const group = (
+  file: string,
+  annotation: boolean,
+  ...references: string[]
+): OccurrenceGroup => ({
   file,
   annotation,
-  occurrences: [],
+  occurrences: references.map((text, position) => ({
+    file,
+    position,
+    reference: ref(text),
+    source: annotation ? 'annotation-frontmatter' : 'body',
+  })),
 })
 
 const detailsOf = (model: ReaderPaneModel): VerseDetailsView => {
@@ -663,17 +672,23 @@ describe('annotation ordering in details', () => {
 })
 
 describe('verse indicators', () => {
+  const chapterQueried = (
+    groups: OccurrenceGroup[],
+  ): ((reference: Reference) => OccurrenceGroup[]) => {
+    const chapterStart = makeVerseId(43, 15, 1)
+    return (reference) =>
+      reference.ranges.some((range) => range.startId === chapterStart)
+        ? groups
+        : []
+  }
+
   it('marks verses with annotation and intersecting-note counts', async () => {
-    const verse4 = makeVerseId(43, 15, 4)
     const model = modelWith({
-      intersecting: (reference) =>
-        reference.ranges.some((range) => range.startId === verse4)
-          ? [
-              group('Annotations/John 15.4.md', true),
-              group('Sermons/Fruitfulness.md', false),
-              group('Topics/Union.md', false),
-            ]
-          : [],
+      intersecting: chapterQueried([
+        group('Annotations/John 15.4.md', true, 'John 15:4'),
+        group('Sermons/Fruitfulness.md', false, 'John 15:4'),
+        group('Topics/Union.md', false, 'John 15:4'),
+      ]),
     })
 
     await model.openAt(ref('John 15:4'), 'web')
@@ -683,6 +698,69 @@ describe('verse indicators', () => {
     expect(rows[3].mentions).toBe(2)
     expect(rows[0].annotations).toBe(0)
     expect(rows[0].mentions).toBe(0)
+  })
+
+  it('marks only the first verse of a range, not every covered verse', async () => {
+    const model = modelWith({
+      intersecting: chapterQueried([
+        group('Annotations/Abiding.md', true, 'John 15:2-5'),
+      ]),
+    })
+
+    await model.openAt(ref('John 15:2'), 'web')
+
+    expect(model.view.rows.map((row) => row.annotations)).toEqual([
+      0, 1, 0, 0, 0,
+    ])
+  })
+
+  it('marks the chapter opening for a range entering from the previous chapter', async () => {
+    const model = modelWith({
+      intersecting: chapterQueried([
+        group('Sermons/Farewell.md', false, 'John 14:30-15:3'),
+      ]),
+    })
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.view.rows.map((row) => row.mentions)).toEqual([1, 0, 0, 0, 0])
+  })
+
+  it('marks each range of a multi-range reference', async () => {
+    const model = modelWith({
+      intersecting: chapterQueried([
+        group('Sermons/Fruit.md', false, 'John 15:1-2,4-5'),
+      ]),
+    })
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.view.rows.map((row) => row.mentions)).toEqual([1, 0, 0, 1, 0])
+  })
+
+  it('counts annotations starting a range at the same verse', async () => {
+    const model = modelWith({
+      intersecting: chapterQueried([
+        group('Annotations/a.md', true, 'John 15:4'),
+        group('Annotations/b.md', true, 'John 15:4-5'),
+      ]),
+    })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(model.view.rows[3].annotations).toBe(2)
+  })
+
+  it('counts mentions per distinct note', async () => {
+    const model = modelWith({
+      intersecting: chapterQueried([
+        group('Sermons/Vine.md', false, 'John 15:4', 'John 15:4-6'),
+      ]),
+    })
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(model.view.rows[3].mentions).toBe(1)
   })
 })
 
@@ -766,7 +844,7 @@ describe('occurrence refresh', () => {
     await model.selectVerse(verse4)
     expect(model.view.rows[3].annotations).toBe(0)
 
-    groups = [group('Annotations/John 15.4.md', true)]
+    groups = [group('Annotations/John 15.4.md', true, 'John 15:4')]
     await model.refreshOccurrences()
 
     expect(model.view.rows[3].annotations).toBe(1)
