@@ -6,7 +6,7 @@ import {
   type ScriptureStudySettings,
 } from '../data-access'
 import { ModulesFeature, ObsidianModuleDataDir } from '../modules'
-import { StrongsDictionaries } from '../strongs'
+import { LsjLexicon, StrongsDictionaries } from '../strongs'
 import { SettingsFeature } from './settings-feature'
 
 
@@ -22,10 +22,26 @@ const setup = () => {
   const modules = new ModulesFeature(plugin, settingsStore)
   const strongs = new StrongsDictionaries(
     new ObsidianModuleDataDir(plugin),
-    { fetchHebrew: async () => '', fetchGreek: async () => '' },
+    {
+      fetchHebrew: async () => '',
+      fetchGreek: async () => '',
+      fetchHebrewDerivations: async () => '',
+      fetchGreekDerivations: async () => '',
+    },
     settingsStore,
   )
-  const feature = new SettingsFeature(plugin, settingsStore, modules, strongs)
+  const lsj = new LsjLexicon(
+    new ObsidianModuleDataDir(plugin),
+    { fetchLsj: async () => [] },
+    settingsStore,
+  )
+  const feature = new SettingsFeature(
+    plugin,
+    settingsStore,
+    modules,
+    strongs,
+    lsj,
+  )
   return { feature, registered }
 }
 

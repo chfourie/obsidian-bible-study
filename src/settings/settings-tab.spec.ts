@@ -84,6 +84,11 @@ const setup = async (
       install: vi.fn(async () => {}),
       remove: vi.fn(async () => {}),
     },
+    lsj: {
+      isInstalled: async () => false,
+      install: vi.fn(async () => {}),
+      remove: vi.fn(async () => {}),
+    },
     ...deps,
   })
   const app = new App()
@@ -1119,5 +1124,50 @@ describe('ScriptureStudySettingTab books section', () => {
     ].map((option) => option.value)
     expect(options).toEqual(['web'])
     expect(hasSettingNamed(container, 'Humility')).toBe(false)
+  })
+})
+
+describe('ScriptureStudySettingTab LSJ section', () => {
+  it('installs the LSJ Lexicon from its own toggle', async () => {
+    const lsj = {
+      isInstalled: async () => false,
+      install: vi.fn(async () => {}),
+      remove: vi.fn(async () => {}),
+    }
+    const { container } = await setup({ lsj })
+
+    changeToggle(settingNamed(container, 'Enable full LSJ lexicon'), true)
+    await flushAsync()
+
+    expect(lsj.install).toHaveBeenCalled()
+  })
+
+  it('names the STEPBible source and its licence on the setting', async () => {
+    const { container } = await setup()
+
+    expect(settingNamed(container, 'Enable full LSJ lexicon').textContent).toContain(
+      'CC BY 4.0',
+    )
+  })
+
+  it('surfaces a failed LSJ install on the setting', async () => {
+    const { container } = await setup({
+      lsj: {
+        isInstalled: async () => false,
+        install: vi.fn(async () => {
+          throw new Error('network gone')
+        }),
+        remove: vi.fn(async () => {}),
+      },
+    })
+
+    changeToggle(settingNamed(container, 'Enable full LSJ lexicon'), true)
+    await flushAsync()
+
+    expect(
+      settingNamed(container, 'Enable full LSJ lexicon').querySelector(
+        '.scripture-study-settings-error',
+      )?.textContent,
+    ).toBe('network gone')
   })
 })

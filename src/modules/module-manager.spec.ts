@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SettingsStore } from '../data-access'
+import { InMemoryModuleDataDir } from '../../tests/fixtures/in-memory-module-data-dir'
 import {
   chapterCount,
   deregisterBookVersification,
   isValidVerseId,
   makeVerseId,
 } from '../reference'
-import type { ModuleDataDir } from './module-data-dir'
 import { ChecksumMismatchError, ModuleManager } from './module-manager'
 import { ModuleStore } from './module-store'
 import type { NormalizedModule } from './normalized-module'
@@ -15,35 +15,6 @@ import type {
   PrebuiltModuleSource,
 } from './prebuilt-module-source'
 import type { TranslationSource } from './translation-source'
-
-class InMemoryModuleDataDir implements ModuleDataDir {
-  readonly files = new Map<string, string>()
-
-  async readTextFile(path: string): Promise<string | null> {
-    return this.files.get(path) ?? null
-  }
-
-  async writeTextFile(path: string, content: string): Promise<void> {
-    this.files.set(path, content)
-  }
-
-  async removeDir(path: string): Promise<void> {
-    for (const file of [...this.files.keys()]) {
-      if (file.startsWith(`${path}/`)) this.files.delete(file)
-    }
-  }
-
-  async listDirs(path: string): Promise<string[]> {
-    const dirs = new Set<string>()
-    for (const file of this.files.keys()) {
-      if (!file.startsWith(`${path}/`)) continue
-      const rest = file.slice(path.length + 1)
-      const slash = rest.indexOf('/')
-      if (slash > 0) dirs.add(rest.slice(0, slash))
-    }
-    return [...dirs]
-  }
-}
 
 const webModule = (): NormalizedModule => ({
   manifest: {

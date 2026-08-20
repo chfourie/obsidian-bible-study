@@ -44,6 +44,11 @@ const setup = (overrides: SetupOverrides = {}) => {
       install: vi.fn(async () => {}),
       remove: vi.fn(async () => {}),
     },
+    lsj: {
+      isInstalled: async () => false,
+      install: vi.fn(async () => {}),
+      remove: vi.fn(async () => {}),
+    },
     ...deps,
   })
   return { model, settingsStore }
@@ -600,5 +605,80 @@ describe('SettingsTabModel books section', () => {
     expect(model.view.fallbackTranslationOptions).toEqual([
       { id: 'web', label: 'World English Bible' },
     ])
+  })
+})
+
+describe('SettingsTabModel LSJ section', () => {
+  it('reports whether the LSJ Lexicon is installed', async () => {
+    const { model } = setup({
+      lsj: {
+        isInstalled: async () => true,
+        install: vi.fn(async () => {}),
+        remove: vi.fn(async () => {}),
+      },
+    })
+
+    await model.refresh()
+
+    expect(model.view.lsjInstalled).toBe(true)
+  })
+
+  it('downloads the lexicon when it is enabled and removes it when disabled', async () => {
+    let installed = false
+    const lsj = {
+      isInstalled: async () => installed,
+      install: vi.fn(async () => {
+        installed = true
+      }),
+      remove: vi.fn(async () => {
+        installed = false
+      }),
+    }
+    const { model } = setup({ lsj })
+    await model.refresh()
+
+    await model.setLsjEnabled(true)
+    expect(lsj.install).toHaveBeenCalled()
+    expect(model.view.lsjInstalled).toBe(true)
+
+    await model.setLsjEnabled(false)
+    expect(lsj.remove).toHaveBeenCalled()
+    expect(model.view.lsjInstalled).toBe(false)
+  })
+
+  it('surfaces a failed LSJ install and clears the busy state', async () => {
+    const { model } = setup({
+      lsj: {
+        isInstalled: async () => false,
+        install: vi.fn(async () => {
+          throw new Error('network gone')
+        }),
+        remove: vi.fn(async () => {}),
+      },
+    })
+    await model.refresh()
+
+    await model.setLsjEnabled(true)
+
+    expect(model.view.lsjBusy).toBe(false)
+    expect(model.view.lsjError).toBe('network gone')
+    expect(model.view.lsjInstalled).toBe(false)
+  })
+
+  it('leaves the Strongs toggle alone while the LSJ install fails', async () => {
+    const { model } = setup({
+      lsj: {
+        isInstalled: async () => false,
+        install: vi.fn(async () => {
+          throw new Error('network gone')
+        }),
+        remove: vi.fn(async () => {}),
+      },
+    })
+    await model.refresh()
+
+    await model.setLsjEnabled(true)
+
+    expect(model.view.strongsError).toBe(null)
   })
 })

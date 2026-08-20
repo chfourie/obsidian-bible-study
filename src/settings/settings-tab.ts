@@ -21,7 +21,7 @@ import {
   type ReaderDevice,
   type ScriptureStudySettings,
 } from '../data-access'
-import { STRONGS_ATTRIBUTION } from '../strongs'
+import { LSJ_ATTRIBUTION, STRONGS_ATTRIBUTION } from '../strongs'
 import { resolveHighlightPalette } from './highlight-palette'
 import type {
   BookRowView,
@@ -64,6 +64,7 @@ type SettingsControlKey =
   | 'derivedRedLetter'
   | 'revealPanelOnSelection'
   | 'strongsEnabled'
+  | 'lsjEnabled'
   | ReaderDefaultControlKey
   | 'readerFontScalePercent'
   | 'annotationsFolder'
@@ -229,6 +230,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.revealPanelOnSelection
       case 'strongsEnabled':
         return view.strongsInstalled
+      case 'lsjEnabled':
+        return view.lsjInstalled
       case 'readerFontScalePercent':
         return settings.readerFontScalePercent
       case 'annotationsFolder':
@@ -276,6 +279,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         }))
       case 'strongsEnabled':
         return this.model.setStrongsEnabled(value === true)
+      case 'lsjEnabled':
+        return this.model.setLsjEnabled(value === true)
       case 'readerFontScalePercent':
         return this.#update((settings) => ({
           ...settings,
@@ -565,8 +570,33 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
             disabled: view.strongsBusy,
           },
         },
+        {
+          name: 'Enable full LSJ lexicon',
+          desc: this.#lsjDesc(view),
+          control: {
+            type: 'toggle',
+            key: 'lsjEnabled',
+            disabled: view.lsjBusy,
+          },
+        },
       ],
     }
+  }
+
+  #lsjDesc(view: SettingsTabView): string | DocumentFragment {
+    const base =
+      'Adds the full Liddell-Scott-Jones entry to the word study of a Greek ' +
+      `number. Greek only, and a large download. ${LSJ_ATTRIBUTION}`
+    if (view.lsjError === null) return base
+    const fragment = createFragment()
+    fragment.append(base)
+    fragment.append(
+      createDiv({
+        cls: 'scripture-study-settings-error',
+        text: view.lsjError,
+      }),
+    )
+    return fragment
   }
 
   #strongsDesc(view: SettingsTabView): string | DocumentFragment {

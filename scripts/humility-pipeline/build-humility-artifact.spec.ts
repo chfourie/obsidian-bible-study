@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
 import { makeVerseId } from '../../src/reference/verse-id'
 import type { BookRegistryEntry } from './book-registry'
 import {
@@ -29,7 +30,7 @@ describe('buildHumilityArtifact', () => {
       name: 'Humility',
       language: 'English',
       license: 'Public Domain',
-      formatVersion: 2,
+      formatVersion: MODULE_FORMAT_VERSION,
       kind: 'book',
       capabilities: { strongsTagged: false },
     })

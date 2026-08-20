@@ -5,6 +5,7 @@ import type {
   StudyMaterial,
   StudyMaterialProvider,
   StudyMaterialSource,
+  WordStudyOpener,
 } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
@@ -116,6 +117,7 @@ const fakeStudyMaterial = () => {
 const harness = (
   notes: Record<string, string> = {},
   settings: Partial<ScriptureStudySettings> = {},
+  options: { wordStudy?: WordStudyOpener } = {},
 ) => {
   const readGates: Record<string, Promise<void>> = {}
   const leaves: FakeLeaf[] = []
@@ -187,6 +189,7 @@ const harness = (
   const feature = new StudyPanelFeature(plugin, fakeStore(), {
     studyMaterial,
     index,
+    wordStudy: options.wordStudy,
   })
   feature.useSettings({
     ...DEFAULT_SETTINGS,
@@ -508,6 +511,30 @@ describe('StudyPanelFeature entry points', () => {
       [ref('John 15:1'), 'kjv', undefined],
       [ref('John 15:1'), null, true],
     ])
+  })
+
+  it('sends a Strong\'s entry card to the Word Study Panel through the contract', async () => {
+    const opened: [string, boolean | undefined][] = []
+    const { feature } = harness({}, {}, {
+      wordStudy: {
+        openWordStudy: async (strongsNumber, options) => {
+          opened.push([strongsNumber, options?.newPane])
+        },
+      },
+    })
+
+    await feature.openWordStudy('G0026')
+    await feature.openWordStudy('G0026', { newPane: true })
+
+    expect(opened).toEqual([
+      ['G0026', undefined],
+      ['G0026', true],
+    ])
+  })
+
+  it('leads nowhere while no word study is wired up', async () => {
+    const { feature } = harness()
+    await expect(feature.openWordStudy('G0026')).resolves.toBeUndefined()
   })
 
   it('recognizes well-known translation tokens when extracting', async () => {

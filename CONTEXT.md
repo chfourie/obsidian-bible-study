@@ -66,7 +66,7 @@ An intersecting note that is not an Annotation: a vault note whose body referenc
 A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB (built from the public-domain Berean word-level tables) and KJV (built from bolls.life's `<S>`-tagged dump); the capability is per-translation.
 
 ### Strong's Dictionaries
-The shared dictionary module (STEPBible TBESH/TBESG plus Strong's 1890 derivations) mapping extended Strong's numbers to lemma, transliteration, gloss, definition, variant, morphology, and etymology. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
+The shared dictionary module (STEPBible TBESH/TBESG plus Strong's 1890 derivations) mapping extended Strong's numbers to lemma, transliteration, gloss, definition, family, morphology, and etymology. One module serves all Tagged Translations; downloading it is what "Enable Strong's" means.
 
 ### Strong's Number
 The translation-independent identity of an original-language word, and the join key of the whole Strong's system: tag spans, dictionary and lexicon entries, and Concordance Indexes share no other common key. What the Verse Id is to verses, the Strong's number is to words — an arbitrary-but-stable coordinate everything projects onto. The glue is only as fine-grained as the coarsest source keyed by it.
@@ -75,10 +75,10 @@ The translation-independent identity of an original-language word, and the join 
 A base Strong's number together with its lettered disambiguations (`H4191`, `H4191a`, `H4191b`). Dictionary entries exist at extended-number granularity; occurrence matching is only honest at family granularity, because tagged translations mostly predate disambiguation.
 
 ### Word Study Panel
-A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, and the family's concordance in one tagged translation at a time. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel.
+A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, a collapsible full LSJ entry where the number is Greek and that module is installed, and the family's concordance in one tagged translation at a time — switchable where more than one is installed, and filterable by Rendering. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel.
 
 ### Concordance Index
-The per-translation mapping from Strong's Family to the verse ids where the family is tagged, built when a Tagged Translation module is installed. A concordance is inherently per-text — counts and renderings are only meaningful within one translation.
+The per-translation mapping from Strong's Family to the verses where the family is tagged, each with how many of that verse's words carry it, built when a Tagged Translation module is installed. Counts are of occurrences, not of verses: a verse tagging the family on two words counts twice, while the occurrence list still shows that verse as one row. A concordance is inherently per-text — counts and renderings are only meaningful within one translation.
 
 ### Rendering
 The surface text a translation uses where a Strong's Family is tagged ("love", "charity"). The unit occurrence lists group and filter by; meaningful only within one translation.

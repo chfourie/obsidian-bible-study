@@ -2,7 +2,22 @@
 // lines (poetry/paragraph structure), red (words of Christ), and supplied
 // (translator-added words). Purely additive — v1 modules load and render
 // unchanged, and readers ignore channels they don't know.
-export const MODULE_FORMAT_VERSION = 2
+// v3: the Strong's Dictionaries store entries at extended-number granularity,
+// with their family groupings, morphology, and Strong's 1890 derivations.
+// A v2 dictionary carries none of it, so installs rebuild on the bump.
+// v4: a Tagged Translation stores its Concordance Index beside its books.
+// The index is derived from the tagging the module already carries, so an
+// installed translation is re-indexed in place rather than re-downloaded.
+// v5: the Concordance Index counts occurrences rather than verses — a verse
+// tagging a family on two words counts twice. Re-derived in place, as v4 was.
+export const MODULE_FORMAT_VERSION = 5
+
+// The oldest stored translation whose content is already everything the
+// current format asks of it. Later versions added only what can be re-derived
+// from what such a module carries; anything older genuinely lacks content
+// (v2's line, red-letter and supplied-word channels) that only a re-download
+// brings back.
+export const TRANSLATION_CONTENT_VERSION = 2
 
 export type ModuleCapabilities = {
   strongsTagged: boolean
@@ -11,7 +26,11 @@ export type ModuleCapabilities = {
   poetry?: boolean
 }
 
-export type ModuleKind = 'translation' | 'strongs-dictionaries' | 'book'
+export type ModuleKind =
+  | 'translation'
+  | 'strongs-dictionaries'
+  | 'lsj-lexicon'
+  | 'book'
 
 // One addressable section of a book: its chapter number in the BBBCCCVVV id
 // space, its display name, and how many paragraph atoms it holds. The whole

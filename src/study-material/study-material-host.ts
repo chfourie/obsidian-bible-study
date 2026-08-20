@@ -1,4 +1,4 @@
-import type { NavigationOptions } from '../contracts'
+import type { NavigationOptions, WordStudyOptions } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 
@@ -18,6 +18,10 @@ export type StudyMaterialHost = {
   // Opens the annotation prompt with the given reference typed in, letting
   // the user adjust it before the note is created.
   promptAnnotate: (prefill: Reference) => void
+  // Sends an extended Strong's number to the Word Study Panel: plainly, it
+  // retargets the most-recently-focused panel; with the new-pane modifier, it
+  // opens another beside it.
+  openWordStudy: (strongsNumber: string, options?: WordStudyOptions) => void
   renderMarkdown: (
     el: HTMLElement,
     markdown: string,

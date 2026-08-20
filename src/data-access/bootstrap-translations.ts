@@ -3,7 +3,11 @@
 import { BOOK_MODULE_IDS } from '../modules/book-catalogue'
 import type { ScriptureStudySettings } from './scripture-study-settings.type'
 
-const NON_TRANSLATION_MODULE_IDS = ['strongs-dictionaries', ...BOOK_MODULE_IDS]
+const NON_TRANSLATION_MODULE_IDS = [
+  'strongs-dictionaries',
+  'lsj-lexicon',
+  ...BOOK_MODULE_IDS,
+]
 
 export const installedTranslationModuleIds = (
   settings: ScriptureStudySettings,

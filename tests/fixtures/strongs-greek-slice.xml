@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<strongsdictionary>
+<prologue><title>Strong's Greek Dictionary</title></prologue>
+<entries>
+<entry strongs="00001">
+<strongs>1</strongs>
+<greek BETA="*A" unicode="Α" translit="A"/>
+<pronunciation strongs="al'-fah"/>
+<strongs_derivation>of Hebrew origin;</strongs_derivation>
+<strongs_def>the first letter of the alphabet:</strongs_def>
+<kjv_def>--Alpha.</kjv_def>
+</entry>
+<entry strongs="00002">
+<strongs>2</strongs>
+<greek BETA="*)AARW/N" unicode="Ἀαρών" translit="Aarṓn"/>
+<pronunciation strongs="ah-ar-ohn'"/>
+<strongs_derivation>of Hebrew origin
+ (<strongsref language="HEBREW" strongs="0175"/>);
+ </strongs_derivation>
+<strongs_def>Aaron, the brother of Moses</strongs_def>
+<kjv_def>:--Aaron.</kjv_def>
+<see language="HEBREW" strongs="0175"/>
+</entry>
+<entry strongs="00004">
+<strongs>4</strongs>
+<greek BETA="A)BARH/S" unicode="ἀβαρής" translit="abarḗs"/>
+<pronunciation strongs="ab-ar-ace'"/>
+<strongs_derivation>from <strongsref language="GREEK" strongs="00001"/> (as a negative particle) and <strongsref language="GREEK" strongs="00922"/>;</strongs_derivation>
+<strongs_def>weightless, i.e. (figuratively) not burdensome:</strongs_def>
+<kjv_def>--from being burdensome.</kjv_def>
+</entry>
+<entry strongs="00003">
+<strongs>3</strongs>
+<greek BETA="*)ABADDW/N" unicode="Ἀβαδδών" translit="Abaddṓn"/>
+<pronunciation strongs="ab-ad-dohn'"/>
+<strongs_def>a destroying angel:</strongs_def>
+<kjv_def>--Abaddon.</kjv_def>
+</entry>
+</entries>
+</strongsdictionary>

@@ -565,6 +565,7 @@ describe('verse details', () => {
       ],
       strongs: [],
       strongsAttribution: null,
+      strongsTranslationId: null,
     })
   })
 
@@ -1356,12 +1357,14 @@ describe('opening the reader at a reference', () => {
 
 
 
-const strongsEntry = (strongs: string) => ({
-  strongs,
-  lemma: `lemma-${strongs}`,
-  transliteration: `translit-${strongs}`,
-  gloss: `gloss-${strongs}`,
-  definition: `definition of ${strongs}`,
+const strongsEntry = (family: string) => ({
+  family,
+  extendedNumber: family,
+  lemma: `lemma-${family}`,
+  transliteration: `translit-${family}`,
+  morphology: `morph-${family}`,
+  gloss: `gloss-${family}`,
+  definition: `definition of ${family}`,
 })
 
 const strongsDeps = (
@@ -1469,7 +1472,7 @@ describe("Strong's word lookup", () => {
     await model.selectWord(verseId, ['G3306', 'G1722'])
 
     const details = detailsOf(model)
-    expect(details.strongs.map((entry) => entry.strongs)).toEqual([
+    expect(details.strongs.map((entry) => entry.family)).toEqual([
       'G3306',
       'G1722',
     ])
@@ -1485,8 +1488,25 @@ describe("Strong's word lookup", () => {
     await model.selectWord(verseId, ['G2222'])
 
     expect(
-      detailsOf(model).strongs.map((entry) => entry.strongs),
+      detailsOf(model).strongs.map((entry) => entry.family),
     ).toEqual(['G2222'])
+  })
+
+  it('names the translation the tapped word was tagged in', async () => {
+    const model = await openedModel()
+
+    await model.selectWord(makeVerseId(43, 15, 4), ['G3306'])
+
+    expect(detailsOf(model).strongsTranslationId).toBe('bsb')
+  })
+
+  it('names no translation for a plain verse selection', async () => {
+    const model = await openedModel()
+    await model.selectWord(makeVerseId(43, 15, 4), ['G3306'])
+
+    await model.selectVerse(makeVerseId(43, 15, 5))
+
+    expect(detailsOf(model).strongsTranslationId).toBeNull()
   })
 
   it('keeps a plain verse selection free of dictionary entries', async () => {
@@ -3172,6 +3192,7 @@ describe('ReaderPaneModel book mode', () => {
       translations: [],
       strongs: [],
       strongsAttribution: null,
+      strongsTranslationId: null,
     })
   })
 
