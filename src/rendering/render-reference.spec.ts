@@ -572,7 +572,14 @@ describe('renderReference in-note intersections', () => {
   const occurrenceGroup = (
     file: string,
     annotation: boolean,
-  ): OccurrenceGroup => ({ file, annotation, occurrences: [] })
+  ): OccurrenceGroup => ({
+    file,
+    annotation,
+    annotationReference: annotation
+      ? { book: 43, ranges: [{ startId: 43015004, endId: 43015004 }] }
+      : null,
+    occurrences: [],
+  })
 
   const intersectionsSetup = (groups: OccurrenceGroup[]) => {
     const base = setup()

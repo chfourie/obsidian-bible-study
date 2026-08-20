@@ -807,21 +807,22 @@ export class ReaderPaneModel implements StudyMaterialSource {
             (occurrence) => occurrence.reference,
           ),
         })),
-      chapter,
+      chapter.ranges,
     )
     const annotationGroups = groups.filter((group) => group.annotation)
     const items = await Promise.all(
       annotationGroups.map(async (group) => {
-        const reference = group.occurrences.find(
-          (occurrence) => occurrence.source === 'annotation-frontmatter',
-        )?.reference
-        if (reference === undefined) return null
+        const reference = group.annotationReference
+        if (reference === null) return null
         const details = await this.deps.annotationDetails(group.file)
         if (details === null) return null
         return {
           file: group.file,
           created: details.created,
           reference,
+          intersecting: group.occurrences.map(
+            (occurrence) => occurrence.reference,
+          ),
           body: details.body,
         }
       }),
@@ -830,7 +831,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#chapterMentions = mentions
     this.#chapterAnnotations = orderChapterAnnotations(
       items.filter((item) => item !== null),
-      chapter,
+      chapter.ranges,
       this.#annotationOrdering,
     ).map(({ file, reference, body }) => ({
       file,

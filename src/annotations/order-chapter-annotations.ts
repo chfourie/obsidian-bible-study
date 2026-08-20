@@ -1,36 +1,44 @@
 import type { AnnotationOrdering } from '../data-access'
-import { rangesOverlap, type Reference } from '../reference'
+import {
+  firstIntersectingStart,
+  type Reference,
+  type VerseRange,
+} from '../reference'
 
 export type ChapterAnnotationItem = {
   file: string
   created: number
+  // The annotation's declared subject: its frontmatter reference.
   reference: Reference
+  // The annotation's references that intersect the scope, placing it when the
+  // declared subject itself lies outside.
+  intersecting: readonly Reference[]
 }
 
-// Chapter annotations read in scripture order: each sits where its first
-// range inside the chapter starts. Annotations opening at the same spot fall
-// back to the annotation-ordering setting, the order the per-verse Notes list
-// already uses.
+// Annotations read in scripture order: each sits where its declared subject
+// first enters the scope — or, when the subject lies entirely outside it,
+// where the note's own intersecting references first touch it. Annotations
+// opening at the same spot fall back to the annotation-ordering setting, the
+// order the per-verse Notes list already uses.
 export const orderChapterAnnotations = <T extends ChapterAnnotationItem>(
   items: readonly T[],
-  chapter: Reference,
+  scope: readonly VerseRange[],
   ordering: AnnotationOrdering,
 ): T[] => {
-  const firstIntersectingStart = (reference: Reference): number => {
-    const starts = reference.ranges
-      .filter((range) =>
-        chapter.ranges.some((chapterRange) => rangesOverlap(range, chapterRange)),
-      )
-      .map((range) => range.startId)
-    return starts.length === 0 ? Number.POSITIVE_INFINITY : Math.min(...starts)
+  const placement = (item: T): number => {
+    const declared = firstIntersectingStart(item.reference.ranges, scope)
+    if (declared !== Number.POSITIVE_INFINITY) return declared
+    return Math.min(
+      ...item.intersecting.map((reference) =>
+        firstIntersectingStart(reference.ranges, scope),
+      ),
+    )
   }
   const tiebreak = (a: T, b: T): number =>
     ordering === 'created-oldest-first'
       ? a.created - b.created
       : a.file.localeCompare(b.file)
   return [...items].sort(
-    (a, b) =>
-      firstIntersectingStart(a.reference) - firstIntersectingStart(b.reference) ||
-      tiebreak(a, b),
+    (a, b) => placement(a) - placement(b) || tiebreak(a, b),
   )
 }

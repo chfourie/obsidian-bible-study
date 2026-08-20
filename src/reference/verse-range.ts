@@ -35,6 +35,18 @@ export const mergeRanges = (ranges: readonly VerseRange[]): VerseRange[] => {
   return merged
 }
 
+// Where a set of ranges first enters the scope: the smallest start among the
+// ranges overlapping any scope range, or Infinity when none does.
+export const firstIntersectingStart = (
+  ranges: readonly VerseRange[],
+  scope: readonly VerseRange[],
+): number => {
+  const starts = ranges
+    .filter((range) => scope.some((scopeRange) => rangesOverlap(range, scopeRange)))
+    .map((range) => range.startId)
+  return starts.length === 0 ? Number.POSITIVE_INFINITY : Math.min(...starts)
+}
+
 export const referencesIntersect = (a: Reference, b: Reference): boolean =>
   a.book === b.book &&
   a.ranges.some((rangeA) => b.ranges.some((rangeB) => rangesOverlap(rangeA, rangeB)))

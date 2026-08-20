@@ -105,19 +105,27 @@ const ref = (text: string): Reference => {
   return parsed.reference
 }
 
+// An annotation group carries its frontmatter reference first; a mention
+// group (frontmatter null) holds body occurrences only.
 const group = (
   file: string,
-  annotation: boolean,
-  ...references: string[]
+  frontmatter: string | null,
+  ...body: string[]
 ): OccurrenceGroup => ({
   file,
-  annotation,
-  occurrences: references.map((text, position) => ({
-    file,
-    position,
-    reference: ref(text),
-    source: annotation ? 'annotation-frontmatter' : 'body',
-  })),
+  annotation: frontmatter !== null,
+  annotationReference: frontmatter === null ? null : ref(frontmatter),
+  occurrences: [...(frontmatter === null ? [] : [frontmatter]), ...body].map(
+    (text, position) => ({
+      file,
+      position,
+      reference: ref(text),
+      source:
+        frontmatter !== null && position === 0
+          ? ('annotation-frontmatter' as const)
+          : ('body' as const),
+    }),
+  ),
 })
 
 const detailsOf = (model: ReaderPaneModel): VerseDetailsView => {
@@ -594,9 +602,9 @@ describe('verse indicators', () => {
   it('marks verses with annotation and intersecting-note counts', async () => {
     const model = modelWith({
       intersecting: chapterQueried([
-        group('Annotations/John 15.4.md', true, 'John 15:4'),
-        group('Sermons/Fruitfulness.md', false, 'John 15:4'),
-        group('Topics/Union.md', false, 'John 15:4'),
+        group('Annotations/John 15.4.md', 'John 15:4'),
+        group('Sermons/Fruitfulness.md', null, 'John 15:4'),
+        group('Topics/Union.md', null, 'John 15:4'),
       ]),
     })
 
@@ -612,7 +620,7 @@ describe('verse indicators', () => {
   it('marks only the first verse of a range, not every covered verse', async () => {
     const model = modelWith({
       intersecting: chapterQueried([
-        group('Annotations/Abiding.md', true, 'John 15:2-5'),
+        group('Annotations/Abiding.md', 'John 15:2-5'),
       ]),
     })
 
@@ -626,7 +634,7 @@ describe('verse indicators', () => {
   it('marks the chapter opening for a range entering from the previous chapter', async () => {
     const model = modelWith({
       intersecting: chapterQueried([
-        group('Sermons/Farewell.md', false, 'John 14:30-15:3'),
+        group('Sermons/Farewell.md', null, 'John 14:30-15:3'),
       ]),
     })
 
@@ -638,7 +646,7 @@ describe('verse indicators', () => {
   it('marks each range of a multi-range reference', async () => {
     const model = modelWith({
       intersecting: chapterQueried([
-        group('Sermons/Fruit.md', false, 'John 15:1-2,4-5'),
+        group('Sermons/Fruit.md', null, 'John 15:1-2,4-5'),
       ]),
     })
 
@@ -650,8 +658,8 @@ describe('verse indicators', () => {
   it('counts annotations starting a range at the same verse', async () => {
     const model = modelWith({
       intersecting: chapterQueried([
-        group('Annotations/a.md', true, 'John 15:4'),
-        group('Annotations/b.md', true, 'John 15:4-5'),
+        group('Annotations/a.md', 'John 15:4'),
+        group('Annotations/b.md', 'John 15:4-5'),
       ]),
     })
 
@@ -663,7 +671,7 @@ describe('verse indicators', () => {
   it('counts mentions per distinct note', async () => {
     const model = modelWith({
       intersecting: chapterQueried([
-        group('Sermons/Vine.md', false, 'John 15:4', 'John 15:4-6'),
+        group('Sermons/Vine.md', null, 'John 15:4', 'John 15:4-6'),
       ]),
     })
 
@@ -731,7 +739,7 @@ describe('occurrence refresh', () => {
     await model.selectVerse(verse4)
     expect(model.view.rows[3].annotations).toBe(0)
 
-    groups = [group('Annotations/John 15.4.md', true, 'John 15:4')]
+    groups = [group('Annotations/John 15.4.md', 'John 15:4')]
     await model.refreshOccurrences()
 
     expect(model.view.rows[3].annotations).toBe(1)
@@ -2322,6 +2330,8 @@ describe('chapter annotations in the study material', () => {
         .map((note) => ({
           file: note.file,
           annotation: note.annotation ?? true,
+          annotationReference:
+            note.annotation === false ? null : note.reference,
           occurrences: [
             {
               file: note.file,
@@ -2470,6 +2480,34 @@ describe('chapter annotations in the study material', () => {
     ])
   })
 
+  it('lists an annotation whose frontmatter ref lies outside the chapter, placed by its intersecting body ref', async () => {
+    const model = modelWith({
+      intersecting: () => [
+        group('Annotations/Later.md', 'John 15:4'),
+        group('Annotations/Farewell.md', 'John 14:1', 'John 15:2'),
+      ],
+      annotationDetails: async (file) => ({
+        body: file,
+        created: 1,
+      }),
+    })
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.studyMaterial.chapterAnnotations).toEqual([
+      {
+        file: 'Annotations/Farewell.md',
+        label: 'John 14:1',
+        body: 'Annotations/Farewell.md',
+      },
+      {
+        file: 'Annotations/Later.md',
+        label: 'John 15:4',
+        body: 'Annotations/Later.md',
+      },
+    ])
+  })
+
   it('drops annotations whose note no longer loads', async () => {
     const model = modelWith({
       ...indexOver(() => [
@@ -2502,6 +2540,8 @@ describe('chapter mentions in the study material', () => {
         .map((note) => ({
           file: note.file,
           annotation: note.annotation === true,
+          annotationReference:
+            note.annotation === true ? note.references[0] : null,
           occurrences: note.references
             .filter((noteReference) =>
               referencesIntersect(noteReference, reference),
@@ -2566,6 +2606,22 @@ describe('chapter mentions in the study material', () => {
     await model.openAt(ref('John 15:1'), 'web')
 
     expect(model.studyMaterial.chapterMentions).toEqual([])
+  })
+
+  it('never lists an annotation as a mention when only its body intersects the chapter', async () => {
+    const model = modelWith({
+      intersecting: () => [
+        group('Annotations/Farewell.md', 'John 14:1', 'John 15:4'),
+      ],
+      annotationDetails: async () => ({ body: 'Comfort', created: 1 }),
+    })
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.studyMaterial.chapterMentions).toEqual([])
+    expect(
+      model.studyMaterial.chapterAnnotations.map((item) => item.file),
+    ).toEqual(['Annotations/Farewell.md'])
   })
 
   it('follows the reader to the next chapter', async () => {

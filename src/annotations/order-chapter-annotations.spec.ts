@@ -8,12 +8,18 @@ const ref = (text: string): Reference => {
   return parsed.reference
 }
 
-const chapter = ref('John 15')
+const scope = ref('John 15').ranges
 
-const item = (file: string, reference: string, created = 0) => ({
+const item = (
+  file: string,
+  reference: string,
+  created = 0,
+  ...intersecting: string[]
+) => ({
   file,
   created,
   reference: ref(reference),
+  intersecting: intersecting.map(ref),
 })
 
 describe('orderChapterAnnotations', () => {
@@ -24,7 +30,7 @@ describe('orderChapterAnnotations', () => {
         item('early.md', 'John 15:2'),
         item('middle.md', 'John 15:5-7'),
       ],
-      chapter,
+      scope,
       'created-oldest-first',
     )
 
@@ -41,7 +47,7 @@ describe('orderChapterAnnotations', () => {
         item('spanning.md', 'John 14:1,15:8'),
         item('local.md', 'John 15:3'),
       ],
-      chapter,
+      scope,
       'created-oldest-first',
     )
 
@@ -51,13 +57,29 @@ describe('orderChapterAnnotations', () => {
     ])
   })
 
+  it('places an annotation whose subject lies outside the scope where its intersecting references first touch it', () => {
+    const ordered = orderChapterAnnotations(
+      [
+        item('later.md', 'John 15:4'),
+        item('elsewhere.md', 'John 14:1', 0, 'John 15:2'),
+      ],
+      scope,
+      'created-oldest-first',
+    )
+
+    expect(ordered.map((entry) => entry.file)).toEqual([
+      'elsewhere.md',
+      'later.md',
+    ])
+  })
+
   it('breaks scripture-position ties by creation time when so configured', () => {
     const ordered = orderChapterAnnotations(
       [
         item('younger.md', 'John 15:4', 200),
         item('older.md', 'John 15:4', 100),
       ],
-      chapter,
+      scope,
       'created-oldest-first',
     )
 
@@ -73,7 +95,7 @@ describe('orderChapterAnnotations', () => {
         item('b.md', 'John 15:4', 100),
         item('a.md', 'John 15:4', 200),
       ],
-      chapter,
+      scope,
       'path-a-z',
     )
 
@@ -83,7 +105,7 @@ describe('orderChapterAnnotations', () => {
   it('leaves the given items untouched', () => {
     const items = [item('late.md', 'John 15:9'), item('early.md', 'John 15:2')]
 
-    orderChapterAnnotations(items, chapter, 'created-oldest-first')
+    orderChapterAnnotations(items, scope, 'created-oldest-first')
 
     expect(items.map((entry) => entry.file)).toEqual(['late.md', 'early.md'])
   })

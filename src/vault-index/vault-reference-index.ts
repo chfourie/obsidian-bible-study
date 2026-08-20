@@ -5,6 +5,10 @@ import type { Occurrence } from './occurrence'
 export type OccurrenceGroup = {
   file: string
   annotation: boolean
+  // The annotation's declared subject — its frontmatter reference — carried
+  // even when that reference itself lies outside the queried scope. Null for
+  // plain mentions.
+  annotationReference: Reference | null
   occurrences: Occurrence[]
 }
 
@@ -80,11 +84,15 @@ export class VaultReferenceIndex {
         referencesIntersect(occurrence.reference, reference),
       )
       if (intersecting.length === 0) continue
+      // Classification is file-scoped: any frontmatter ref makes the file an
+      // annotation, even when only its body intersects the query.
+      const frontmatter = occurrences.find(
+        (occurrence) => occurrence.source === 'annotation-frontmatter',
+      )
       groups.push({
         file: intersecting[0].file,
-        annotation: intersecting.some(
-          (occurrence) => occurrence.source === 'annotation-frontmatter',
-        ),
+        annotation: frontmatter !== undefined,
+        annotationReference: frontmatter?.reference ?? null,
         occurrences: intersecting,
       })
     }

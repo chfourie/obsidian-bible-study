@@ -310,16 +310,16 @@ export class StudyPanelModel {
   #intersectingGroups(references: Reference[]): OccurrenceGroup[] {
     const merged = new Map<
       string,
-      { annotation: boolean; occurrences: Map<string, Occurrence> }
+      { annotationReference: Reference | null; occurrences: Map<string, Occurrence> }
     >()
     for (const reference of references) {
       for (const group of this.deps.intersecting(reference)) {
         if (group.file === this.#file) continue
         const entry = merged.get(group.file) ?? {
-          annotation: false,
+          annotationReference: null,
           occurrences: new Map<string, Occurrence>(),
         }
-        entry.annotation ||= group.annotation
+        entry.annotationReference ??= group.annotationReference
         for (const occurrence of group.occurrences)
           entry.occurrences.set(
             `${occurrence.source}|${occurrence.position}`,
@@ -330,7 +330,8 @@ export class StudyPanelModel {
     }
     return [...merged.entries()].map(([file, entry]) => ({
       file,
-      annotation: entry.annotation,
+      annotation: entry.annotationReference !== null,
+      annotationReference: entry.annotationReference,
       occurrences: [...entry.occurrences.values()],
     }))
   }
@@ -344,13 +345,9 @@ export class StudyPanelModel {
       this.#notify()
       return
     }
-    // The ordering helpers scope by plain range overlap, so one scope carries
-    // all the note's references even across books: verse ids encode the book,
-    // and ranges from different books never overlap.
-    const scope: Reference = {
-      book: references[0].book,
-      ranges: mergeRanges(references.flatMap((reference) => reference.ranges)),
-    }
+    // The ordering helpers place notes by plain range overlap, so the scope
+    // is simply every range of every note reference, whatever book each is in.
+    const scope = references.flatMap((reference) => reference.ranges)
     const groups = this.#intersectingGroups(references)
     const mentions = chapterMentionViews(
       groups
@@ -367,16 +364,17 @@ export class StudyPanelModel {
       groups
         .filter((group) => group.annotation)
         .map(async (group) => {
-          const reference = group.occurrences.find(
-            (occurrence) => occurrence.source === 'annotation-frontmatter',
-          )?.reference
-          if (reference === undefined) return null
+          const reference = group.annotationReference
+          if (reference === null) return null
           const details = await this.deps.annotationDetails(group.file)
           if (details === null) return null
           return {
             file: group.file,
             created: details.created,
             reference,
+            intersecting: group.occurrences.map(
+              (occurrence) => occurrence.reference,
+            ),
             body: details.body,
           }
         }),

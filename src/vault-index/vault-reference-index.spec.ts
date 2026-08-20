@@ -67,6 +67,7 @@ describe('VaultReferenceIndex', () => {
       {
         file: 'Annotations/John 15.4.md',
         annotation: true,
+        annotationReference: johnRef(15, 4),
         occurrences: [
           {
             file: 'Annotations/John 15.4.md',
@@ -79,7 +80,7 @@ describe('VaultReferenceIndex', () => {
     ])
   })
 
-  it('keeps a body-only mention inside an annotation note out of the annotation class', () => {
+  it('classifies an annotation note by its file even when only its body intersects', () => {
     const index = new VaultReferenceIndex()
     index.indexNote(
       'Annotations/John 15.4.md',
@@ -90,7 +91,10 @@ describe('VaultReferenceIndex', () => {
       book: 42,
       ranges: [{ startId: makeVerseId(42, 15, 4), endId: makeVerseId(42, 15, 4) }],
     })
-    expect(groups.map((group) => group.annotation)).toEqual([false])
+    expect(groups.map((group) => group.annotation)).toEqual([true])
+    expect(groups.map((group) => group.annotationReference)).toEqual([
+      johnRef(15, 4),
+    ])
   })
 
   it('orders groups annotations first, then file path A-Z', () => {
@@ -120,6 +124,7 @@ describe('VaultReferenceIndex', () => {
       {
         file: 'Sermons/Abiding.md',
         annotation: false,
+        annotationReference: null,
         occurrences: [
           {
             file: 'Sermons/Abiding.md',

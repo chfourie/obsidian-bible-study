@@ -1043,6 +1043,24 @@ describe('annotations and mentions in the Study Panel', () => {
     expect(panel.view.mentions).toEqual([])
   })
 
+  it('classifies an annotation by its file even when only its body intersects', async () => {
+    const vault = fakeVault({
+      'Annotations/John 14.1.md':
+        '---\nref: John 14:1\n---\nCompare {John 15:1}.',
+    })
+
+    const panel = await panelFor(vault, 'note.md', '{John 15:1}')
+
+    expect(panel.view.mentions).toEqual([])
+    expect(panel.view.annotations).toEqual([
+      {
+        file: 'Annotations/John 14.1.md',
+        label: 'John 14:1',
+        body: 'Compare {John 15:1}.',
+      },
+    ])
+  })
+
   it('orders both sections by scripture position across the note references', async () => {
     const vault = fakeVault({
       'Annotations/John.md': '---\nref: John 15:1\n---\nJohn.',

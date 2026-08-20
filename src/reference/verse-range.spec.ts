@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   enumerateVerseIds,
+  firstIntersectingStart,
   mergeRanges,
   rangeContains,
   rangesOverlap,
@@ -131,6 +132,25 @@ describe('referencesIntersect', () => {
         { book: 43, ranges: [range(john(15, 18), john(15, 27))] },
       ),
     ).toBe(false)
+  })
+})
+
+describe('firstIntersectingStart', () => {
+  const scope = [range(john(15, 1), john(15, 27))]
+
+  it('returns the smallest start among ranges overlapping the scope', () => {
+    expect(
+      firstIntersectingStart(
+        [range(john(14, 1), john(14, 1)), range(john(15, 9), john(15, 10)), range(john(15, 4), john(15, 6))],
+        scope,
+      ),
+    ).toBe(john(15, 4))
+  })
+
+  it('returns Infinity when no range enters the scope', () => {
+    expect(
+      firstIntersectingStart([range(john(14, 1), john(14, 31))], scope),
+    ).toBe(Number.POSITIVE_INFINITY)
   })
 })
 

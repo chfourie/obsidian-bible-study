@@ -8,7 +8,7 @@ const ref = (text: string): Reference => {
   return parsed.reference
 }
 
-const chapter = ref('John 15')
+const scope = ref('John 15').ranges
 
 const source = (file: string, ...references: string[]) => ({
   file,
@@ -23,7 +23,7 @@ describe('chapterMentionViews', () => {
         source('early.md', 'John 15:2'),
         source('middle.md', 'John 15:5-7'),
       ],
-      chapter,
+      scope,
     )
 
     expect(views.map((view) => view.file)).toEqual([
@@ -39,7 +39,7 @@ describe('chapterMentionViews', () => {
         source('spanning.md', 'John 14:1,15:8'),
         source('local.md', 'John 15:3'),
       ],
-      chapter,
+      scope,
     )
 
     expect(views.map((view) => view.file)).toEqual([
@@ -51,7 +51,7 @@ describe('chapterMentionViews', () => {
   it('breaks scripture-position ties by path A-Z', () => {
     const views = chapterMentionViews(
       [source('b.md', 'John 15:4'), source('a.md', 'John 15:4')],
-      chapter,
+      scope,
     )
 
     expect(views.map((view) => view.file)).toEqual(['a.md', 'b.md'])
@@ -60,7 +60,7 @@ describe('chapterMentionViews', () => {
   it('titles each mention by its note name, not its path', () => {
     const views = chapterMentionViews(
       [source('sermons/vine and branches.md', 'John 15:1')],
-      chapter,
+      scope,
     )
 
     expect(views[0].title).toBe('vine and branches')
@@ -69,7 +69,7 @@ describe('chapterMentionViews', () => {
   it('labels a mention with its references that intersect the chapter, in scripture order', () => {
     const views = chapterMentionViews(
       [source('study.md', 'John 15:9', 'John 14:6', 'John 15:2')],
-      chapter,
+      scope,
     )
 
     expect(views[0].labels).toEqual(['John 15:2', 'John 15:9'])
@@ -78,7 +78,7 @@ describe('chapterMentionViews', () => {
   it('collapses repeated references into one label', () => {
     const views = chapterMentionViews(
       [source('study.md', 'John 15:4', 'John 15:4')],
-      chapter,
+      scope,
     )
 
     expect(views[0].labels).toEqual(['John 15:4'])
@@ -87,7 +87,7 @@ describe('chapterMentionViews', () => {
   it('drops a mention with no reference inside the chapter', () => {
     const views = chapterMentionViews(
       [source('elsewhere.md', 'John 14:1')],
-      chapter,
+      scope,
     )
 
     expect(views).toEqual([])
@@ -99,7 +99,7 @@ describe('chapterMentionViews', () => {
       source('early.md', 'John 15:2'),
     ]
 
-    chapterMentionViews(sources, chapter)
+    chapterMentionViews(sources, scope)
 
     expect(sources.map((entry) => entry.file)).toEqual([
       'late.md',

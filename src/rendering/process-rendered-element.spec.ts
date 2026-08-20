@@ -36,8 +36,18 @@ describe('processRenderedElement', () => {
     const { root, deps } = setup()
     deps.intersections = {
       intersecting: () => [
-        { file: 'Sermons/Abiding.md', annotation: false, occurrences: [] },
-        { file: 'Topics/Union.md', annotation: false, occurrences: [] },
+        {
+          file: 'Sermons/Abiding.md',
+          annotation: false,
+          annotationReference: null,
+          occurrences: [],
+        },
+        {
+          file: 'Topics/Union.md',
+          annotation: false,
+          annotationReference: null,
+          occurrences: [],
+        },
       ],
       openNote: vi.fn(),
     }

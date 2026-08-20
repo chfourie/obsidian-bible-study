@@ -1,5 +1,10 @@
 import type { ChapterMentionView } from '../contracts'
-import { formatReference, rangesOverlap, type Reference } from '../reference'
+import {
+  firstIntersectingStart,
+  formatReference,
+  type Reference,
+  type VerseRange,
+} from '../reference'
 
 export type ChapterMentionSource = {
   file: string
@@ -11,33 +16,24 @@ const noteTitle = (file: string): string => {
   return basename.replace(/\.md$/, '')
 }
 
-// Chapter mentions read in scripture order: each sits where its first range
-// inside the chapter starts, with mentions opening at the same spot sorted by
-// path. A mention's labels are its in-chapter references, in the same order.
+// Mentions read in scripture order: each sits where its first range inside
+// the scope starts, with mentions opening at the same spot sorted by path. A
+// mention's labels are its in-scope references, in the same order.
 export const chapterMentionViews = (
   sources: readonly ChapterMentionSource[],
-  chapter: Reference,
+  scope: readonly VerseRange[],
 ): ChapterMentionView[] => {
-  const firstIntersectingStart = (reference: Reference): number => {
-    const starts = reference.ranges
-      .filter((range) =>
-        chapter.ranges.some((chapterRange) => rangesOverlap(range, chapterRange)),
-      )
-      .map((range) => range.startId)
-    return starts.length === 0 ? Number.POSITIVE_INFINITY : Math.min(...starts)
-  }
+  const start = (reference: Reference): number =>
+    firstIntersectingStart(reference.ranges, scope)
   const intersectingLabels = (references: Reference[]): string[] => {
     const labels = references
-      .filter((reference) => firstIntersectingStart(reference) < Number.POSITIVE_INFINITY)
-      .sort((a, b) => firstIntersectingStart(a) - firstIntersectingStart(b))
+      .filter((reference) => start(reference) < Number.POSITIVE_INFINITY)
+      .sort((a, b) => start(a) - start(b))
       .map(formatReference)
     return [...new Set(labels)]
   }
   const position = (source: ChapterMentionSource): number =>
-    Math.min(
-      Number.POSITIVE_INFINITY,
-      ...source.references.map(firstIntersectingStart),
-    )
+    Math.min(Number.POSITIVE_INFINITY, ...source.references.map(start))
   return sources
     .filter((source) => position(source) < Number.POSITIVE_INFINITY)
     .sort(
