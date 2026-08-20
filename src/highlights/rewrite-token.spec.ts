@@ -1,9 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   makeVerseId,
+  parseReference,
   type HighlightCue,
   type HighlightSlot,
 } from '../reference'
+import {
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import { rewriteHighlightToken } from './rewrite-token'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
@@ -115,5 +120,58 @@ describe('rewriteHighlightToken — canonical cue tail', () => {
         options,
       ),
     ).toBe('John 15:26-16:4 nkjv h3/16:2.10-16:2.20')
+  })
+})
+
+describe('rewriteHighlightToken — non-biblical books', () => {
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  const humilityVerseId = (chapter: number, paragraph: number) =>
+    makeVerseId(101, chapter, paragraph)
+
+  const humilityCue = (
+    startParagraph: number,
+    startChar: number,
+    endParagraph: number,
+    endChar: number,
+  ): HighlightCue => ({
+    slot: 1,
+    startVerseId: humilityVerseId(1, startParagraph),
+    startChar,
+    endVerseId: humilityVerseId(1, endParagraph),
+    endChar,
+  })
+
+  it('adds a cue without pinning a translation token', () => {
+    const rewritten = rewriteHighlightToken(
+      'Humility 1:2',
+      [humilityCue(2, 0, 2, 10)],
+      options,
+    )
+
+    expect(rewritten).toBe('Humility 1:2 h1/2.0-2.10')
+    expect(rewritten).not.toContain('nkjv')
+  })
+
+  it('round-trips the rewritten token through parseReference', () => {
+    const rewritten = rewriteHighlightToken(
+      'Humility 1:2',
+      [humilityCue(2, 0, 2, 10)],
+      options,
+    )
+
+    const parsed = parseReference(rewritten, {
+      translationIds: options.translationIds,
+    })
+
+    expect(parsed).not.toBeNull()
+    expect(parsed?.translation).toBeNull()
+  })
+
+  it('erasing the last cue leaves no stray translation token', () => {
+    expect(
+      rewriteHighlightToken('Humility 1:2 h1/1:2.0-1:2.10', [], options),
+    ).toBe('Humility 1:2')
   })
 })
