@@ -116,6 +116,9 @@ export interface StudyMaterialSource {
   // The reference the chapter-level annotate action prefills: the current
   // selection when there is one, otherwise the whole chapter on screen.
   chapterAnnotationReference(): Reference
+  // Copies the current selection's canonical `{...}` reference to the
+  // clipboard, paste-ready into any note. A no-op while nothing is selected.
+  copyFormattedReference(): Promise<void>
   startCollecting(): void
   startEditingCrossReference(entry: CrossReference): void
   cancelCollecting(): void

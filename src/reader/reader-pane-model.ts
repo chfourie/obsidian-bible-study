@@ -84,6 +84,14 @@ const NO_BOOKS: ReaderBookSource = {
   epigraphs: async () => [],
 }
 
+// Where the copy-formatted-reference action writes to. The browser API by
+// default, with an injectable seam so specs never touch the real clipboard.
+export type ReaderClipboard = { writeText: (text: string) => Promise<void> }
+
+const NAVIGATOR_CLIPBOARD: ReaderClipboard = {
+  writeText: (text) => navigator.clipboard.writeText(text),
+}
+
 export type ReaderStrongsDeps = {
   dictionariesInstalled: () => Promise<boolean>
   entriesFor: (numbers: string[]) => Promise<StrongsEntryView[]>
@@ -123,6 +131,7 @@ export type ReaderPaneDeps = {
   strongs: ReaderStrongsDeps
   books?: ReaderBookSource
   firstRun?: ReaderFirstRunDeps
+  clipboard?: ReaderClipboard
 }
 
 export type ReaderPaneConfig = {
@@ -710,6 +719,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   chapterAnnotationReference(): Reference {
     return this.selectionReference() ?? this.currentChapterReference()
+  }
+
+  // The selection's canonical `{...}` reference, ready to paste into a note
+  // and read back by the same parser (spec-books §5) — a no-op while nothing
+  // is selected.
+  async copyFormattedReference(): Promise<void> {
+    const reference = this.selectionReference()
+    if (reference === null) return
+    await (this.deps.clipboard ?? NAVIGATOR_CLIPBOARD).writeText(
+      `{${formatReference(reference)}}`,
+    )
   }
 
   #collectionView(): CollectionView | null {
