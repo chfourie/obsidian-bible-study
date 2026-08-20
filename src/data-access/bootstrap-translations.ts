@@ -1,6 +1,9 @@
+// Imported from the file rather than the modules barrel: the barrel pulls in
+// the plugin features, which depend on this layer.
+import { BOOK_MODULE_IDS } from '../modules/book-catalogue'
 import type { ScriptureStudySettings } from './scripture-study-settings.type'
 
-const NON_TRANSLATION_MODULE_IDS = ['strongs-dictionaries']
+const NON_TRANSLATION_MODULE_IDS = ['strongs-dictionaries', ...BOOK_MODULE_IDS]
 
 export const installedTranslationModuleIds = (
   settings: ScriptureStudySettings,

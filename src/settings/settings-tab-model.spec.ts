@@ -475,3 +475,130 @@ describe('SettingsTabModel Strongs section', () => {
     expect(model.view.strongsInstalled).toBe(true)
   })
 })
+
+const bookManifest = (
+  id = 'hum-m1895',
+  name = 'Humility',
+  editionCode = 'HUM-M1895',
+): ModuleManifest => ({
+  id,
+  name,
+  language: 'English',
+  license: 'Public Domain',
+  source: 'test',
+  sourceChecksum: '',
+  formatVersion: MODULE_FORMAT_VERSION,
+  kind: 'book',
+  capabilities: { strongsTagged: false },
+  book: {
+    number: 101,
+    editionCode,
+    author: 'Andrew Murray',
+    year: 1895,
+    abbreviation: 'Hum',
+    sections: [{ chapter: 0, name: 'Preface', paragraphs: 4 }],
+  },
+})
+
+describe('SettingsTabModel books section', () => {
+  it('lists the compiled-in book catalogue as uninstalled rows', async () => {
+    const { model } = setup()
+
+    await model.refresh()
+
+    expect(model.view.bookRows).toEqual([
+      {
+        id: 'hum-m1895',
+        title: 'Humility',
+        author: 'Andrew Murray',
+        editionCode: 'HUM-M1895',
+        installed: false,
+        busy: null,
+        error: null,
+        updateAvailable: false,
+      },
+    ])
+  })
+
+  it('marks a catalogued book installed once its manifest is on disk', async () => {
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['hum-m1895'] },
+      installedManifests: async () => [bookManifest()],
+    })
+
+    await model.refresh()
+
+    expect(model.view.bookRows[0].installed).toBe(true)
+  })
+
+  it('offers a one-click re-download on a fresh device carrying only the synced id', async () => {
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['hum-m1895'] },
+      installedManifests: async () => [],
+    })
+
+    await model.refresh()
+
+    expect(model.view.bookRows[0].installed).toBe(false)
+  })
+
+  it('surfaces an available update for an installed book', async () => {
+    const { model } = setup({
+      installedManifests: async () => [bookManifest()],
+      modulesWithUpdates: async () => ['hum-m1895'],
+    })
+
+    await model.refresh()
+
+    expect(model.view.bookRows[0].updateAvailable).toBe(true)
+  })
+
+  it('lists an installed book the catalogue no longer carries', async () => {
+    const { model } = setup({
+      installedManifests: async () => [
+        bookManifest('hum-m1901', 'Humility', 'HUM-M1901'),
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.bookRows.map((row) => row.id)).toEqual([
+      'hum-m1895',
+      'hum-m1901',
+    ])
+  })
+
+  it('shares the busy and error state with the translation rows', async () => {
+    const { model } = setup({
+      downloadModule: vi.fn(async () => {
+        throw new Error('release not published')
+      }),
+    })
+    await model.refresh()
+
+    await model.download('hum-m1895')
+
+    expect(model.view.bookRows[0].busy).toBe(null)
+    expect(model.view.bookRows[0].error).toBe('release not published')
+  })
+
+  it('keeps books out of the translation rows and both pickers', async () => {
+    const { model } = setup({
+      storedSettings: { installedModuleIds: ['web', 'hum-m1895'] },
+      installedManifests: async () => [
+        manifest('web', 'World English Bible'),
+        bookManifest(),
+      ],
+    })
+
+    await model.refresh()
+
+    expect(model.view.rows.map((row) => row.id)).toEqual(['web'])
+    expect(model.view.defaultTranslationOptions).toEqual([
+      { id: 'web', label: 'World English Bible' },
+    ])
+    expect(model.view.fallbackTranslationOptions).toEqual([
+      { id: 'web', label: 'World English Bible' },
+    ])
+  })
+})

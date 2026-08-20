@@ -24,11 +24,22 @@ import {
 import { STRONGS_ATTRIBUTION } from '../strongs'
 import { resolveHighlightPalette } from './highlight-palette'
 import type {
+  BookRowView,
   SettingsTabModel,
   SettingsTabView,
   TranslationOption,
   TranslationRowView,
 } from './settings-tab-model'
+
+// The Download / progress / Update / Delete button set shared by translation
+// and book rows.
+type ModuleRowActions = {
+  id: string
+  busy: 'downloading' | 'removing' | null
+  installed: boolean
+  offerUpdate: boolean
+  offerRedownload: boolean
+}
 
 const NO_TRANSLATIONS_PLACEHOLDER =
   'No translations installed — see Translations below'
@@ -90,6 +101,7 @@ const isReaderDefaultControlKey = (
 export class ScriptureStudySettingTab extends PluginSettingTab {
   #unsubscribe: (() => void) | null = null
   #catalogLoadedThisOpen = false
+  #updatesLoadedThisOpen = false
   #updateQueuedBehindFocusedInput = false
   #renderedStructureSignature: string | null = null
 
@@ -142,6 +154,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         control: { type: 'toggle', key: 'revealPanelOnSelection' },
       },
       this.#translationsPage(view),
+      this.#booksPage(view),
       this.#strongsGroup(view),
       this.#readerGroup(),
       this.#highlightsGroup(view),
@@ -154,6 +167,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     this.#unsubscribe?.()
     this.#unsubscribe = null
     this.#catalogLoadedThisOpen = false
+    this.#updatesLoadedThisOpen = false
     this.#renderedStructureSignature = null
   }
 
@@ -433,6 +447,58 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
 
   #renderTranslationRow(setting: Setting, row: TranslationRowView): void {
     this.#decorateRow(setting, row)
+    this.#renderRowActions(setting, {
+      id: row.id,
+      busy: row.busy,
+      installed: row.installed,
+      // bolls publishes no checksums, so there is no update detection for
+      // catalogue modules — updating one is an ordinary re-download.
+      offerUpdate:
+        row.updateAvailable || (row.formatOutdated && row.redownloadable),
+      offerRedownload: row.redownloadable,
+    })
+  }
+
+  #booksPage(view: SettingsTabView): SettingDefinitionPage<SettingsControlKey> {
+    return {
+      type: 'page',
+      name: 'Books',
+      desc: 'Download and manage book modules.',
+      items: view.bookRows.map((row) => ({
+        name: `${row.title} — ${row.author}`,
+        desc: row.editionCode,
+        render: (setting: Setting) => this.#renderBookRow(setting, row),
+      })),
+    }
+  }
+
+  // The Books page holds no control of its own, so — like the Translations
+  // page's languageFilter read — its first rendered row doubles as the
+  // page-open hook that goes looking for published updates.
+  #loadUpdatesOnBooksPageRender(): void {
+    if (this.#updatesLoadedThisOpen || !this.containerEl.isConnected) return
+    this.#updatesLoadedThisOpen = true
+    void this.model.refreshUpdates()
+  }
+
+  #renderBookRow(setting: Setting, row: BookRowView): void {
+    this.#loadUpdatesOnBooksPageRender()
+    if (row.error !== null) {
+      setting.descEl.createDiv({
+        cls: 'scripture-study-settings-error',
+        text: row.error,
+      })
+    }
+    this.#renderRowActions(setting, {
+      id: row.id,
+      busy: row.busy,
+      installed: row.installed,
+      offerUpdate: row.updateAvailable,
+      offerRedownload: false,
+    })
+  }
+
+  #renderRowActions(setting: Setting, row: ModuleRowActions): void {
     if (row.busy !== null) {
       setting.addButton((button) =>
         button
@@ -452,16 +518,14 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       )
       return
     }
-    if (row.updateAvailable || (row.formatOutdated && row.redownloadable)) {
+    if (row.offerUpdate) {
       setting.addButton((button) =>
         button
           .setButtonText('Update')
           .setCta()
           .onClick(() => void this.model.download(row.id)),
       )
-    } else if (row.redownloadable) {
-      // bolls publishes no checksums, so there is no update detection for
-      // catalogue modules — updating one is an ordinary re-download.
+    } else if (row.offerRedownload) {
       setting.addButton((button) =>
         button
           .setButtonText('Re-download')

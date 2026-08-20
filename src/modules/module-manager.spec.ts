@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SettingsStore } from '../data-access'
-import { makeVerseId } from '../reference'
+import {
+  chapterCount,
+  deregisterBookVersification,
+  isValidVerseId,
+  makeVerseId,
+} from '../reference'
 import type { ModuleDataDir } from './module-data-dir'
 import { ChecksumMismatchError, ModuleManager } from './module-manager'
 import { ModuleStore } from './module-store'
@@ -92,12 +97,47 @@ const bsbModule = (): NormalizedModule => ({
   ]),
 })
 
+const HUMILITY_BOOK = 101
+
+const humilityModule = (): NormalizedModule => ({
+  manifest: {
+    id: 'hum-m1895',
+    name: 'Humility',
+    language: 'English',
+    license: 'Public Domain',
+    source: 'https://example.com/hum-m1895-module.json',
+    sourceChecksum: 'sha-hum-1',
+    formatVersion: 2,
+    kind: 'book',
+    capabilities: { strongsTagged: false },
+    book: {
+      number: HUMILITY_BOOK,
+      editionCode: 'HUM-M1895',
+      author: 'Andrew Murray',
+      year: 1895,
+      abbreviation: 'Hum',
+      sections: [
+        { chapter: 0, name: 'Preface', paragraphs: 4 },
+        { chapter: 1, name: 'The Glory of the Creature', paragraphs: 9 },
+      ],
+    },
+  },
+  books: new Map([
+    [
+      HUMILITY_BOOK,
+      { [makeVerseId(HUMILITY_BOOK, 0, 1)]: { text: 'In the Preface.' } },
+    ],
+  ]),
+})
+
 class FakePrebuiltSource implements PrebuiltModuleSource {
-  download: PrebuiltModuleDownload = {
-    module: bsbModule(),
-    checksum: 'sha-bsb-1',
+  download: PrebuiltModuleDownload
+  published: string | null
+
+  constructor(module: NormalizedModule = bsbModule()) {
+    this.download = { module, checksum: module.manifest.sourceChecksum }
+    this.published = module.manifest.sourceChecksum
   }
-  published: string | null = 'sha-bsb-1'
 
   async fetchModule(): Promise<PrebuiltModuleDownload> {
     return this.download
@@ -123,11 +163,27 @@ const setup = () => {
   const store = new ModuleStore(new InMemoryModuleDataDir())
   const settingsStore = inMemorySettingsStore()
   const prebuilt = new FakePrebuiltSource()
-  const manager = new ModuleManager(source, store, settingsStore, {
-    bsb: prebuilt,
-  })
-  return { source, store, settingsStore, prebuilt, manager }
+  const humility = new FakePrebuiltSource(humilityModule())
+  const modulesChanged = vi.fn()
+  const manager = new ModuleManager(
+    source,
+    store,
+    settingsStore,
+    { bsb: prebuilt, 'hum-m1895': humility },
+    modulesChanged,
+  )
+  return {
+    source,
+    store,
+    settingsStore,
+    prebuilt,
+    humility,
+    modulesChanged,
+    manager,
+  }
 }
+
+afterEach(() => deregisterBookVersification(HUMILITY_BOOK))
 
 describe('ModuleManager download', () => {
   it('installs the module the source serves for the requested id', async () => {
@@ -225,6 +281,80 @@ describe('ModuleManager installed-module ids in settings', () => {
     expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
       'bsb',
     ])
+  })
+})
+
+describe('ModuleManager book modules', () => {
+  it('installs a book module into the unchanged storage layout', async () => {
+    const { store, settingsStore, manager } = setup()
+
+    const manifest = await manager.downloadModule('hum-m1895')
+
+    expect(manifest.kind).toBe('book')
+    expect(await store.manifest('hum-m1895')).toEqual(manifest)
+    expect(
+      await store.verseText('hum-m1895', makeVerseId(HUMILITY_BOOK, 0, 1)),
+    ).toBe('In the Preface.')
+    expect((await settingsStore.loadSettings()).installedModuleIds).toEqual([
+      'hum-m1895',
+    ])
+  })
+
+  it('registers the book versification table on install', async () => {
+    const { manager } = setup()
+
+    await manager.downloadModule('hum-m1895')
+
+    expect(chapterCount(HUMILITY_BOOK)).toBe(2)
+    expect(isValidVerseId(makeVerseId(HUMILITY_BOOK, 1, 9))).toBe(true)
+  })
+
+  it('deregisters the book versification table on uninstall', async () => {
+    const { manager } = setup()
+    await manager.downloadModule('hum-m1895')
+
+    await manager.deleteModule('hum-m1895')
+
+    expect(chapterCount(HUMILITY_BOOK)).toBe(0)
+    expect(isValidVerseId(makeVerseId(HUMILITY_BOOK, 1, 9))).toBe(false)
+  })
+
+  it('leaves the registry alone when a rejected download never lands', async () => {
+    const { humility, manager } = setup()
+    humility.published = 'sha-hum-2'
+
+    await expect(manager.downloadModule('hum-m1895')).rejects.toBeInstanceOf(
+      ChecksumMismatchError,
+    )
+    expect(chapterCount(HUMILITY_BOOK)).toBe(0)
+  })
+
+  it('reports an installed book update when its published checksum changes', async () => {
+    const { humility, manager } = setup()
+    await manager.downloadModule('hum-m1895')
+
+    humility.published = 'sha-hum-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['hum-m1895'])
+  })
+})
+
+describe('ModuleManager change notifications', () => {
+  it('announces install and uninstall so the vault reindexes', async () => {
+    const { modulesChanged, manager } = setup()
+
+    await manager.downloadModule('hum-m1895')
+    await manager.deleteModule('hum-m1895')
+
+    expect(modulesChanged).toHaveBeenCalledTimes(2)
+  })
+
+  it('stays silent when a download fails', async () => {
+    const { modulesChanged, manager } = setup()
+
+    await expect(manager.downloadModule('nope')).rejects.toThrow()
+
+    expect(modulesChanged).not.toHaveBeenCalled()
   })
 })
 

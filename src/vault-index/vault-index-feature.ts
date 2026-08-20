@@ -20,4 +20,8 @@ export class VaultIndexFeature extends PluginFeature {
   override unload(): void {
     this.#indexer.stop()
   }
+
+  // Installing or uninstalling a module changes which references parse, so
+  // the whole vault is rescanned (spec-books §6).
+  readonly reindexVault = (): Promise<void> => this.#indexer.scanVault()
 }

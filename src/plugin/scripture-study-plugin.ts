@@ -27,7 +27,9 @@ export default class ScriptureStudyPlugin extends Plugin {
   #settings = DEFAULT_SETTINGS
 
   readonly vaultIndex = new VaultIndexFeature(this)
-  readonly modules = new ModulesFeature(this, this.settingsStore)
+  readonly modules = new ModulesFeature(this, this.settingsStore, () =>
+    void this.vaultIndex.reindexVault(),
+  )
   readonly strongsDictionaries = new StrongsDictionaries(
     new ObsidianModuleDataDir(this),
     new StepBibleLexiconClient(),

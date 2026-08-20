@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BSB_MODULE_ID } from './bsb-release-client'
+import { BSB_MODULE_ID } from './bsb-release'
 import { SUGGESTED_FIRST_TRANSLATION } from './suggested-translation'
 
 describe('first-run suggested translation', () => {

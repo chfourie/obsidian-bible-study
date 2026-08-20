@@ -1,4 +1,8 @@
 import type { SettingsStore } from '../data-access'
+import {
+  deregisterManifestVersification,
+  registerManifestVersification,
+} from './book-versification'
 import type { ModuleManifest } from './module-manifest'
 import type { ModuleStore } from './module-store'
 import type { PrebuiltModuleSource } from './prebuilt-module-source'
@@ -17,6 +21,7 @@ export class ModuleManager {
     private readonly store: ModuleStore,
     private readonly settingsStore: SettingsStore,
     private readonly prebuiltSources: Record<string, PrebuiltModuleSource> = {},
+    private readonly onModulesChanged: () => void = () => {},
   ) {}
 
   async downloadModule(translationId: string): Promise<ModuleManifest> {
@@ -25,7 +30,7 @@ export class ModuleManager {
       return this.#downloadPrebuilt(translationId, prebuilt)
     const module = await this.source.fetchModule(translationId)
     await this.store.saveModule(module)
-    await this.#recordInstalled(translationId)
+    await this.#completeInstall(translationId, module.manifest)
     return module.manifest
   }
 
@@ -41,13 +46,16 @@ export class ModuleManager {
       throw new ChecksumMismatchError(translationId)
     }
     await this.store.saveModule(download.module)
-    await this.#recordInstalled(translationId)
+    await this.#completeInstall(translationId, download.module.manifest)
     return download.module.manifest
   }
 
   async deleteModule(moduleId: string): Promise<void> {
+    const manifest = await this.store.manifest(moduleId)
     await this.store.deleteModule(moduleId)
     await this.#recordDeleted(moduleId)
+    if (manifest !== null) deregisterManifestVersification(manifest)
+    this.onModulesChanged()
   }
 
   // Catalogue modules never appear here: bolls publishes no checksums, so
@@ -68,7 +76,10 @@ export class ModuleManager {
     return updated.filter((moduleId) => moduleId !== null)
   }
 
-  async #recordInstalled(moduleId: string): Promise<void> {
+  async #completeInstall(
+    moduleId: string,
+    manifest: ModuleManifest,
+  ): Promise<void> {
     await this.settingsStore.updateSettings((settings) =>
       settings.installedModuleIds.includes(moduleId)
         ? settings
@@ -77,6 +88,8 @@ export class ModuleManager {
             installedModuleIds: [...settings.installedModuleIds, moduleId],
           },
     )
+    registerManifestVersification(manifest)
+    this.onModulesChanged()
   }
 
   async #recordDeleted(moduleId: string): Promise<void> {

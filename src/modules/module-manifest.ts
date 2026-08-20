@@ -11,7 +11,26 @@ export type ModuleCapabilities = {
   poetry?: boolean
 }
 
-export type ModuleKind = 'translation' | 'strongs-dictionaries'
+export type ModuleKind = 'translation' | 'strongs-dictionaries' | 'book'
+
+// One addressable section of a book: its chapter number in the BBBCCCVVV id
+// space, its display name, and how many paragraph atoms it holds. The whole
+// table is the book's versification data (spec-books §1).
+export type BookSection = {
+  chapter: number
+  name: string
+  paragraphs: number
+}
+
+export type BookMetadata = {
+  number: number
+  editionCode: string
+  author: string
+  year: number
+  abbreviation: string
+  aliases?: string[]
+  sections: BookSection[]
+}
 
 export type ModuleManifest = {
   id: string
@@ -24,7 +43,19 @@ export type ModuleManifest = {
   // Absent means 'translation' — manifests written before kinds existed.
   kind?: ModuleKind
   capabilities: ModuleCapabilities
+  // Required when kind is 'book', absent otherwise.
+  book?: BookMetadata
+}
+
+export type BookManifest = ModuleManifest & {
+  kind: 'book'
+  book: BookMetadata
 }
 
 export const isTranslationManifest = (manifest: ModuleManifest): boolean =>
   manifest.kind === undefined || manifest.kind === 'translation'
+
+export const isBookManifest = (
+  manifest: ModuleManifest,
+): manifest is BookManifest =>
+  manifest.kind === 'book' && manifest.book !== undefined
