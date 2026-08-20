@@ -5,6 +5,7 @@ import {
   type ScriptureStudySettings,
 } from './scripture-study-settings.type'
 import { applyTranslationBootstrap } from './bootstrap-translations'
+import { applyReaderDefaultMigration } from './migrate-reader-defaults'
 
 type SettingsData = Pick<Plugin, 'loadData' | 'saveData'>
 
@@ -39,7 +40,7 @@ export class SettingsStore {
     } as ScriptureStudySettings &
       Partial<Record<(typeof REMOVED_SETTINGS_KEYS)[number], unknown>>
     for (const key of REMOVED_SETTINGS_KEYS) delete settings[key]
-    return applyTranslationBootstrap(settings)
+    return applyTranslationBootstrap(applyReaderDefaultMigration(settings))
   }
 
   async updateSettings(

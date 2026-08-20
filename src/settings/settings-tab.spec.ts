@@ -188,9 +188,12 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Reveal Study Panel on selection',
         'Language',
         "Enable Strong's",
-        'Navigation',
-        'Layout',
-        "Strong's mode",
+        'Navigation (desktop)',
+        'Navigation (mobile)',
+        'Layout (desktop)',
+        'Layout (mobile)',
+        "Strong's mode (desktop)",
+        "Strong's mode (mobile)",
         'Folder',
         'Template file',
         'Display ordering',
@@ -654,18 +657,41 @@ describe('ScriptureStudySettingTab reveal on selection', () => {
 })
 
 describe('ScriptureStudySettingTab reader defaults', () => {
-  it('persists a reader default change', async () => {
+  it('shows separate desktop and mobile rows, both seeded from the stored default', async () => {
+    const { container } = await setup()
+
+    expect(
+      dropdownOf(settingNamed(container, 'Navigation (desktop)')).value,
+    ).toBe('tree')
+    expect(
+      dropdownOf(settingNamed(container, 'Navigation (mobile)')).value,
+    ).toBe('tree')
+  })
+
+  it('persists a desktop reader default change without touching the mobile slot', async () => {
     const { container, settingsStore } = await setup()
 
-    const navigation = settingNamed(container, 'Navigation')
-    expect(dropdownOf(navigation).value).toBe('tree')
-
-    changeDropdown(navigation, 'breadcrumb')
+    changeDropdown(settingNamed(container, 'Navigation (desktop)'), 'breadcrumb')
     await flushAsync()
 
-    expect((await settingsStore.loadSettings()).readerNavDefault).toBe(
-      'breadcrumb',
-    )
+    const settings = await settingsStore.loadSettings()
+    expect(settings.readerNavDefault).toEqual({
+      desktop: 'breadcrumb',
+      mobile: 'tree',
+    })
+  })
+
+  it('persists a mobile reader default change without touching the desktop slot', async () => {
+    const { container, settingsStore } = await setup()
+
+    changeDropdown(settingNamed(container, 'Navigation (mobile)'), 'breadcrumb')
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.readerNavDefault).toEqual({
+      desktop: 'tree',
+      mobile: 'breadcrumb',
+    })
   })
 
   it('persists the reader text size slider', async () => {

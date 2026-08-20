@@ -18,6 +18,7 @@ import {
   type HighlightPalette,
   type HighlightSlot,
   type HighlightThemeMode,
+  type ReaderDevice,
   type ScriptureStudySettings,
 } from '../data-access'
 import { STRONGS_ATTRIBUTION } from '../strongs'
@@ -35,6 +36,15 @@ const NO_TRANSLATIONS_PLACEHOLDER =
 const READER_DEFAULT_DESC =
   'Seeds new reader panes; in-pane switches stay per pane.'
 
+type ReaderOptionField =
+  | 'readerNavDefault'
+  | 'readerLayoutDefault'
+  | 'readerStrongsDefault'
+
+type ReaderDefaultControlKey =
+  | `${ReaderOptionField}Desktop`
+  | `${ReaderOptionField}Mobile`
+
 type SettingsControlKey =
   | 'defaultTranslationId'
   | 'fallbackTranslationId'
@@ -42,16 +52,40 @@ type SettingsControlKey =
   | 'derivedRedLetter'
   | 'revealPanelOnSelection'
   | 'strongsEnabled'
-  | 'readerNavDefault'
-  | 'readerLayoutDefault'
-  | 'readerStrongsDefault'
+  | ReaderDefaultControlKey
   | 'readerFontScalePercent'
   | 'annotationsFolder'
   | 'annotationTemplatePath'
   | 'annotationOrdering'
   | 'crossReferencesFolder'
 
-type ReaderDefaultKey = Extract<SettingsControlKey, `reader${string}`>
+// Maps each per-device settings control back to the field it reads/writes
+// and which device slot within it — the settings tab shows both slots of
+// every reader option under a single "desktop" / "mobile" pair of rows.
+const READER_DEFAULT_CONTROLS: Record<
+  ReaderDefaultControlKey,
+  { field: ReaderOptionField; device: ReaderDevice }
+> = {
+  readerNavDefaultDesktop: { field: 'readerNavDefault', device: 'desktop' },
+  readerNavDefaultMobile: { field: 'readerNavDefault', device: 'mobile' },
+  readerLayoutDefaultDesktop: {
+    field: 'readerLayoutDefault',
+    device: 'desktop',
+  },
+  readerLayoutDefaultMobile: { field: 'readerLayoutDefault', device: 'mobile' },
+  readerStrongsDefaultDesktop: {
+    field: 'readerStrongsDefault',
+    device: 'desktop',
+  },
+  readerStrongsDefaultMobile: {
+    field: 'readerStrongsDefault',
+    device: 'mobile',
+  },
+}
+
+const isReaderDefaultControlKey = (
+  key: SettingsControlKey,
+): key is ReaderDefaultControlKey => key in READER_DEFAULT_CONTROLS
 
 export class ScriptureStudySettingTab extends PluginSettingTab {
   #unsubscribe: (() => void) | null = null
@@ -146,6 +180,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       this.#loadCatalogOnTranslationsPageRender()
     const view = this.model.view
     const settings = view.settings
+    if (isReaderDefaultControlKey(key as SettingsControlKey)) {
+      const { field, device } =
+        READER_DEFAULT_CONTROLS[key as ReaderDefaultControlKey]
+      return settings[field][device]
+    }
     switch (key as SettingsControlKey) {
       case 'defaultTranslationId':
         return (
@@ -167,11 +206,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.revealPanelOnSelection
       case 'strongsEnabled':
         return view.strongsInstalled
-      case 'readerNavDefault':
-      case 'readerLayoutDefault':
-      case 'readerStrongsDefault':
       case 'readerFontScalePercent':
-        return settings[key as ReaderDefaultKey]
+        return settings.readerFontScalePercent
       case 'annotationsFolder':
         return settings.annotationsFolder
       case 'annotationTemplatePath':
@@ -184,6 +220,14 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
   }
 
   override setControlValue(key: string, value: unknown): void | Promise<void> {
+    if (isReaderDefaultControlKey(key as SettingsControlKey)) {
+      const { field, device } =
+        READER_DEFAULT_CONTROLS[key as ReaderDefaultControlKey]
+      return this.#update((settings) => ({
+        ...settings,
+        [field]: { ...settings[field], [device]: value },
+      }))
+    }
     switch (key as SettingsControlKey) {
       case 'defaultTranslationId':
         return this.#update((settings) => ({
@@ -209,11 +253,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         }))
       case 'strongsEnabled':
         return this.model.setStrongsEnabled(value === true)
-      case 'readerNavDefault':
-      case 'readerLayoutDefault':
-      case 'readerStrongsDefault':
       case 'readerFontScalePercent':
-        return this.#update((settings) => ({ ...settings, [key]: value }))
+        return this.#update((settings) => ({
+          ...settings,
+          readerFontScalePercent: value as number,
+        }))
       case 'annotationsFolder':
         return this.#update((settings) => ({
           ...settings,
@@ -483,15 +527,15 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       type: 'group',
       heading: 'Reader defaults',
       items: [
-        this.#readerDefault('Navigation', 'readerNavDefault', {
+        ...this.#readerDefaultPair('Navigation', 'readerNavDefault', {
           tree: 'Tree panel',
           breadcrumb: 'Breadcrumbs',
         }),
-        this.#readerDefault('Layout', 'readerLayoutDefault', {
+        ...this.#readerDefaultPair('Layout', 'readerLayoutDefault', {
           'verse-per-line': 'Verse per line',
           continuous: 'Continuous prose',
         }),
-        this.#readerDefault("Strong's mode", 'readerStrongsDefault', {
+        ...this.#readerDefaultPair("Strong's mode", 'readerStrongsDefault', {
           off: 'Off',
           on: 'On',
         }),
@@ -511,16 +555,24 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     }
   }
 
-  #readerDefault<Key extends ReaderDefaultKey>(
+  // One dropdown per device slot — a new pane seeds from whichever slot
+  // matches the device it opens on.
+  #readerDefaultPair<Field extends ReaderOptionField>(
     name: string,
-    key: Key,
-    labels: Record<ScriptureStudySettings[Key], string>,
-  ): SettingDefinitionControl<SettingsControlKey> {
-    return {
-      name,
+    field: Field,
+    labels: Record<ScriptureStudySettings[Field][ReaderDevice], string>,
+  ): SettingDefinitionControl<SettingsControlKey>[] {
+    return (['desktop', 'mobile'] as const).map((device) => ({
+      name: `${name} (${device})`,
       desc: READER_DEFAULT_DESC,
-      control: { type: 'dropdown', key, options: labels },
-    }
+      control: {
+        type: 'dropdown',
+        key: `${field}${
+          device === 'desktop' ? 'Desktop' : 'Mobile'
+        }` as ReaderDefaultControlKey,
+        options: labels,
+      },
+    }))
   }
 
   #highlightsGroup(

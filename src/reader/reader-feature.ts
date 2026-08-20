@@ -1,4 +1,4 @@
-import { WorkspaceLeaf, type Plugin, type View } from 'obsidian'
+import { Platform, WorkspaceLeaf, type Plugin, type View } from 'obsidian'
 import type {
   NavigationOptions,
   ReferenceNavigator,
@@ -157,6 +157,9 @@ export class ReaderFeature
       this.#repositories[
         model.view.toggles.redLetter === 'on' ? 'red' : 'plain'
       ]
+    // A new pane seeds from the device it opens on; in-pane toggling from
+    // there is ephemeral and never writes back to either device's default.
+    const device = Platform.isMobile ? 'mobile' : 'desktop'
     model = new ReaderPaneModel(
       {
         passages: {
@@ -174,9 +177,9 @@ export class ReaderFeature
       },
       {
         toggles: {
-          nav: this.settings.readerNavDefault,
-          layout: this.settings.readerLayoutDefault,
-          strongs: this.settings.readerStrongsDefault,
+          nav: this.settings.readerNavDefault[device],
+          layout: this.settings.readerLayoutDefault[device],
+          strongs: this.settings.readerStrongsDefault[device],
           redLetter: this.settings.derivedRedLetter ? 'on' : 'off',
         },
         translationId: this.settings.defaultTranslationId,
