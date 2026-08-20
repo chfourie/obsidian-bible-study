@@ -33,8 +33,8 @@ Rendered by the Study Panel following that tab.
   {/if}
   <ChapterAnnotationList
     items={material.chapterAnnotations}
-    {source}
     {host}
+    annotate={() => host.promptAnnotate(source.chapterAnnotationReference())}
   />
   <ChapterMentionList items={material.chapterMentions} {host} />
   <CrossReferenceList

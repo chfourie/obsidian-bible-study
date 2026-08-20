@@ -72,6 +72,7 @@ export default class ScriptureStudyPlugin extends Plugin {
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
     crossReferences: this.crossReferences.store,
     studyMaterial: this.reader,
+    index: this.vaultIndex.index,
   })
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(

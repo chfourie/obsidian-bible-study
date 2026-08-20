@@ -8,9 +8,10 @@ import {
   type Reference,
 } from '../reference'
 import type { Passage, PassageSource } from '../rendering'
-import { extractOccurrences } from '../vault-index'
+import { extractOccurrences, VaultReferenceIndex } from '../vault-index'
 import {
   StudyPanelModel,
+  type AnnotationDetails,
   type StudyPanelCrossReferences,
   type StudyPanelDeps,
 } from './study-panel-model'
@@ -105,6 +106,9 @@ const model = (
   translationId: string | null = 'web',
   crossReferences: StudyPanelCrossReferences = noCrossReferences,
   editCrossReference: StudyPanelDeps['editCrossReference'] = () => {},
+  intersections: Partial<
+    Pick<StudyPanelDeps, 'intersecting' | 'annotationDetails'>
+  > = {},
 ): StudyPanelModel =>
   new StudyPanelModel(
     {
@@ -113,9 +117,38 @@ const model = (
         extractOccurrences(content, { translationIds: ['web', 'niv', 'kjv'] }),
       crossReferences,
       editCrossReference,
+      intersecting: intersections.intersecting ?? (() => []),
+      annotationDetails: intersections.annotationDetails ?? (async () => null),
     },
     { translationId },
   )
+
+// The vault seen through the intersection query, indexed with the real index
+// so groups classify exactly as they do live.
+const fakeVault = (notes: Record<string, string>) => {
+  const index = new VaultReferenceIndex()
+  const created: Record<string, number> = {}
+  Object.entries(notes).forEach(([file, content], position) => {
+    index.indexNote(file, content)
+    created[file] = position + 1
+  })
+  const bodyOf = (content: string): string =>
+    content.startsWith('---\n')
+      ? content.slice(content.indexOf('\n---\n') + 5)
+      : content
+  return {
+    intersecting: (reference: Reference) =>
+      index.intersectingOccurrences(reference),
+    annotationDetails: async (file: string): Promise<AnnotationDetails | null> =>
+      file in notes
+        ? { body: bodyOf(notes[file]), created: created[file] }
+        : null,
+    editNote: (file: string, content: string) => {
+      notes[file] = content
+      index.indexNote(file, content)
+    },
+  }
+}
 
 describe('StudyPanelModel', () => {
   it('starts with no note', () => {
@@ -127,6 +160,8 @@ describe('StudyPanelModel', () => {
       status: 'no-note',
       entries: [],
       crossReferences: [],
+      annotations: [],
+      mentions: [],
       studyMaterial: null,
       folded: new Set(),
     })
@@ -364,6 +399,8 @@ describe('StudyPanelModel', () => {
       status: 'no-note',
       entries: [],
       crossReferences: [],
+      annotations: [],
+      mentions: [],
       studyMaterial: null,
       folded: new Set(),
     })
@@ -920,5 +957,201 @@ describe('cross-references in the Study Panel', () => {
 
       expect(notifications).toBe(3)
     })
+  })
+})
+
+describe('annotations and mentions in the Study Panel', () => {
+  const panelFor = async (
+    vault: ReturnType<typeof fakeVault>,
+    file: string,
+    content: string,
+  ): Promise<StudyPanelModel> => {
+    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, vault)
+    await panel.setActiveNote({ file, content })
+    return panel
+  }
+
+  it('lists annotations and mentions intersecting the note references', async () => {
+    const vault = fakeVault({
+      'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nThe true vine.',
+      'Sermons/Abiding.md': 'On {John 15:1-4} at length.',
+    })
+
+    const panel = await panelFor(vault, 'note.md', 'See {John 15:1}.')
+
+    expect(panel.view.annotations).toEqual([
+      {
+        file: 'Annotations/John 15.1.md',
+        label: 'John 15:1',
+        body: 'The true vine.',
+      },
+    ])
+    expect(panel.view.mentions).toEqual([
+      {
+        file: 'Sermons/Abiding.md',
+        title: 'Abiding',
+        labels: ['John 15:1-4'],
+      },
+    ])
+  })
+
+  it('excludes the active note from both sections', async () => {
+    const vault = fakeVault({
+      'note.md': 'See {John 15:1}.',
+      'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nBody.',
+    })
+
+    const panel = await panelFor(vault, 'note.md', 'See {John 15:1}.')
+
+    expect(panel.view.mentions).toEqual([])
+    expect(panel.view.annotations.map((item) => item.file)).toEqual([
+      'Annotations/John 15.1.md',
+    ])
+  })
+
+  it('lists a file once even when it intersects several note references', async () => {
+    const vault = fakeVault({
+      'Sermons/Both.md': 'On {John 15:1} and {Genesis 1:1}.',
+    })
+
+    const panel = await panelFor(
+      vault,
+      'note.md',
+      '{John 15:1} and {Genesis 1:1}',
+    )
+
+    expect(panel.view.mentions).toEqual([
+      {
+        file: 'Sermons/Both.md',
+        title: 'Both',
+        labels: ['Genesis 1:1', 'John 15:1'],
+      },
+    ])
+  })
+
+  it('classifies a frontmatter-ref file as an annotation, never a mention', async () => {
+    const vault = fakeVault({
+      'Annotations/John 15.1.md':
+        '---\nref: John 15:1\n---\nSee also {John 15:2}.',
+    })
+
+    const panel = await panelFor(vault, 'note.md', '{John 15:1-2}')
+
+    expect(panel.view.annotations.map((item) => item.file)).toEqual([
+      'Annotations/John 15.1.md',
+    ])
+    expect(panel.view.mentions).toEqual([])
+  })
+
+  it('orders both sections by scripture position across the note references', async () => {
+    const vault = fakeVault({
+      'Annotations/John.md': '---\nref: John 15:1\n---\nJohn.',
+      'Annotations/Genesis.md': '---\nref: Genesis 1:1\n---\nGenesis.',
+      'Sermons/John.md': 'On {John 15:1}.',
+      'Sermons/Genesis.md': 'On {Genesis 1:1}.',
+    })
+
+    const panel = await panelFor(
+      vault,
+      'note.md',
+      '{John 15:1} before {Genesis 1:1}',
+    )
+
+    expect(panel.view.annotations.map((item) => item.file)).toEqual([
+      'Annotations/Genesis.md',
+      'Annotations/John.md',
+    ])
+    expect(panel.view.mentions.map((item) => item.file)).toEqual([
+      'Sermons/Genesis.md',
+      'Sermons/John.md',
+    ])
+  })
+
+  it('tiebreaks annotations at one position by the ordering setting', async () => {
+    const vault = fakeVault({
+      'Annotations/Older.md': '---\nref: John 15:1\n---\nOlder.',
+      'Annotations/Newer.md': '---\nref: John 15:1\n---\nNewer.',
+    })
+    const panel = await panelFor(vault, 'note.md', '{John 15:1}')
+
+    expect(panel.view.annotations.map((item) => item.file)).toEqual([
+      'Annotations/Older.md',
+      'Annotations/Newer.md',
+    ])
+
+    panel.setAnnotationOrdering('path-a-z')
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+    expect(panel.view.annotations.map((item) => item.file)).toEqual([
+      'Annotations/Newer.md',
+      'Annotations/Older.md',
+    ])
+  })
+
+  it('tiebreaks mentions at one position by path', async () => {
+    const vault = fakeVault({
+      'Sermons/B.md': 'On {John 15:1}.',
+      'Sermons/A.md': 'On {John 15:1}.',
+    })
+
+    const panel = await panelFor(vault, 'note.md', '{John 15:1}')
+
+    expect(panel.view.mentions.map((item) => item.file)).toEqual([
+      'Sermons/A.md',
+      'Sermons/B.md',
+    ])
+  })
+
+  it('leaves an annotation out when its details cannot be read', async () => {
+    const vault = fakeVault({
+      'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nBody.',
+    })
+    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, {
+      intersecting: vault.intersecting,
+      annotationDetails: async () => null,
+    })
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
+
+    expect(panel.view.annotations).toEqual([])
+  })
+
+  it('shows empty sections for a note without intersecting notes', async () => {
+    const vault = fakeVault({})
+
+    const panel = await panelFor(vault, 'note.md', '{John 15:1}')
+
+    expect(panel.view.annotations).toEqual([])
+    expect(panel.view.mentions).toEqual([])
+  })
+
+  it('clears both sections with the note', async () => {
+    const vault = fakeVault({
+      'Sermons/Abiding.md': 'On {John 15:1}.',
+    })
+    const panel = await panelFor(vault, 'note.md', '{John 15:1}')
+
+    await panel.setActiveNote(null)
+
+    expect(panel.view.annotations).toEqual([])
+    expect(panel.view.mentions).toEqual([])
+  })
+
+  it('refreshes both sections when told the index changed', async () => {
+    const vault = fakeVault({})
+    const panel = await panelFor(vault, 'note.md', '{John 15:1}')
+    expect(panel.view.mentions).toEqual([])
+    let notified = 0
+    panel.subscribe(() => {
+      notified += 1
+    })
+
+    vault.editNote('Sermons/Abiding.md', 'On {John 15:1}.')
+    await panel.refreshIntersectingNotes()
+
+    expect(panel.view.mentions.map((item) => item.file)).toEqual([
+      'Sermons/Abiding.md',
+    ])
+    expect(notified).toBeGreaterThan(0)
   })
 })

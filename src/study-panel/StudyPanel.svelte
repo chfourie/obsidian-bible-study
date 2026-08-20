@@ -8,6 +8,8 @@ opens the reference in the reader with the entry's translation.
   import { setIcon } from 'obsidian'
   import type { NavigationOptions } from '../contracts'
   import type { Reference } from '../reference'
+  import ChapterAnnotationList from '../study-material/ChapterAnnotationList.svelte'
+  import ChapterMentionList from '../study-material/ChapterMentionList.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
   import type { StudyMaterialHost } from '../study-material'
   import { activate, opensInNewPane } from '../ui'
@@ -92,6 +94,12 @@ opens the reference in the reader with the entry's translation.
       {#if view.status === 'no-translation'}
         <p class="bsp-empty">No translation installed.</p>
       {/if}
+      <!-- The annotations and mentions intersecting the note's references,
+           displayed exactly as the reader-tab sections show them. Both are
+           derived here, so neither offers an add action and each hides
+           itself when empty. -->
+      <ChapterAnnotationList items={view.annotations} {host} />
+      <ChapterMentionList items={view.mentions} {host} />
       {#if view.crossReferences.length > 0}
         <div class="bsp-xrefs">
           <div class="bsp-group-label">Cross-references</div>

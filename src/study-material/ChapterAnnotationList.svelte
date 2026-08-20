@@ -1,22 +1,23 @@
 <!--
-The annotations intersecting the chapter on screen, each headed by its
-reference with the note's body rendered beneath. The add action opens the
-annotation prompt prefilled from the reader's selection, falling back to the
-whole chapter.
+The annotations intersecting the scripture in view, each headed by its
+reference with the note's body rendered beneath. The reader's chapter section
+carries an add action opening the annotation prompt prefilled from its
+selection; a surface passing no add action — the note-tab panel — gets a bare
+heading instead, and the whole section hides itself when empty.
 -->
 <script lang="ts">
-  import type { ChapterAnnotationView, StudyMaterialSource } from '../contracts'
+  import type { ChapterAnnotationView } from '../contracts'
   import SectionHeading from './SectionHeading.svelte'
   import type { StudyMaterialHost } from './study-material-host'
 
   let {
     items,
-    source,
     host,
+    annotate = null,
   }: {
     items: ChapterAnnotationView[]
-    source: StudyMaterialSource
     host: StudyMaterialHost
+    annotate?: (() => void) | null
   } = $props()
 
   type MarkdownBody = { text: string; path: string }
@@ -30,13 +31,21 @@ whole chapter.
   }
 </script>
 
-<SectionHeading
-  label="Annotations"
-  action="Annotate the selection or chapter"
-  onAdd={() => host.promptAnnotate(source.chapterAnnotationReference())}
-/>
+{#if annotate !== null}
+  <SectionHeading
+    label="Annotations"
+    action="Annotate the selection or chapter"
+    onAdd={annotate}
+  />
+{:else if items.length > 0}
+  <div class="bsm-section-head">
+    <span class="bsm-group-label">Annotations</span>
+  </div>
+{/if}
 {#if items.length === 0}
-  <div class="bsm-chapter-anno-empty">No annotations for this chapter.</div>
+  {#if annotate !== null}
+    <div class="bsm-chapter-anno-empty">No annotations for this chapter.</div>
+  {/if}
 {:else}
   {#each items as item, index (item.file)}
     {#if index > 0}<hr class="bsm-chapter-anno-sep" />{/if}
@@ -57,6 +66,21 @@ whole chapter.
 {/if}
 
 <style>
+  /* The bare heading matches SectionHeading's, minus the add action. */
+  .bsm-section-head {
+    display: flex;
+    align-items: center;
+    margin-top: 16px;
+  }
+
+  .bsm-group-label {
+    display: block;
+    font-size: var(--font-smallest);
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
   .bsm-chapter-anno-empty {
     color: var(--text-faint);
     font-size: var(--font-ui-small);

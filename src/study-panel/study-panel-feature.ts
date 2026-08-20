@@ -14,22 +14,42 @@ import {
 } from '../cross-references'
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
-import type { Reference } from '../reference'
+import { frontmatterLength, type Reference } from '../reference'
 import {
   ModulePassageSource,
   PassageRepository,
   renderContextFromSettings,
 } from '../rendering'
-import { extractOccurrences } from '../vault-index'
-import { StudyPanelModel, type ActiveNote } from './study-panel-model'
+import { extractOccurrences, type OccurrenceGroup } from '../vault-index'
+import {
+  StudyPanelModel,
+  type ActiveNote,
+  type AnnotationDetails,
+} from './study-panel-model'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelView } from './study-panel-view'
 import { TabMemory, type StudyTabState } from './tab-memory'
 
 export { STUDY_PANEL_VIEW_TYPE } from './study-panel-view'
 
+// What the panel asks of the vault index: the intersection query its
+// annotation and mention sections read, and the change feed that refreshes
+// them. VaultReferenceIndex satisfies this as it stands.
+export type StudyPanelVaultIndex = {
+  intersectingOccurrences: (reference: Reference) => OccurrenceGroup[]
+  onChanged: (listener: () => void) => () => void
+}
+
+// Stands in when the feature runs without an index — a panel that surfaces no
+// annotations or mentions.
+const INERT_VAULT_INDEX: StudyPanelVaultIndex = {
+  intersectingOccurrences: () => [],
+  onChanged: () => () => {},
+}
+
 export type StudyPanelFeatureOptions = {
   crossReferences?: CrossReferenceCatalog
   studyMaterial?: StudyMaterialProvider
+  index?: StudyPanelVaultIndex
 }
 
 // The focused leaf's note, when it shows one. Reader tabs are not file views,
@@ -57,7 +77,9 @@ export class StudyPanelFeature extends PluginFeature {
   // reader whose view was not in place yet — kept for another look.
   #unread: WorkspaceLeaf | null = null
   readonly #tabs = new TabMemory<WorkspaceLeaf>()
+  readonly #index: StudyPanelVaultIndex
   #unsubscribeCrossReferences: (() => void) | null = null
+  #unsubscribeIndex: (() => void) | null = null
   #unsubscribeSelection: (() => void) | null = null
 
   constructor(
@@ -74,6 +96,7 @@ export class StudyPanelFeature extends PluginFeature {
     )
     this.#crossReferences =
       options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
+    this.#index = options.index ?? INERT_VAULT_INDEX
   }
 
   override async load(): Promise<void> {
@@ -114,20 +137,28 @@ export class StudyPanelFeature extends PluginFeature {
     this.#unsubscribeCrossReferences = this.#crossReferences.onChanged(() =>
       this.#refreshCrossReferences(),
     )
+    // The annotation and mention sections read the vault index, whose change
+    // feed is wired in the same way.
+    this.#unsubscribeIndex = this.#index.onChanged(() =>
+      this.#refreshIntersectingNotes(),
+    )
     await this.#showFile(workspace.getActiveFile())
   }
 
   override unload(): void {
     this.#unsubscribeCrossReferences?.()
     this.#unsubscribeCrossReferences = null
+    this.#unsubscribeIndex?.()
+    this.#unsubscribeIndex = null
     this.#followMaterial(null)
   }
 
   override onSettingsChanged(): void {
     this.#repository.clear()
-    this.#models.forEach(
-      (model) => void model.setTranslation(this.settings.defaultTranslationId),
-    )
+    this.#models.forEach((model) => {
+      void model.setTranslation(this.settings.defaultTranslationId)
+      model.setAnnotationOrdering(this.settings.annotationOrdering)
+    })
     // Installing a module can change which translation tokens parse, so the
     // active note is re-extracted too.
     this.#fanOut()
@@ -149,8 +180,14 @@ export class StudyPanelFeature extends PluginFeature {
             this.settings.defaultTranslationId,
             options,
           ),
+        intersecting: (reference) =>
+          this.#index.intersectingOccurrences(reference),
+        annotationDetails: (file) => this.#annotationDetails(file),
       },
-      { translationId: this.settings.defaultTranslationId },
+      {
+        translationId: this.settings.defaultTranslationId,
+        annotationOrdering: this.settings.annotationOrdering,
+      },
     )
     this.#models.add(model)
     model.showStudyMaterial(this.#material)
@@ -307,5 +344,20 @@ export class StudyPanelFeature extends PluginFeature {
 
   #refreshCrossReferences(): void {
     this.#models.forEach((model) => model.refreshCrossReferences())
+  }
+
+  #refreshIntersectingNotes(): void {
+    this.#models.forEach((model) => void model.refreshIntersectingNotes())
+  }
+
+  async #annotationDetails(file: string): Promise<AnnotationDetails | null> {
+    const vault = this.plugin.app.vault
+    const noteFile = vault.getFileByPath(file)
+    if (noteFile === null) return null
+    const content = await vault.cachedRead(noteFile)
+    return {
+      body: content.slice(frontmatterLength(content)),
+      created: noteFile.stat.ctime,
+    }
   }
 }

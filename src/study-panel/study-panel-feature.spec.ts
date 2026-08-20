@@ -9,6 +9,7 @@ import type { CrossReference } from '../cross-references'
 import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
+import { VaultReferenceIndex } from '../vault-index'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelFeature } from './study-panel-feature'
 import { StudyPanelView } from './study-panel-view'
 
@@ -170,7 +171,11 @@ const harness = (
   const studyMaterial: StudyMaterialProvider = {
     studyMaterialFor: (view) => (view === null ? null : readers.get(view) ?? null),
   }
-  const feature = new StudyPanelFeature(plugin, fakeStore(), { studyMaterial })
+  const index = new VaultReferenceIndex()
+  const feature = new StudyPanelFeature(plugin, fakeStore(), {
+    studyMaterial,
+    index,
+  })
   feature.useSettings({
     ...DEFAULT_SETTINGS,
     defaultTranslationId: 'web',
@@ -263,6 +268,7 @@ const harness = (
     focusNote,
     editNote,
     readGates,
+    indexNote: (path: string) => index.indexNote(path, notes[path] ?? ''),
     setActiveFile: (file: TFile | null) => {
       activeFile = file
     },
@@ -813,6 +819,67 @@ describe('StudyPanelFeature entry points', () => {
     feature.openNote('Sermons/Vine.md')
 
     expect(opened).toEqual(['Sermons/Vine.md'])
+  })
+
+  it('refreshes annotations and mentions when the vault index changes', async () => {
+    const { feature, commands, leaves, focusNote, indexNote } = harness({
+      'a.md': '{John 15:1}',
+      'Sermons/Abiding.md': 'On {John 15:1}.',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    expect(view.model.view.mentions).toEqual([])
+
+    indexNote('Sermons/Abiding.md')
+    await flushAsync()
+
+    expect(view.model.view.mentions.map((item) => item.file)).toEqual([
+      'Sermons/Abiding.md',
+    ])
+  })
+
+  it('reads indexed annotation bodies through the vault', async () => {
+    const { feature, commands, leaves, focusNote, indexNote } = harness({
+      'a.md': '{John 15:1}',
+      'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nThe true vine.',
+    })
+    indexNote('Annotations/John 15.1.md')
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+
+    focusNote('a.md')
+    await flushAsync()
+
+    expect(panelView(leaves[0]).model.view.annotations).toEqual([
+      {
+        file: 'Annotations/John 15.1.md',
+        label: 'John 15:1',
+        body: 'The true vine.',
+      },
+    ])
+  })
+
+  it('stops refreshing on index changes once unloaded', async () => {
+    const { feature, commands, leaves, focusNote, indexNote } = harness({
+      'a.md': '{John 15:1}',
+      'Sermons/Abiding.md': 'On {John 15:1}.',
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    focusNote('a.md')
+    await flushAsync()
+
+    feature.unload()
+    indexNote('Sermons/Abiding.md')
+    await flushAsync()
+
+    expect(panelView(leaves[0]).model.view.mentions).toEqual([])
   })
 
   it('releases models when the view closes', async () => {
