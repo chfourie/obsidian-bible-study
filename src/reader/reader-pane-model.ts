@@ -30,6 +30,7 @@ import type {
   ChapterAnnotationView,
   ChapterMentionView,
   CollectionView,
+  SelectionKind,
   StrongsEntryView,
   StudyMaterial,
   StudyMaterialSource,
@@ -131,10 +132,14 @@ export const paragraphsOf = (rows: VerseRowView[]): VerseRowView[][] => {
   return paragraphs
 }
 
-const singleVerseReference = (book: number, verseId: number): Reference => ({
-  book,
-  ranges: [{ startId: verseId, endId: verseId }],
-})
+// The selection's verses joined as one run of segments, a space between
+// verses, so a translation row reads as the whole selected span.
+const joinedSegments = (verses: { segments: VerseSegment[] }[]): VerseSegment[] =>
+  verses.flatMap((verse, index) =>
+    index === 0
+      ? verse.segments
+      : [{ text: ' ', redLetter: false }, ...verse.segments],
+  )
 
 export const translationTitle = (translation: {
   name: string
@@ -196,9 +201,16 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #toggles: ReaderToggles
   #selectedVerseId: number | null = null
   #selectionEnd: number | null = null
-  // The loaded details of the selected verse, or null while nothing is
-  // selected or its load is still in flight.
+  // The loaded details of the current selection, or null while nothing is
+  // selected, no surface wants details, or the load is still in flight.
   #details: VerseDetailsView | null = null
+  // Whether any surface shows the details right now: loads run only while
+  // wanted, so selecting with the details out of sight fetches nothing.
+  #detailsWanted = false
+  // What the loaded details cover (selection span plus tapped word), and what
+  // an in-flight load is fetching — so a repeat request costs nothing.
+  #loadedDetailsKey: string | null = null
+  #loadingDetailsKey: string | null = null
   #chapterAnnotations: ChapterAnnotationView[] = []
   // The loaded annotations, kept so a changed ordering re-sorts them without
   // re-reading any note. Their scope is always the current chapter.
@@ -233,7 +245,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #navigate: ReaderNavigation = OPEN_DIRECTLY
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
-  readonly #selectionListeners = new Set<() => void>()
+  readonly #selectionListeners = new Set<(kind: SelectionKind) => void>()
 
   #annotationOrdering: AnnotationOrdering
   #defaultFontScale: number
@@ -263,13 +275,13 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   // Only a verse click or a Strong's word tap announces here: the feed marks
   // the user's own act of selecting, not the material changes it causes.
-  onSelection(listener: () => void): () => void {
+  onSelection(listener: (kind: SelectionKind) => void): () => void {
     this.#selectionListeners.add(listener)
     return () => this.#selectionListeners.delete(listener)
   }
 
-  #announceSelection(): void {
-    this.#selectionListeners.forEach((listener) => listener())
+  #announceSelection(kind: SelectionKind): void {
+    this.#selectionListeners.forEach((listener) => listener(kind))
   }
 
   setToggle<Key extends keyof ReaderToggles>(
@@ -507,8 +519,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   async selectWord(verseId: number, strongsNumbers: string[]): Promise<void> {
     this.#wordStrongs = { verseId, numbers: strongsNumbers }
-    this.#select(verseId)
-    await this.#loadDetails(verseId)
+    this.#select(verseId, 'word')
+    await this.#refreshDetails()
   }
 
   // Clicking the sole selected verse deselects it; a click on the anchor of
@@ -520,23 +532,18 @@ export class ReaderPaneModel implements StudyMaterialSource {
       this.clearSelection()
       return
     }
-    const loaded = this.#details
     this.#wordStrongs = null
-    this.#select(verseId)
-    // Re-selecting a verse whose details are already loaded without Strong's
-    // entries would reload the same content; tapping a word first leaves
-    // entries to clear.
-    if (loaded?.verseId === verseId && loaded.strongs.length === 0) return
-    await this.#loadDetails(verseId)
+    this.#select(verseId, 'verse')
+    await this.#refreshDetails()
   }
 
-  // Details of another verse are dropped at once so no surface shows the
-  // previous verse's material beside the newly selected one.
-  #select(verseId: number): void {
+  // Details of another selection are dropped at once so no surface shows the
+  // previous selection's material beside the newly selected one.
+  #select(verseId: number, kind: SelectionKind): void {
     this.#selectedVerseId = verseId
     this.#selectionEnd = null
-    if (this.#details?.verseId !== verseId) this.#details = null
-    this.#announceSelection()
+    this.#dropStaleDetails()
+    this.#announceSelection(kind)
     this.#notify()
   }
 
@@ -552,6 +559,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#selectionEnd = null
     this.#wordStrongs = null
     this.#details = null
+    this.#loadedDetailsKey = null
   }
 
   currentChapterReference(): Reference {
@@ -561,7 +569,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
   extendSelectionTo(verseId: number): void {
     if (this.#selectedVerseId === null) return
     this.#selectionEnd = verseId
+    this.#dropStaleDetails()
     this.#notify()
+    void this.#refreshDetails()
   }
 
   selectionReference(): Reference | null {
@@ -750,39 +760,83 @@ export class ReaderPaneModel implements StudyMaterialSource {
     return this.#markers.get(verseId) ?? { annotations: 0, mentions: 0 }
   }
 
-  async #loadDetails(verseId: number): Promise<void> {
-    const reference = singleVerseReference(this.#position.book, verseId)
-    const translations = await Promise.all(
-      this.#available.map(async (translation): Promise<TranslationRowView> => {
-        const passage = await this.deps.passages.passage(
-          reference,
-          translation.id,
-        )
-        return {
-          id: translation.id,
-          label: translation.label,
-          name: translation.name,
-          segments:
-            passage.status === 'ok' ? passage.verses[0].segments : null,
-        }
-      }),
-    )
-    const strongs =
-      this.#wordStrongs !== null && this.#wordStrongs.verseId === verseId
-        ? await this.deps.strongs.entriesFor(this.#wordStrongs.numbers)
-        : []
-    // A load the selection has moved on from is dropped: only the verse on
-    // screen may replace what the surfaces are showing.
-    if (this.#selectedVerseId !== verseId) return
-    this.#details = {
-      verseId,
-      title: formatReference(reference),
-      translations,
-      strongs,
-      strongsAttribution:
-        strongs.length > 0 ? this.deps.strongs.attribution : null,
+  setDetailsWanted(wanted: boolean): void {
+    if (this.#detailsWanted === wanted) return
+    this.#detailsWanted = wanted
+    if (wanted) void this.#refreshDetails()
+  }
+
+  // What the current selection's details would cover: the selected span and
+  // the tapped word's Strong's numbers. Null while nothing is selected.
+  #detailsKey(): string | null {
+    const selection = this.selectionReference()
+    if (selection === null) return null
+    const numbers = this.#wordStrongs?.numbers.join(',') ?? ''
+    return `${formatReference(selection)}|${numbers}`
+  }
+
+  #dropStaleDetails(): void {
+    if (this.#detailsKey() === this.#loadedDetailsKey) return
+    this.#details = null
+    this.#loadedDetailsKey = null
+  }
+
+  // Loads the selection's details when a surface wants them and neither the
+  // loaded details nor an in-flight load already covers the selection.
+  async #refreshDetails(): Promise<void> {
+    if (!this.#detailsWanted) return
+    const key = this.#detailsKey()
+    if (key === null) return
+    if (key === this.#loadedDetailsKey || key === this.#loadingDetailsKey)
+      return
+    await this.#loadDetails(key)
+  }
+
+  async #loadDetails(key: string): Promise<void> {
+    const reference = this.selectionReference()
+    const anchor = this.#selectedVerseId
+    if (reference === null || anchor === null) return
+    this.#loadingDetailsKey = key
+    try {
+      const translations = await Promise.all(
+        this.#available.map(
+          async (translation): Promise<TranslationRowView> => {
+            const passage = await this.deps.passages.passage(
+              reference,
+              translation.id,
+            )
+            return {
+              id: translation.id,
+              label: translation.label,
+              name: translation.name,
+              segments:
+                passage.status === 'ok'
+                  ? joinedSegments(passage.verses)
+                  : null,
+            }
+          },
+        ),
+      )
+      const strongs =
+        this.#wordStrongs !== null
+          ? await this.deps.strongs.entriesFor(this.#wordStrongs.numbers)
+          : []
+      // A load the selection has moved on from is dropped: only the span on
+      // screen may replace what the surfaces are showing.
+      if (this.#detailsKey() !== key) return
+      this.#details = {
+        verseId: anchor,
+        title: formatReference(reference),
+        translations,
+        strongs,
+        strongsAttribution:
+          strongs.length > 0 ? this.deps.strongs.attribution : null,
+      }
+      this.#loadedDetailsKey = key
+      this.#notify()
+    } finally {
+      if (this.#loadingDetailsKey === key) this.#loadingDetailsKey = null
     }
-    this.#notify()
   }
 
   // One chapter-level intersection query feeds the panel's annotation and

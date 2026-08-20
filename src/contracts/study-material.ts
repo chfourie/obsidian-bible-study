@@ -39,6 +39,8 @@ export type ChapterMentionView = {
   labels: string[]
 }
 
+// The selected span's details: each translation carries the text of the whole
+// selection, and the title names that span.
 export type VerseDetailsView = {
   verseId: number
   title: string
@@ -73,8 +75,8 @@ export type StudyMaterial = {
   title: string
   selectedVerseId: number | null
   selectionEndId: number | null
-  // The selected verse's details, or null when nothing is selected or the
-  // details have not loaded yet.
+  // The selection's details, or null when nothing is selected, no surface
+  // wants them, or the load is still in flight.
   details: VerseDetailsView | null
   // Every cross-reference touching the chapter on screen, independent of any
   // verse selection.
@@ -88,6 +90,10 @@ export type StudyMaterial = {
   collection: CollectionView | null
 }
 
+// What the user deliberately picked in the reader: a verse row, or a
+// Strong's-tagged word within one.
+export type SelectionKind = 'verse' | 'word'
+
 // One reader tab's study material, observable and actionable without reaching
 // into the reader: the surface that renders it — today the reader's own
 // details region, later the Study Panel — reads snapshots and invokes actions
@@ -99,7 +105,11 @@ export interface StudyMaterialSource {
   // word in this tab. Separate from subscribe(), which reports every material
   // change: a surface may act on a deliberate selection — revealing itself,
   // say — without acting on material that merely changed underneath it.
-  onSelection(listener: () => void): () => void
+  onSelection(listener: (kind: SelectionKind) => void): () => void
+  // Whether any surface is showing the verse details right now. Details load
+  // only while wanted: selections made while nothing wants them fetch no
+  // passage text, and wanting them later loads the current selection.
+  setDetailsWanted(wanted: boolean): void
   // Dismisses the selection outright: details and row highlight go with it.
   // Never fires the selection feed — clearing is not a deliberate selection.
   clearSelection(): void

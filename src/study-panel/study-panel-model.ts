@@ -28,6 +28,7 @@ import {
   type VerseRange,
 } from '../reference'
 import type { PassageSource, PassageVerse } from '../rendering'
+import type { StudySubTab } from '../study-material'
 import {
   isAnnotation,
   noteTitle,
@@ -77,9 +78,12 @@ export type StudyPanelViewState = {
   // study material, and the note fields above describe the note it will fall
   // back to when a note is focused again.
   studyMaterial: StudyMaterial | null
-  // The followed tab's own state: which passage entries stay folded — every
-  // entry the tab has not unfolded.
+  // The followed tab's own state: the sub-tab its material shows under,
+  // which passage entries stay folded — every entry the tab has not
+  // unfolded — and which translation blocks it collapsed.
+  subTab: StudySubTab
   folded: ReadonlySet<string>
+  collapsedTranslations: ReadonlySet<string>
 }
 
 export type StudyPanelCrossReferences = {
@@ -198,7 +202,9 @@ export class StudyPanelModel {
       annotations: this.#annotations,
       mentions: this.#mentions,
       studyMaterial: this.#studySource?.studyMaterial ?? null,
+      subTab: this.#tabState.subTab,
       folded: this.#folded(),
+      collapsedTranslations: this.#tabState.collapsedTranslations,
     }
   }
 
@@ -206,6 +212,45 @@ export class StudyPanelModel {
   // panel writes lands in the tab's own memory, so refocusing it restores it.
   useTabState(state: StudyTabState | null): void {
     this.#tabState = state ?? freshTabState()
+    this.#syncDetailsWanted()
+    this.#notify()
+  }
+
+  selectSubTab(subTab: StudySubTab): void {
+    if (this.#tabState.subTab === subTab) return
+    this.#tabState.subTab = subTab
+    this.#syncDetailsWanted()
+    this.#notify()
+  }
+
+  // The followed reader loads translation texts only while the Translations
+  // tab shows them.
+  #syncDetailsWanted(): void {
+    this.#studySource?.setDetailsWanted(this.#tabState.subTab === 'translations')
+  }
+
+  toggleTranslationFold(id: string): void {
+    const collapsed = new Set(this.#tabState.collapsedTranslations)
+    if (!collapsed.delete(id)) collapsed.add(id)
+    this.#setCollapsedTranslations(collapsed)
+  }
+
+  collapseAllTranslations(): void {
+    this.#setCollapsedTranslations(
+      new Set(
+        (this.#studySource?.studyMaterial.details?.translations ?? []).map(
+          (row) => row.id,
+        ),
+      ),
+    )
+  }
+
+  expandAllTranslations(): void {
+    this.#setCollapsedTranslations(new Set())
+  }
+
+  #setCollapsedTranslations(collapsed: ReadonlySet<string>): void {
+    this.#tabState.collapsedTranslations = collapsed
     this.#notify()
   }
 
@@ -245,9 +290,12 @@ export class StudyPanelModel {
   }
 
   // Mirrors the given reader tab until another one is shown, or null to fall
-  // back to the note view.
+  // back to the note view. The new tab's details wanted state waits for its
+  // remembered state to arrive through useTabState — the caller always pairs
+  // the two — so the old tab's sub-tab never triggers a load on the new one.
   showStudyMaterial(source: StudyMaterialSource | null): void {
     if (source === this.#studySource) return
+    this.#studySource?.setDetailsWanted(false)
     this.#unsubscribeStudySource?.()
     this.#studySource = source
     this.#unsubscribeStudySource =

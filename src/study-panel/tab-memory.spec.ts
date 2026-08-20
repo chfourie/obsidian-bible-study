@@ -4,26 +4,36 @@ import { TabMemory } from './tab-memory'
 type Tab = { id: string }
 
 describe('TabMemory', () => {
-  it('starts a tab with nothing unfolded', () => {
+  it('starts a tab on the study tab with nothing unfolded or collapsed', () => {
     const memory = new TabMemory<Tab>()
 
-    expect(memory.stateFor({ id: 'a' })).toEqual({ expanded: new Set() })
+    expect(memory.stateFor({ id: 'a' })).toEqual({
+      subTab: 'study',
+      expanded: new Set(),
+      collapsedTranslations: new Set(),
+    })
   })
 
   it('hands the same tab back its own state', () => {
     const memory = new TabMemory<Tab>()
     const tab = { id: 'a' }
+    memory.stateFor(tab).subTab = 'translations'
     memory.stateFor(tab).expanded = new Set(['John 15:1'])
+    memory.stateFor(tab).collapsedTranslations = new Set(['kjv'])
 
+    expect(memory.stateFor(tab).subTab).toBe('translations')
     expect([...memory.stateFor(tab).expanded]).toEqual(['John 15:1'])
+    expect([...memory.stateFor(tab).collapsedTranslations]).toEqual(['kjv'])
   })
 
   it('keeps two tabs on the same content independent', () => {
     const memory = new TabMemory<Tab>()
     const first = { id: 'a' }
     const second = { id: 'a' }
+    memory.stateFor(first).subTab = 'translations'
     memory.stateFor(first).expanded = new Set(['John 15:1'])
 
+    expect(memory.stateFor(second).subTab).toBe('study')
     expect(memory.stateFor(second).expanded.size).toBe(0)
   })
 

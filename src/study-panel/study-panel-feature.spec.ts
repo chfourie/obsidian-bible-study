@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { TFile, WorkspaceLeaf, type Plugin, type View } from 'obsidian'
 import type {
+  SelectionKind,
   StudyMaterial,
   StudyMaterialProvider,
   StudyMaterialSource,
@@ -49,7 +50,8 @@ type FakeCommand = { id: string; name: string; callback: () => void }
 // touches anything else about it.
 const fakeStudyMaterial = () => {
   const listeners = new Set<() => void>()
-  const selectionListeners = new Set<() => void>()
+  const selectionListeners = new Set<(kind: SelectionKind) => void>()
+  let detailsWanted = false
   let material: StudyMaterial = {
     title: 'John 15',
     selectedVerseId: null,
@@ -68,18 +70,27 @@ const fakeStudyMaterial = () => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
-    onSelection: (listener: () => void) => {
+    onSelection: (listener: (kind: SelectionKind) => void) => {
       selectionListeners.add(listener)
       return () => selectionListeners.delete(listener)
+    },
+    setDetailsWanted: (wanted: boolean) => {
+      detailsWanted = wanted
     },
   } as unknown as StudyMaterialSource
   return {
     source,
     subscriptions: () => listeners.size,
     selectionSubscriptions: () => selectionListeners.size,
+    detailsWanted: () => detailsWanted,
     select: (verseId: number) => {
       material = { ...material, selectedVerseId: verseId }
-      selectionListeners.forEach((listener) => listener())
+      selectionListeners.forEach((listener) => listener('verse'))
+      listeners.forEach((listener) => listener())
+    },
+    tapWord: (verseId: number) => {
+      material = { ...material, selectedVerseId: verseId }
+      selectionListeners.forEach((listener) => listener('word'))
       listeners.forEach((listener) => listener())
     },
     collect: () => {
@@ -697,6 +708,42 @@ describe('StudyPanelFeature entry points', () => {
     focusTab(second)
     await flushAsync()
     expect([...view.model.view.folded]).toEqual(['|Genesis 1:1'])
+  })
+
+  it('restores each reader tab’s sub-tab as focus moves between them', async () => {
+    const { feature, commands, leaves, focusReader, focusTab } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const first = focusReader()
+    const view = panelView(leaves[0])
+    view.model.selectSubTab('translations')
+    const second = focusReader()
+
+    expect(view.model.view.subTab).toBe('study')
+
+    focusTab(first.leaf)
+    expect(view.model.view.subTab).toBe('translations')
+    expect(first.detailsWanted()).toBe(true)
+
+    focusTab(second.leaf)
+    expect(view.model.view.subTab).toBe('study')
+    expect(first.detailsWanted()).toBe(false)
+  })
+
+  it('switches to the translations tab when a word is tapped, not on a verse pick', async () => {
+    const { feature, commands, leaves, focusReader } = harness()
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const reader = focusReader()
+    const view = panelView(leaves[0])
+
+    reader.select(makeVerseId(43, 15, 1))
+    expect(view.model.view.subTab).toBe('study')
+
+    reader.tapWord(makeVerseId(43, 15, 1))
+    expect(view.model.view.subTab).toBe('translations')
   })
 
   it('keeps two tabs on the same note independent', async () => {

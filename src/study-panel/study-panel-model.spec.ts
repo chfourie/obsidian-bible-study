@@ -72,6 +72,7 @@ const fakeCrossReferenceStore = () => {
 // touches anything else about it.
 const fakeStudyMaterial = () => {
   const listeners = new Set<() => void>()
+  let detailsWanted = false
   let material: StudyMaterial = {
     title: 'John 15',
     selectedVerseId: null,
@@ -90,12 +91,34 @@ const fakeStudyMaterial = () => {
       listeners.add(listener)
       return () => listeners.delete(listener)
     },
+    setDetailsWanted: (wanted: boolean) => {
+      detailsWanted = wanted
+    },
   } as unknown as StudyMaterialSource
   return {
     source,
     subscriptions: () => listeners.size,
+    detailsWanted: () => detailsWanted,
     select: (verseId: number) => {
       material = { ...material, selectedVerseId: verseId }
+      listeners.forEach((listener) => listener())
+    },
+    showDetails: (translationIds: string[]) => {
+      material = {
+        ...material,
+        details: {
+          verseId: makeVerseId(43, 15, 1),
+          title: 'John 15:1',
+          translations: translationIds.map((id) => ({
+            id,
+            label: id.toUpperCase(),
+            name: `${id.toUpperCase()} Full Name`,
+            segments: [],
+          })),
+          strongs: [],
+          strongsAttribution: null,
+        },
+      }
       listeners.forEach((listener) => listener())
     },
   }
@@ -163,7 +186,9 @@ describe('StudyPanelModel', () => {
       annotations: [],
       mentions: [],
       studyMaterial: null,
+      subTab: 'study',
       folded: new Set(),
+      collapsedTranslations: new Set(),
     })
   })
 
@@ -402,7 +427,9 @@ describe('StudyPanelModel', () => {
       annotations: [],
       mentions: [],
       studyMaterial: null,
+      subTab: 'study',
       folded: new Set(),
+      collapsedTranslations: new Set(),
     })
   })
 
@@ -956,6 +983,129 @@ describe('cross-references in the Study Panel', () => {
       panel.toggleFold('|Genesis 1:1')
 
       expect(notifications).toBe(3)
+    })
+  })
+
+  describe('the reader sub-tabs', () => {
+    it('starts on the study tab', () => {
+      const panel = model(fakeSource().source)
+
+      expect(panel.view.subTab).toBe('study')
+    })
+
+    it('switches sub-tabs and writes the choice into the followed tab state', () => {
+      const panel = model(fakeSource().source)
+      const state = freshTabState()
+      panel.useTabState(state)
+
+      panel.selectSubTab('translations')
+
+      expect(panel.view.subTab).toBe('translations')
+      expect(state.subTab).toBe('translations')
+    })
+
+    it('ignores re-selecting the sub-tab already shown', () => {
+      const panel = model(fakeSource().source)
+      let notified = 0
+      panel.subscribe(() => notified++)
+
+      panel.selectSubTab('study')
+
+      expect(notified).toBe(0)
+    })
+
+    it('wants details from the followed tab only while the translations tab shows', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(freshTabState())
+      expect(reader.detailsWanted()).toBe(false)
+
+      panel.selectSubTab('translations')
+      expect(reader.detailsWanted()).toBe(true)
+
+      panel.selectSubTab('study')
+      expect(reader.detailsWanted()).toBe(false)
+    })
+
+    it('wants details at once from a tab remembered on the translations tab', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      const state = freshTabState()
+      state.subTab = 'translations'
+
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(state)
+
+      expect(reader.detailsWanted()).toBe(true)
+    })
+
+    it('stops wanting details from a tab it no longer follows', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      const state = freshTabState()
+      state.subTab = 'translations'
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(state)
+
+      panel.showStudyMaterial(null)
+
+      expect(reader.detailsWanted()).toBe(false)
+    })
+  })
+
+  describe('translation folds on the translations tab', () => {
+    it('starts with every translation open and collapses one at a time', () => {
+      const panel = model(fakeSource().source)
+      const state = freshTabState()
+      panel.useTabState(state)
+
+      expect(panel.view.collapsedTranslations.size).toBe(0)
+
+      panel.toggleTranslationFold('kjv')
+
+      expect([...panel.view.collapsedTranslations]).toEqual(['kjv'])
+      expect([...state.collapsedTranslations]).toEqual(['kjv'])
+    })
+
+    it('opens a translation it collapsed before', () => {
+      const panel = model(fakeSource().source)
+      panel.toggleTranslationFold('kjv')
+
+      panel.toggleTranslationFold('kjv')
+
+      expect(panel.view.collapsedTranslations.size).toBe(0)
+    })
+
+    it('collapses every translation of the shown details, and expands them all again', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(freshTabState())
+      reader.showDetails(['web', 'kjv'])
+
+      panel.collapseAllTranslations()
+      expect([...panel.view.collapsedTranslations].sort()).toEqual([
+        'kjv',
+        'web',
+      ])
+
+      panel.expandAllTranslations()
+      expect(panel.view.collapsedTranslations.size).toBe(0)
+    })
+
+    it('keeps the folds in the followed tab state', () => {
+      const panel = model(fakeSource().source)
+      const first = freshTabState()
+      const second = freshTabState()
+      panel.useTabState(first)
+      panel.toggleTranslationFold('kjv')
+
+      panel.useTabState(second)
+      expect(panel.view.collapsedTranslations.size).toBe(0)
+
+      panel.useTabState(first)
+      expect([...panel.view.collapsedTranslations]).toEqual(['kjv'])
     })
   })
 })

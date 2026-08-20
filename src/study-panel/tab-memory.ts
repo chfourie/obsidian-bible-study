@@ -1,12 +1,20 @@
-// What the Study Panel remembers about one tab it follows: the passage
-// entries unfolded under it. Entries start folded, so it is the unfolding
-// that is worth remembering.
+import type { StudySubTab } from '../study-material'
+
+// What the Study Panel remembers about one tab it follows: the sub-tab it
+// last showed, the passage entries unfolded under it, and the translation
+// blocks collapsed on the Translations tab. Entries start folded and
+// translations start open, so each set holds the departures worth
+// remembering.
 export type StudyTabState = {
+  subTab: StudySubTab
   expanded: ReadonlySet<string>
+  collapsedTranslations: ReadonlySet<string>
 }
 
 export const freshTabState = (): StudyTabState => ({
+  subTab: 'study',
   expanded: new Set(),
+  collapsedTranslations: new Set(),
 })
 
 // Panel state one tab at a time, in memory for that tab's lifetime: two tabs

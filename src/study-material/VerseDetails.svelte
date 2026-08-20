@@ -1,18 +1,51 @@
 <!--
-Everything one selected verse offers beside its text: the Strong's entries for
-a tapped word, and the same verse in every installed translation.
+Everything the selected span offers beside its text: the Strong's entries for
+a tapped word, and the whole selection in every installed translation — each
+translation a collapsible block headed by its full name, with fold-all
+controls beside the selection's title.
 -->
 <script lang="ts">
-  import type { StudyMaterialSource, VerseDetailsView } from '../contracts'
+  import { setIcon } from 'obsidian'
+  import type {
+    StudyMaterialSource,
+    TranslationRowView,
+    VerseDetailsView,
+  } from '../contracts'
   import type { VerseSegment } from '../rendering'
+  import { activate } from '../ui'
 
   let {
     details,
     source,
+    collapsed,
+    toggle,
+    collapseAll,
+    expandAll,
   }: {
     details: VerseDetailsView
     source: StudyMaterialSource
+    collapsed: ReadonlySet<string>
+    toggle: (id: string) => void
+    collapseAll: () => void
+    expandAll: () => void
   } = $props()
+
+  function icon(node: HTMLElement, name: string) {
+    setIcon(node, name)
+    return {
+      update(next: string) {
+        node.empty()
+        setIcon(node, next)
+      },
+    }
+  }
+
+  // The block leads with the translation's full name; a translation known
+  // only by its abbreviation gets that alone.
+  const heading = (row: TranslationRowView): string =>
+    row.name.trim() !== '' && row.name !== row.label
+      ? `${row.name} (${row.label})`
+      : row.label
 </script>
 
 {#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.psalmHeading}<span
@@ -23,6 +56,26 @@ a tapped word, and the same verse in every installed translation.
 
 <div class="bsm-details-head">
   <span class="bsm-details-title">{details.title}</span>
+  <span
+    role="button"
+    tabindex="0"
+    class="bsm-fold-all"
+    aria-label="Collapse all translations"
+    title="Collapse all translations"
+    use:icon={'chevrons-down-up'}
+    onclick={collapseAll}
+    onkeydown={activate(collapseAll)}
+  ></span>
+  <span
+    role="button"
+    tabindex="0"
+    class="bsm-fold-all"
+    aria-label="Expand all translations"
+    title="Expand all translations"
+    use:icon={'chevrons-up-down'}
+    onclick={expandAll}
+    onkeydown={activate(expandAll)}
+  ></span>
   <button
     type="button"
     class="bsm-details-clear"
@@ -50,35 +103,66 @@ a tapped word, and the same verse in every installed translation.
   {/if}
 {/if}
 
-<table class="bsm-trans-table">
-  <tbody>
-    {#each details.translations as row (row.id)}
-      <tr>
-        <td class="bsm-trans-id" title={row.name}>{row.label}</td>
-        <td class="bsm-trans-text">
-          {#if row.segments === null}
-            <span class="bsm-unavailable">Unavailable</span>
-          {:else}
-            {#each row.segments as segment, index (index)}{@render formattedText(segment)}{/each}
-          {/if}
-        </td>
-      </tr>
-    {/each}
-  </tbody>
-</table>
+{#each details.translations as row (row.id)}
+  <section class="bsm-trans-block">
+    <span
+      role="button"
+      tabindex="0"
+      class="bsm-trans-head"
+      aria-expanded={!collapsed.has(row.id)}
+      onclick={() => toggle(row.id)}
+      onkeydown={activate(() => toggle(row.id))}
+    >
+      <span
+        class="bsm-trans-fold-icon"
+        aria-hidden="true"
+        use:icon={collapsed.has(row.id) ? 'chevron-right' : 'chevron-down'}
+      ></span>
+      {heading(row)}
+    </span>
+    {#if !collapsed.has(row.id)}
+      <div class="bsm-trans-text">
+        {#if row.segments === null}
+          <span class="bsm-unavailable">Unavailable</span>
+        {:else}
+          {#each row.segments as segment, index (index)}{@render formattedText(segment)}{/each}
+        {/if}
+      </div>
+    {/if}
+  </section>
+{/each}
 
 <style>
   .bsm-details-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 0.25rem;
     margin-bottom: 6px;
   }
 
   .bsm-details-title {
+    margin-right: auto;
     font-size: var(--font-smallest);
     color: var(--text-faint);
+  }
+
+  .bsm-fold-all {
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsm-fold-all:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .bsm-fold-all :global(svg) {
+    width: var(--icon-s);
+    height: var(--icon-s);
   }
 
   .bsm-details-clear {
@@ -109,26 +193,36 @@ a tapped word, and the same verse in every installed translation.
     letter-spacing: 0.05em;
   }
 
-  .bsm-trans-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 6px;
+  .bsm-trans-block {
+    margin-bottom: 8px;
   }
 
-  .bsm-trans-table td {
-    padding: 4px 8px;
-    vertical-align: top;
-    border-top: 1px solid var(--background-modifier-border);
-  }
-
-  .bsm-trans-table tr:first-child td {
-    border-top: none;
-  }
-
-  .bsm-trans-id {
-    color: var(--text-accent);
+  .bsm-trans-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    font-size: var(--font-ui-small);
     font-weight: 600;
-    width: 52px;
+    color: var(--text-accent);
+    cursor: pointer;
+  }
+
+  .bsm-trans-fold-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-muted);
+  }
+
+  .bsm-trans-fold-icon :global(svg) {
+    width: var(--icon-xs);
+    height: var(--icon-xs);
+  }
+
+  .bsm-trans-text {
+    margin-top: 2px;
+    padding-left: calc(var(--icon-xs) + 0.3em);
+    line-height: var(--line-height-normal);
+    user-select: text;
   }
 
   .bsm-unavailable {

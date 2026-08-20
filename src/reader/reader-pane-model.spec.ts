@@ -506,6 +506,7 @@ describe('translation switching', () => {
 })
 
 describe('verse details', () => {
+  const verse2 = makeVerseId(43, 15, 2)
   const verse4 = makeVerseId(43, 15, 4)
   const twoTranslations = (): Partial<ReaderPaneDeps> => ({
     passages: passageSourceOver({
@@ -517,6 +518,7 @@ describe('verse details', () => {
 
   it('loads the clicked verse with every installed translation stacked', async () => {
     const model = modelWith(twoTranslations())
+    model.setDetailsWanted(true)
     await model.openAt(ref('John 15:4'), 'web')
 
     await model.selectVerse(verse4)
@@ -538,8 +540,72 @@ describe('verse details', () => {
     })
   })
 
+  it('loads no details while no surface wants them', async () => {
+    const detailLoads: Reference[] = []
+    const model = modelWith({
+      passages: {
+        passage: async (reference, translationId) => {
+          if (reference.ranges[0].startId === reference.ranges[0].endId)
+            detailLoads.push(reference)
+          return passageSourceOver(john15Texts()).passage(
+            reference,
+            translationId,
+          )
+        },
+      },
+    })
+    await model.openAt(ref('John 15:4'), 'web')
+
+    await model.selectVerse(verse4)
+    await flushAsync()
+
+    expect(model.studyMaterial.selectedVerseId).toBe(verse4)
+    expect(model.studyMaterial.details).toBe(null)
+    expect(detailLoads).toEqual([])
+  })
+
+  it('loads the current selection the moment details become wanted', async () => {
+    const model = modelWith(twoTranslations())
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+
+    model.setDetailsWanted(true)
+    await flushAsync()
+
+    expect(detailsOf(model).title).toBe('John 15:4')
+  })
+
+  it('loads the whole extended selection into every translation', async () => {
+    const model = modelWith(twoTranslations())
+    model.setDetailsWanted(true)
+    await model.openAt(ref('John 15:2'), 'web')
+
+    await model.selectVerse(verse2)
+    model.extendSelectionTo(verse4)
+    await flushAsync()
+
+    const details = detailsOf(model)
+    expect(details.title).toBe('John 15:2-4')
+    expect(
+      details.translations[0].segments?.map((segment) => segment.text).join(''),
+    ).toBe('Every branch in me. You are already pruned. Remain in me.')
+  })
+
+  it('refreshes the details as the selection changes while they are wanted', async () => {
+    const model = modelWith(twoTranslations())
+    model.setDetailsWanted(true)
+    await model.openAt(ref('John 15:4'), 'web')
+    await model.selectVerse(verse4)
+
+    await model.selectVerse(verse2)
+    await flushAsync()
+
+    expect(detailsOf(model).title).toBe('John 15:2')
+  })
+
   it('deselects the verse and drops its details when clicked again', async () => {
     const model = modelWith(twoTranslations())
+    model.setDetailsWanted(true)
     await model.openAt(ref('John 15:4'), 'web')
 
     await model.selectVerse(verse4)
@@ -563,6 +629,7 @@ describe('verse details', () => {
 
   it('clears the selection and its details on the clear action', async () => {
     const model = modelWith(twoTranslations())
+    model.setDetailsWanted(true)
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
 
@@ -576,6 +643,7 @@ describe('verse details', () => {
 
   it('drops the previous verse details the moment another verse is clicked', async () => {
     const model = modelWith(twoTranslations())
+    model.setDetailsWanted(true)
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
 
@@ -759,6 +827,7 @@ describe('occurrence refresh', () => {
         },
       },
     })
+    model.setDetailsWanted(true)
     await model.openAt(ref('John 15:4'), 'web')
     await model.selectVerse(verse4)
     detailLoads.length = 0
@@ -1322,6 +1391,7 @@ describe("Strong's word lookup", () => {
       { ...DEFAULT_TOGGLES, strongs: 'on' },
       'bsb',
     )
+    model.setDetailsWanted(true)
     await model.openPosition({ book: 43, chapter: 15 })
     return model
   }
@@ -1558,6 +1628,7 @@ describe('translation availability in the reader', () => {
         translation('nkjv'),
       ],
     })
+    model.setDetailsWanted(true)
     await model.openAt(ref('John 15:4'), 'web')
 
     await model.selectVerse(makeVerseId(43, 15, 4))
@@ -2123,19 +2194,22 @@ describe('the study material contract', () => {
 
   it('projects the selected verse, the span it extends over and its details', async () => {
     const model = modelWith()
+    sourceOf(model).setDetailsWanted(true)
     await model.openAt(ref('John 15:1'), 'web')
     await model.selectVerse(verse2)
     model.extendSelectionTo(verse4)
+    await flushAsync()
 
     const material = sourceOf(model).studyMaterial
     expect(material.selectedVerseId).toBe(verse2)
     expect(material.selectionEndId).toBe(verse4)
-    expect(material.details?.title).toBe('John 15:2')
+    expect(material.details?.title).toBe('John 15:2-4')
     expect(material.details?.translations.map((row) => row.id)).toEqual(['web'])
   })
 
   it('withholds the details of a verse whose load is still in flight', async () => {
     const model = modelWith()
+    sourceOf(model).setDetailsWanted(true)
     await model.openAt(ref('John 15:1'), 'web')
 
     const selecting = model.selectVerse(verse4)
@@ -2245,14 +2319,14 @@ describe('the study material contract', () => {
       'bsb',
     )
     await model.openPosition({ book: 43, chapter: 15 })
-    let selections = 0
-    sourceOf(model).onSelection(() => selections++)
+    const selections: string[] = []
+    sourceOf(model).onSelection((kind) => selections.push(kind))
 
     await model.selectVerse(verse4)
-    expect(selections).toBe(1)
+    expect(selections).toEqual(['verse'])
 
     await model.selectWord(verse4, ['G3306'])
-    expect(selections).toBe(2)
+    expect(selections).toEqual(['verse', 'word'])
   })
 
   it('keeps deselection and clearing off the selection feed', async () => {

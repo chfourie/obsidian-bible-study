@@ -78,6 +78,12 @@ opens the reference in the reader with the entry's translation.
       {material}
       source={model.studySource}
       {host}
+      tab={view.subTab}
+      selectTab={(tab) => model.selectSubTab(tab)}
+      collapsedTranslations={view.collapsedTranslations}
+      toggleTranslation={(id) => model.toggleTranslationFold(id)}
+      collapseAllTranslations={() => model.collapseAllTranslations()}
+      expandAllTranslations={() => model.expandAllTranslations()}
     />
   </div>
 {:else}
@@ -244,8 +250,8 @@ opens the reference in the reader with the entry's translation.
     padding-bottom: 0.25rem;
   }
 
-  /* The mirrored reader fills the sidebar: its material scrolls as one
-     column under the title. */
+  /* The mirrored reader fills the sidebar: each sub-tab's material scrolls
+     on its own under the title and tab bar. */
   .bsp-reader {
     display: flex;
     flex-direction: column;
