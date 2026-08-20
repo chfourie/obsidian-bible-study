@@ -19,6 +19,9 @@ export type SearchHitView = {
   reference: Reference
   label: string
   segments: SearchHitSegment[]
+  // The matched spans as the searched module stores them, kept so activating
+  // the hit can emphasize the same words in the reader.
+  spans: readonly MatchSpan[]
 }
 
 // How many of a book's hits the list prints before the rest wait behind an
@@ -69,6 +72,7 @@ const hitView = (hit: SearchHit): SearchHitView => {
     reference,
     label: referenceLabel(reference),
     segments: emphasizedSegments(hit.text, hit.spans),
+    spans: hit.spans,
   }
 }
 

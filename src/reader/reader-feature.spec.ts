@@ -140,6 +140,23 @@ describe('ReaderFeature entry points', () => {
     expect(revealLeaf).toHaveBeenCalled()
   })
 
+  it('emphasizes the words the navigated entry carries', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    feature.openReference(ref('John 15:1'), 'web', {
+      emphasis: [{ verseId: makeVerseId(43, 15, 1), start: 14, end: 18 }],
+    })
+    await flushAsync()
+
+    const view = leaves[0].view as ReaderView
+    expect(view.model.view.rows[0].segments).toEqual([
+      { text: 'I am the true ', redLetter: false },
+      { text: 'vine', redLetter: false, emphasized: true },
+      { text: '.', redLetter: false },
+    ])
+  })
+
   it('edits a cross-reference in a second reader leaf when asked for a new pane', async () => {
     const { feature, leaves } = harness()
     await feature.load()

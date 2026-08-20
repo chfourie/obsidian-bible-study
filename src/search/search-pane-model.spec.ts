@@ -323,7 +323,11 @@ describe('SearchPaneModel', () => {
           ],
         },
         translationId: 'web',
-        options: undefined,
+        options: {
+          emphasis: [
+            { verseId: makeVerseId(43, 15, 1), start: 14, end: 18 },
+          ],
+        },
       },
     ])
   })
@@ -333,7 +337,10 @@ describe('SearchPaneModel', () => {
     model.setQuery('vine')
     await model.submit()
     model.openHit(model.view.books[0].hits[0], { newPane: true })
-    expect(opened[0].options).toEqual({ newPane: true })
+    expect(opened[0].options).toEqual({
+      newPane: true,
+      emphasis: [{ verseId: makeVerseId(43, 15, 1), start: 14, end: 18 }],
+    })
   })
 
   it('keeps its query and results while hits are opened', async () => {
@@ -555,7 +562,10 @@ describe('SearchPaneModel scope', () => {
           ],
         },
         translationId: null,
-        options: { newPane: true },
+        options: {
+          newPane: true,
+          emphasis: [{ verseId: makeVerseId(101, 1, 2), start: 0, end: 8 }],
+        },
       },
     ])
   })

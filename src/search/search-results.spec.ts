@@ -90,6 +90,17 @@ describe('groupHitsByBook', () => {
     ])
   })
 
+  it('keeps the matched spans, so the reader can emphasize the same words', () => {
+    const [group] = groupHitsByBook([
+      {
+        verseId: makeVerseId(43, 15, 1),
+        text: 'I am the true vine.',
+        spans: [{ start: 14, end: 18 }],
+      },
+    ])
+    expect(group.hits[0].spans).toEqual([{ start: 14, end: 18 }])
+  })
+
   it('has no groups for no hits', () => {
     expect(groupHitsByBook([])).toEqual([])
   })

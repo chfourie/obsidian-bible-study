@@ -182,7 +182,12 @@ describe('SearchFeature', () => {
           ],
         },
         translationId: 'web',
-        options: { newPane: true },
+        options: {
+          newPane: true,
+          emphasis: [
+            { verseId: makeVerseId(43, 15, 1), start: 14, end: 18 },
+          ],
+        },
       },
     ])
   })

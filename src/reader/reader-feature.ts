@@ -249,7 +249,7 @@ export class ReaderFeature
     options: NavigationOptions = {},
   ): void {
     void this.#withReaderView(
-      (view) => view.model.openAt(reference, translationId),
+      (view) => view.model.openAt(reference, translationId, options.emphasis),
       options,
     )
   }

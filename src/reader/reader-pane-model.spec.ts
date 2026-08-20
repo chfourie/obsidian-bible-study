@@ -291,6 +291,75 @@ describe('entry banner dismissal', () => {
   })
 })
 
+describe('entry emphasis spans', () => {
+  const REMAIN_IN_ME = makeVerseId(43, 15, 4)
+
+  const emphasized = (model: ReaderPaneModel): string[] =>
+    model.view.rows
+      .flatMap((row) => row.segments)
+      .filter((segment) => segment.emphasized === true)
+      .map((segment) => segment.text)
+
+  const openEmphasized = async (): Promise<ReaderPaneModel> => {
+    const model = modelWith()
+    await model.openAt(ref('John 15:4'), 'web', [
+      { verseId: REMAIN_IN_ME, start: 0, end: 6 },
+    ])
+    return model
+  }
+
+  it('splits the entry verse at the emphasized words', async () => {
+    const model = await openEmphasized()
+
+    expect(model.view.rows[3].segments).toEqual([
+      { text: 'Remain', redLetter: false, emphasized: true },
+      { text: ' in me.', redLetter: false },
+    ])
+  })
+
+  it('leaves the rest of the chapter as it stands', async () => {
+    const model = await openEmphasized()
+
+    expect(model.view.rows[0].segments).toEqual([
+      { text: 'I am the true vine.', redLetter: false },
+    ])
+  })
+
+  it('emphasizes nothing when the entry carries no spans', async () => {
+    const model = modelWith()
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(emphasized(model)).toEqual([])
+  })
+
+  it('clears the emphasis when the entry banner is dismissed', async () => {
+    const model = await openEmphasized()
+
+    model.dismissBanner()
+
+    expect(emphasized(model)).toEqual([])
+    expect(model.view.rows[3].highlighted).toBe(true)
+  })
+
+  it('clears the emphasis once the user navigates away', async () => {
+    const model = await openEmphasized()
+
+    await model.nextChapter()
+    await model.previousChapter()
+
+    expect(emphasized(model)).toEqual([])
+  })
+
+  it('carries no emphasis into a plainly opened position', async () => {
+    const model = await openEmphasized()
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(emphasized(model)).toEqual([])
+  })
+})
+
 describe('attribution', () => {
   it('surfaces the passage attribution line under the chapter', async () => {
     const model = modelWith({

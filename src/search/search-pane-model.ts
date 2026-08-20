@@ -210,16 +210,25 @@ export class SearchPaneModel {
   }
 
   // A Book carries its own edition rather than a translation, and the reader
-  // resolves it from the paragraph's book number.
+  // resolves it from the paragraph's book number. The hit's matched spans
+  // travel with it, so the opened passage emphasizes the same words.
   openHit(hit: SearchHitView, options?: NavigationOptions): void {
+    const entry: NavigationOptions = {
+      ...options,
+      emphasis: hit.spans.map((span) => ({
+        verseId: hit.verseId,
+        start: span.start,
+        end: span.end,
+      })),
+    }
     const { book } = decodeVerseId(hit.verseId)
     if (isNonBiblicalBook(book)) {
-      this.deps.openHit(hit.reference, null, options)
+      this.deps.openHit(hit.reference, null, entry)
       return
     }
     const translation = this.deps.scope().translation
     if (translation === null) return
-    this.deps.openHit(hit.reference, translation.id, options)
+    this.deps.openHit(hit.reference, translation.id, entry)
   }
 
   // The searchable modules can change under a live pane — a module installed
