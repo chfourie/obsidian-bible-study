@@ -1,3 +1,6 @@
+// From the file rather than the modules barrel: the barrel pulls in the plugin
+// features, and nothing here may reach Obsidian.
+import { isBookManifest, type ModuleManifest } from '../modules/module-manifest'
 import {
   isCurrentSearchIndex,
   searchIndex,
@@ -22,7 +25,7 @@ export class SearchEngine {
 
   constructor(
     private readonly source: SearchIndexSource,
-    private readonly books: readonly number[],
+    private readonly scriptureBooks: readonly number[],
   ) {}
 
   async search(
@@ -52,10 +55,18 @@ export class SearchEngine {
       (await buildAndPersistSearchIndex(
         this.source,
         moduleId,
-        this.books,
+        this.#booksOf(manifest),
         onProgress,
       ))
     this.#loaded.set(moduleId, index)
     return index
+  }
+
+  // A Book module holds one book and nothing else, so its index is built over
+  // that book alone; a translation is built over the Canonical Grid's.
+  #booksOf(manifest: ModuleManifest): readonly number[] {
+    return isBookManifest(manifest)
+      ? [manifest.book.number]
+      : this.scriptureBooks
   }
 }

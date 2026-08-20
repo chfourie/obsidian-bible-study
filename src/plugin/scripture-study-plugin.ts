@@ -77,7 +77,11 @@ export default class ScriptureStudyPlugin extends Plugin {
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
   })
-  readonly search = new SearchFeature(this, this.modules.store)
+  readonly search = new SearchFeature(
+    this,
+    this.modules.store,
+    this.settingsStore,
+  )
   readonly annotations = new AnnotationsFeature(this, this.vaultIndex.index)
   readonly settingsTab = new SettingsFeature(
     this,

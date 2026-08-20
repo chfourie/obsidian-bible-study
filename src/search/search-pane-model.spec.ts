@@ -1,15 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { FakeSearchIndexSource } from '../../tests/fixtures/fake-search-index-source'
+import {
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import type { NavigationOptions } from '../contracts'
 import type { BookContent } from '../modules'
 import { BOOKS, makeVerseId, type Reference } from '../reference'
 import { SearchEngine } from './search-engine'
-import {
-  SearchPaneModel,
-  type SearchPaneDeps,
-  type SearchTranslation,
-} from './search-pane-model'
+import { SearchPaneModel, type SearchPaneDeps } from './search-pane-model'
 import type { SearchQuery } from './search-query'
+import {
+  defaultStoredSearchScope,
+  resolveSearchScope,
+  storedSearchScope,
+  type SearchScopeBook,
+  type SearchScopeOptions,
+  type SearchTranslation,
+  type StoredSearchScope,
+} from './search-scope'
 
 const verses = (
   book: number,
@@ -36,27 +45,64 @@ const WEB_CONTENT: Record<number, BookContent> = {
   }),
 }
 
+const HUMILITY_BOOK_OPTION: SearchScopeBook = {
+  moduleId: 'hum-m1895',
+  bookId: 101,
+  label: 'Humility',
+}
+
+const HUMILITY_CONTENT: Record<number, BookContent> = {
+  101: {
+    [makeVerseId(101, 1, 2)]:
+      'Humility is the only soil in which the graces take root.',
+    [makeVerseId(101, 2, 1)]: 'The life of Jesus is our love and our humility.',
+  },
+}
+
 type Opened = {
   reference: Reference
-  translationId: string
+  translationId: string | null
   options: NavigationOptions | undefined
 }
 
-const harness = (
-  translation: SearchTranslation | null = { id: 'web', label: 'WEB' },
-  content: Record<string, Record<number, BookContent>> = { web: WEB_CONTENT },
-) => {
-  const source = new FakeSearchIndexSource(content)
+type Harness = {
+  translations?: SearchTranslation[]
+  books?: SearchScopeBook[]
+  fallbackTranslationId?: string | null
+  content?: Record<string, Record<number, BookContent>>
+  bookNumbers?: Record<string, number>
+}
+
+const harness = ({
+  translations = [{ id: 'web', label: 'WEB' }],
+  books = [],
+  fallbackTranslationId = 'web',
+  content = { web: WEB_CONTENT },
+  bookNumbers = {},
+}: Harness = {}) => {
+  const source = new FakeSearchIndexSource(content, undefined, bookNumbers)
   const engine = new SearchEngine(
     source,
     BOOKS.map((book) => book.id),
   )
   const opened: Opened[] = []
-  const searches: SearchQuery[] = []
+  const searches: { moduleId: string; query: SearchQuery }[] = []
+  // The scope is held the way the feature holds it — remembered in its stored
+  // form and resolved against what is installed on every read.
+  let stored: StoredSearchScope = defaultStoredSearchScope()
+  const options = (): SearchScopeOptions => ({
+    translations,
+    books,
+    fallbackTranslationId,
+  })
   const deps: SearchPaneDeps = {
-    translation: () => translation,
+    scopeOptions: options,
+    scope: () => resolveSearchScope(stored, options()),
+    chooseScope: (scope) => {
+      stored = storedSearchScope(scope, options())
+    },
     search: (moduleId, query, onProgress) => {
-      searches.push(query)
+      searches.push({ moduleId, query })
       return engine.search(moduleId, query, onProgress)
     },
     openHit: (reference, translationId, options) => {
@@ -67,7 +113,9 @@ const harness = (
     model: new SearchPaneModel(deps),
     opened,
     searches,
+    searchedModules: () => searches.map((search) => search.moduleId),
     reads: source.contentReads,
+    stored: () => stored,
   }
 }
 
@@ -132,8 +180,10 @@ describe('SearchPaneModel', () => {
   })
 
   it('folds case and diacritics on both sides of the query', async () => {
-    const { model } = harness({ id: 'esp', label: 'ESP' }, {
-      esp: { 43: verses(43, 15, { 1: 'Yo soy la vid verdadéra.' }) },
+    const { model } = harness({
+      translations: [{ id: 'esp', label: 'ESP' }],
+      fallbackTranslationId: 'esp',
+      content: { esp: { 43: verses(43, 15, { 1: 'Yo soy la vid verdadéra.' }) } },
     })
     model.setQuery('VERDADERA')
     await model.submit()
@@ -141,8 +191,10 @@ describe('SearchPaneModel', () => {
   })
 
   it('folds non-Latin scripts the same way', async () => {
-    const { model } = harness({ id: 'grk', label: 'GRK' }, {
-      grk: { 43: verses(43, 1, { 1: 'Ἐν ἀρχῇ ἦν ὁ Λόγος' }) },
+    const { model } = harness({
+      translations: [{ id: 'grk', label: 'GRK' }],
+      fallbackTranslationId: 'grk',
+      content: { grk: { 43: verses(43, 1, { 1: 'Ἐν ἀρχῇ ἦν ὁ Λόγος' }) } },
     })
     model.setQuery('λογος')
     await model.submit()
@@ -190,8 +242,12 @@ describe('SearchPaneModel', () => {
     expect(model.view.books).toEqual([])
   })
 
-  it('reports having no translation to search', async () => {
-    const { model, searches } = harness(null)
+  it('reports having nothing installed to search', async () => {
+    const { model, searches } = harness({
+      translations: [],
+      fallbackTranslationId: null,
+      content: {},
+    })
     model.setQuery('vine')
     await model.submit()
     expect(model.view.status).toBe('no-translation')
@@ -302,5 +358,157 @@ describe('SearchPaneModel', () => {
     unsubscribe()
     model.setQuery('other')
     expect(notifications).toBe(settled)
+  })
+})
+
+const scopedHarness = () =>
+  harness({
+    translations: [
+      { id: 'web', label: 'WEB' },
+      { id: 'kjv', label: 'KJV' },
+    ],
+    books: [HUMILITY_BOOK_OPTION],
+    content: { web: WEB_CONTENT, kjv: WEB_CONTENT, 'hum-m1895': HUMILITY_CONTENT },
+    bookNumbers: { 'hum-m1895': 101 },
+  })
+
+describe('SearchPaneModel scope', () => {
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  it('offers every installed translation, one of them chosen', () => {
+    const { model } = scopedHarness()
+    expect(model.view.scope.translations).toEqual([
+      { id: 'web', label: 'WEB' },
+      { id: 'kjv', label: 'KJV' },
+    ])
+    expect(model.view.scope.translationId).toBe('web')
+  })
+
+  it('starts on the Fallback Translation, both testaments and every book', () => {
+    const { model } = scopedHarness()
+    expect(model.view.scope.testament).toBe('all')
+    expect(model.view.scope.books).toEqual([
+      { ...HUMILITY_BOOK_OPTION, selected: true },
+    ])
+  })
+
+  it('searches the chosen translation instead of the fallback', async () => {
+    const { model, searchedModules } = scopedHarness()
+    model.chooseTranslation('kjv')
+    expect(model.view.translationLabel).toBe('KJV')
+    model.setQuery('vine')
+    await model.submit()
+    expect(searchedModules()).toEqual(['kjv', 'hum-m1895'])
+  })
+
+  it('fans out only over the modules the scope selects', async () => {
+    const { model, searchedModules } = scopedHarness()
+    model.toggleBook('hum-m1895')
+    model.setQuery('humility')
+    await model.submit()
+    expect(searchedModules()).toEqual(['web'])
+    expect(model.view.books).toEqual([])
+  })
+
+  it('shows a book’s paragraph hits under the book, with the matched words emphasized', async () => {
+    const { model } = scopedHarness()
+    model.setQuery('humility')
+    await model.submit()
+    expect(bookSummary(model)).toEqual([{ name: 'Humility', count: 2 }])
+    expect(labels(model)).toEqual([
+      'Humility ch. 1, par. 2',
+      'Humility ch. 2, par. 1',
+    ])
+    expect(model.view.books[0].hits[0].segments).toEqual([
+      { text: 'Humility', matched: true },
+      { text: ' is the only soil in which the graces take root.', matched: false },
+    ])
+  })
+
+  it('opens a book hit at that paragraph, in the book’s own edition', async () => {
+    const { model, opened } = scopedHarness()
+    model.setQuery('humility')
+    await model.submit()
+    model.openHit(model.view.books[0].hits[0], { newPane: true })
+    expect(opened).toEqual([
+      {
+        reference: {
+          book: 101,
+          ranges: [
+            { startId: makeVerseId(101, 1, 2), endId: makeVerseId(101, 1, 2) },
+          ],
+        },
+        translationId: null,
+        options: { newPane: true },
+      },
+    ])
+  })
+
+  it('presents scripture and book hits together in Canonical Grid order', async () => {
+    const { model } = scopedHarness()
+    model.setQuery('the')
+    await model.submit()
+    expect(bookSummary(model).map((group) => group.name)).toEqual([
+      'Genesis',
+      'John',
+      'Humility',
+    ])
+  })
+
+  it('keeps only Old Testament hits when the scope says so', async () => {
+    const { model } = scopedHarness()
+    model.chooseTestament('ot')
+    model.setQuery('the')
+    await model.submit()
+    expect(bookSummary(model).map((group) => group.name)).toEqual([
+      'Genesis',
+      'Humility',
+    ])
+  })
+
+  it('keeps only New Testament hits when the scope says so', async () => {
+    const { model } = scopedHarness()
+    model.chooseTestament('nt')
+    model.setQuery('the')
+    await model.submit()
+    expect(bookSummary(model).map((group) => group.name)).toEqual([
+      'John',
+      'Humility',
+    ])
+  })
+
+  it('remembers every choice the picker makes', () => {
+    const { model, stored } = scopedHarness()
+    model.chooseTranslation('kjv')
+    model.chooseTestament('nt')
+    model.toggleBook('hum-m1895')
+    expect(stored()).toEqual({
+      translationId: 'kjv',
+      testament: 'nt',
+      excludedBookIds: ['hum-m1895'],
+    })
+  })
+
+  it('remembers nothing of the query it ran or the hits it found', async () => {
+    const { model, stored } = scopedHarness()
+    model.setQuery('vine')
+    await model.submit()
+    expect(model.view.totalHits).toBeGreaterThan(0)
+    expect(stored()).toEqual(defaultStoredSearchScope())
+  })
+
+  it('searches books even with no translation installed', async () => {
+    const { model, searchedModules } = harness({
+      translations: [],
+      fallbackTranslationId: null,
+      books: [HUMILITY_BOOK_OPTION],
+      content: { 'hum-m1895': HUMILITY_CONTENT },
+      bookNumbers: { 'hum-m1895': 101 },
+    })
+    model.setQuery('humility')
+    await model.submit()
+    expect(searchedModules()).toEqual(['hum-m1895'])
+    expect(model.view.status).toBe('ok')
   })
 })

@@ -12,7 +12,11 @@ export const WEB_CONTENT: ModuleContent = {
   43: { [makeVerseId(43, 15, 1)]: 'I am the true vine.' },
 }
 
-const manifestFor = (moduleId: string, checksum: string): ModuleManifest => ({
+const manifestFor = (
+  moduleId: string,
+  checksum: string,
+  bookNumber: number | undefined,
+): ModuleManifest => ({
   id: moduleId,
   name: moduleId.toUpperCase(),
   language: 'English',
@@ -21,6 +25,19 @@ const manifestFor = (moduleId: string, checksum: string): ModuleManifest => ({
   sourceChecksum: checksum,
   formatVersion: 2,
   capabilities: { strongsTagged: false },
+  ...(bookNumber === undefined
+    ? {}
+    : {
+        kind: 'book' as const,
+        book: {
+          number: bookNumber,
+          editionCode: moduleId.toUpperCase(),
+          author: 'Author',
+          year: 1895,
+          abbreviation: moduleId.toUpperCase(),
+          sections: [{ chapter: 1, name: 'One', paragraphs: 1 }],
+        },
+      }),
 })
 
 // Module storage as the search sees it, entirely in memory: content to index,
@@ -35,6 +52,9 @@ export class FakeSearchIndexSource implements SearchIndexSource {
   constructor(
     private readonly content: Record<string, ModuleContent> = { web: WEB_CONTENT },
     checksums?: Record<string, string>,
+    // Module ids that stand for installed Books, by the book number their
+    // manifest declares; every other module is a translation.
+    private readonly bookNumbers: Record<string, number> = {},
   ) {
     this.checksums =
       checksums ??
@@ -53,7 +73,9 @@ export class FakeSearchIndexSource implements SearchIndexSource {
 
   manifest = async (moduleId: string): Promise<ModuleManifest | null> => {
     const checksum = this.checksums[moduleId]
-    return checksum === undefined ? null : manifestFor(moduleId, checksum)
+    return checksum === undefined
+      ? null
+      : manifestFor(moduleId, checksum, this.bookNumbers[moduleId])
   }
 
   readSearchIndex = async (moduleId: string): Promise<string | null> =>
@@ -80,4 +102,6 @@ export class FakeSearchIndexSource implements SearchIndexSource {
 export const fakeSearchIndexSource = (
   content?: Record<string, ModuleContent>,
   checksums?: Record<string, string>,
-): FakeSearchIndexSource => new FakeSearchIndexSource(content, checksums)
+  bookNumbers?: Record<string, number>,
+): FakeSearchIndexSource =>
+  new FakeSearchIndexSource(content, checksums, bookNumbers)

@@ -167,6 +167,26 @@ describe('SearchEngine', () => {
     expect(later).toEqual([])
   })
 
+  it('indexes a book module over its own book alone', async () => {
+    const source = fakeSearchIndexSource(
+      {
+        'hum-m1895': {
+          101: {
+            [makeVerseId(101, 3, 2)]:
+              'Humility is the only soil in which the graces root.',
+          },
+        },
+      },
+      { 'hum-m1895': 'sha-hum-1' },
+      { 'hum-m1895': 101 },
+    )
+    const engine = new SearchEngine(source, BOOKS)
+    expect(await verses(engine, 'graces', 'hum-m1895')).toEqual([
+      makeVerseId(101, 3, 2),
+    ])
+    expect(source.contentReads).toEqual(['hum-m1895/101'])
+  })
+
   it('indexes each module it is asked about separately', async () => {
     const { engine, source } = engineOver(
       fakeSearchIndexSource(

@@ -1,13 +1,21 @@
 <!--
 The singleton Search Pane. Typing fills the box and nothing more; Enter runs
-the query over the searched translation and the hits below group under their
-book. Activating a hit opens the reader at that verse.
+the query over the Search Scope — one translation, a testament filter and any
+subset of the installed Books — and the hits below group under their book.
+Activating a hit opens the reader at that verse or paragraph.
 -->
 <script lang="ts">
   import { activate, opensInNewPane } from '../ui'
   import type { IndexBuildProgress } from './search-index-store'
   import type { SearchPaneModel } from './search-pane-model'
   import type { SearchHitView } from './search-results'
+  import type { TestamentFilter } from './search-scope'
+
+  const TESTAMENTS: { value: TestamentFilter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'ot', label: 'OT' },
+    { value: 'nt', label: 'NT' },
+  ]
 
   let { model }: { model: SearchPaneModel } = $props()
 
@@ -47,21 +55,63 @@ book. Activating a hit opens the reader at that verse.
       oninput={(event) => model.setQuery(event.currentTarget.value)}
       onkeydown={submitOnEnter}
     />
-    {#if view.translationLabel !== null}
-      <span class="bss-translation">{view.translationLabel}</span>
-    {/if}
   </div>
+
+  <div class="bss-scope">
+    <select
+      class="dropdown bss-scope-translation"
+      aria-label="Translation to search"
+      value={view.scope.translationId}
+      onchange={(event) => model.chooseTranslation(event.currentTarget.value)}
+      disabled={view.scope.translations.length === 0}
+    >
+      {#if view.scope.translationId === null}
+        <option value={null}>No translation</option>
+      {/if}
+      {#each view.scope.translations as translation (translation.id)}
+        <option value={translation.id}>{translation.label}</option>
+      {/each}
+    </select>
+    <div class="bss-testaments" role="group" aria-label="Testament to search">
+      {#each TESTAMENTS as testament (testament.value)}
+        <button
+          type="button"
+          class="bss-testament"
+          class:bss-chosen={view.scope.testament === testament.value}
+          aria-pressed={view.scope.testament === testament.value}
+          onclick={() => model.chooseTestament(testament.value)}
+        >
+          {testament.label}
+        </button>
+      {/each}
+    </div>
+  </div>
+
+  {#if view.scope.books.length > 0}
+    <div class="bss-scope-books">
+      {#each view.scope.books as book (book.moduleId)}
+        <label class="bss-scope-book">
+          <input
+            type="checkbox"
+            checked={book.selected}
+            onchange={() => model.toggleBook(book.moduleId)}
+          />
+          {book.label}
+        </label>
+      {/each}
+    </div>
+  {/if}
 
   <div class="bss-body">
     {#if view.status === 'idle'}
       <p class="bss-empty">Type words and press Enter to search.</p>
     {:else if view.status === 'no-translation'}
-      <p class="bss-empty">No translation installed.</p>
+      <p class="bss-empty">Nothing installed to search.</p>
     {:else if view.status === 'searching'}
       <p class="bss-empty">Searching…</p>
     {:else if view.status === 'indexing'}
       <p class="bss-empty">
-        Indexing {view.translationLabel} for search… {indexedPercent(
+        Indexing {view.indexingLabel} for search… {indexedPercent(
           view.indexing,
         )}%
       </p>
@@ -122,10 +172,59 @@ book. Activating a hit opens the reader at that verse.
     min-width: 0;
   }
 
-  /* Names the module the query ran against — the scope picker will grow out
-     of this slot. */
-  .bss-translation {
+  /* The Search Scope: one translation, a testament filter, and a checkbox per
+     installed Book on its own row when there are any. */
+  .bss-scope {
+    display: flex;
     flex-shrink: 0;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .bss-scope-translation {
+    flex: 1;
+    min-width: 0;
+    font-size: var(--font-ui-small);
+  }
+
+  .bss-testaments {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .bss-testament {
+    padding: 0.15rem 0.45rem;
+    border-radius: 0;
+    box-shadow: none;
+    background-color: var(--background-modifier-form-field);
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bss-testament:first-child {
+    border-radius: var(--radius-s) 0 0 var(--radius-s);
+  }
+
+  .bss-testament:last-child {
+    border-radius: 0 var(--radius-s) var(--radius-s) 0;
+  }
+
+  .bss-testament.bss-chosen {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+
+  .bss-scope-books {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 0.15rem 0.75rem;
+  }
+
+  .bss-scope-book {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
   }

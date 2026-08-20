@@ -1,4 +1,10 @@
 export { HIGHLIGHT_SLOTS, type HighlightSlot } from '../reference'
+// From the file rather than the search barrel: the barrel pulls in the plugin
+// features, which depend on this layer.
+import {
+  defaultStoredSearchScope,
+  type StoredSearchScope,
+} from '../search/search-scope'
 
 // Fields land with the features that need them; the settings ticket on the
 // wayfinder map enumerates the v1 surface.
@@ -56,6 +62,9 @@ export type ScriptureStudySettings = {
   readerStrongsDefault: PerDeviceDefault<'off' | 'on'>
   readerParaNumbersDefault: PerDeviceDefault<'on' | 'hover'>
   readerFontScalePercent: number
+  // Not a default but a memory: the scope the Search Pane was last left in on
+  // this device, restored whole on the next start.
+  searchScope: PerDeviceDefault<StoredSearchScope>
   revealPanelOnSelection: boolean
   annotationsFolder: string
   crossReferencesFolder: string
@@ -75,6 +84,10 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   readerStrongsDefault: perDeviceDefault('off'),
   readerParaNumbersDefault: perDeviceDefault('hover'),
   readerFontScalePercent: FONT_SCALE_DEFAULT,
+  searchScope: {
+    desktop: defaultStoredSearchScope(),
+    mobile: defaultStoredSearchScope(),
+  },
   revealPanelOnSelection: true,
   annotationsFolder: 'Annotations',
   crossReferencesFolder: '',

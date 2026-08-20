@@ -1,5 +1,5 @@
 import type { NavigationOptions } from '../contracts'
-import type { Reference } from '../reference'
+import { decodeVerseId, isNonBiblicalBook, type Reference } from '../reference'
 import type { IndexBuildProgress } from './search-index-store'
 import {
   isEmptyQuery,
@@ -12,16 +12,19 @@ import {
   type SearchHitView,
 } from './search-results'
 import type { SearchHit } from './search-scan'
-
-// The module one query runs against, named as the pane shows it. The scope
-// picker will choose it; for now it is the Fallback Translation.
-export type SearchTranslation = {
-  id: string
-  label: string
-}
+import {
+  hitsInTestament,
+  scopeModuleIds,
+  type SearchScope,
+  type SearchScopeOptions,
+  type SearchTranslation,
+  type TestamentFilter,
+} from './search-scope'
 
 export type SearchPaneDeps = {
-  translation: () => SearchTranslation | null
+  scopeOptions: () => SearchScopeOptions
+  scope: () => SearchScope
+  chooseScope: (scope: SearchScope) => void
   search: (
     moduleId: string,
     query: SearchQuery,
@@ -29,7 +32,7 @@ export type SearchPaneDeps = {
   ) => Promise<SearchHit[]>
   openHit: (
     reference: Reference,
-    translationId: string,
+    translationId: string | null,
     options?: NavigationOptions,
   ) => void
 }
@@ -42,15 +45,34 @@ export type SearchPaneStatus =
   | 'no-results'
   | 'ok'
 
+// One installed Book as the picker shows it: offered whether or not the scope
+// currently takes it in.
+export type SearchScopeBookView = {
+  moduleId: string
+  bookId: number
+  label: string
+  selected: boolean
+}
+
+export type SearchScopeView = {
+  translations: SearchTranslation[]
+  translationId: string | null
+  testament: TestamentFilter
+  books: SearchScopeBookView[]
+}
+
 export type SearchPaneViewState = {
   // What the box holds, which is not what was searched until it is submitted.
   query: string
   status: SearchPaneStatus
+  scope: SearchScopeView
   translationLabel: string | null
   // The query the results on screen came from, null while none has run.
   submittedQuery: string | null
-  // How far the module's index has been built, only while one is being built.
+  // How far the module's index has been built, only while one is being built,
+  // and the module it is being built for.
   indexing: IndexBuildProgress | null
+  indexingLabel: string | null
   totalHits: number
   books: SearchBookView[]
 }
@@ -61,6 +83,7 @@ export class SearchPaneModel {
   #status: SearchPaneStatus = 'idle'
   #books: SearchBookView[] = []
   #indexing: IndexBuildProgress | null = null
+  #indexingLabel: string | null = null
   #totalHits = 0
   #searchToken = 0
   readonly #listeners = new Set<() => void>()
@@ -73,12 +96,15 @@ export class SearchPaneModel {
   }
 
   get view(): SearchPaneViewState {
+    const scope = this.deps.scope()
     return {
       query: this.#query,
       status: this.#status,
-      translationLabel: this.deps.translation()?.label ?? null,
+      scope: this.#scopeView(scope),
+      translationLabel: scope.translation?.label ?? null,
       submittedQuery: this.#submittedQuery,
       indexing: this.#indexing,
+      indexingLabel: this.#indexingLabel,
       totalHits: this.#totalHits,
       books: this.#books,
     }
@@ -89,6 +115,35 @@ export class SearchPaneModel {
     if (query === this.#query) return
     this.#query = query
     this.#notify()
+  }
+
+  // Exactly one translation is searched, so choosing one replaces the last;
+  // an id no longer installed leaves the scope as it stands.
+  chooseTranslation(translationId: string): void {
+    const translation = this.deps
+      .scopeOptions()
+      .translations.find((candidate) => candidate.id === translationId)
+    if (translation === undefined) return
+    this.#chooseScope({ ...this.deps.scope(), translation })
+  }
+
+  chooseTestament(testament: TestamentFilter): void {
+    this.#chooseScope({ ...this.deps.scope(), testament })
+  }
+
+  toggleBook(moduleId: string): void {
+    const scope = this.deps.scope()
+    const selected = scope.books.some((book) => book.moduleId === moduleId)
+    const books = selected
+      ? scope.books.filter((book) => book.moduleId !== moduleId)
+      : this.deps
+          .scopeOptions()
+          .books.filter(
+            (book) =>
+              book.moduleId === moduleId ||
+              scope.books.some((chosen) => chosen.moduleId === book.moduleId),
+          )
+    this.#chooseScope({ ...scope, books })
   }
 
   async submit(): Promise<void> {
@@ -103,42 +158,89 @@ export class SearchPaneModel {
       return
     }
     this.#submittedQuery = text
-    const translation = this.deps.translation()
-    if (translation === null) {
+    const scope = this.deps.scope()
+    const moduleIds = scopeModuleIds(scope)
+    if (moduleIds.length === 0) {
       this.#settle('no-translation')
       return
     }
     this.#settle('searching')
-    // A module met without a valid index is built one before it can answer;
-    // the pane says so, and how far it has got, until the results land.
-    const hits = await this.deps.search(translation.id, query, (progress) => {
+    const hits: SearchHit[] = []
+    for (const moduleId of moduleIds) {
+      // A module met without a valid index is built one before it can answer;
+      // the pane says so, and how far it has got, until the results land.
+      const found = await this.deps.search(moduleId, query, (progress) => {
+        if (token !== this.#searchToken) return
+        this.#indexing = progress
+        this.#indexingLabel = this.#labelOf(scope, moduleId)
+        this.#settle('indexing')
+      })
+      // A submission overtaken while it ran leaves the newer one's results
+      // standing.
       if (token !== this.#searchToken) return
-      this.#indexing = progress
-      this.#settle('indexing')
-    })
-    // A submission overtaken while it ran leaves the newer one's results
-    // standing.
-    if (token !== this.#searchToken) return
-    this.#books = groupHitsByBook(hits)
-    this.#totalHits = hits.length
-    this.#settle(hits.length === 0 ? 'no-results' : 'ok')
+      hits.push(...found)
+    }
+    // Atom ids sort into Canonical Grid order across modules on their own:
+    // scripture holds books 1-66 and every Book sits above them.
+    const scoped = hitsInTestament(hits, scope.testament).sort(
+      (a, b) => a.verseId - b.verseId,
+    )
+    this.#books = groupHitsByBook(scoped)
+    this.#totalHits = scoped.length
+    this.#settle(scoped.length === 0 ? 'no-results' : 'ok')
   }
 
+  // A Book carries its own edition rather than a translation, and the reader
+  // resolves it from the paragraph's book number.
   openHit(hit: SearchHitView, options?: NavigationOptions): void {
-    const translation = this.deps.translation()
+    const { book } = decodeVerseId(hit.verseId)
+    if (isNonBiblicalBook(book)) {
+      this.deps.openHit(hit.reference, null, options)
+      return
+    }
+    const translation = this.deps.scope().translation
     if (translation === null) return
     this.deps.openHit(hit.reference, translation.id, options)
   }
 
-  // The searchable module can change under a live pane — a module installed
-  // or removed moves the Fallback Translation. Results already on screen came
-  // from the module they named and stay as they are.
+  // The searchable modules can change under a live pane — a module installed
+  // or removed moves the scope with it. Results already on screen came from
+  // the modules they named and stay as they are.
   refresh(): void {
     this.#notify()
   }
 
+  #scopeView(scope: SearchScope): SearchScopeView {
+    return {
+      translations: this.deps.scopeOptions().translations,
+      translationId: scope.translation?.id ?? null,
+      testament: scope.testament,
+      books: this.deps.scopeOptions().books.map((book) => ({
+        ...book,
+        selected: scope.books.some(
+          (chosen) => chosen.moduleId === book.moduleId,
+        ),
+      })),
+    }
+  }
+
+  #labelOf(scope: SearchScope, moduleId: string): string | null {
+    if (scope.translation?.id === moduleId) return scope.translation.label
+    return (
+      scope.books.find((book) => book.moduleId === moduleId)?.label ?? null
+    )
+  }
+
+  #chooseScope(scope: SearchScope): void {
+    this.deps.chooseScope(scope)
+    this.#notify()
+  }
+
   #settle(status: SearchPaneStatus): void {
-    if (status !== 'indexing') this.#indexing = null
+    if (status !== 'indexing') {
+      this.#indexing = null
+      this.#indexingLabel = null
+    }
     this.#status = status
     this.#notify()
   }

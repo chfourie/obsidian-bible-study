@@ -1,29 +1,52 @@
-import { WorkspaceLeaf, type Plugin } from 'obsidian'
+import { Platform, WorkspaceLeaf, type Plugin } from 'obsidian'
 import {
   NOOP_REFERENCE_NAVIGATOR,
   type NavigationOptions,
   type ReferenceNavigator,
 } from '../contracts'
-import { PluginFeature } from '../data-access'
+import {
+  installedTranslationModuleIds,
+  PluginFeature,
+  type ReaderDevice,
+  type SettingsStore,
+} from '../data-access'
 import type { ModuleStore } from '../modules'
-import { BOOKS, type Reference } from '../reference'
+import { BOOKS, registeredBooks, type Reference } from '../reference'
 import { resolveFallbackTranslationId } from '../rendering'
 import { SearchEngine } from './search-engine'
-import { SearchPaneModel, type SearchTranslation } from './search-pane-model'
+import { SearchPaneModel } from './search-pane-model'
 import { SEARCH_PANE_VIEW_TYPE, SearchPaneView } from './search-pane-view'
+import {
+  resolveSearchScope,
+  storedSearchScope,
+  type SearchScope,
+  type SearchScopeOptions,
+  type StoredSearchScope,
+} from './search-scope'
 
 export { SEARCH_PANE_VIEW_TYPE } from './search-pane-view'
 
-// Canonical Grid order is the order the index build walks: OT 1-39 then NT
-// 40-66. Books (≥ 101) join this list when the scope picker can select them.
+// Canonical Grid order is the order a translation's index build walks: OT 1-39
+// then NT 40-66. A Book module indexes its own book instead, which the engine
+// reads from its manifest.
 const SCRIPTURE_BOOKS: readonly number[] = BOOKS.map((book) => book.id)
+
+const currentDevice = (): ReaderDevice =>
+  Platform.isMobile ? 'mobile' : 'desktop'
 
 export class SearchFeature extends PluginFeature {
   readonly #models = new Set<SearchPaneModel>()
   readonly #engine: SearchEngine
+  // The scope as the picker last left it, ahead of the settings write that
+  // persists it — the pane must not wait on the filesystem to redraw.
+  #chosen: StoredSearchScope | null = null
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
 
-  constructor(plugin: Plugin, store: ModuleStore) {
+  constructor(
+    plugin: Plugin,
+    store: ModuleStore,
+    private readonly settingsStore: SettingsStore,
+  ) {
     super(plugin)
     this.#engine = new SearchEngine(store, SCRIPTURE_BOOKS)
   }
@@ -53,12 +76,14 @@ export class SearchFeature extends PluginFeature {
 
   createModel(): SearchPaneModel {
     const model = new SearchPaneModel({
-      translation: () => this.#translation(),
+      scopeOptions: () => this.#scopeOptions(),
+      scope: () => this.#scope(),
+      chooseScope: (scope: SearchScope) => this.#chooseScope(scope),
       search: (moduleId, query, onProgress) =>
         this.#engine.search(moduleId, query, onProgress),
       openHit: (
         reference: Reference,
-        translationId: string,
+        translationId: string | null,
         options?: NavigationOptions,
       ) => this.#navigator.openReference(reference, translationId, options),
     })
@@ -70,11 +95,40 @@ export class SearchFeature extends PluginFeature {
     this.#models.delete(model)
   }
 
-  // The scope picker lands in a later ticket; until then every query runs
-  // against the Fallback Translation.
-  #translation(): SearchTranslation | null {
-    const id = resolveFallbackTranslationId(this.settings)
-    return id === null ? null : { id, label: id.toUpperCase() }
+  // Installed translations name themselves by their module id; a Book names
+  // itself as the Book Registry has it, and is offered only while both its
+  // module is installed and its manifest is registered.
+  #scopeOptions(): SearchScopeOptions {
+    const installed = this.settings.installedModuleIds
+    return {
+      translations: installedTranslationModuleIds(this.settings).map((id) => ({
+        id,
+        label: id.toUpperCase(),
+      })),
+      books: registeredBooks()
+        .filter((book) => installed.includes(book.moduleId))
+        .map((book) => ({
+          moduleId: book.moduleId,
+          bookId: book.id,
+          label: book.name,
+        })),
+      fallbackTranslationId: resolveFallbackTranslationId(this.settings),
+    }
+  }
+
+  #scope(): SearchScope {
+    const remembered =
+      this.#chosen ?? this.settings.searchScope[currentDevice()]
+    return resolveSearchScope(remembered, this.#scopeOptions())
+  }
+
+  #chooseScope(scope: SearchScope): void {
+    const chosen = storedSearchScope(scope, this.#scopeOptions())
+    this.#chosen = chosen
+    void this.settingsStore.updateSettings((settings) => ({
+      ...settings,
+      searchScope: { ...settings.searchScope, [currentDevice()]: chosen },
+    }))
   }
 
   async openPane(): Promise<void> {

@@ -1,8 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import { FakeSearchIndexSource } from '../../tests/fixtures/fake-search-index-source'
+import {
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import type { NavigationOptions, ReferenceNavigator } from '../contracts'
-import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
+import {
+  DEFAULT_SETTINGS,
+  SettingsStore,
+  type ScriptureStudySettings,
+} from '../data-access'
 import type { ModuleStore } from '../modules'
 import { makeVerseId, type Reference } from '../reference'
 import { SEARCH_PANE_VIEW_TYPE, SearchFeature } from './search-feature'
@@ -13,9 +21,17 @@ type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 type FakeCommand = { id: string; name: string; callback: () => void }
 
 const fakeStore = (): ModuleStore =>
-  new FakeSearchIndexSource({
-    web: { 43: { [makeVerseId(43, 15, 1)]: 'I am the true vine.' } },
-  }) as unknown as ModuleStore
+  new FakeSearchIndexSource(
+    {
+      web: { 43: { [makeVerseId(43, 15, 1)]: 'I am the true vine.' } },
+      kjv: { 43: { [makeVerseId(43, 15, 1)]: 'I am the true vine.' } },
+      'hum-m1895': {
+        101: { [makeVerseId(101, 1, 2)]: 'Humility is the soil of every grace.' },
+      },
+    },
+    undefined,
+    { 'hum-m1895': 101 },
+  ) as unknown as ModuleStore
 
 const harness = (settings: Partial<ScriptureStudySettings> = {}) => {
   const leaves: FakeLeaf[] = []
@@ -68,14 +84,22 @@ const harness = (settings: Partial<ScriptureStudySettings> = {}) => {
     openNote: () => {},
     editCrossReference: () => {},
   }
-  const feature = new SearchFeature(plugin, fakeStore())
-  feature.useNavigator(navigator)
-  feature.useSettings({
+  const stored: ScriptureStudySettings = {
     ...DEFAULT_SETTINGS,
     installedModuleIds: ['web'],
     fallbackTranslationId: 'web',
     ...settings,
+  }
+  let saved: ScriptureStudySettings = stored
+  const settingsStore = new SettingsStore({
+    loadData: async () => saved,
+    saveData: async (data: unknown) => {
+      saved = data as ScriptureStudySettings
+    },
   })
+  const feature = new SearchFeature(plugin, fakeStore(), settingsStore)
+  feature.useNavigator(navigator)
+  feature.useSettings(stored)
   return {
     feature,
     leaves,
@@ -84,6 +108,8 @@ const harness = (settings: Partial<ScriptureStudySettings> = {}) => {
     workspace,
     opened,
     workspaceEvents,
+    settingsStore,
+    saved: () => saved,
     viewType: () => registeredType,
   }
 }
@@ -198,5 +224,88 @@ describe('SearchFeature', () => {
     view.model.setQuery('vine')
     await view.model.submit()
     expect(view.model.view.totalHits).toBe(1)
+  })
+})
+
+describe('SearchFeature scope', () => {
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  const installed = { installedModuleIds: ['web', 'kjv', 'hum-m1895'] }
+
+  it('offers the installed translations and books, and starts on every one', () => {
+    const { feature } = harness(installed)
+    const { scope } = feature.createModel().view
+    expect(scope.translations).toEqual([
+      { id: 'web', label: 'WEB' },
+      { id: 'kjv', label: 'KJV' },
+    ])
+    expect(scope.translationId).toBe('web')
+    expect(scope.testament).toBe('all')
+    expect(scope.books).toEqual([
+      { moduleId: 'hum-m1895', bookId: 101, label: 'Humility', selected: true },
+    ])
+  })
+
+  it('writes every scope choice to this device’s settings', async () => {
+    const { feature, saved } = harness(installed)
+    const model = feature.createModel()
+    model.chooseTranslation('kjv')
+    model.chooseTestament('nt')
+    model.toggleBook('hum-m1895')
+    await vi.waitFor(() =>
+      expect(saved().searchScope.desktop).toEqual({
+        translationId: 'kjv',
+        testament: 'nt',
+        excludedBookIds: ['hum-m1895'],
+      }),
+    )
+  })
+
+  it('reopens on the scope it was left in, with no query or results', async () => {
+    const { feature, saved } = harness(installed)
+    const model = feature.createModel()
+    model.chooseTranslation('kjv')
+    model.chooseTestament('ot')
+    model.setQuery('vine')
+    await model.submit()
+    await vi.waitFor(() =>
+      expect(saved().searchScope.desktop.translationId).toBe('kjv'),
+    )
+
+    const reloaded = harness().feature
+    reloaded.useSettings(saved())
+    const reopened = reloaded.createModel()
+    expect(reopened.view.scope.translationId).toBe('kjv')
+    expect(reopened.view.scope.testament).toBe('ot')
+    expect(reopened.view.query).toBe('')
+    expect(reopened.view.submittedQuery).toBeNull()
+    expect(reopened.view.books).toEqual([])
+  })
+
+  it('falls back to the Fallback Translation when the remembered one is gone', () => {
+    const { feature } = harness({
+      ...installed,
+      installedModuleIds: ['web', 'hum-m1895'],
+      searchScope: {
+        ...DEFAULT_SETTINGS.searchScope,
+        desktop: {
+          translationId: 'kjv',
+          testament: 'all',
+          excludedBookIds: [],
+        },
+      },
+    })
+    const model = feature.createModel()
+    expect(model.view.scope.translationId).toBe('web')
+    expect(model.view.translationLabel).toBe('WEB')
+  })
+
+  it('searches the scope’s book alongside its translation', async () => {
+    const { feature } = harness(installed)
+    const model = feature.createModel()
+    model.setQuery('humility')
+    await model.submit()
+    expect(model.view.books.map((group) => group.name)).toEqual(['Humility'])
   })
 })
