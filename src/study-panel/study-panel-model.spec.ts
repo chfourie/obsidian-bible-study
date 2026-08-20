@@ -128,6 +128,7 @@ const fakeStudyMaterial = () => {
           })),
           strongs: [],
           strongsAttribution: null,
+          strongsTranslationId: null,
         },
       }
       listeners.forEach((listener) => listener())

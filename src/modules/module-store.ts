@@ -1,4 +1,9 @@
 import { decodeVerseId } from '../reference'
+import {
+  buildConcordanceIndex,
+  strongsFamily,
+  type ConcordanceIndex,
+} from './concordance-index'
 import type { ModuleDataDir } from './module-data-dir'
 import type { ModuleManifest } from './module-manifest'
 import type {
@@ -27,6 +32,9 @@ const bookPath = (moduleId: string, book: number): string =>
 const epigraphsPath = (moduleId: string): string =>
   `${moduleDir(moduleId)}/epigraphs.json`
 
+const concordancePath = (moduleId: string): string =>
+  `${moduleDir(moduleId)}/concordance.json`
+
 const parseOrNull = <T>(content: string): T | null => {
   try {
     return JSON.parse(content) as T
@@ -36,10 +44,20 @@ const parseOrNull = <T>(content: string): T | null => {
 }
 
 export class ModuleStore {
+  // The last concordance read, held whole: a word study asks for one family
+  // after another out of the same translation.
+  #concordance: { moduleId: string; index: ConcordanceIndex } | null = null
+
   constructor(private readonly dataDir: ModuleDataDir) {}
 
   async saveModule(module: NormalizedModule): Promise<void> {
     await this.dataDir.removeDir(moduleDir(module.manifest.id))
+    if (module.manifest.capabilities.strongsTagged) {
+      await this.saveConcordance(
+        module.manifest.id,
+        module.concordance ?? buildConcordanceIndex(module.books),
+      )
+    }
     for (const [book, content] of module.books) {
       await this.dataDir.writeTextFile(
         bookPath(module.manifest.id, book),
@@ -80,6 +98,46 @@ export class ModuleStore {
     return content === null ? null : parseOrNull<BookContent>(content)
   }
 
+  // Every verse of one Tagged Translation where a Strong's Family is tagged,
+  // in canon order. Extended numbers answer under their family on both sides:
+  // the tagging's and the caller's.
+  async occurrences(moduleId: string, strongsNumber: string): Promise<number[]> {
+    const index = await this.#concordanceIndex(moduleId)
+    return index[strongsFamily(strongsNumber)] ?? []
+  }
+
+  async hasConcordance(moduleId: string): Promise<boolean> {
+    return (await this.dataDir.readTextFile(concordancePath(moduleId))) !== null
+  }
+
+  async saveConcordance(
+    moduleId: string,
+    index: ConcordanceIndex,
+  ): Promise<void> {
+    await this.dataDir.writeTextFile(
+      concordancePath(moduleId),
+      JSON.stringify(index),
+    )
+    if (this.#concordance?.moduleId === moduleId) this.#concordance = null
+  }
+
+  async saveManifest(manifest: ModuleManifest): Promise<void> {
+    await this.dataDir.writeTextFile(
+      manifestPath(manifest.id),
+      JSON.stringify(manifest, null, 2),
+    )
+  }
+
+  async #concordanceIndex(moduleId: string): Promise<ConcordanceIndex> {
+    const held = this.#concordance
+    if (held !== null && held.moduleId === moduleId) return held.index
+    const content = await this.dataDir.readTextFile(concordancePath(moduleId))
+    const index =
+      content === null ? {} : (parseOrNull<ConcordanceIndex>(content) ?? {})
+    this.#concordance = { moduleId, index }
+    return index
+  }
+
   async manifest(moduleId: string): Promise<ModuleManifest | null> {
     const content = await this.dataDir.readTextFile(manifestPath(moduleId))
     return content === null ? null : parseOrNull<ModuleManifest>(content)
@@ -87,6 +145,7 @@ export class ModuleStore {
 
   async deleteModule(moduleId: string): Promise<void> {
     await this.dataDir.removeDir(moduleDir(moduleId))
+    if (this.#concordance?.moduleId === moduleId) this.#concordance = null
   }
 
   async installedManifests(): Promise<ModuleManifest[]> {

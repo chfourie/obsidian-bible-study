@@ -1,9 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import { WorkspaceLeaf, type Plugin } from 'obsidian'
 import type { StrongsEntryView } from '../contracts'
+import { NOOP_REFERENCE_NAVIGATOR } from '../contracts'
 import { DEFAULT_SETTINGS } from '../data-access'
+import { makeVerseId } from '../reference'
 import { WordStudyFeature } from './word-study-feature'
-import type { WordStudyDictionary, WordStudyEntry } from './word-study-model'
+import type {
+  WordStudyConcordance,
+  WordStudyDictionary,
+  WordStudyEntry,
+} from './word-study-model'
 import { WORD_STUDY_VIEW_TYPE, WordStudyView } from './word-study-view'
 
 const entryView = (strongs: string): StrongsEntryView => ({
@@ -32,10 +38,27 @@ const fakeDictionary = (
   etymologyAttribution: "Etymology: Strong's (1890, public domain)",
 })
 
+// Two installed Tagged Translations, each carrying the same one occurrence.
+const fakeConcordance = (): WordStudyConcordance => ({
+  translationFor: async (preferredId) =>
+    preferredId === 'bsb'
+      ? { id: 'bsb', name: 'Berean Standard Bible' }
+      : { id: 'kjv', name: 'King James Version' },
+  occurrences: async () => [makeVerseId(1, 1, 1)],
+  versesFor: async (_translationId, _strongsNumber, verseIds) =>
+    verseIds.map((verseId) => ({
+      verseId,
+      segments: [{ text: 'In the beginning God created.', emphasis: false }],
+    })),
+})
+
 type FakeLeaf = WorkspaceLeaf & { detached?: boolean }
 
 // A null dictionary stands for a feature wired up without one at all.
-type HarnessOptions = { dictionary?: WordStudyDictionary | null }
+type HarnessOptions = {
+  dictionary?: WordStudyDictionary | null
+  concordance?: WordStudyConcordance
+}
 
 const harness = (options: HarnessOptions = {}) => {
   const leaves: FakeLeaf[] = []
@@ -88,10 +111,11 @@ const harness = (options: HarnessOptions = {}) => {
   } as unknown as Plugin
   const dictionary =
     options.dictionary === undefined ? fakeDictionary() : options.dictionary
+  const concordance = options.concordance ?? fakeConcordance()
   const feature =
     dictionary === null
       ? new WordStudyFeature(plugin)
-      : new WordStudyFeature(plugin, { dictionary })
+      : new WordStudyFeature(plugin, { dictionary, concordance })
   feature.useSettings(DEFAULT_SETTINGS)
   const focus = (leaf: WorkspaceLeaf | null) => {
     handlers['active-leaf-change']?.forEach((handler) =>
@@ -294,5 +318,85 @@ describe('WordStudyFeature', () => {
     await feature.load()
     await feature.openWordStudy('G0026')
     expect(panel(leaves[0]).model.view.status).toBe('no-dictionary')
+  })
+
+  it('reads the concordance of the translation the tapped word came from', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    await feature.openWordStudy('G0026', { translationId: 'bsb' })
+
+    expect(panel(leaves[0]).model.view.concordance).toMatchObject({
+      translation: { id: 'bsb', name: 'Berean Standard Bible' },
+      label: '1 occurrence in BSB',
+      books: [{ book: 1, name: 'Genesis', count: 1, expanded: false }],
+    })
+  })
+
+  it('falls back to the first tagged translation when the tap named none', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    await feature.openWordStudy('G0026')
+
+    expect(panel(leaves[0]).model.view.concordance?.translation.id).toBe('kjv')
+  })
+
+  it('persists the concordance translation beside the number', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+
+    await feature.openWordStudy('G0026', { translationId: 'bsb' })
+
+    expect(leaves[0].getViewState()).toEqual({
+      type: WORD_STUDY_VIEW_TYPE,
+      state: { strongs: 'G0026', translation: 'bsb' },
+    })
+  })
+
+  it('comes back to the same concordance when the layout is restored', async () => {
+    const { feature, restore } = harness()
+    await feature.load()
+
+    const leaf = await restore({ strongs: 'G0026', translation: 'bsb' })
+
+    expect(panel(leaf).model.view.concordance?.translation.id).toBe('bsb')
+  })
+
+  it('walks an occurrence row to that chapter through the reader', async () => {
+    const openReference = vi.fn()
+    const { feature, leaves } = harness()
+    feature.useNavigator({ ...NOOP_REFERENCE_NAVIGATOR, openReference })
+    await feature.load()
+    await feature.openWordStudy('G0026', { translationId: 'bsb' })
+
+    panel(leaves[0]).model.openOccurrence(makeVerseId(1, 1, 1), {
+      newPane: true,
+    })
+
+    expect(openReference).toHaveBeenCalledWith(
+      { book: 1, ranges: [{ startId: makeVerseId(1, 1, 1), endId: makeVerseId(1, 1, 1) }] },
+      'bsb',
+      { newPane: true },
+    )
+  })
+
+  it('renders a book\'s occurrence rows when it is expanded', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    await feature.openWordStudy('G0026')
+
+    await panel(leaves[0]).model.toggleConcordanceBook(1)
+
+    expect(panel(leaves[0]).model.view.concordance?.books[0]).toMatchObject({
+      expanded: true,
+      verses: [
+        {
+          verseId: makeVerseId(1, 1, 1),
+          reference: 'Genesis 1:1',
+          segments: [{ text: 'In the beginning God created.', emphasis: false }],
+        },
+      ],
+    })
   })
 })

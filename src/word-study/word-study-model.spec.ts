@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { StrongsEntryView } from '../contracts'
-import { WordStudyModel, type WordStudyEntry } from './word-study-model'
+import { NOOP_REFERENCE_NAVIGATOR, type StrongsEntryView } from '../contracts'
+import { makeVerseId } from '../reference'
+import {
+  WordStudyModel,
+  type ConcordanceSegment,
+  type WordStudyEntry,
+} from './word-study-model'
 
 const entryView = (strongs: string): StrongsEntryView => ({
   strongs,
@@ -262,5 +267,259 @@ describe('WordStudyModel', () => {
       number: 'G0025',
       entry: { strongs: 'G0025' },
     })
+  })
+})
+
+const KJV = { id: 'kjv', name: 'King James Version' }
+const BSB = { id: 'bsb', name: 'Berean Standard Bible' }
+
+// Marked-up verse text the fake splits into emphasized and plain stretches,
+// standing for the spans a real concordance re-derives from the verse's tags.
+const MARKED: Record<number, string> = {
+  [makeVerseId(1, 1, 1)]: 'In the beginning «God» created the heaven.',
+  [makeVerseId(1, 2, 4)]: 'the day that the LORD «God» made the earth.',
+  [makeVerseId(43, 15, 4)]: 'Abide in me, and I in «you».',
+}
+
+const segmentsOf = (verseId: number): ConcordanceSegment[] =>
+  (MARKED[verseId] ?? '')
+    .split(/«|»/)
+    .map((text, index) => ({ text, emphasis: index % 2 === 1 }))
+    .filter((segment) => segment.text !== '')
+
+const fakeConcordance = (
+  options: {
+    translations?: { id: string; name: string }[]
+    occurrences?: Record<string, number[]>
+  } = {},
+) => {
+  const translations = options.translations ?? [KJV]
+  const occurrences = options.occurrences ?? {}
+  const asked: { translationId: string; verseIds: number[] }[] = []
+  return {
+    asked,
+    deps: {
+      translationFor: async (preferredId: string | null) =>
+        translations.find((translation) => translation.id === preferredId) ??
+        translations[0] ??
+        null,
+      occurrences: async (_translationId: string, strongsNumber: string) =>
+        occurrences[strongsNumber] ?? [],
+      versesFor: async (
+        translationId: string,
+        _strongsNumber: string,
+        verseIds: number[],
+      ) => {
+        asked.push({ translationId, verseIds })
+        return verseIds.map((verseId) => ({
+          verseId,
+          segments: segmentsOf(verseId),
+        }))
+      },
+    },
+  }
+}
+
+const concordanceModel = (
+  options: Parameters<typeof fakeConcordance>[0] = {},
+  entries: Record<string, WordStudyEntry> = { H0430: entry('H0430') },
+) => {
+  const dictionary = fakeDictionary(entries)
+  const concordance = fakeConcordance(options)
+  const openReference = vi.fn()
+  return {
+    concordance,
+    openReference,
+    model: new WordStudyModel({
+      dictionary: dictionary.deps,
+      concordance: concordance.deps,
+      navigator: { ...NOOP_REFERENCE_NAVIGATOR, openReference },
+    }),
+  }
+}
+
+const occurrencesOf = (verseIds: number[]) => ({ H0430: verseIds })
+
+describe("WordStudyModel's concordance", () => {
+  it('heads the occurrences with their count and the translation they are in', async () => {
+    const { model: panel } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)]),
+    })
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance).toMatchObject({
+      translation: KJV,
+      total: 2,
+      label: '2 occurrences in KJV',
+    })
+  })
+
+  it('reads the translation the tapped word came from', async () => {
+    const { model: panel } = concordanceModel({
+      translations: [KJV, BSB],
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1)]),
+    })
+
+    await panel.show('H0430', { translationId: 'bsb' })
+
+    expect(panel.view.concordance?.translation).toEqual(BSB)
+  })
+
+  it('falls back to the first installed tagged translation', async () => {
+    const { model: panel } = concordanceModel({
+      translations: [KJV, BSB],
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1)]),
+    })
+
+    await panel.show('H0430', { translationId: 'nkjv' })
+
+    expect(panel.view.concordance?.translation).toEqual(KJV)
+  })
+
+  it('has no concordance at all while no tagged translation is installed', async () => {
+    const { model: panel } = concordanceModel({ translations: [] })
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance).toBeNull()
+  })
+
+  it('groups the occurrences by book in canon order, collapsed and unloaded', async () => {
+    const { concordance, model: panel } = concordanceModel({
+      occurrences: occurrencesOf([
+        makeVerseId(43, 15, 4),
+        makeVerseId(1, 1, 1),
+        makeVerseId(1, 2, 4),
+      ]),
+    })
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance?.books).toEqual([
+      { book: 1, name: 'Genesis', count: 2, expanded: false, verses: null },
+      { book: 43, name: 'John', count: 1, expanded: false, verses: null },
+    ])
+    expect(concordance.asked).toEqual([])
+  })
+
+  it('renders a book\'s verse rows only once it is expanded', async () => {
+    const { concordance, model: panel } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1), makeVerseId(43, 15, 4)]),
+    })
+    await panel.show('H0430')
+
+    await panel.toggleConcordanceBook(1)
+
+    expect(concordance.asked).toEqual([
+      { translationId: 'kjv', verseIds: [makeVerseId(1, 1, 1)] },
+    ])
+    expect(panel.view.concordance?.books[0]).toEqual({
+      book: 1,
+      name: 'Genesis',
+      count: 1,
+      expanded: true,
+      verses: [
+        {
+          verseId: makeVerseId(1, 1, 1),
+          reference: 'Genesis 1:1',
+          segments: [
+            { text: 'In the beginning ', emphasis: false },
+            { text: 'God', emphasis: true },
+            { text: ' created the heaven.', emphasis: false },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('keeps a re-expanded book\'s rows instead of loading them again', async () => {
+    const { concordance, model: panel } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1)]),
+    })
+    await panel.show('H0430')
+
+    await panel.toggleConcordanceBook(1)
+    await panel.toggleConcordanceBook(1)
+    expect(panel.view.concordance?.books[0].expanded).toBe(false)
+    await panel.toggleConcordanceBook(1)
+
+    expect(concordance.asked).toHaveLength(1)
+    expect(panel.view.concordance?.books[0].expanded).toBe(true)
+  })
+
+  it('serves a number the dictionaries carry no entry for', async () => {
+    const { model: panel } = concordanceModel(
+      { occurrences: occurrencesOf([makeVerseId(1, 1, 1)]) },
+      {},
+    )
+
+    await panel.show('H0430')
+
+    expect(panel.view.status).toBe('no-entry')
+    expect(panel.view.concordance).toMatchObject({ total: 1 })
+  })
+
+  it('says the occurrences cover the family undifferentiated', async () => {
+    const { model: panel } = concordanceModel(
+      { occurrences: occurrencesOf([makeVerseId(1, 1, 1)]) },
+      { H0430: entry('H0430', { siblings: ['H0430B'] }) },
+    )
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance?.familyUndifferentiated).toBe(true)
+  })
+
+  it('claims no undifferentiated family for a number that stands alone', async () => {
+    const { model: panel } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1)]),
+    })
+
+    await panel.show('H0430')
+
+    expect(panel.view.concordance?.familyUndifferentiated).toBe(false)
+  })
+
+  it('navigates the reader to an occurrence in the concordance\'s translation', async () => {
+    const { model: panel, openReference } = concordanceModel({
+      occurrences: occurrencesOf([makeVerseId(1, 1, 1)]),
+    })
+    await panel.show('H0430')
+
+    panel.openOccurrence(makeVerseId(1, 1, 1))
+    panel.openOccurrence(makeVerseId(1, 1, 1), { newPane: true })
+
+    expect(openReference.mock.calls).toEqual([
+      [
+        { book: 1, ranges: [{ startId: 1001001, endId: 1001001 }] },
+        'kjv',
+        {},
+      ],
+      [
+        { book: 1, ranges: [{ startId: 1001001, endId: 1001001 }] },
+        'kjv',
+        { newPane: true },
+      ],
+    ])
+  })
+
+  it('lets a later number win the concordance too', async () => {
+    const { model: panel } = concordanceModel(
+      {
+        occurrences: {
+          H0430: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)],
+          G3306: [makeVerseId(43, 15, 4)],
+        },
+      },
+      { H0430: entry('H0430'), G3306: entry('G3306') },
+    )
+
+    const first = panel.show('H0430')
+    const second = panel.show('G3306')
+    await Promise.all([first, second])
+
+    expect(panel.view.concordance?.total).toBe(1)
+    expect(panel.view.concordance?.books[0].book).toBe(43)
   })
 })

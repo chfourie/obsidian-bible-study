@@ -2,18 +2,36 @@
 The Word Study Panel: one main-area tab dedicated to a single extended
 Strong's number. It leads with the number, lemma, transliteration and the rest
 of its Strong's Family, then the brief lexicon entry and the Strong's 1890
-etymology. Every number on the page is walkable — plain activation retargets
-this panel, a modified one spawns another. The family's concordance lands
-beside these later.
+etymology, and closes with the family's concordance in one Tagged Translation:
+every verse it is tagged in, grouped by book and collapsed until asked for.
+Every number on the page is walkable — plain activation retargets this panel,
+a modified one spawns another — and every occurrence row walks to its chapter
+in the reader.
 -->
 <script lang="ts">
+  import { setIcon } from 'obsidian'
   import { activate, opensInNewPane } from '../ui'
   import type { WordStudyModel } from './word-study-model'
+
+  function icon(node: HTMLElement, name: string) {
+    setIcon(node, name)
+    return {
+      update(next: string) {
+        node.empty()
+        setIcon(node, next)
+      },
+    }
+  }
 
   let { model }: { model: WordStudyModel } = $props()
 
   const walk = (strongsNumber: string, event: MouseEvent | KeyboardEvent): void =>
     void model.open(strongsNumber, { newPane: opensInNewPane(event) })
+
+  const openOccurrence = (
+    verseId: number,
+    event: MouseEvent | KeyboardEvent,
+  ): void => model.openOccurrence(verseId, { newPane: opensInNewPane(event) })
 
   // Initial snapshot only — the model subscription below keeps it fresh.
   // svelte-ignore state_referenced_locally
@@ -105,6 +123,59 @@ beside these later.
       <div class="bsw-attribution">{view.etymologyAttribution}</div>
     {/if}
   {/if}
+  {#if view.concordance !== null}
+    <div class="bsw-section-heading">{view.concordance.label}</div>
+    {#if view.concordance.familyUndifferentiated}
+      <div class="bsw-family-note">
+        These occurrences cover the whole {view.entry?.strongs ?? view.number}
+        family — a tagged translation does not tell its entries apart.
+      </div>
+    {/if}
+    {#each view.concordance.books as book (book.book)}
+      <section class="bsw-book">
+        <span
+          role="button"
+          tabindex="0"
+          class="bsw-book-head"
+          aria-expanded={book.expanded}
+          onclick={() => void model.toggleConcordanceBook(book.book)}
+          onkeydown={activate(() => void model.toggleConcordanceBook(book.book))}
+        >
+          <span
+            class="bsw-book-fold-icon"
+            aria-hidden="true"
+            use:icon={book.expanded ? 'chevron-down' : 'chevron-right'}
+          ></span>
+          <span class="bsw-book-name">{book.name}</span>
+          <span class="bsw-book-count">{book.count}</span>
+        </span>
+        {#if book.expanded}
+          {#if book.verses === null}
+            <div class="bsw-empty">Loading…</div>
+          {:else}
+            {#each book.verses as verse (verse.verseId)}
+              <div
+                role="button"
+                tabindex="0"
+                class="bsw-occurrence"
+                title="Open in the reader"
+                onclick={(event) => openOccurrence(verse.verseId, event)}
+                onkeydown={activate((event) =>
+                  openOccurrence(verse.verseId, event))}
+              >
+                <span class="bsw-occurrence-ref">{verse.reference}</span>
+                <span class="bsw-occurrence-text"
+                  >{#each verse.segments as segment, index (index)}{#if segment.emphasis}<strong
+                        class="bsw-occurrence-word">{segment.text}</strong
+                      >{:else}{segment.text}{/if}{/each}</span
+                >
+              </div>
+            {/each}
+          {/if}
+        {/if}
+      </section>
+    {/each}
+  {/if}
 </div>
 
 <style>
@@ -194,6 +265,64 @@ beside these later.
     color: var(--text-faint);
     font-size: var(--font-smallest);
     margin-top: 16px;
+  }
+
+  .bsw-family-note {
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+    margin-top: 4px;
+  }
+
+  .bsw-book {
+    display: block;
+    border-top: 1px solid var(--background-modifier-border);
+  }
+
+  .bsw-book-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: var(--font-ui-small);
+  }
+
+  .bsw-book-fold-icon {
+    display: flex;
+    color: var(--text-faint);
+  }
+
+  .bsw-book-name {
+    flex: 1;
+  }
+
+  .bsw-book-count {
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bsw-occurrence {
+    padding: 4px 0 6px 22px;
+    cursor: pointer;
+    line-height: var(--line-height-normal);
+  }
+
+  .bsw-occurrence:hover .bsw-occurrence-ref {
+    text-decoration: underline;
+  }
+
+  .bsw-occurrence-ref {
+    color: var(--text-accent);
+    font-size: var(--font-ui-smaller);
+    margin-right: 6px;
+  }
+
+  .bsw-occurrence-text {
+    color: var(--text-muted);
+  }
+
+  .bsw-occurrence-word {
+    color: var(--text-normal);
   }
 
   .bsw-empty {

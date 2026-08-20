@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS, SettingsStore } from '../data-access'
 import {
   ModulesFeature,
   ObsidianModuleDataDir,
+  reindexConcordances,
   SUGGESTED_FIRST_TRANSLATION,
 } from '../modules'
 import { ReaderFeature } from '../reader'
@@ -20,7 +21,7 @@ import {
   StrongsDictionaries,
 } from '../strongs'
 import { VaultIndexFeature } from '../vault-index'
-import { WordStudyFeature } from '../word-study'
+import { moduleConcordance, WordStudyFeature } from '../word-study'
 import { PluginFeatureSet } from './plugin-feature-set'
 
 export default class ScriptureStudyPlugin extends Plugin {
@@ -92,6 +93,7 @@ export default class ScriptureStudyPlugin extends Plugin {
       attribution: STRONGS_ATTRIBUTION,
       etymologyAttribution: STRONGS_ETYMOLOGY_ATTRIBUTION,
     },
+    concordance: moduleConcordance(this.modules.store),
   })
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
     crossReferences: this.crossReferences.store,
@@ -117,6 +119,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     super(app, manifest)
     this.annotations.usePrefill(() => this.reader.prefillReference())
     this.studyPanel.useNavigator(this.reader)
+    this.wordStudy.useNavigator(this.reader)
     this.studyPanel.useAnnotationPrompt((prefill) =>
       this.annotations.promptAnnotation(prefill),
     )
@@ -144,6 +147,10 @@ export default class ScriptureStudyPlugin extends Plugin {
     // Offline or interrupted, the module simply stays on its old format and
     // the next load tries again — never a reason to fail the plugin's own.
     void this.strongsDictionaries.rebuildIfOutdated().catch(() => {})
+    // A Tagged Translation installed before the Concordance Index existed is
+    // re-indexed from the tagging it already carries — no download involved,
+    // so an interrupted pass simply runs again on the next load.
+    void reindexConcordances(this.modules.store).catch(() => {})
   }
 
   readonly onExternalSettingsChange = async (): Promise<void> => {

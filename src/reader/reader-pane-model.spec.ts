@@ -565,6 +565,7 @@ describe('verse details', () => {
       ],
       strongs: [],
       strongsAttribution: null,
+      strongsTranslationId: null,
     })
   })
 
@@ -1489,6 +1490,23 @@ describe("Strong's word lookup", () => {
     expect(
       detailsOf(model).strongs.map((entry) => entry.strongs),
     ).toEqual(['G2222'])
+  })
+
+  it('names the translation the tapped word was tagged in', async () => {
+    const model = await openedModel()
+
+    await model.selectWord(makeVerseId(43, 15, 4), ['G3306'])
+
+    expect(detailsOf(model).strongsTranslationId).toBe('bsb')
+  })
+
+  it('names no translation for a plain verse selection', async () => {
+    const model = await openedModel()
+    await model.selectWord(makeVerseId(43, 15, 4), ['G3306'])
+
+    await model.selectVerse(makeVerseId(43, 15, 5))
+
+    expect(detailsOf(model).strongsTranslationId).toBeNull()
   })
 
   it('keeps a plain verse selection free of dictionary entries', async () => {
@@ -3174,6 +3192,7 @@ describe('ReaderPaneModel book mode', () => {
       translations: [],
       strongs: [],
       strongsAttribution: null,
+      strongsTranslationId: null,
     })
   })
 

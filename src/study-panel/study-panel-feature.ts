@@ -9,6 +9,7 @@ import {
   type StudyMaterialProvider,
   type StudyMaterialSource,
   type WordStudyOpener,
+  type WordStudyOptions,
 } from '../contracts'
 import {
   INERT_CROSS_REFERENCE_CATALOG,
@@ -240,7 +241,7 @@ export class StudyPanelFeature extends PluginFeature {
 
   async openWordStudy(
     strongsNumber: string,
-    options?: NavigationOptions,
+    options?: WordStudyOptions,
   ): Promise<void> {
     await this.#wordStudy.openWordStudy(strongsNumber, options)
   }

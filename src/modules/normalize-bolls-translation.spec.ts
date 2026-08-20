@@ -370,3 +370,34 @@ describe('malformed markup never reaches storage', () => {
     )
   })
 })
+
+describe('the concordance index a tagged translation carries', () => {
+  it('maps each tagged family to the sorted verse ids it is tagged in', () => {
+    const concordance = normalizedKjv().concordance ?? {}
+
+    expect(concordance['H0430']).toEqual([
+      makeVerseId(1, 1, 1),
+      makeVerseId(1, 1, 4),
+    ])
+    expect(concordance['G3306']).toEqual([makeVerseId(43, 15, 4)])
+  })
+
+  it('indexes every number a single word span stacks', () => {
+    const concordance = normalizedKjv().concordance ?? {}
+
+    // Gen 1:1 stacks 'created' with the untranslated object marker H0853.
+    expect(concordance['H1254']).toEqual([makeVerseId(1, 1, 1)])
+    expect(concordance['H0853']).toContain(makeVerseId(1, 1, 1))
+  })
+
+  it('leaves a translation with no tags without an index at all', () => {
+    const normalized = normalizeBollsTranslation(
+      'nkjv',
+      nkjvSlice(),
+      nkjvMeta,
+      sourceInfo,
+    )
+
+    expect(normalized.concordance).toBeUndefined()
+  })
+})

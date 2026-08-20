@@ -284,3 +284,123 @@ describe('ModuleStore', () => {
     )
   })
 })
+
+const taggedModule = (): NormalizedModule => ({
+  manifest: {
+    ...webManifest(),
+    id: 'kjv',
+    name: 'King James Version',
+    capabilities: { strongsTagged: true },
+  },
+  books: new Map([
+    [
+      1,
+      {
+        [makeVerseId(1, 1, 1)]: {
+          text: 'In the beginning God created the heaven and the earth.',
+          tags: [
+            { start: 18, end: 21, strongs: ['H0430'] },
+            { start: 22, end: 29, strongs: ['H1254', 'H0853'] },
+          ],
+        },
+      },
+    ],
+    [
+      43,
+      {
+        [makeVerseId(43, 15, 4)]: {
+          text: 'Abide in me, and I in you.',
+          tags: [{ start: 0, end: 5, strongs: ['G3306'] }],
+        },
+      },
+    ],
+  ]),
+})
+
+describe("ModuleStore's concordance", () => {
+  it('serves the verse ids a family is tagged in, in canon order', async () => {
+    const { store } = setup()
+    await store.saveModule(taggedModule())
+
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([
+      makeVerseId(1, 1, 1),
+    ])
+    expect(await store.occurrences('kjv', 'G3306')).toEqual([
+      makeVerseId(43, 15, 4),
+    ])
+  })
+
+  it('answers an extended number under its family', async () => {
+    const { store } = setup()
+    const kjv = taggedModule()
+    kjv.books.set(1, {
+      [makeVerseId(1, 1, 1)]: {
+        text: 'In the beginning God created the heaven and the earth.',
+        tags: [{ start: 18, end: 21, strongs: ['H0430G'] }],
+      },
+    })
+
+    await store.saveModule(kjv)
+
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([
+      makeVerseId(1, 1, 1),
+    ])
+    expect(await store.occurrences('kjv', 'H0430H')).toEqual([
+      makeVerseId(1, 1, 1),
+    ])
+  })
+
+  it('indexes a tagged module that arrives without an index of its own', async () => {
+    const { dataDir, store } = setup()
+
+    await store.saveModule(taggedModule())
+
+    expect(dataDir.files.has('modules/kjv/concordance.json')).toBe(true)
+    expect(await store.hasConcordance('kjv')).toBe(true)
+  })
+
+  it('keeps the index a module arrives with instead of deriving another', async () => {
+    const { store } = setup()
+    const kjv = taggedModule()
+    kjv.concordance = { H9999: [makeVerseId(1, 1, 1)] }
+
+    await store.saveModule(kjv)
+
+    expect(await store.occurrences('kjv', 'H9999')).toEqual([
+      makeVerseId(1, 1, 1),
+    ])
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([])
+  })
+
+  it('leaves an untagged module without a concordance at all', async () => {
+    const { dataDir, store } = setup()
+
+    await store.saveModule(webModule())
+
+    expect(dataDir.files.has('modules/web/concordance.json')).toBe(false)
+    expect(await store.hasConcordance('web')).toBe(false)
+    expect(await store.occurrences('web', 'G3306')).toEqual([])
+  })
+
+  it('serves an index written after the install, past the one read before it', async () => {
+    const { store } = setup()
+    const kjv = taggedModule()
+    kjv.concordance = {}
+    await store.saveModule(kjv)
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([])
+
+    await store.saveConcordance('kjv', { H0430: [makeVerseId(1, 1, 1)] })
+
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([
+      makeVerseId(1, 1, 1),
+    ])
+  })
+
+  it('treats a corrupt concordance as no occurrences anywhere', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(taggedModule())
+    dataDir.files.set('modules/kjv/concordance.json', 'not json')
+
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([])
+  })
+})

@@ -1,4 +1,4 @@
-import type { NavigationOptions } from '../contracts'
+import type { NavigationOptions, WordStudyOptions } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 
@@ -21,7 +21,7 @@ export type StudyMaterialHost = {
   // Sends an extended Strong's number to the Word Study Panel: plainly, it
   // retargets the most-recently-focused panel; with the new-pane modifier, it
   // opens another beside it.
-  openWordStudy: (strongsNumber: string, options?: NavigationOptions) => void
+  openWordStudy: (strongsNumber: string, options?: WordStudyOptions) => void
   renderMarkdown: (
     el: HTMLElement,
     markdown: string,

@@ -320,7 +320,13 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #strongsAvailable = false
   #installingSuggested = false
   #installError: string | null = null
-  #wordStrongs: { verseId: number; numbers: string[] } | null = null
+  // A tapped word remembers the translation it was tagged in: the word study
+  // it opens reads that translation's concordance.
+  #wordStrongs: {
+    verseId: number
+    numbers: string[]
+    translationId: string | null
+  } | null = null
   // The collection basket is pane-scoped and in-memory: a closed pane
   // releases its model and the half-built cross-reference with it.
   #collection: {
@@ -710,7 +716,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async selectWord(verseId: number, strongsNumbers: string[]): Promise<void> {
-    this.#wordStrongs = { verseId, numbers: strongsNumbers }
+    this.#wordStrongs = {
+      verseId,
+      numbers: strongsNumbers,
+      translationId: this.#translationId,
+    }
     this.#select(verseId, 'word')
     await this.#refreshDetails()
   }
@@ -1047,6 +1057,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
         strongs,
         strongsAttribution:
           strongs.length > 0 ? this.deps.strongs.attribution : null,
+        strongsTranslationId:
+          strongs.length > 0 ? (this.#wordStrongs?.translationId ?? null) : null,
       }
       this.#loadedDetailsKey = key
       this.#notify()

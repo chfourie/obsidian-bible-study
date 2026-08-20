@@ -1,4 +1,5 @@
 import { BOOK_COUNT, isValidVerseId, makeVerseId } from '../reference'
+import { buildConcordanceIndex } from './concordance-index'
 import { MODULE_FORMAT_VERSION } from './module-manifest'
 import type {
   BookContent,
@@ -148,5 +149,6 @@ export const normalizeBollsTranslation = (
       capabilities: { strongsTagged },
     },
     books,
+    ...(strongsTagged ? { concordance: buildConcordanceIndex(books) } : {}),
   }
 }

@@ -39,7 +39,10 @@ controls beside the selection's title.
     strongsNumber: string,
     event: MouseEvent | KeyboardEvent,
   ): void =>
-    host.openWordStudy(strongsNumber, { newPane: opensInNewPane(event) })
+    host.openWordStudy(strongsNumber, {
+      newPane: opensInNewPane(event),
+      translationId: details.strongsTranslationId,
+    })
 
   function icon(node: HTMLElement, name: string) {
     setIcon(node, name)

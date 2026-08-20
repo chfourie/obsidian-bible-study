@@ -63,6 +63,9 @@ export type VerseDetailsView = {
   translations: TranslationRowView[]
   strongs: StrongsEntryView[]
   strongsAttribution: string | null
+  // The translation the tapped word was tagged in, non-null exactly while
+  // there are entries — the concordance a word study opened here reads.
+  strongsTranslationId: string | null
 }
 
 // The strip that builds a cross-reference: members, description and the
@@ -160,8 +163,14 @@ export interface StudyMaterialSource {
 export interface WordStudyOpener {
   openWordStudy(
     strongsNumber: string,
-    options?: NavigationOptions,
+    options?: WordStudyOptions,
   ): Promise<void>
+}
+
+// Opening a word study carries the translation the tapped word came from: the
+// concordance is per-translation, and this is the one the reader was in.
+export type WordStudyOptions = NavigationOptions & {
+  translationId?: string | null
 }
 
 // Stands in until the word study feature is wired up: entry cards still render,

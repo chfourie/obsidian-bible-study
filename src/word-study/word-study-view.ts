@@ -10,8 +10,8 @@ export const WORD_STUDY_VIEW_TYPE = 'scripture-study-word-study'
 type HeaderedLeaf = WorkspaceLeaf & { updateHeader?: () => void }
 
 // All a Word Study Panel outlives its session with: the extended Strong's
-// number it was opened on.
-type WordStudyViewState = { strongs?: string }
+// number it was opened on, and the translation its concordance reads.
+type WordStudyViewState = { strongs?: string; translation?: string }
 
 export class WordStudyView extends ItemView {
   // Retargeting a panel is a move the tab's back and forward arrows walk.
@@ -58,12 +58,17 @@ export class WordStudyView extends ItemView {
     if (typeof state?.strongs !== 'string') return
     // Only a retarget onto a different number is a move worth walking back to.
     result.history = this.model.number !== null && this.model.number !== state.strongs
-    await this.model.show(state.strongs)
+    await this.model.show(state.strongs, { translationId: state.translation ?? null })
   }
 
   override getState(): Record<string, unknown> {
     const number = this.model.number
-    return number === null ? {} : { strongs: number }
+    if (number === null) return {}
+    const translation = this.model.translationId
+    return {
+      strongs: number,
+      ...(translation === null ? {} : { translation }),
+    }
   }
 
   // A panel retargeted onto another number keeps the title it was opened with
