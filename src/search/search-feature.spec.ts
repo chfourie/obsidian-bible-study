@@ -269,6 +269,7 @@ describe('SearchFeature scope', () => {
         translationId: 'kjv',
         testament: 'nt',
         excludedBookIds: ['hum-m1895'],
+        bookId: null,
       }),
     )
   })
@@ -304,12 +305,50 @@ describe('SearchFeature scope', () => {
           translationId: 'kjv',
           testament: 'all',
           excludedBookIds: [],
+          bookId: null,
         },
       },
     })
     const model = feature.createModel()
     expect(model.view.scope.translationId).toBe('web')
     expect(model.view.translationLabel).toBe('WEB')
+  })
+
+  it('reopens narrowed to the book it was left on', async () => {
+    const { feature, saved } = harness(installed)
+    const model = feature.createModel()
+    model.chooseBook(101)
+    await vi.waitFor(() => expect(saved().searchScope.desktop.bookId).toBe(101))
+
+    const reloaded = harness().feature
+    reloaded.useSettings(saved())
+    expect(reloaded.createModel().view.scope.bookId).toBe(101)
+  })
+
+  it('searches every book again when the remembered book is uninstalled', async () => {
+    const { feature } = harness({
+      ...installed,
+      installedModuleIds: ['web', 'kjv'],
+      searchScope: {
+        ...DEFAULT_SETTINGS.searchScope,
+        desktop: {
+          ...DEFAULT_SETTINGS.searchScope.desktop,
+          bookId: 101,
+        },
+      },
+    })
+    const model = feature.createModel()
+    expect(model.view.scope.bookId).toBeNull()
+    expect(model.view.scope.narrowedToBook).toBe(false)
+  })
+
+  it('searches one scripture book in the chosen translation alone', async () => {
+    const { feature } = harness(installed)
+    const model = feature.createModel()
+    model.chooseBook(43)
+    model.setQuery('humility')
+    await model.submit()
+    expect(model.view.books).toEqual([])
   })
 
   it('searches the scope’s book alongside its translation', async () => {

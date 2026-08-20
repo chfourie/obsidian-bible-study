@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
 import {
   defaultStoredSearchScope,
+  hitsInScope,
   hitsInTestament,
   resolveSearchScope,
   scopeModuleIds,
+  searchBookChoices,
   storedSearchScope,
+  type SearchScope,
   type SearchScopeOptions,
 } from './search-scope'
 
@@ -52,7 +55,7 @@ describe('search scope', () => {
 
   it('keeps the remembered translation while its module is installed', () => {
     const scope = resolveSearchScope(
-      { translationId: 'kjv', testament: 'nt', excludedBookIds: [] },
+      { translationId: 'kjv', testament: 'nt', excludedBookIds: [], bookId: null },
       options(),
     )
     expect(scope.translation).toEqual({ id: 'kjv', label: 'KJV' })
@@ -61,7 +64,7 @@ describe('search scope', () => {
 
   it('falls back to the Fallback Translation when the remembered module is gone', () => {
     const scope = resolveSearchScope(
-      { translationId: 'niv', testament: 'all', excludedBookIds: [] },
+      { translationId: 'niv', testament: 'all', excludedBookIds: [], bookId: null },
       options(),
     )
     expect(scope.translation).toEqual({ id: 'web', label: 'WEB' })
@@ -73,6 +76,7 @@ describe('search scope', () => {
         translationId: 'web',
         testament: 'all',
         excludedBookIds: ['hum-m1895'],
+        bookId: null,
       },
       options(),
     )
@@ -94,6 +98,7 @@ describe('search scope', () => {
         translation: { id: 'kjv', label: 'KJV' },
         testament: 'ot',
         books: [CONFESSIONS],
+        book: null,
       },
       options(),
     )
@@ -101,6 +106,7 @@ describe('search scope', () => {
       translationId: 'kjv',
       testament: 'ot',
       excludedBookIds: ['hum-m1895'],
+      bookId: null,
     })
   })
 
@@ -110,6 +116,7 @@ describe('search scope', () => {
         translation: { id: 'web', label: 'WEB' },
         testament: 'all',
         books: [],
+        book: null,
       },
       options({ books: [HUMILITY] }),
     )
@@ -135,5 +142,111 @@ describe('search scope', () => {
     const hits = [hit(101, 1, 1), hit(102, 3, 5)]
     expect(hitsInTestament(hits, 'ot')).toEqual(hits)
     expect(hitsInTestament(hits, 'nt')).toEqual(hits)
+  })
+})
+
+const GENESIS_CHOICE = { bookId: 1, label: 'Genesis', moduleId: null }
+const HUMILITY_CHOICE = {
+  bookId: 101,
+  label: 'Humility',
+  moduleId: 'hum-m1895',
+}
+
+describe('search scope narrowed to one book', () => {
+  it('offers every scripture book, then every installed book', () => {
+    const choices = searchBookChoices(options())
+    expect(choices).toHaveLength(68)
+    expect(choices[0]).toEqual(GENESIS_CHOICE)
+    expect(choices[65]).toEqual({
+      bookId: 66,
+      label: 'Revelation',
+      moduleId: null,
+    })
+    expect(choices.slice(66)).toEqual([
+      HUMILITY_CHOICE,
+      { bookId: 102, label: 'Confessions', moduleId: 'con-a0400' },
+    ])
+  })
+
+  it('searches every book by default', () => {
+    const scope = resolveSearchScope(defaultStoredSearchScope(), options())
+    expect(scope.book).toBeNull()
+  })
+
+  it('remembers a scripture book by its Canonical Grid number', () => {
+    const stored = storedSearchScope(
+      {
+        translation: { id: 'web', label: 'WEB' },
+        testament: 'all',
+        books: [HUMILITY, CONFESSIONS],
+        book: GENESIS_CHOICE,
+      },
+      options(),
+    )
+    expect(stored.bookId).toBe(1)
+    expect(resolveSearchScope(stored, options()).book).toEqual(GENESIS_CHOICE)
+  })
+
+  it('remembers an installed book, and searches only its module', () => {
+    const stored = storedSearchScope(
+      {
+        translation: { id: 'web', label: 'WEB' },
+        testament: 'all',
+        books: [HUMILITY, CONFESSIONS],
+        book: HUMILITY_CHOICE,
+      },
+      options(),
+    )
+    expect(stored.bookId).toBe(101)
+    const scope = resolveSearchScope(stored, options())
+    expect(scope.book).toEqual(HUMILITY_CHOICE)
+    expect(scopeModuleIds(scope)).toEqual(['hum-m1895'])
+  })
+
+  it('falls back to every book when the remembered book’s module is gone', () => {
+    const scope = resolveSearchScope(
+      { ...defaultStoredSearchScope(), bookId: 101 },
+      options({ books: [CONFESSIONS] }),
+    )
+    expect(scope.book).toBeNull()
+    expect(scopeModuleIds(scope)).toEqual(['web', 'con-a0400'])
+  })
+
+  it('searches a scripture book in the chosen translation alone', () => {
+    const scope = resolveSearchScope(
+      { ...defaultStoredSearchScope(), bookId: 43 },
+      options(),
+    )
+    expect(scopeModuleIds(scope)).toEqual(['web'])
+  })
+
+  it('has nothing to search for a scripture book with no translation', () => {
+    const scope = resolveSearchScope(
+      { ...defaultStoredSearchScope(), bookId: 43 },
+      options({ translations: [], fallbackTranslationId: null }),
+    )
+    expect(scopeModuleIds(scope)).toEqual([])
+  })
+
+  it('keeps only the chosen book’s hits, testament filter and all', () => {
+    const scope: SearchScope = {
+      translation: { id: 'web', label: 'WEB' },
+      testament: 'nt',
+      books: [HUMILITY],
+      book: GENESIS_CHOICE,
+    }
+    const hits = [hit(1, 1, 1), hit(43, 15, 1), hit(101, 1, 1)]
+    expect(hitBooks(hitsInScope(hits, scope))).toEqual([1])
+  })
+
+  it('filters by testament while every book is searched', () => {
+    const scope: SearchScope = {
+      translation: { id: 'web', label: 'WEB' },
+      testament: 'nt',
+      books: [HUMILITY],
+      book: null,
+    }
+    const hits = [hit(1, 1, 1), hit(43, 15, 1), hit(101, 1, 1)]
+    expect(hitBooks(hitsInScope(hits, scope))).toEqual([43, 101])
   })
 })

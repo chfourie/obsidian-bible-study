@@ -15,8 +15,10 @@ import {
 } from './search-results'
 import type { SearchHit } from './search-scan'
 import {
-  hitsInTestament,
+  hitsInScope,
   scopeModuleIds,
+  searchBookChoices,
+  type SearchBookChoice,
   type SearchScope,
   type SearchScopeOptions,
   type SearchTranslation,
@@ -56,11 +58,16 @@ export type SearchScopeBookView = {
   selected: boolean
 }
 
+// The picker's state. Narrowed to one book, the testament filter and the Book
+// selection have nothing to say, and the picker greys them out.
 export type SearchScopeView = {
   translations: SearchTranslation[]
   translationId: string | null
   testament: TestamentFilter
   books: SearchScopeBookView[]
+  bookChoices: SearchBookChoice[]
+  bookId: number | null
+  narrowedToBook: boolean
 }
 
 export type SearchPaneViewState = {
@@ -151,6 +158,22 @@ export class SearchPaneModel {
     this.#chooseScope({ ...this.deps.scope(), testament })
   }
 
+  // Narrowing to one book leaves the testament filter and the Book selection
+  // as they stand: they wait, inapplicable, until every book is searched
+  // again. A book that is not on offer leaves the scope alone.
+  chooseBook(bookId: number | null): void {
+    const scope = this.deps.scope()
+    if (bookId === null) {
+      this.#chooseScope({ ...scope, book: null })
+      return
+    }
+    const book = searchBookChoices(this.deps.scopeOptions()).find(
+      (choice) => choice.bookId === bookId,
+    )
+    if (book === undefined) return
+    this.#chooseScope({ ...scope, book })
+  }
+
   toggleBook(moduleId: string): void {
     const scope = this.deps.scope()
     const selected = scope.books.some((book) => book.moduleId === moduleId)
@@ -204,7 +227,7 @@ export class SearchPaneModel {
     }
     // Atom ids sort into Canonical Grid order across modules on their own:
     // scripture holds books 1-66 and every Book sits above them.
-    const scoped = hitsInTestament(hits, scope.testament).sort(
+    const scoped = hitsInScope(hits, scope).sort(
       (a, b) => a.verseId - b.verseId,
     )
     this.#groups = groupHitsByBook(scoped)
@@ -220,6 +243,19 @@ export class SearchPaneModel {
 
   expandBookHits(book: number): void {
     this.#expandedBooks.add(book)
+    this.#notify()
+  }
+
+  // Expanding everything is asking to see every hit, so it lifts the per-book
+  // cap along with the collapse.
+  expandAllBooks(): void {
+    this.#collapsedBooks.clear()
+    this.#groups.forEach((group) => this.#expandedBooks.add(group.book))
+    this.#notify()
+  }
+
+  collapseAllBooks(): void {
+    this.#groups.forEach((group) => this.#collapsedBooks.add(group.book))
     this.#notify()
   }
 
@@ -257,6 +293,9 @@ export class SearchPaneModel {
       translations: this.deps.scopeOptions().translations,
       translationId: scope.translation?.id ?? null,
       testament: scope.testament,
+      bookChoices: searchBookChoices(this.deps.scopeOptions()),
+      bookId: scope.book?.bookId ?? null,
+      narrowedToBook: scope.book !== null,
       books: this.deps.scopeOptions().books.map((book) => ({
         ...book,
         selected: scope.books.some(
