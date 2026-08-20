@@ -12,7 +12,7 @@ Books ride the existing machinery everywhere — no parallel book paths. Where a
 
 - Books extend the `BBBCCCVVV` id space: scripture keeps 1–66, 67–100 reserved for canon extensions, non-biblical books start at **101** (Humility = 101). Numbers are assigned by the repo-side **Book Registry** (§7), append-only, never reused.
 - **Atom = paragraph**: `CCC` = section, `VVV` = paragraph within section. Epigraphs are chapter metadata, not atoms; footnotes attach to their anchor paragraph.
-- **Sections** take chapter numbers in reading order, keeping printed chapter numbers. Humility: Preface = 0, chapters I–XII = 1–12, Notes A–C = 13–15, A Prayer for Humility = 16 (17 sections).
+- **Sections** take chapter numbers in reading order, keeping printed chapter numbers. Humility: Preface = 0, chapters I–XII = 1–12, Notes A–D = 13–16, A Prayer for Humility = 17 (18 sections; the source's Note D was missed by the planning research and surfaced at build time — see ADR 0002).
 - The manifest's section table is the book's versification data. The **first published module release freezes the grid** — later releases may fix text within paragraphs but never renumber. One book = one module = one grid; editions are not translations.
 - A single manifest **edition code** (Humility: `HUM-M1895`) fills the translation slot in all keying. Fallback Translation never applies to books.
 - The plugin discovers which books exist from installed module manifests; scripture's 66 books stay compiled-in.
