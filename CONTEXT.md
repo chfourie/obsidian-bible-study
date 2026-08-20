@@ -24,7 +24,7 @@ A book module's single manifest-declared code (e.g. `HUM-M1895`) occupying the t
 An inclusive span of verse ids within one book (`startId`-`endId` on the Canonical Grid). The normalized form of a reference is a set of verse ranges. Overlap, sorting, and containment are plain integer interval operations; enumerating the verses inside a range uses versification data to skip non-existent ids.
 
 ### Versification Data
-The static verse-counts-per-chapter table for the canon (KJV versification). Shipped with the plugin; used for validating references and mapping between ordinals and book/chapter/verse.
+The atom-counts-per-chapter tables behind reference validation, adjacency, and enumeration, held in a runtime registry. The canon's verse-counts table (KJV versification) ships compiled-in as the permanent base; each installed Book module registers its own atom-count table from its manifest. A Book's references are only valid while its module is installed — uninstalling leaves vault text and cross-reference entries untouched but dormant until reinstall.
 
 ### Intersection
 Two references intersect iff they share at least one verse ordinal. Translation-agnostic.
