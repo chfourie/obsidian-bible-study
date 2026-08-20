@@ -2144,6 +2144,7 @@ describe('the study material contract', () => {
       details: null,
       chapterCrossReferences: [],
       chapterAnnotations: [],
+      chapterMentions: [],
       collection: null,
     })
   })
@@ -2541,5 +2542,121 @@ describe('chapter annotations in the study material', () => {
     await model.openAt(ref('John 15:1'), 'web')
 
     expect(model.studyMaterial.chapterAnnotations).toEqual([])
+  })
+})
+
+describe('chapter mentions in the study material', () => {
+  type IndexedNote = {
+    file: string
+    references: Reference[]
+    annotation?: boolean
+  }
+
+  const indexOver = (notes: () => IndexedNote[]) => ({
+    intersecting: (reference: Reference): OccurrenceGroup[] =>
+      notes()
+        .map((note) => ({
+          file: note.file,
+          annotation: note.annotation === true,
+          occurrences: note.references
+            .filter((noteReference) =>
+              referencesIntersect(noteReference, reference),
+            )
+            .map((noteReference, position) => ({
+              file: note.file,
+              position,
+              reference: noteReference,
+              source:
+                note.annotation === true
+                  ? ('annotation-frontmatter' as const)
+                  : ('body' as const),
+            })),
+        }))
+        .filter((group) => group.occurrences.length > 0),
+    annotationDetails: async () => ({ body: '', created: 0 }),
+  })
+
+  it('lists every mention intersecting the chapter without a verse selected', async () => {
+    const model = modelWith(
+      indexOver(() => [
+        { file: 'sermons/vine.md', references: [ref('John 15:5')] },
+        { file: 'branch.md', references: [ref('John 15:2'), ref('John 15:9')] },
+      ]),
+    )
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.studyMaterial.selectedVerseId).toBe(null)
+    expect(model.studyMaterial.chapterMentions).toEqual([
+      { file: 'branch.md', title: 'branch', labels: ['John 15:2', 'John 15:9'] },
+      { file: 'sermons/vine.md', title: 'vine', labels: ['John 15:5'] },
+    ])
+  })
+
+  it('breaks scripture-position ties by path A-Z', async () => {
+    const model = modelWith(
+      indexOver(() => [
+        { file: 'b.md', references: [ref('John 15:4')] },
+        { file: 'a.md', references: [ref('John 15:4')] },
+      ]),
+    )
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(
+      model.studyMaterial.chapterMentions.map((item) => item.file),
+    ).toEqual(['a.md', 'b.md'])
+  })
+
+  it('never lists an annotation as a mention, even when its body intersects', async () => {
+    const model = modelWith(
+      indexOver(() => [
+        {
+          file: 'abide.md',
+          references: [ref('John 15:4'), ref('John 15:6')],
+          annotation: true,
+        },
+      ]),
+    )
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.studyMaterial.chapterMentions).toEqual([])
+  })
+
+  it('follows the reader to the next chapter', async () => {
+    const model = modelWith({
+      ...indexOver(() => [
+        { file: 'abide.md', references: [ref('John 15:4')] },
+        { file: 'spirit.md', references: [ref('John 16:13')] },
+      ]),
+      passages: passageSourceOver({
+        web: {
+          ...john15Texts().web,
+          [makeVerseId(43, 16, 1)]: 'These things I have spoken.',
+        },
+      }),
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.nextChapter()
+
+    expect(
+      model.studyMaterial.chapterMentions.map((item) => item.file),
+    ).toEqual(['spirit.md'])
+  })
+
+  it('refreshes the list when the vault index changes', async () => {
+    const notes: IndexedNote[] = []
+    const model = modelWith(indexOver(() => notes))
+    await model.openAt(ref('John 15:1'), 'web')
+    expect(model.studyMaterial.chapterMentions).toEqual([])
+
+    notes.push({ file: 'abide.md', references: [ref('John 15:4')] })
+    await model.refreshOccurrences()
+
+    expect(model.studyMaterial.chapterMentions).toEqual([
+      { file: 'abide.md', title: 'abide', labels: ['John 15:4'] },
+    ])
   })
 })

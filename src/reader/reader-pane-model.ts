@@ -19,9 +19,11 @@ import {
   type CrossReferenceView,
 } from '../cross-references'
 import { orderChapterAnnotations } from '../annotations'
+import { chapterMentionViews } from '../mentions'
 import type {
   AnnotationBlockView,
   ChapterAnnotationView,
+  ChapterMentionView,
   CollectionView,
   StrongsEntryView,
   StudyMaterial,
@@ -199,7 +201,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // selected or its load is still in flight.
   #details: VerseDetailsView | null = null
   #chapterAnnotations: ChapterAnnotationView[] = []
-  #chapterAnnotationsToken = 0
+  #chapterMentions: ChapterMentionView[] = []
+  #chapterMaterialToken = 0
   #attribution: string | null = null
   #bannerDismissed = false
   #strongsAvailable = false
@@ -375,6 +378,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       details: this.#details,
       chapterCrossReferences: this.#chapterCrossReferences(),
       chapterAnnotations: this.#chapterAnnotations,
+      chapterMentions: this.#chapterMentions,
       collection: this.#collectionView(),
     }
   }
@@ -743,7 +747,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       ...this.#occurrenceCounts(row.verseId),
     }))
     this.#notify()
-    await this.#loadChapterAnnotations()
+    await this.#loadChapterMaterial()
     const loadedVerseId = this.#details?.verseId
     if (loadedVerseId !== undefined) await this.#loadDetails(loadedVerseId)
   }
@@ -801,17 +805,27 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#notify()
   }
 
-  // One chapter-level intersection query feeds the panel's annotation list —
-  // no verse selection involved. The token retires a load the reader has
-  // navigated away from.
-  async #loadChapterAnnotations(): Promise<void> {
-    const token = ++this.#chapterAnnotationsToken
+  // One chapter-level intersection query feeds the panel's annotation and
+  // mention lists — no verse selection involved. The token retires a load the
+  // reader has navigated away from.
+  async #loadChapterMaterial(): Promise<void> {
+    const token = ++this.#chapterMaterialToken
     const chapter = chapterReference(this.#position)
-    const groups = this.deps
-      .intersecting(chapter)
-      .filter((group) => group.annotation)
+    const groups = this.deps.intersecting(chapter)
+    const mentions = chapterMentionViews(
+      groups
+        .filter((group) => !group.annotation)
+        .map((group) => ({
+          file: group.file,
+          references: group.occurrences.map(
+            (occurrence) => occurrence.reference,
+          ),
+        })),
+      chapter,
+    )
+    const annotationGroups = groups.filter((group) => group.annotation)
     const items = await Promise.all(
-      groups.map(async (group) => {
+      annotationGroups.map(async (group) => {
         const reference = group.occurrences.find(
           (occurrence) => occurrence.source === 'annotation-frontmatter',
         )?.reference
@@ -826,7 +840,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
         }
       }),
     )
-    if (token !== this.#chapterAnnotationsToken) return
+    if (token !== this.#chapterMaterialToken) return
+    this.#chapterMentions = mentions
     this.#chapterAnnotations = orderChapterAnnotations(
       items.filter((item) => item !== null),
       chapter,
@@ -881,9 +896,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#status = 'loading'
     this.#rows = []
     this.#notify()
-    // Annotations hang off the vault index alone, so they load whatever
-    // becomes of the passage below.
-    await this.#loadChapterAnnotations()
+    // Annotations and mentions hang off the vault index alone, so they load
+    // whatever becomes of the passage below.
+    await this.#loadChapterMaterial()
     const available = await this.deps.availableTranslations()
     if (token !== this.#loadToken) return
     this.#available = available

@@ -39,6 +39,15 @@ export type ChapterAnnotationView = {
   body: string
 }
 
+// One note mentioning the chapter on screen — an intersecting note that is
+// not an annotation — titled by its note name and labelled by the references
+// in it that fall inside the chapter.
+export type ChapterMentionView = {
+  file: string
+  title: string
+  labels: string[]
+}
+
 export type VerseDetailsView = {
   verseId: number
   title: string
@@ -84,6 +93,9 @@ export type StudyMaterial = {
   // Every annotation intersecting the chapter on screen, in scripture order,
   // independent of any verse selection.
   chapterAnnotations: ChapterAnnotationView[]
+  // Every mention intersecting the chapter on screen, in scripture order with
+  // a path A-Z tiebreak, independent of any verse selection.
+  chapterMentions: ChapterMentionView[]
   collection: CollectionView | null
 }
 

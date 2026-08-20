@@ -1,12 +1,14 @@
 <!--
 One reader tab's study material as a region: the selected verse's details
 under Translations/Notes sub-tabs, and the chapter-scoped material — the
-annotations and cross-references of the chapter on screen — below them.
+annotations, mentions and cross-references of the chapter on screen — below
+them.
 Rendered by the Study Panel following that tab.
 -->
 <script lang="ts">
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
   import ChapterAnnotationList from './ChapterAnnotationList.svelte'
+  import ChapterMentionList from './ChapterMentionList.svelte'
   import CrossReferenceList from './CrossReferenceList.svelte'
   import type { StudyMaterialHost, StudySubTab } from './study-material-host'
   import VerseDetails from './VerseDetails.svelte'
@@ -57,6 +59,7 @@ Rendered by the Study Panel following that tab.
       {source}
       {host}
     />
+    <ChapterMentionList items={material.chapterMentions} {host} />
     <CrossReferenceList
       entries={material.chapterCrossReferences}
       {source}
