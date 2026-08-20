@@ -1,8 +1,10 @@
 import { decodeVerseId } from '../reference'
 import {
+  CONCORDANCE_INDEX_VERSION,
   buildConcordanceIndex,
-  strongsFamily,
+  occurrencesOf,
   type ConcordanceIndex,
+  type VerseOccurrences,
 } from './concordance-index'
 import type { ModuleDataDir } from './module-data-dir'
 import type { ModuleManifest } from './module-manifest'
@@ -42,6 +44,17 @@ const parseOrNull = <T>(content: string): T | null => {
     return null
   }
 }
+
+// The index as it sits on disk, stamped with the derivation that built it so a
+// plugin that counts differently can rebuild it in place.
+type StoredConcordance = { version: number; index: ConcordanceIndex }
+
+// An index written before the stamp existed: readable as it stands — its bare
+// verse ids are one occurrence each — but due a rebuild.
+const asStored = (parsed: unknown): StoredConcordance =>
+  parsed !== null && typeof parsed === 'object' && 'index' in parsed
+    ? (parsed as StoredConcordance)
+    : { version: 0, index: (parsed ?? {}) as ConcordanceIndex }
 
 export class ModuleStore {
   // The last concordance read, held whole: a word study asks for one family
@@ -99,24 +112,34 @@ export class ModuleStore {
   }
 
   // Every verse of one Tagged Translation where a Strong's Family is tagged,
-  // in canon order. Extended numbers answer under their family on both sides:
-  // the tagging's and the caller's.
-  async occurrences(moduleId: string, strongsNumber: string): Promise<number[]> {
-    const index = await this.#concordanceIndex(moduleId)
-    return index[strongsFamily(strongsNumber)] ?? []
+  // in canon order, each with the occurrences that verse holds. Extended
+  // numbers answer under their family on both sides: the tagging's and the
+  // caller's.
+  async occurrences(
+    moduleId: string,
+    strongsNumber: string,
+  ): Promise<VerseOccurrences[]> {
+    return occurrencesOf(await this.#concordanceIndex(moduleId), strongsNumber)
   }
 
-  async hasConcordance(moduleId: string): Promise<boolean> {
-    return (await this.dataDir.readTextFile(concordancePath(moduleId))) !== null
+  // Which derivation built the stored index, 0 where none is stored at all.
+  async concordanceVersion(moduleId: string): Promise<number> {
+    const content = await this.dataDir.readTextFile(concordancePath(moduleId))
+    if (content === null) return 0
+    return asStored(parseOrNull<unknown>(content)).version
   }
 
   async saveConcordance(
     moduleId: string,
     index: ConcordanceIndex,
   ): Promise<void> {
+    const stored: StoredConcordance = {
+      version: CONCORDANCE_INDEX_VERSION,
+      index,
+    }
     await this.dataDir.writeTextFile(
       concordancePath(moduleId),
-      JSON.stringify(index),
+      JSON.stringify(stored),
     )
     if (this.#concordance?.moduleId === moduleId) this.#concordance = null
   }
@@ -133,7 +156,7 @@ export class ModuleStore {
     if (held !== null && held.moduleId === moduleId) return held.index
     const content = await this.dataDir.readTextFile(concordancePath(moduleId))
     const index =
-      content === null ? {} : (parseOrNull<ConcordanceIndex>(content) ?? {})
+      content === null ? {} : asStored(parseOrNull<unknown>(content)).index
     this.#concordance = { moduleId, index }
     return index
   }

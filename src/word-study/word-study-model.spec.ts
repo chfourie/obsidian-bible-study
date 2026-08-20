@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { NOOP_REFERENCE_NAVIGATOR, type StrongsEntryView } from '../contracts'
+import {
+  occurrencesOf as storedOccurrences,
+  type ConcordanceIndex,
+  type VerseOccurrences,
+} from '../modules'
 import { makeVerseId } from '../reference'
 import {
   WordStudyModel,
@@ -293,14 +298,14 @@ const segmentsOf = (verseId: number): ConcordanceSegment[] =>
 // What one translation answers about a family, where it differs from what the
 // rest of them answer.
 type FakeIndex = {
-  occurrences?: Record<string, number[]>
+  occurrences?: ConcordanceIndex
   renderings?: ConcordanceRendering[]
 }
 
 const fakeConcordance = (
   options: {
     translations?: { id: string; name: string }[]
-    occurrences?: Record<string, number[]>
+    occurrences?: ConcordanceIndex
     renderings?: ConcordanceRendering[]
     perTranslation?: Record<string, FakeIndex>
   } = {},
@@ -319,16 +324,18 @@ const fakeConcordance = (
     deps: {
       translations: async () => translations,
       occurrences: async (translationId: string, strongsNumber: string) =>
-        (own(translationId).occurrences ?? options.occurrences ?? {})[
-          strongsNumber
-        ] ?? [],
+        storedOccurrences(
+          own(translationId).occurrences ?? options.occurrences ?? {},
+          strongsNumber,
+        ),
       renderings: async (translationId: string) =>
         own(translationId).renderings ?? options.renderings ?? [],
       versesFor: async (
         translationId: string,
         _strongsNumber: string,
-        verseIds: number[],
+        occurrences: VerseOccurrences[],
       ) => {
+        const verseIds = occurrences.map(({ verseId }) => verseId)
         asked.push({ translationId, verseIds })
         return verseIds.map((verseId) => ({
           verseId,
@@ -361,7 +368,17 @@ const concordanceModel = (
   }
 }
 
-const occurrencesOf = (verseIds: number[]) => ({ H0430: verseIds })
+const occurrencesOf = (verseIds: number[]): ConcordanceIndex => ({
+  H0430: verseIds,
+})
+
+const rendering = (
+  text: string,
+  verseIds: number[],
+): ConcordanceRendering => ({
+  text,
+  occurrences: verseIds.map((verseId) => ({ verseId, count: 1 })),
+})
 
 describe("WordStudyModel's concordance", () => {
   it('heads the occurrences with their count and the translation they are in', async () => {
@@ -592,6 +609,56 @@ describe("WordStudyModel's concordance", () => {
     ])
   })
 
+  it('counts occurrences rather than the verses that hold them', async () => {
+    const { concordance, model: panel } = concordanceModel({
+      occurrences: { H0430: [[makeVerseId(1, 1, 1), 2], makeVerseId(1, 2, 4)] },
+    })
+
+    await panel.show('H0430')
+    await panel.toggleConcordanceBook(1)
+
+    expect(panel.view.concordance).toMatchObject({
+      total: 3,
+      label: '3 occurrences in KJV',
+      books: [{ book: 1, count: 3 }],
+    })
+    // The list itself stays one row per verse, twice-tagged or not.
+    expect(concordance.asked).toEqual([
+      {
+        translationId: 'kjv',
+        verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)],
+      },
+    ])
+  })
+
+  it('counts a rendering by its occurrences, chip and filtered total alike', async () => {
+    const { model: panel } = concordanceModel({
+      occurrences: {
+        H0430: [[makeVerseId(1, 1, 1), 2], makeVerseId(43, 15, 4)],
+      },
+      renderings: [
+        {
+          text: 'God',
+          occurrences: [{ verseId: makeVerseId(1, 1, 1), count: 2 }],
+        },
+        rendering('you', [makeVerseId(43, 15, 4)]),
+      ],
+    })
+    await panel.show('H0430')
+
+    panel.toggleRendering('God')
+
+    expect(panel.view.concordance).toMatchObject({
+      total: 2,
+      label: 'God: 2 occurrences in KJV',
+      books: [{ book: 1, count: 2 }],
+      renderings: [
+        { text: 'God', count: 2, active: true },
+        { text: 'you', count: 1, active: false },
+      ],
+    })
+  })
+
   it('chips the renderings of the family, the most frequent first', async () => {
     const { model: panel } = concordanceModel({
       occurrences: occurrencesOf([
@@ -600,8 +667,8 @@ describe("WordStudyModel's concordance", () => {
         makeVerseId(43, 15, 4),
       ]),
       renderings: [
-        { text: 'you', verseIds: [makeVerseId(43, 15, 4)] },
-        { text: 'God', verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)] },
+        rendering('you', [makeVerseId(43, 15, 4)]),
+        rendering('God', [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)]),
       ],
     })
 
@@ -621,8 +688,8 @@ describe("WordStudyModel's concordance", () => {
         makeVerseId(43, 15, 4),
       ]),
       renderings: [
-        { text: 'God', verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)] },
-        { text: 'you', verseIds: [makeVerseId(43, 15, 4)] },
+        rendering('God', [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)]),
+        rendering('you', [makeVerseId(43, 15, 4)]),
       ],
     })
     await panel.show('H0430')
@@ -646,8 +713,8 @@ describe("WordStudyModel's concordance", () => {
     const { model: panel } = concordanceModel({
       occurrences: occurrencesOf([makeVerseId(1, 1, 1), makeVerseId(43, 15, 4)]),
       renderings: [
-        { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
-        { text: 'you', verseIds: [makeVerseId(43, 15, 4)] },
+        rendering('God', [makeVerseId(1, 1, 1)]),
+        rendering('you', [makeVerseId(43, 15, 4)]),
       ],
     })
     await panel.show('H0430')
@@ -670,8 +737,8 @@ describe("WordStudyModel's concordance", () => {
     const { concordance, model: panel } = concordanceModel({
       occurrences: occurrencesOf([makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)]),
       renderings: [
-        { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
-        { text: 'LORD God', verseIds: [makeVerseId(1, 2, 4)] },
+        rendering('God', [makeVerseId(1, 1, 1)]),
+        rendering('LORD God', [makeVerseId(1, 2, 4)]),
       ],
     })
     await panel.show('H0430')
@@ -715,15 +782,12 @@ describe("WordStudyModel's translation switcher", () => {
             makeVerseId(1, 2, 4),
           ]),
           renderings: [
-            {
-              text: 'God',
-              verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)],
-            },
+            rendering('God', [makeVerseId(1, 1, 1), makeVerseId(1, 2, 4)]),
           ],
         },
         bsb: {
           occurrences: occurrencesOf([makeVerseId(43, 15, 4)]),
-          renderings: [{ text: 'you', verseIds: [makeVerseId(43, 15, 4)] }],
+          renderings: [rendering('you', [makeVerseId(43, 15, 4)])],
         },
       },
     })

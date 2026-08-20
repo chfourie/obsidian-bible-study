@@ -78,7 +78,7 @@ A base Strong's number together with its lettered disambiguations (`H4191`, `H41
 A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, a collapsible full LSJ entry where the number is Greek and that module is installed, and the family's concordance in one tagged translation at a time — switchable where more than one is installed, and filterable by Rendering. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel.
 
 ### Concordance Index
-The per-translation mapping from Strong's Family to the verse ids where the family is tagged, built when a Tagged Translation module is installed. A concordance is inherently per-text — counts and renderings are only meaningful within one translation.
+The per-translation mapping from Strong's Family to the verses where the family is tagged, each with how many of that verse's words carry it, built when a Tagged Translation module is installed. Counts are of occurrences, not of verses: a verse tagging the family on two words counts twice, while the occurrence list still shows that verse as one row. A concordance is inherently per-text — counts and renderings are only meaningful within one translation.
 
 ### Rendering
 The surface text a translation uses where a Strong's Family is tagged ("love", "charity"). The unit occurrence lists group and filter by; meaningful only within one translation.

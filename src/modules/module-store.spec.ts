@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
+import { CONCORDANCE_INDEX_VERSION } from './concordance-index'
 import type { ModuleDataDir } from './module-data-dir'
 import type { ModuleManifest } from './module-manifest'
 import { ModuleStore } from './module-store'
@@ -318,15 +319,35 @@ const taggedModule = (): NormalizedModule => ({
 })
 
 describe("ModuleStore's concordance", () => {
-  it('serves the verse ids a family is tagged in, in canon order', async () => {
+  it('serves the verses a family is tagged in, in canon order, counted', async () => {
     const { store } = setup()
     await store.saveModule(taggedModule())
 
     expect(await store.occurrences('kjv', 'H0430')).toEqual([
-      makeVerseId(1, 1, 1),
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
     ])
     expect(await store.occurrences('kjv', 'G3306')).toEqual([
-      makeVerseId(43, 15, 4),
+      { verseId: makeVerseId(43, 15, 4), count: 1 },
+    ])
+  })
+
+  it('counts a verse tagging the family twice as two occurrences', async () => {
+    const { store } = setup()
+    const kjv = taggedModule()
+    kjv.books.set(1, {
+      [makeVerseId(1, 1, 1)]: {
+        text: 'God created, and God saw.',
+        tags: [
+          { start: 0, end: 3, strongs: ['H0430'] },
+          { start: 17, end: 20, strongs: ['H0430'] },
+        ],
+      },
+    })
+
+    await store.saveModule(kjv)
+
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([
+      { verseId: makeVerseId(1, 1, 1), count: 2 },
     ])
   })
 
@@ -343,10 +364,10 @@ describe("ModuleStore's concordance", () => {
     await store.saveModule(kjv)
 
     expect(await store.occurrences('kjv', 'H0430')).toEqual([
-      makeVerseId(1, 1, 1),
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
     ])
     expect(await store.occurrences('kjv', 'H0430H')).toEqual([
-      makeVerseId(1, 1, 1),
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
     ])
   })
 
@@ -356,7 +377,9 @@ describe("ModuleStore's concordance", () => {
     await store.saveModule(taggedModule())
 
     expect(dataDir.files.has('modules/kjv/concordance.json')).toBe(true)
-    expect(await store.hasConcordance('kjv')).toBe(true)
+    expect(await store.concordanceVersion('kjv')).toBe(
+      CONCORDANCE_INDEX_VERSION,
+    )
   })
 
   it('keeps the index a module arrives with instead of deriving another', async () => {
@@ -367,7 +390,7 @@ describe("ModuleStore's concordance", () => {
     await store.saveModule(kjv)
 
     expect(await store.occurrences('kjv', 'H9999')).toEqual([
-      makeVerseId(1, 1, 1),
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
     ])
     expect(await store.occurrences('kjv', 'H0430')).toEqual([])
   })
@@ -378,7 +401,7 @@ describe("ModuleStore's concordance", () => {
     await store.saveModule(webModule())
 
     expect(dataDir.files.has('modules/web/concordance.json')).toBe(false)
-    expect(await store.hasConcordance('web')).toBe(false)
+    expect(await store.concordanceVersion('web')).toBe(0)
     expect(await store.occurrences('web', 'G3306')).toEqual([])
   })
 
@@ -392,7 +415,7 @@ describe("ModuleStore's concordance", () => {
     await store.saveConcordance('kjv', { H0430: [makeVerseId(1, 1, 1)] })
 
     expect(await store.occurrences('kjv', 'H0430')).toEqual([
-      makeVerseId(1, 1, 1),
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
     ])
   })
 
@@ -402,5 +425,19 @@ describe("ModuleStore's concordance", () => {
     dataDir.files.set('modules/kjv/concordance.json', 'not json')
 
     expect(await store.occurrences('kjv', 'H0430')).toEqual([])
+  })
+
+  it('serves an index stored before occurrences were counted, as one each', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(taggedModule())
+    dataDir.files.set(
+      'modules/kjv/concordance.json',
+      JSON.stringify({ H0430: [makeVerseId(1, 1, 1)] }),
+    )
+
+    expect(await store.concordanceVersion('kjv')).toBe(0)
+    expect(await store.occurrences('kjv', 'H0430')).toEqual([
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
+    ])
   })
 })

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { makeVerseId } from '../reference'
+import { occurrencesOf } from './concordance-index'
 import { MODULE_FORMAT_VERSION } from './module-manifest'
 import { normalizeBollsTranslation } from './normalize-bolls-translation'
 import type { BollsVerse } from './normalize-bolls-translation'
@@ -372,22 +373,31 @@ describe('malformed markup never reaches storage', () => {
 })
 
 describe('the concordance index a tagged translation carries', () => {
-  it('maps each tagged family to the sorted verse ids it is tagged in', () => {
+  it('maps each tagged family to the verses it is tagged in, ascending', () => {
     const concordance = normalizedKjv().concordance ?? {}
 
-    expect(concordance['H0430']).toEqual([
-      makeVerseId(1, 1, 1),
-      makeVerseId(1, 1, 4),
+    // Gen 1:4 says 'God' twice, which is two occurrences of one verse.
+    expect(occurrencesOf(concordance, 'H0430')).toEqual([
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
+      { verseId: makeVerseId(1, 1, 4), count: 2 },
     ])
-    expect(concordance['G3306']).toEqual([makeVerseId(43, 15, 4)])
+    // John 15:4 says 'abide' three times over.
+    expect(occurrencesOf(concordance, 'G3306')).toEqual([
+      { verseId: makeVerseId(43, 15, 4), count: 3 },
+    ])
   })
 
   it('indexes every number a single word span stacks', () => {
     const concordance = normalizedKjv().concordance ?? {}
 
     // Gen 1:1 stacks 'created' with the untranslated object marker H0853.
-    expect(concordance['H1254']).toEqual([makeVerseId(1, 1, 1)])
-    expect(concordance['H0853']).toContain(makeVerseId(1, 1, 1))
+    expect(occurrencesOf(concordance, 'H1254')).toEqual([
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
+    ])
+    expect(occurrencesOf(concordance, 'H0853')).toContainEqual({
+      verseId: makeVerseId(1, 1, 1),
+      count: 2,
+    })
   })
 
   it('leaves a translation with no tags without an index at all', () => {

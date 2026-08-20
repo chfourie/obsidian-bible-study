@@ -6,7 +6,12 @@ import {
   type StrongsEntryView,
   type WordStudyOpener,
 } from '../contracts'
-import { occurrencesByBook, strongsFamily } from '../modules'
+import {
+  occurrencesByBook,
+  strongsFamily,
+  totalOccurrences,
+  type VerseOccurrences,
+} from '../modules'
 import {
   bookName,
   decodeVerseId,
@@ -80,8 +85,11 @@ export type ConcordanceVerse = {
 }
 
 // One way a Tagged Translation renders the family — the surface words under
-// its tag spans — against the verses it renders them in.
-export type ConcordanceRendering = { text: string; verseIds: number[] }
+// its tag spans — against the verses it renders them in, and how often in each.
+export type ConcordanceRendering = {
+  text: string
+  occurrences: VerseOccurrences[]
+}
 
 // The Concordance Indexes seen from the Word Study Panel, at family
 // granularity: the verses, the renderings, and the text of as many of them as
@@ -93,15 +101,16 @@ export type WordStudyConcordance = {
   occurrences: (
     translationId: string,
     strongsNumber: string,
-  ) => Promise<number[]>
+  ) => Promise<VerseOccurrences[]>
   renderings: (
     translationId: string,
     strongsNumber: string,
   ) => Promise<ConcordanceRendering[]>
+  // One row per verse, however many occurrences that verse holds.
   versesFor: (
     translationId: string,
     strongsNumber: string,
-    verseIds: number[],
+    occurrences: VerseOccurrences[],
   ) => Promise<ConcordanceVerse[]>
 }
 
@@ -257,7 +266,7 @@ const verseReference = (verseId: number): Reference => ({
 
 type ConcordanceBook = {
   book: number
-  verseIds: number[]
+  occurrences: VerseOccurrences[]
   expanded: boolean
   verses: ConcordanceVerseView[] | null
 }
@@ -266,17 +275,17 @@ type LoadedConcordance = {
   translation: ConcordanceTranslation | null
   translations: ConcordanceTranslation[]
   message: string | null
-  verseIds: number[]
+  occurrences: VerseOccurrences[]
   renderings: ConcordanceRendering[]
   // The rendering the occurrence list is filtered to, or null for all of them.
   rendering: string | null
   books: ConcordanceBook[]
 }
 
-const groupByBook = (verseIds: number[]): ConcordanceBook[] =>
-  [...occurrencesByBook(verseIds)].map(([book, ids]) => ({
+const groupByBook = (occurrences: VerseOccurrences[]): ConcordanceBook[] =>
+  [...occurrencesByBook(occurrences)].map(([book, inBook]) => ({
     book,
-    verseIds: ids,
+    occurrences: inBook,
     expanded: false,
     verses: null,
   }))
@@ -392,7 +401,7 @@ export class WordStudyModel {
     const verses = await this.#concordanceSource().versesFor(
       loaded.translation.id,
       this.#number ?? '',
-      found.verseIds,
+      found.occurrences,
     )
     if (token !== this.#concordanceToken) return
     found.verses = verses.map((verse) => ({
@@ -408,7 +417,7 @@ export class WordStudyModel {
     const loaded = this.#concordance
     if (loaded === null) return
     loaded.rendering = loaded.rendering === text ? null : text
-    loaded.books = groupByBook(this.#filteredVerseIds(loaded))
+    loaded.books = groupByBook(this.#filteredOccurrences(loaded))
     this.#notify()
   }
 
@@ -575,16 +584,16 @@ export class WordStudyModel {
       return
     }
     const source = this.#concordanceSource()
-    const verseIds = await source.occurrences(translation.id, number)
+    const occurrences = await source.occurrences(translation.id, number)
     if (token !== this.#concordanceToken) return
     const loaded: LoadedConcordance = {
       translation,
       translations,
       message: null,
-      verseIds,
+      occurrences,
       renderings: [],
       rendering: null,
-      books: groupByBook(verseIds),
+      books: groupByBook(occurrences),
     }
     this.#concordance = loaded
     this.#notify()
@@ -604,7 +613,7 @@ export class WordStudyModel {
       translation: null,
       translations,
       message,
-      verseIds: [],
+      occurrences: [],
       renderings: [],
       rendering: null,
       books: [],
@@ -623,12 +632,12 @@ export class WordStudyModel {
     )
   }
 
-  #filteredVerseIds(loaded: LoadedConcordance): number[] {
-    if (loaded.rendering === null) return loaded.verseIds
+  #filteredOccurrences(loaded: LoadedConcordance): VerseOccurrences[] {
+    if (loaded.rendering === null) return loaded.occurrences
     const rendering = loaded.renderings.find(
       (candidate) => candidate.text === loaded.rendering,
     )
-    return rendering?.verseIds ?? []
+    return rendering?.occurrences ?? []
   }
 
   #lsjSource(): WordStudyLsj {
@@ -642,7 +651,7 @@ export class WordStudyModel {
   #concordanceView(): ConcordanceView | null {
     const loaded = this.#concordance
     if (loaded === null) return null
-    const total = this.#filteredVerseIds(loaded).length
+    const total = totalOccurrences(this.#filteredOccurrences(loaded))
     return {
       translation: loaded.translation,
       translations: loaded.translations,
@@ -653,18 +662,18 @@ export class WordStudyModel {
       total,
       label: occurrenceLabel(total, loaded.translation, loaded.rendering),
       renderings: [...loaded.renderings]
-        .sort((a, b) => b.verseIds.length - a.verseIds.length)
-        .map(({ text, verseIds }) => ({
+        .map(({ text, occurrences }) => ({
           text,
-          count: verseIds.length,
+          count: totalOccurrences(occurrences),
           active: text === loaded.rendering,
-        })),
+        }))
+        .sort((a, b) => b.count - a.count),
       family: strongsFamily(this.#number ?? ''),
       familyUndifferentiated: this.#familyUndifferentiated(loaded),
-      books: loaded.books.map(({ book, verseIds, expanded, verses }) => ({
+      books: loaded.books.map(({ book, occurrences, expanded, verses }) => ({
         book,
         name: bookName(book),
-        count: verseIds.length,
+        count: totalOccurrences(occurrences),
         expanded,
         verses: expanded ? verses : null,
       })),
@@ -678,7 +687,7 @@ export class WordStudyModel {
   #familyUndifferentiated(loaded: LoadedConcordance): boolean {
     if (this.#found !== null) return this.#found.siblings.length > 0
     if (this.#familySiblings !== null) return this.#familySiblings.length > 0
-    return loaded.verseIds.length > 0
+    return loaded.occurrences.length > 0
   }
 
   #notify(): void {

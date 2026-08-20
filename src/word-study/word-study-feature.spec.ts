@@ -62,12 +62,15 @@ const fakeConcordance = (
   translations: { id: string; name: string }[] = [KJV, BSB],
 ): WordStudyConcordance => ({
   translations: async () => translations,
-  occurrences: async () => [makeVerseId(1, 1, 1)],
+  occurrences: async () => [{ verseId: makeVerseId(1, 1, 1), count: 1 }],
   renderings: async () => [
-    { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
+    {
+      text: 'God',
+      occurrences: [{ verseId: makeVerseId(1, 1, 1), count: 1 }],
+    },
   ],
-  versesFor: async (_translationId, _strongsNumber, verseIds) =>
-    verseIds.map((verseId) => ({
+  versesFor: async (_translationId, _strongsNumber, occurrences) =>
+    occurrences.map(({ verseId }) => ({
       verseId,
       segments: [{ text: 'In the beginning God created.', emphasis: false }],
     })),

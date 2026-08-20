@@ -1,5 +1,8 @@
 import { BOOK_COUNT } from '../reference'
-import { buildConcordanceIndex } from './concordance-index'
+import {
+  CONCORDANCE_INDEX_VERSION,
+  buildConcordanceIndex,
+} from './concordance-index'
 import {
   MODULE_FORMAT_VERSION,
   TRANSLATION_CONTENT_VERSION,
@@ -36,14 +39,16 @@ const reindex = async (
   })
 }
 
-// A Tagged Translation installed before the Concordance Index existed carries
-// every tag the index is made of, so the bump that introduced it is served by
-// re-indexing on the spot — no download, and nothing for the reader to notice.
+// A Tagged Translation carries every tag its index is made of, so a bump that
+// changes only the index — its arrival, and later its occurrence counts — is
+// served by re-indexing on the spot: no download, and nothing for the reader to
+// notice.
 export const reindexConcordances = async (store: ModuleStore): Promise<void> => {
   for (const manifest of await store.installedManifests()) {
     if (!isTranslationManifest(manifest)) continue
     if (!manifest.capabilities.strongsTagged) continue
-    if (await store.hasConcordance(manifest.id)) continue
+    const stored = await store.concordanceVersion(manifest.id)
+    if (stored === CONCORDANCE_INDEX_VERSION) continue
     await reindex(store, manifest)
   }
 }

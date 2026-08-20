@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { InMemoryModuleDataDir } from '../../tests/fixtures/in-memory-module-data-dir'
 import { makeVerseId } from '../reference'
+import { CONCORDANCE_INDEX_VERSION } from './concordance-index'
 import {
   MODULE_FORMAT_VERSION,
   TRANSLATION_CONTENT_VERSION,
@@ -70,10 +71,10 @@ describe('reindexConcordances', () => {
     await reindexConcordances(store)
 
     expect(await store.occurrences('kjv', 'H0430')).toEqual([
-      makeVerseId(1, 1, 1),
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
     ])
     expect(await store.occurrences('kjv', 'G3306')).toEqual([
-      makeVerseId(43, 15, 4),
+      { verseId: makeVerseId(43, 15, 4), count: 1 },
     ])
   })
 
@@ -100,7 +101,25 @@ describe('reindexConcordances', () => {
       TRANSLATION_CONTENT_VERSION - 1,
     )
     expect(await store.occurrences('kjv', 'H0430')).toEqual([
-      makeVerseId(1, 1, 1),
+      { verseId: makeVerseId(1, 1, 1), count: 1 },
+    ])
+  })
+
+  it('rebuilds an index built before occurrences were counted', async () => {
+    const { dataDir, store } = setup()
+    await store.saveModule(taggedModule())
+    dataDir.files.set(
+      'modules/kjv/concordance.json',
+      JSON.stringify({ H0430: [makeVerseId(1, 1, 1)] }),
+    )
+
+    await reindexConcordances(store)
+
+    expect(await store.concordanceVersion('kjv')).toBe(
+      CONCORDANCE_INDEX_VERSION,
+    )
+    expect(await store.occurrences('kjv', 'G3306')).toEqual([
+      { verseId: makeVerseId(43, 15, 4), count: 1 },
     ])
   })
 
@@ -124,6 +143,6 @@ describe('reindexConcordances', () => {
     await reindexConcordances(store)
 
     expect(dataDir.writes).toEqual([])
-    expect(await store.hasConcordance('web')).toBe(false)
+    expect(await store.concordanceVersion('web')).toBe(0)
   })
 })

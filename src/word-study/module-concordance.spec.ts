@@ -99,6 +99,8 @@ const web = (): NormalizedModule => ({
   books: new Map([[1, { [makeVerseId(1, 1, 1)]: 'In the beginning.' }]]),
 })
 
+const once = (verseId: number) => ({ verseId, count: 1 })
+
 const setup = async (
   modules: NormalizedModule[] = [kjv()],
 ): Promise<{ dataDir: FakeModuleDataDir; concordance: ReturnType<typeof moduleConcordance> }> => {
@@ -123,16 +125,16 @@ describe('moduleConcordance', () => {
     expect(await concordance.translations()).toEqual([])
   })
 
-  it('serves a family\'s verse ids from the index alone', async () => {
+  it('serves a family\'s counted verses from the index alone', async () => {
     const { dataDir, concordance } = await setup()
     dataDir.reads.length = 0
 
-    const verseIds = await concordance.occurrences('kjv', 'H0430')
+    const occurrences = await concordance.occurrences('kjv', 'H0430')
 
-    expect(verseIds).toEqual([
-      makeVerseId(1, 1, 1),
-      makeVerseId(1, 1, 4),
-      makeVerseId(1, 2, 4),
+    expect(occurrences).toEqual([
+      once(makeVerseId(1, 1, 1)),
+      once(makeVerseId(1, 1, 4)),
+      once(makeVerseId(1, 2, 4)),
     ])
     expect(dataDir.reads).toEqual(['modules/kjv/concordance.json'])
   })
@@ -141,9 +143,9 @@ describe('moduleConcordance', () => {
     const { concordance } = await setup()
 
     expect(await concordance.occurrences('kjv', 'H0430B')).toEqual([
-      makeVerseId(1, 1, 1),
-      makeVerseId(1, 1, 4),
-      makeVerseId(1, 2, 4),
+      once(makeVerseId(1, 1, 1)),
+      once(makeVerseId(1, 1, 4)),
+      once(makeVerseId(1, 2, 4)),
     ])
   })
 
@@ -153,9 +155,9 @@ describe('moduleConcordance', () => {
     expect(await concordance.renderings('kjv', 'H0430')).toEqual([
       {
         text: 'God',
-        verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 1, 4)],
+        occurrences: [once(makeVerseId(1, 1, 1)), once(makeVerseId(1, 1, 4))],
       },
-      { text: 'LORD God', verseIds: [makeVerseId(1, 2, 4)] },
+      { text: 'LORD God', occurrences: [once(makeVerseId(1, 2, 4))] },
     ])
   })
 
@@ -165,7 +167,10 @@ describe('moduleConcordance', () => {
     expect(await concordance.renderings('kjv', 'G3306')).toEqual([
       {
         text: 'Abide',
-        verseIds: [makeVerseId(43, 15, 4), makeVerseId(43, 15, 5)],
+        occurrences: [
+          once(makeVerseId(43, 15, 4)),
+          once(makeVerseId(43, 15, 5)),
+        ],
       },
     ])
   })
@@ -176,9 +181,9 @@ describe('moduleConcordance', () => {
     expect(await concordance.renderings('kjv', 'H0430B')).toEqual([
       {
         text: 'God',
-        verseIds: [makeVerseId(1, 1, 1), makeVerseId(1, 1, 4)],
+        occurrences: [once(makeVerseId(1, 1, 1)), once(makeVerseId(1, 1, 4))],
       },
-      { text: 'LORD God', verseIds: [makeVerseId(1, 2, 4)] },
+      { text: 'LORD God', occurrences: [once(makeVerseId(1, 2, 4))] },
     ])
   })
 
@@ -192,7 +197,7 @@ describe('moduleConcordance', () => {
     expect(dataDir.reads).toEqual([])
   })
 
-  it('counts a verse once for a rendering it tags twice', async () => {
+  it('counts a verse twice for a rendering it tags twice', async () => {
     const { concordance } = await setup([
       {
         manifest: manifest({}),
@@ -214,7 +219,34 @@ describe('moduleConcordance', () => {
     ])
 
     expect(await concordance.renderings('kjv', 'H0430')).toEqual([
-      { text: 'God', verseIds: [makeVerseId(1, 1, 1)] },
+      { text: 'God', occurrences: [{ verseId: makeVerseId(1, 1, 1), count: 2 }] },
+    ])
+  })
+
+  it('splits a verse that renders the family two ways between them', async () => {
+    const { concordance } = await setup([
+      {
+        manifest: manifest({}),
+        books: new Map([
+          [
+            1,
+            {
+              [makeVerseId(1, 1, 1)]: {
+                text: 'God is the LORD God.',
+                tags: [
+                  { start: 0, end: 3, strongs: ['H0430'] },
+                  { start: 11, end: 19, strongs: ['H0430'] },
+                ],
+              },
+            },
+          ],
+        ]),
+      },
+    ])
+
+    expect(await concordance.renderings('kjv', 'H0430')).toEqual([
+      { text: 'God', occurrences: [once(makeVerseId(1, 1, 1))] },
+      { text: 'LORD God', occurrences: [once(makeVerseId(1, 1, 1))] },
     ])
   })
 
@@ -222,8 +254,8 @@ describe('moduleConcordance', () => {
     const { concordance } = await setup()
 
     const verses = await concordance.versesFor('kjv', 'H0430', [
-      makeVerseId(1, 1, 1),
-      makeVerseId(1, 1, 4),
+      once(makeVerseId(1, 1, 1)),
+      once(makeVerseId(1, 1, 4)),
     ])
 
     expect(verses).toEqual([
@@ -250,7 +282,7 @@ describe('moduleConcordance', () => {
     const { concordance } = await setup()
 
     const verses = await concordance.versesFor('kjv', 'H0853', [
-      makeVerseId(1, 1, 1),
+      once(makeVerseId(1, 1, 1)),
     ])
 
     expect(verses[0].segments).toEqual([
@@ -264,7 +296,7 @@ describe('moduleConcordance', () => {
     const { concordance } = await setup()
 
     const verses = await concordance.versesFor('kjv', 'H0430B', [
-      makeVerseId(1, 1, 1),
+      once(makeVerseId(1, 1, 1)),
     ])
 
     expect(verses[0].segments).toEqual([
@@ -279,8 +311,8 @@ describe('moduleConcordance', () => {
     dataDir.reads.length = 0
 
     await concordance.versesFor('kjv', 'H0430', [
-      makeVerseId(1, 1, 1),
-      makeVerseId(1, 1, 4),
+      once(makeVerseId(1, 1, 1)),
+      once(makeVerseId(1, 1, 4)),
     ])
 
     expect(dataDir.reads).toEqual(['modules/kjv/001.json'])
@@ -290,7 +322,7 @@ describe('moduleConcordance', () => {
     const { concordance } = await setup()
 
     expect(
-      await concordance.versesFor('kjv', 'H0430', [makeVerseId(1, 9, 9)]),
+      await concordance.versesFor('kjv', 'H0430', [once(makeVerseId(1, 9, 9))]),
     ).toEqual([])
   })
 })

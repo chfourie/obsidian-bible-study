@@ -3,10 +3,12 @@ import {
   isTranslationManifest,
   occurrencesByBook,
   strongsFamily,
+  totalOccurrences,
   verseTextOf,
   type FormatSpan,
   type ModuleStore,
   type VerseContent,
+  type VerseOccurrences,
 } from '../modules'
 import type {
   ConcordanceRendering,
@@ -41,7 +43,10 @@ const surfaceOf = (text: string, span: FormatSpan): string =>
 
 // Spellings are counted while they are gathered, so the chip can be named
 // with the commonest of them.
-type GatheredRendering = { verseIds: number[]; forms: Map<string, number> }
+type GatheredRendering = {
+  occurrences: VerseOccurrences[]
+  forms: Map<string, number>
+}
 
 const commonestForm = (forms: Map<string, number>): string =>
   [...forms.entries()].reduce((best, form) =>
@@ -68,20 +73,21 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
       store.occurrences(translationId, strongsNumber),
 
     // Spellings that differ only in case or punctuation are one rendering,
-    // named with the commonest of them.
+    // named with the commonest of them. A verse rendering the family twice
+    // counts twice, under whichever renderings its two words fall.
     renderings: async (translationId, strongsNumber) => {
-      const verseIds = await store.occurrences(translationId, strongsNumber)
+      const occurrences = await store.occurrences(translationId, strongsNumber)
       const key = [
         translationId,
         strongsFamily(strongsNumber),
-        verseIds.length,
+        totalOccurrences(occurrences),
       ].join(':')
       if (held?.key === key) return held.renderings
       const gathered = new Map<string, GatheredRendering>()
-      for (const [book, ids] of occurrencesByBook(verseIds)) {
+      for (const [book, inBook] of occurrencesByBook(occurrences)) {
         const content = await store.bookContent(translationId, book)
         if (content === null) continue
-        for (const verseId of ids) {
+        for (const { verseId } of inBook) {
           const verse = content[verseId]
           if (verse === undefined) continue
           const text = verseTextOf(verse)
@@ -90,32 +96,31 @@ export const moduleConcordance = (store: ModuleStore): WordStudyConcordance => {
             if (form === '') continue
             const grouping = form.toLowerCase()
             const rendering = gathered.get(grouping) ?? {
-              verseIds: [],
+              occurrences: [],
               forms: new Map<string, number>(),
             }
             rendering.forms.set(form, (rendering.forms.get(form) ?? 0) + 1)
-            if (rendering.verseIds[rendering.verseIds.length - 1] !== verseId)
-              rendering.verseIds.push(verseId)
+            const last = rendering.occurrences[rendering.occurrences.length - 1]
+            if (last?.verseId === verseId) last.count += 1
+            else rendering.occurrences.push({ verseId, count: 1 })
             gathered.set(grouping, rendering)
           }
         }
       }
-      const renderings = [...gathered.values()].map(
-        ({ verseIds: ids, forms }) => ({
-          text: commonestForm(forms),
-          verseIds: ids,
-        }),
-      )
+      const renderings = [...gathered.values()].map((rendering) => ({
+        text: commonestForm(rendering.forms),
+        occurrences: rendering.occurrences,
+      }))
       held = { key, renderings }
       return renderings
     },
 
-    versesFor: async (translationId, strongsNumber, verseIds) => {
+    versesFor: async (translationId, strongsNumber, occurrences) => {
       const verses: ConcordanceVerse[] = []
-      for (const [book, ids] of occurrencesByBook(verseIds)) {
+      for (const [book, inBook] of occurrencesByBook(occurrences)) {
         const content = await store.bookContent(translationId, book)
         if (content === null) continue
-        for (const verseId of ids) {
+        for (const { verseId } of inBook) {
           const verse = content[verseId]
           if (verse === undefined) continue
           verses.push({ verseId, segments: segmentsOf(verse, strongsNumber) })

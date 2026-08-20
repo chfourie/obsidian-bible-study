@@ -8,7 +8,9 @@
 // v4: a Tagged Translation stores its Concordance Index beside its books.
 // The index is derived from the tagging the module already carries, so an
 // installed translation is re-indexed in place rather than re-downloaded.
-export const MODULE_FORMAT_VERSION = 4
+// v5: the Concordance Index counts occurrences rather than verses — a verse
+// tagging a family on two words counts twice. Re-derived in place, as v4 was.
+export const MODULE_FORMAT_VERSION = 5
 
 // The oldest stored translation whose content is already everything the
 // current format asks of it. Later versions added only what can be re-derived
