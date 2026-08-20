@@ -48,13 +48,16 @@ The single user-configured translation (restricted to installed modules) served 
 A symmetric connection between two or more References that belong together in study (e.g. a shared theme or allusion). All members are mutually connected — there is no direction and no primary member. Not a note: cross-references live in a single plugin-managed data file inside the vault, so they sync and back up with the vault without imposing per-item filenames. Distinct from a Reference: a Reference is an address; a Cross-Reference is an edge between addresses.
 
 ### Study Panel
-The single right-sidebar surface that follows the last-focused note or reader tab: for a note, the passages it references and intersecting Cross-References; for a reader, the selected verse's details and the chapter's Cross-References. Remembers its state per tab (in memory, for the tab's lifetime). The reader itself shows only scripture text — all companion material lives here.
+The single right-sidebar surface that follows the last-focused note or reader tab: for a reader, the selected verse's translations plus the chapter's Annotations, Mentions, and Cross-References; for a note, the same three sections for its referenced scriptures, plus the passages it references. Remembers its state per tab (in memory, for the tab's lifetime). The reader itself shows only scripture text — all companion material lives here.
 
 ### Occurrence
 One appearance of a reference at a position in a vault note (in the body or in annotation frontmatter). The unit the vault index stores; intersection queries return occurrences.
 
 ### Annotation
-A vault note dedicated to commenting on a reference, with the reference in its frontmatter as source of truth. Indexed like any note but always surfaced in the reader beside its verses.
+A vault note dedicated to commenting on a reference, with the reference in its frontmatter as source of truth. Indexed like any note but surfaced in the Study Panel for any chapter or note whose references intersect it.
+
+### Mention
+An intersecting note that is not an Annotation: a vault note whose body references overlap the scripture in view. Derived, not declared — a note with a frontmatter ref is always an Annotation, never a Mention, even if its body also references the same verses.
 
 ### Tagged Translation
 A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB (built from the public-domain Berean word-level tables) and KJV (built from bolls.life's `<S>`-tagged dump); the capability is per-translation.

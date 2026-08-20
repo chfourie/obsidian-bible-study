@@ -8,7 +8,6 @@ opens the reference in the reader with the entry's translation.
   import { setIcon } from 'obsidian'
   import type { NavigationOptions } from '../contracts'
   import type { Reference } from '../reference'
-  import CollectionStrip from '../study-material/CollectionStrip.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
   import type { StudyMaterialHost } from '../study-material'
   import { activate, opensInNewPane } from '../ui'
@@ -62,19 +61,17 @@ opens the reference in the reader with the entry's translation.
 </script>
 
 {#snippet panelTitle(title: string | null)}
-  <div class="bsp-title">{title}</div>
+  <div class="bsp-title" title={title ?? ''}>
+    <span class="bsp-title-text">{title}</span>
+  </div>
 {/snippet}
 
 {#if view.studyMaterial !== null && model.studySource !== null}
   {@const material = view.studyMaterial}
   <div class="bsp-reader">
     {@render panelTitle(view.title)}
-    {#if material.collection !== null}
-      <CollectionStrip
-        collection={material.collection}
-        source={model.studySource}
-      />
-    {/if}
+    <!-- Collecting a cross-reference is the reader's own work: its strip is
+         where the verses being collected are, so the panel leaves it there. -->
     <StudyMaterialView
       {material}
       source={model.studySource}
@@ -84,10 +81,11 @@ opens the reference in the reader with the entry's translation.
     />
   </div>
 {:else}
-  <div class="bsp-panel" class:bsp-panel-untitled={view.title === null}>
+  <div class="bsp-panel">
     {#if view.title !== null}
       {@render panelTitle(view.title)}
     {/if}
+    <div class="bsp-body">
     {#if view.status === 'no-note'}
       <p class="bsp-empty">Open a note to see its scripture references.</p>
     {:else if view.status === 'no-references'}
@@ -127,6 +125,31 @@ opens the reference in the reader with the entry's translation.
               </div>
             </div>
           {/each}
+        </div>
+      {/if}
+      {#if view.entries.length > 0}
+        <div class="bsp-entries-head">
+          <div class="bsp-group-label">References</div>
+          <span
+            role="button"
+            tabindex="0"
+            class="bsp-fold-all"
+            aria-label="Collapse all"
+            title="Collapse all"
+            use:icon={'chevrons-down-up'}
+            onclick={() => model.foldAll()}
+            onkeydown={activate(() => model.foldAll())}
+          ></span>
+          <span
+            role="button"
+            tabindex="0"
+            class="bsp-fold-all"
+            aria-label="Expand all"
+            title="Expand all"
+            use:icon={'chevrons-up-down'}
+            onclick={() => model.expandAll()}
+            onkeydown={activate(() => model.expandAll())}
+          ></span>
         </div>
       {/if}
       <div class="bsp-entries">
@@ -190,6 +213,7 @@ opens the reference in the reader with the entry's translation.
         {/each}
       </div>
     {/if}
+    </div>
   </div>
 {/if}
 
@@ -198,14 +222,20 @@ opens the reference in the reader with the entry's translation.
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 0 0 0.25rem;
+    height: 100%;
+    min-height: 0;
   }
 
-  /* The title stands in for the leaf's file header, so the view content is
-     flush with the top of the pane. With no title to head it, the content
-     takes that spacing back. */
-  .bsp-panel-untitled {
-    padding-top: var(--size-4-4);
+  /* The body scrolls on its own so the title above it stays put without
+     having to paint over anything. */
+  .bsp-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 0.25rem;
   }
 
   /* The mirrored reader fills the sidebar: its details region scrolls on its
@@ -227,12 +257,18 @@ opens the reference in the reader with the entry's translation.
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    height: var(--header-height);
-    border-bottom: var(--file-header-border);
-    font-family: var(--file-header-font);
+    padding: var(--size-4-1) 0 var(--size-4-2);
     font-size: var(--font-ui-medium);
     font-weight: 600;
     color: var(--text-accent);
+  }
+
+  /* One line, however long the note's name: the header keeps the height the
+     theme gives a file header. */
+  .bsp-title-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .bsp-empty {
@@ -241,16 +277,48 @@ opens the reference in the reader with the entry's translation.
     font-size: var(--font-ui-small);
   }
 
+  /* The entries are headed like the cross-references above them, with the
+     fold controls for those entries out at the far edge of the same line. */
+  .bsp-entries-head {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .bsp-entries-head .bsp-group-label {
+    margin-right: auto;
+  }
+
+  .bsp-fold-all {
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsp-fold-all:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .bsp-fold-all :global(svg) {
+    width: var(--icon-s);
+    height: var(--icon-s);
+  }
+
   .bsp-entries {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
   }
 
+  /* No gap of its own: the blocks and their dividers carry the same spacing
+     the reader gives its cross-references. */
   .bsp-xrefs {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
   }
 
   .bsp-group-label {
@@ -274,10 +342,12 @@ opens the reference in the reader with the entry's translation.
     background: var(--background-modifier-hover);
   }
 
+  /* Item-level divider: the same subordinate rule the reader draws between
+     its own cross-references. */
   .bsp-xref-divider {
-    width: 66%;
-    margin: 0 auto;
-    border: 0;
+    width: 2.5rem;
+    margin: 8px 0;
+    border: none;
     border-top: 1px solid var(--background-modifier-border);
   }
 

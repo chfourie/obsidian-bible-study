@@ -455,7 +455,7 @@ describe('cross-references in the Study Panel', () => {
     description: 'Vine and vineyard imagery for Israel',
   }
 
-  it('lists an intersecting cross-reference with only the other members and its description', async () => {
+  it('lists an intersecting cross-reference with every member and its description', async () => {
     const store = fakeCrossReferenceStore()
     store.setEntries([vineCrossReference])
     const panel = model(fakeSource().source, 'web', store.deps)
@@ -467,6 +467,7 @@ describe('cross-references in the Study Panel', () => {
         id: 'xr-vine',
         description: 'Vine and vineyard imagery for Israel',
         members: [
+          { label: 'John 15:1-8', reference: john15Vine, index: 0 },
           { label: 'Psalms 80:8-16', reference: psalm80Vine, index: 1 },
           { label: 'Romans 11:17-24', reference: romans11Olive, index: 2 },
         ],
@@ -507,7 +508,7 @@ describe('cross-references in the Study Panel', () => {
     ])
     expect(
       panel.view.crossReferences[0].members.map((member) => member.label),
-    ).toEqual(['Romans 11:17-24'])
+    ).toEqual(['Psalms 80:8-16', 'John 15:1-8', 'Romans 11:17-24'])
   })
 
   it('orders members by book and start verse', async () => {
@@ -530,7 +531,12 @@ describe('cross-references in the Study Panel', () => {
 
     expect(
       panel.view.crossReferences[0].members.map((member) => member.label),
-    ).toEqual(['Psalms 80:8-16', 'John 8:31-32', 'John 15:1-8'])
+    ).toEqual([
+      'Romans 11:17-24',
+      'Psalms 80:8-16',
+      'John 8:31-32',
+      'John 15:1-8',
+    ])
   })
 
   it('leads a cross-reference with members sharing a chapter with the note', async () => {
@@ -552,7 +558,25 @@ describe('cross-references in the Study Panel', () => {
 
     expect(
       panel.view.crossReferences[0].members.map((member) => member.label),
-    ).toEqual(['John 8:31-32', 'John 15:22-25'])
+    ).toEqual(['Psalms 80:8-16', 'John 8:31-32', 'John 15:22-25'])
+  })
+
+  it('keeps a cross-reference whose members are all in the note', async () => {
+    const store = fakeCrossReferenceStore()
+    store.setEntries([
+      {
+        id: 'xr-self',
+        members: [john15Vine, reference(43, [[15, 2], [15, 3]])],
+        description: 'The vine',
+      },
+    ])
+    const panel = model(fakeSource().source, 'web', store.deps)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:1-8}' })
+
+    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
+      'xr-self',
+    ])
   })
 
   it('orders cross-references by their leading member', async () => {
@@ -806,42 +830,81 @@ describe('cross-references in the Study Panel', () => {
       expect(state.subTab).toBe('notes')
     })
 
-    it('writes folds into the followed tab’s state', () => {
+    it('folds every entry until the followed tab unfolds one', async () => {
       const panel = model(fakeSource().source)
       const state = freshTabState()
       panel.useTabState(state)
+      await panel.setActiveNote({
+        file: 'note.md',
+        content: 'On {John 15:1} and {Genesis 1:1}.',
+      })
+
+      expect([...panel.view.folded]).toEqual(['|John 15:1', '|Genesis 1:1'])
+
+      panel.toggleFold('|John 15:1')
+
+      expect([...panel.view.folded]).toEqual(['|Genesis 1:1'])
+      expect([...state.expanded]).toEqual(['|John 15:1'])
+    })
+
+    it('unfolds every entry at once, and folds them all again', async () => {
+      const panel = model(fakeSource().source)
+      await panel.setActiveNote({
+        file: 'Sermons/Vine.md',
+        content: 'On {John 15:1} and {Genesis 1:1}.',
+      })
+      const keys = panel.view.entries.map((entry) => entry.key)
+
+      panel.expandAll()
+      expect([...panel.view.folded]).toEqual([])
+
+      panel.foldAll()
+      expect([...panel.view.folded].sort()).toEqual([...keys].sort())
+    })
+
+    it('writes an unfold of every entry into the followed tab’s state', async () => {
+      const panel = model(fakeSource().source)
+      const state = freshTabState()
+      panel.useTabState(state)
+      await panel.setActiveNote({
+        file: 'Sermons/Vine.md',
+        content: 'On {John 15:1}.',
+      })
+
+      panel.expandAll()
+
+      expect([...state.expanded]).toEqual(
+        panel.view.entries.map((entry) => entry.key),
+      )
+    })
+
+    it('folds an entry it unfolded before', async () => {
+      const panel = model(fakeSource().source)
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
+      panel.toggleFold('|John 15:1')
 
       panel.toggleFold('|John 15:1')
 
       expect([...panel.view.folded]).toEqual(['|John 15:1'])
-      expect([...state.folded]).toEqual(['|John 15:1'])
     })
 
-    it('unfolds an entry it folded before', () => {
-      const panel = model(fakeSource().source)
-      panel.toggleFold('|John 15:1')
-
-      panel.toggleFold('|John 15:1')
-
-      expect([...panel.view.folded]).toEqual([])
-    })
-
-    it('shows the state of the tab it is handed', () => {
+    it('shows the state of the tab it is handed', async () => {
       const panel = model(fakeSource().source)
       const first = freshTabState()
       const second = freshTabState()
       panel.useTabState(first)
+      await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
       panel.selectSubTab('notes')
       panel.toggleFold('|John 15:1')
 
       panel.useTabState(second)
 
       expect(panel.view.subTab).toBe('translations')
-      expect([...panel.view.folded]).toEqual([])
+      expect([...panel.view.folded]).toEqual(['|John 15:1'])
 
       panel.useTabState(first)
       expect(panel.view.subTab).toBe('notes')
-      expect([...panel.view.folded]).toEqual(['|John 15:1'])
+      expect([...panel.view.folded]).toEqual([])
     })
 
     it('falls back to a fresh state when it follows no tab', () => {

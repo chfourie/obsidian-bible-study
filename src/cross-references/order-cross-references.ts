@@ -21,7 +21,8 @@ const startOf = (reference: Reference): number =>
 
 // Cross-references and their members read in Bible order, except that anything
 // sharing a chapter with the passage in hand leads — what is already on screen
-// anchors the list. An entry ranks by its own leading member.
+// anchors the list. Entries rank by their members in turn, so entries led by
+// the same passage are told apart by where else they point.
 export const orderCrossReferences = (
   entries: readonly CrossReferenceView[],
   context: readonly Reference[],
@@ -40,7 +41,17 @@ export const orderCrossReferences = (
     ...entry,
     members: [...entry.members].sort((a, b) => compare(a.reference, b.reference)),
   }))
-  const lead = (entry: CrossReferenceView): Reference =>
-    entry.members[0]?.reference ?? { book: 0, ranges: [] }
-  return ordered.sort((a, b) => compare(lead(a), lead(b)))
+  const compareEntries = (a: CrossReferenceView, b: CrossReferenceView): number => {
+    const depth = Math.max(a.members.length, b.members.length)
+    for (let index = 0; index < depth; index += 1) {
+      const left = a.members[index]?.reference
+      const right = b.members[index]?.reference
+      if (left === undefined) return right === undefined ? 0 : -1
+      if (right === undefined) return 1
+      const order = compare(left, right)
+      if (order !== 0) return order
+    }
+    return 0
+  }
+  return ordered.sort(compareEntries)
 }

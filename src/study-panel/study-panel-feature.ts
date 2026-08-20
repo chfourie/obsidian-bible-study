@@ -53,6 +53,9 @@ export class StudyPanelFeature extends PluginFeature {
   #material: StudyMaterialSource | null = null
   // The tab the panel follows, and the state every tab it has followed holds.
   #followed: WorkspaceLeaf | null = null
+  // A tab that took focus without anything the panel could read on it — a
+  // reader whose view was not in place yet — kept for another look.
+  #unread: WorkspaceLeaf | null = null
   readonly #tabs = new TabMemory<WorkspaceLeaf>()
   #unsubscribeCrossReferences: (() => void) | null = null
   #unsubscribeSelection: (() => void) | null = null
@@ -211,6 +214,12 @@ export class StudyPanelFeature extends PluginFeature {
   // panel itself included — leaves the last view standing, which is what a
   // false return reports.
   #focusLeaf(leaf: WorkspaceLeaf | null): boolean {
+    const followed = this.#follow(leaf)
+    this.#unread = followed ? null : leaf
+    return followed
+  }
+
+  #follow(leaf: WorkspaceLeaf | null): boolean {
     const material = this.#studyMaterial.studyMaterialFor(leaf?.view ?? null)
     if (material !== null) {
       // A note's read may still be in flight; taking the panel over cancels
@@ -238,17 +247,18 @@ export class StudyPanelFeature extends PluginFeature {
     const live = new Set<WorkspaceLeaf>()
     workspace.iterateAllLeaves((leaf) => live.add(leaf))
     this.#tabs.retain(live)
-    const recent = workspace.getMostRecentLeaf()
     if (this.#followed !== null && !live.has(this.#followed)) {
       this.#followed = null
       this.#followMaterial(null)
-      if (!this.#focusLeaf(recent)) void this.#showFile(null)
+      if (!this.#focusLeaf(workspace.getMostRecentLeaf()))
+        void this.#showFile(null)
       return
     }
     // A reader that took focus before its view was in place looked like a
     // leaf the panel ignores; the layout settling is when it can be seen for
     // what it is.
-    if (recent !== this.#followed && recent !== null) this.#focusLeaf(recent)
+    const unread = this.#unread
+    if (unread !== null && live.has(unread)) this.#focusLeaf(unread)
   }
 
   // The panel mirrors one reader tab at a time, and listens for deliberate

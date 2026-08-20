@@ -4,12 +4,12 @@ import { TabMemory } from './tab-memory'
 type Tab = { id: string }
 
 describe('TabMemory', () => {
-  it('starts a tab on the translations sub-tab with nothing folded', () => {
+  it('starts a tab on the translations sub-tab with nothing unfolded', () => {
     const memory = new TabMemory<Tab>()
 
     expect(memory.stateFor({ id: 'a' })).toEqual({
       subTab: 'translations',
-      folded: new Set(),
+      expanded: new Set(),
     })
   })
 

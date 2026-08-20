@@ -57,7 +57,7 @@ export type StudyPanelViewState = {
   // back to when a note is focused again.
   studyMaterial: StudyMaterial | null
   // The followed tab's own state: which details sub-tab it shows, and which
-  // passage entries it has folded away.
+  // passage entries stay folded — every entry the tab has not unfolded.
   subTab: StudySubTab
   folded: ReadonlySet<string>
 }
@@ -165,7 +165,7 @@ export class StudyPanelModel {
       crossReferences: this.#crossReferences,
       studyMaterial: this.#studySource?.studyMaterial ?? null,
       subTab: this.#tabState.subTab,
-      folded: this.#tabState.folded,
+      folded: this.#folded(),
     }
   }
 
@@ -183,9 +183,32 @@ export class StudyPanelModel {
   }
 
   toggleFold(key: string): void {
-    const folded = new Set(this.#tabState.folded)
-    if (!folded.delete(key)) folded.add(key)
-    this.#tabState.folded = folded
+    const expanded = new Set(this.#tabState.expanded)
+    if (!expanded.delete(key)) expanded.add(key)
+    this.#setExpanded(expanded)
+  }
+
+  foldAll(): void {
+    this.#setExpanded(new Set())
+  }
+
+  expandAll(): void {
+    this.#setExpanded(new Set(this.#entries.map((entry) => entry.key)))
+  }
+
+  // A passage costs a scroll to read past, so entries open only where the tab
+  // asked for them; everything it has not unfolded is folded.
+  #folded(): ReadonlySet<string> {
+    const expanded = this.#tabState.expanded
+    return new Set(
+      this.#entries
+        .map((entry) => entry.key)
+        .filter((key) => !expanded.has(key)),
+    )
+  }
+
+  #setExpanded(expanded: ReadonlySet<string>): void {
+    this.#tabState.expanded = expanded
     this.#notify()
   }
 
@@ -249,8 +272,9 @@ export class StudyPanelModel {
     const seen = new Map<string, CrossReferenceView>()
     for (const reference of references) {
       for (const entry of this.deps.crossReferences.intersecting(reference)) {
-        if (!seen.has(entry.id))
-          seen.set(entry.id, crossReferenceView(entry, references))
+        // Every member is listed, the note's own reference included: without
+        // it there is nothing to say what the others are references to.
+        if (!seen.has(entry.id)) seen.set(entry.id, crossReferenceView(entry, []))
       }
     }
     return orderCrossReferences([...seen.values()], references)

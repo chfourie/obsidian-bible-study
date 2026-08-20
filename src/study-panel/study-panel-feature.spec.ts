@@ -219,8 +219,13 @@ const harness = (
       },
     }
   }
-  const layoutChanged = () => {
+  // Obsidian can settle the layout before it has caught up on which tab is
+  // most recent, which `staleRecent` stands in for.
+  const layoutChanged = (staleRecent?: WorkspaceLeaf) => {
+    const recent = workspace.getMostRecentLeaf
+    if (staleRecent !== undefined) workspace.getMostRecentLeaf = () => staleRecent
     handlers['layout-change']?.forEach((handler) => handler())
+    workspace.getMostRecentLeaf = recent
   }
   const closeTab = (leaf: WorkspaceLeaf) => {
     const index = tabs.indexOf(leaf)
@@ -550,6 +555,35 @@ describe('StudyPanelFeature entry points', () => {
     expect(view.model.studySource).toBe(reader.source)
   })
 
+  it('stays with a note focused off a reader as the layout settles', async () => {
+    const {
+      feature,
+      commands,
+      leaves,
+      focusReader,
+      focusNote,
+      layoutChanged,
+      readGates,
+    } = harness({ 'slow.md': '{John 15:1}' })
+    let releaseSlow: () => void = () => {}
+    readGates['slow.md'] = new Promise((resolve) => {
+      releaseSlow = resolve
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const reader = focusReader()
+
+    focusNote('slow.md')
+    layoutChanged(reader.leaf)
+    releaseSlow()
+    await flushAsync()
+
+    const view = panelView(leaves[0])
+    expect(view.model.view.studyMaterial).toBe(null)
+    expect(view.model.view.file).toBe('slow.md')
+  })
+
   it('follows the mirrored reader as its selection changes', async () => {
     const { feature, commands, leaves, focusReader } = harness()
     await feature.load()
@@ -664,15 +698,15 @@ describe('StudyPanelFeature entry points', () => {
     const second = focusNote('b.md')
     await flushAsync()
 
-    expect([...view.model.view.folded]).toEqual([])
+    expect([...view.model.view.folded]).toEqual(['|Genesis 1:1'])
 
     focusTab(first)
     await flushAsync()
-    expect([...view.model.view.folded]).toEqual(['|John 15:1'])
+    expect([...view.model.view.folded]).toEqual([])
 
     focusTab(second)
     await flushAsync()
-    expect([...view.model.view.folded]).toEqual([])
+    expect([...view.model.view.folded]).toEqual(['|Genesis 1:1'])
   })
 
   it('keeps two tabs on the same note independent', async () => {
@@ -689,15 +723,15 @@ describe('StudyPanelFeature entry points', () => {
 
     const second = focusNote('a.md')
     await flushAsync()
-    expect([...view.model.view.folded]).toEqual([])
+    expect([...view.model.view.folded]).toEqual(['|John 15:1'])
 
     focusTab(first)
     await flushAsync()
-    expect([...view.model.view.folded]).toEqual(['|John 15:1'])
+    expect([...view.model.view.folded]).toEqual([])
 
     focusTab(second)
     await flushAsync()
-    expect([...view.model.view.folded]).toEqual([])
+    expect([...view.model.view.folded]).toEqual(['|John 15:1'])
   })
 
   it('forgets a tab’s state once it closes', async () => {
@@ -716,7 +750,7 @@ describe('StudyPanelFeature entry points', () => {
     focusNote('a.md')
     await flushAsync()
 
-    expect([...view.model.view.folded]).toEqual([])
+    expect([...view.model.view.folded]).toEqual(['|John 15:1'])
   })
 
   it('falls back to the most recent tab when the mirrored tab closes', async () => {
@@ -751,24 +785,6 @@ describe('StudyPanelFeature entry points', () => {
     await flushAsync()
 
     expect(panelView(leaves[0]).model.view.status).toBe('no-note')
-  })
-
-  it('shows a reader tab’s collect strip again when it regains focus', async () => {
-    const { feature, commands, leaves, focusReader, focusTab } = harness()
-    await feature.load()
-    commands[0].callback()
-    await flushAsync()
-    const collecting = focusReader()
-    collecting.collect()
-    focusReader()
-
-    expect(panelView(leaves[0]).model.view.studyMaterial?.collection).toBe(null)
-
-    focusTab(collecting.leaf)
-
-    expect(
-      panelView(leaves[0]).model.view.studyMaterial?.collection,
-    ).not.toBe(null)
   })
 
   it('routes annotations through the injected annotator', async () => {
