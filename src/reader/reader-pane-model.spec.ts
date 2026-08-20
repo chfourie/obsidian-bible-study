@@ -3432,3 +3432,167 @@ describe('ref spans', () => {
     expect(model.view.position).toEqual({ book: HUMILITY, chapter: 1 })
   })
 })
+
+// The library both nav faces cross over through: the canon and whatever books
+// are installed, one entry list feeding the breadcrumb's root dropdown and the
+// trees' Books group alike (ticket #78).
+describe('reader library', () => {
+  beforeEach(() => {
+    registerBookVersification({
+      book: HUMILITY,
+      sections: HUMILITY_SECTIONS.map(({ chapter }) => ({
+        chapter,
+        paragraphs: 20,
+      })),
+    })
+    registerBook(HUMILITY_REGISTRATION)
+  })
+
+  afterEach(() => {
+    deregisterBookVersification(HUMILITY)
+    deregisterBook(HUMILITY)
+  })
+
+  it('offers the installed books beside the canon while reading scripture', async () => {
+    const model = bookModelWith()
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    const library = model.view.library
+    expect(library.label).toBe('John')
+    expect(library.scripture).toHaveLength(66)
+    expect(library.scripture[0]).toEqual({
+      book: 1,
+      chapter: 1,
+      label: 'Genesis',
+      current: false,
+    })
+    expect(library.scripture[42].current).toBe(true)
+    expect(library.books).toEqual([
+      { book: HUMILITY, chapter: 0, label: 'Humility', current: false },
+    ])
+  })
+
+  it('lists no books at all when none is installed', async () => {
+    const model = bookModelWith({ books: INERT_BOOKS })
+
+    await model.openAt(ref('John 15:1'), 'web')
+
+    expect(model.view.library.books).toEqual([])
+  })
+
+  it('roots the library at the book in view and marks it current', async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    const library = model.view.library
+    expect(library.label).toBe('Humility')
+    expect(library.books[0].current).toBe(true)
+    expect(library.scripture.some((entry) => entry.current)).toBe(false)
+  })
+
+  it('reaches an installed book from scripture at its first section', async () => {
+    const model = bookModelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    const entry = model.view.library.books[0]
+    await model.goTo(entry.book, entry.chapter)
+
+    expect(model.view.position).toEqual({ book: HUMILITY, chapter: 0 })
+    expect(model.view.book?.title).toBe('Humility')
+  })
+
+  it('reaches scripture back from a book', async () => {
+    const model = bookModelWith()
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    const entry = model.view.library.scripture[42]
+    await model.goTo(entry.book, entry.chapter)
+
+    expect(model.view.position).toEqual({ book: 43, chapter: 1 })
+    expect(model.view.book).toBeNull()
+  })
+
+  it('walks the pane history like any other move', async () => {
+    const visited: ReaderPosition[] = []
+    const model = bookModelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+    model.useNavigation(async (position, open) => {
+      visited.push(position)
+      await open()
+    })
+
+    await model.goTo(HUMILITY, 0)
+
+    expect(visited).toEqual([{ book: HUMILITY, chapter: 0 }])
+  })
+})
+
+describe('opening a nav target in a new tab', () => {
+  beforeEach(() => {
+    registerBookVersification({
+      book: HUMILITY,
+      sections: HUMILITY_SECTIONS.map(({ chapter }) => ({
+        chapter,
+        paragraphs: 20,
+      })),
+    })
+    registerBook(HUMILITY_REGISTRATION)
+  })
+
+  afterEach(() => {
+    deregisterBookVersification(HUMILITY)
+    deregisterBook(HUMILITY)
+  })
+
+  const modelSpawning = (opened: ReaderPosition[]): ReaderPaneModel =>
+    bookModelWith({ newTab: (position) => opened.push(position) })
+
+  it('spawns a tab at the target and leaves this pane where it stands', async () => {
+    const opened: ReaderPosition[] = []
+    const model = modelSpawning(opened)
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.goTo(HUMILITY, 0, { newTab: true })
+
+    expect(opened).toEqual([{ book: HUMILITY, chapter: 0 }])
+    expect(model.view.position).toEqual({ book: 43, chapter: 15 })
+    expect(model.view.book).toBeNull()
+  })
+
+  it('keeps a new-tab target out of this pane history', async () => {
+    const opened: ReaderPosition[] = []
+    const visited: ReaderPosition[] = []
+    const model = modelSpawning(opened)
+    await model.openAt(ref('John 15:1'), 'web')
+    model.useNavigation(async (position, open) => {
+      visited.push(position)
+      await open()
+    })
+
+    await model.goTo(1, 1, { newTab: true })
+
+    expect(visited).toEqual([])
+  })
+
+  it('spawns a tab at a tree book node instead of expanding it', async () => {
+    const opened: ReaderPosition[] = []
+    const model = modelSpawning(opened)
+    await model.openAt(ref('John 15:1'), 'web')
+
+    model.browseBook(10, { newTab: true })
+
+    expect(opened).toEqual([{ book: 10, chapter: 1 }])
+    expect(model.view.treeBook).toBe(43)
+  })
+
+  it('navigates in place when the shell offers no new tab', async () => {
+    const model = bookModelWith()
+    await model.openAt(ref('John 15:1'), 'web')
+
+    await model.goTo(1, 1, { newTab: true })
+
+    expect(model.view.position).toEqual({ book: 1, chapter: 1 })
+  })
+})

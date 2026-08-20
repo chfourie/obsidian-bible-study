@@ -202,6 +202,7 @@ export class ReaderFeature
           epigraphs: async (editionId, chapter) =>
             (await this.store.epigraphs(editionId))[chapter] ?? [],
         },
+        newTab: (position) => void this.#openInNewTab(position),
         firstRun: this.#firstRun,
       },
       {
@@ -264,6 +265,15 @@ export class ReaderFeature
       await view.model.openAt(entry.members[0], translationId)
       view.model.startEditingCrossReference(entry)
     }, options)
+  }
+
+  // The seam a mod-clicked nav target travels: a fresh leaf opened straight
+  // at the position, so it starts its own history there and the pane that
+  // asked keeps both its position and its history.
+  async #openInNewTab(position: ReaderPosition): Promise<void> {
+    await this.#withReaderView((view) => view.model.openPosition(position), {
+      newPane: true,
+    })
   }
 
   async openReader(): Promise<void> {
