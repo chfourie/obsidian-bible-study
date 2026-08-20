@@ -21,6 +21,12 @@ describe('bookName', () => {
     expect(bookName(22)).toBe('Song of Solomon')
     expect(bookName(9)).toBe('1 Samuel')
   })
+
+  it('degrades to a numbered label for books outside the canon', () => {
+    expect(bookName(101)).toBe('Book 101')
+    expect(bookName(67)).toBe('Book 67')
+    expect(bookName(0)).toBe('Book 0')
+  })
 })
 
 describe('bookIdForName', () => {

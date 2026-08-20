@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import {
+  deregisterBookVersification,
+  registerBookVersification,
+} from './versification'
 import {
   enumerateVerseIds,
   firstIntersectingStart,
@@ -175,6 +179,49 @@ describe('enumerateVerseIds', () => {
   it('lists a single-verse range as one id', () => {
     expect(enumerateVerseIds(range(john(15, 4), john(15, 4)))).toEqual([
       john(15, 4),
+    ])
+  })
+})
+
+describe('range math over a registered book', () => {
+  const BOOK = 101
+  const atom = (chapter: number, paragraph: number) =>
+    makeVerseId(BOOK, chapter, paragraph)
+
+  afterEach(() => deregisterBookVersification(BOOK))
+
+  const registerBook = (): void =>
+    registerBookVersification({
+      book: BOOK,
+      sections: [
+        { chapter: 0, paragraphs: 2 },
+        { chapter: 1, paragraphs: 3 },
+      ],
+    })
+
+  it('enumerates paragraphs across a section boundary', () => {
+    registerBook()
+    expect(enumerateVerseIds(range(atom(0, 1), atom(1, 2)))).toEqual([
+      atom(0, 1),
+      atom(0, 2),
+      atom(1, 1),
+      atom(1, 2),
+    ])
+  })
+
+  it('merges ranges adjacent across a section boundary', () => {
+    registerBook()
+    expect(
+      mergeRanges([range(atom(1, 1), atom(1, 1)), range(atom(0, 1), atom(0, 2))]),
+    ).toEqual([range(atom(0, 1), atom(1, 1))])
+  })
+
+  it('leaves the ranges of a deregistered book unmerged and unenumerable', () => {
+    expect(
+      mergeRanges([range(atom(1, 1), atom(1, 1)), range(atom(0, 1), atom(0, 2))]),
+    ).toEqual([range(atom(0, 1), atom(0, 2)), range(atom(1, 1), atom(1, 1))])
+    expect(enumerateVerseIds(range(atom(0, 1), atom(1, 2)))).toEqual([
+      atom(0, 1),
     ])
   })
 })

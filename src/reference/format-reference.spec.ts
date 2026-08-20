@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { formatReference } from './format-reference'
 import { parseReference } from './parse-reference'
+import { makeVerseId } from './verse-id'
+import {
+  deregisterBookVersification,
+  registerBookVersification,
+} from './versification'
 
 const formatted = (text: string): string => {
   const parsed = parseReference(text)
@@ -58,5 +63,43 @@ describe('formatReference', () => {
         parseReference(text)?.reference,
       )
     }
+  })
+})
+
+describe('formatReference for books outside the canon', () => {
+  const BOOK = 101
+
+  afterEach(() => deregisterBookVersification(BOOK))
+
+  const reference = (
+    startChapter: number,
+    startVerse: number,
+    endChapter = startChapter,
+    endVerse = startVerse,
+  ) => ({
+    book: BOOK,
+    ranges: [
+      {
+        startId: makeVerseId(BOOK, startChapter, startVerse),
+        endId: makeVerseId(BOOK, endChapter, endVerse),
+      },
+    ],
+  })
+
+  it('degrades to a numbered label when no table is registered', () => {
+    expect(formatReference(reference(5, 2))).toBe('Book 101 5:2')
+    expect(formatReference(reference(5, 2, 6, 1))).toBe('Book 101 5:2-6:1')
+  })
+
+  it('formats a whole section of a registered book without atom numbers', () => {
+    registerBookVersification({
+      book: BOOK,
+      sections: [
+        { chapter: 0, paragraphs: 4 },
+        { chapter: 1, paragraphs: 3 },
+      ],
+    })
+    expect(formatReference(reference(1, 1, 1, 3))).toBe('Book 101 1')
+    expect(formatReference(reference(0, 1, 0, 2))).toBe('Book 101 0:1-2')
   })
 })
