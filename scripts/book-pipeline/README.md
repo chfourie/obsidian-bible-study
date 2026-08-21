@@ -67,10 +67,15 @@ A blank line separates atoms. Within one atom:
 - **Prose** may stay wrapped: the lines are joined with a single space.
 - **A list is one atom.** A block whose first line opens with `-`, `*`, `•`,
   `|` or `1.` keeps its line breaks, one item per line. A list item that runs
-  over several printed lines must be curated onto one line.
+  over several printed lines must be curated onto one line. The kept breaks
+  stay in the stored text and a `lines` channel beside it says where each
+  line starts — the same channel a translation's poetry rides on, so the
+  reader and a note's citation print the breaks without knowing about books.
 - **A table is one atom**, pre-flattened by the curator to one row per line
-  with `|` between cells. Bare `chapter:verse` cells are never linked — a
-  citation needs its book name.
+  with `|` between cells. The leading `|` is the curator's row marker and is
+  not stored; the cells are stored separated by ` | `, so a row reads as
+  `Faithful in Christ | 1:1 | Were dead in trespasses and sins | 2:1`. Bare
+  `chapter:verse` cells are never linked — a citation needs its book name.
 - **A scripture block quote merges into its lead-in paragraph**; a quote that
   opens a section stands as that section's first atom.
 - `>` blocks are epigraphs, kept beside the prose as section metadata. The

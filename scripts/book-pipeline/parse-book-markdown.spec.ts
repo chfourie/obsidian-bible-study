@@ -70,8 +70,23 @@ describe('parseBookMarkdown', () => {
 
   it('keeps a pre-flattened table whole as a single atom, one row per line', () => {
     expect(parsed.sections[1].paragraphs[2].text).toBe(
-      '| God’s kingdom | 1:1\n| World | 2:1',
+      'God’s kingdom | 1:1\nWorld | 2:1',
     )
+  })
+
+  it('says where every kept line starts, so the reader prints the breaks', () => {
+    expect(parsed.sections[1].paragraphs[1].lines).toEqual([
+      { start: 0 },
+      { start: '- Be free from comfort.'.length + 1 },
+    ])
+    expect(parsed.sections[1].paragraphs[2].lines).toEqual([
+      { start: 0 },
+      { start: 'God’s kingdom | 1:1'.length + 1 },
+    ])
+  })
+
+  it('leaves prose without a line channel', () => {
+    expect(parsed.sections[0].paragraphs[0].lines).toBeUndefined()
   })
 
   it('attaches a lower-level heading to the paragraph it precedes', () => {

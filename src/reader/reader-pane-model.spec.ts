@@ -218,6 +218,9 @@ describe('poetry and paragraph structure', () => {
 
     const rows = model.view.rows
     expect(rows.map((row) => row.poetry)).toEqual([false, false, true, false])
+    // Scripture's line data is poetry structure the layout toggle governs —
+    // never the printed line breaks a Book's table or list keeps.
+    expect(rows.every((row) => !row.keepsLines)).toBe(true)
     expect(rows.map((row) => row.startsParagraph)).toEqual([
       true,
       false,
@@ -3034,6 +3037,40 @@ describe('ReaderPaneModel book mode', () => {
   afterEach(() => {
     deregisterBookVersification(HUMILITY)
     deregisterBook(HUMILITY)
+  })
+
+  it('prints a book atom’s own line breaks — a table row or a list item', async () => {
+    const model = bookModelWith({
+      passages: {
+        passage: async () => ({
+          status: 'ok' as const,
+          attribution: null,
+          verses: [
+            {
+              verseId: makeVerseId(HUMILITY, 1, 1),
+              segments: [
+                { text: 'Faithful in Christ | 1:1', redLetter: false },
+                {
+                  text: 'He chose us in Him | 1:4',
+                  redLetter: false,
+                  lineStart: true,
+                  lineBreakBefore: true,
+                },
+              ],
+              hasLineData: true,
+            },
+            {
+              verseId: makeVerseId(HUMILITY, 1, 2),
+              segments: [{ text: 'Plain prose.', redLetter: false }],
+            },
+          ],
+        }),
+      },
+    })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.rows.map((row) => row.keepsLines)).toEqual([true, false])
   })
 
   it('leaves a book printed without Headings with none on its rows', async () => {

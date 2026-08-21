@@ -132,8 +132,21 @@ describe('IN First Edition', () => {
 
   it('leaves the flattened table’s bare chapter:verse cells unlinked', () => {
     const table = artifact.books[102][makeVerseId(102, 0, 21)]
-    expect(table.text).toContain('| Faithful in Christ | 1:1 |')
+    expect(table.text).toContain('Faithful in Christ | 1:1 |')
     expect(table.refs).toBeUndefined()
+  })
+
+  it('prints a table row per line, its cells read without the row marker', () => {
+    const table = artifact.books[102][makeVerseId(102, 0, 21)]
+    const rows = table.text.split('\n')
+    expect(rows[0]).toBe(
+      'God’s kingdom | Chapter: verse | World | Chapter: verse',
+    )
+    expect(table.lines?.map((line) => line.start)).toEqual(
+      rows.map((_row, index) =>
+        rows.slice(0, index).reduce((start, row) => start + row.length + 1, 0),
+      ),
+    )
   })
 
   it('keeps Part and sub-section headings beside the paragraphs, never in them', () => {

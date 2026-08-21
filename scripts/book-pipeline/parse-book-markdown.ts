@@ -7,12 +7,17 @@ import type {
   Heading,
   HeadingLevel,
   RefSpan,
+  VerseLine,
 } from '../../src/modules/verse-content'
 
 export type { Heading, HeadingLevel }
 
 export type BookParagraph = {
   text: string
+  // Set only on an atom that keeps its own line breaks — a list or a table.
+  // The channel addresses the stored text exactly as scripture's does, so a
+  // reader that already prints poetry lines prints these rows unchanged.
+  lines?: VerseLine[]
   headings?: Heading[]
   refs?: RefSpan[]
 }
@@ -81,9 +86,31 @@ const blocksOf = (body: string): string[] =>
     .map((block) => block.trim())
     .filter((block) => block !== '')
 
-const atomTextOf = (block: string): string => {
+// A table row reads as cells, not as pipes: the leading pipe is the curator's
+// row marker and carries no text, and the ones between cells become a single
+// spaced separator. What is stored is what a citation of the row reads as.
+const TABLE_ROW = /^\|/
+const CELL_SEPARATOR = /\s*\|\s*/
+
+const rowTextOf = (line: string): string =>
+  TABLE_ROW.test(line)
+    ? line.replace(TABLE_ROW, '').split(CELL_SEPARATOR).map((cell) => cell.trim()).filter((cell) => cell !== '').join(' | ')
+    : line
+
+// A block whose first line opens a list or a table keeps its line breaks: the
+// lines stay in the stored text, and a line channel beside them says where
+// each one starts, exactly as a translation's poetry lines do.
+const atomOf = (block: string): { text: string; lines?: VerseLine[] } => {
   const lines = block.split('\n').map((line) => line.trim())
-  return LINE_KEEPING.test(lines[0]) ? lines.join('\n') : lines.join(' ')
+  if (!LINE_KEEPING.test(lines[0])) return { text: lines.join(' ') }
+  const rows = lines.map(rowTextOf)
+  const starts: VerseLine[] = []
+  let start = 0
+  for (const row of rows) {
+    starts.push({ start })
+    start += row.length + 1
+  }
+  return { text: rows.join('\n'), lines: starts }
 }
 
 const epigraphOf = (block: string): Epigraph => {
@@ -146,7 +173,7 @@ export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
       current.epigraphs = [...(current.epigraphs ?? []), epigraphOf(block)]
       continue
     }
-    const paragraph: BookParagraph = { text: atomTextOf(block) }
+    const paragraph: BookParagraph = atomOf(block)
     atomsOf().push(pending.length === 0 ? paragraph : { ...paragraph, headings: pending })
     pending = []
   }

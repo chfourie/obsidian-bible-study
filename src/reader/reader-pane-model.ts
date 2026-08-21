@@ -5,6 +5,7 @@ import {
   chapterCount,
   decodeVerseId,
   formatReference,
+  isNonBiblicalBook,
   makeVerseId,
   parseReference,
   rangeContains,
@@ -183,6 +184,10 @@ export type VerseRowView = {
   // The Headings printed above this atom, in order — empty for scripture and
   // for any book paragraph without furniture of its own.
   headings: HeadingRowView[]
+  // A Book atom that keeps its own line breaks — a table's rows or a list's
+  // items — prints them whatever the layout is. Scripture's line data is
+  // poetry structure the layout toggle governs, so it never sets this.
+  keepsLines: boolean
   highlighted: boolean
   annotations: number
   mentions: number
@@ -1321,6 +1326,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
       label: `${decodeVerseId(verse.verseId).verse}`,
       segments: this.#emphasizedSegments(verse),
       headings: this.#headingRows(verse),
+      keepsLines:
+        verse.hasLineData === true && isNonBiblicalBook(this.#position.book),
       poetry: isPoetryVerse(verse.segments, this.#position.book),
       startsParagraph: verse.startsParagraph === true,
       highlighted:

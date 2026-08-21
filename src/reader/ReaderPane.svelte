@@ -166,7 +166,8 @@
     >{:else}{@render segmentText(row, segment)}{/if}{/snippet}
 
 {#snippet verseText(row: VerseRowView)}
-  {@const lineStructured = view.toggles.layout === 'verse-per-line' || row.poetry}
+  {@const lineStructured =
+    view.toggles.layout === 'verse-per-line' || row.poetry || row.keepsLines}
   {#each row.segments as segment, index (index)}
     {#if segment.lineBreakBefore && lineStructured}<br />{/if}
     {#if lineStructured && segment.lineStart && segment.indent !== undefined}<span
