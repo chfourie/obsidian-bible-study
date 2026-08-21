@@ -98,6 +98,9 @@ The serialized form of a highlight: an option token `h<slot>/<verse>.<start>-<ve
 ### Highlight Slot
 One of five global, positional color roles (`h1`–`h5`), each with a light-mode and dark-mode color configured in settings. A cue stores only the slot index, so recoloring a slot re-tints every highlight in the vault that uses it. Slots have no names or semantics — they are colors, not tags.
 
+### Heading
+A title printed inside a Book section — a sub-section head (e.g. *7.1 They knew that they were naked*) or the Part title a run of chapters sits under — attached to the paragraph it precedes. Like an epigraph it lives beside the grid, not on it: a heading consumes no id and is never part of an atom's text, yet it is searched with its paragraph — a Hit may be earned by words that appear only in the heading, and those words are emphasized there. Headings and epigraphs are the two kinds of section furniture.
+
 ### Ref Span
 A live reference inside a Book's stored content, parsed at module build time: a character span over one atom's text plus pre-normalized verse ranges (scripture or same-book), stored as a span channel beside the text like Strong's tag spans. Renders as a quiet link (the author's original citation text); tapping navigates the reader to the target. Only explicit citations become ref spans — unreferenced allusions stay plain prose. Ref spans are not Occurrences and never enter the vault index.
 
@@ -114,7 +117,7 @@ What one query searches over: exactly one Translation, an OT/NT/all testament fi
 One or more words that must all appear in a single atom's text (case- and diacritic-folded, each word matching as a prefix), with quoted phrases required to appear contiguously.
 
 ### Hit
-One atom (verse or Book paragraph) whose text satisfies the Search Query in the searched module. Hits present in Canonical Grid order, grouped by book, matched words emphasized. Activating a hit opens the reader at that atom through the entry mechanism — banner shown, matched words emphasized until the banner is dismissed.
+One atom (verse or Book paragraph) whose text — together with any Heading attached to it — satisfies the Search Query in the searched module. Hits present in Canonical Grid order, grouped by book, matched words emphasized. Activating a hit opens the reader at that atom through the entry mechanism — banner shown, matched words emphasized until the banner is dismissed.
 
 ### Search Index
 The persistent per-module structure that answers Search Queries without scanning the module's text. Its lifecycle is the module's: built when the module is installed (or lazily on first use), discarded with it, and rebuilt whole whenever the module's content or the index format changes — never updated incrementally.
