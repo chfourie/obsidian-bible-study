@@ -52,7 +52,7 @@ import {
 } from '../data-access'
 import { isPoetryVerse, markSpanChannel, verseSegments } from '../rendering'
 import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
-import type { Epigraph, HeadingLevel } from '../modules'
+import type { Epigraph, Figure, HeadingLevel } from '../modules'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
 import { isAnnotation, type OccurrenceGroup } from '../vault-index'
@@ -184,6 +184,9 @@ export type VerseRowView = {
   // The Headings printed above this atom, in order — empty for scripture and
   // for any book paragraph without furniture of its own.
   headings: HeadingRowView[]
+  // The Figures printed with this atom, in source order — each saying whether
+  // it prints above the paragraph or below it. Empty for scripture.
+  figures: Figure[]
   // A Book atom that keeps its own line breaks — a table's rows or a list's
   // items — prints them whatever the layout is. Scripture's line data is
   // poetry structure the layout toggle governs, so it never sets this.
@@ -1326,6 +1329,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       label: `${decodeVerseId(verse.verseId).verse}`,
       segments: this.#emphasizedSegments(verse),
       headings: this.#headingRows(verse),
+      figures: verse.figures ?? [],
       keepsLines:
         verse.hasLineData === true && isNonBiblicalBook(this.#position.book),
       poetry: isPoetryVerse(verse.segments, this.#position.book),

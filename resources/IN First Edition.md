@@ -271,6 +271,8 @@ This portion or warning is critical. If you live according to the flesh, you wil
 
 It is evident that the fall was disastrous for the man Adam and the entire human race, including us. How do you think God felt when they had disobeyed? Pause and think on this. Satan did not overpower man, or even negotiate with him, he simply deceived him. Nothing changed; man is still overcome through deception.
 
+![A tree diagram of the tree of knowledge of good and evil: a stem of rejection and separation from God branching into self-consciousness, self-righteousness, self-protection, self-preservation and self-defence, each with its fruit](in-images/tree-of-knowledge-of-good-and-evil.png)
+
 Figure 1 Tree of knowledge of good and evil
 
 # PART TWO: Redemption of Man – Death for Sin
@@ -543,6 +545,8 @@ Since God is now our Father and Jesus our Commander, it is necessary for us to a
 
 During my study of Romans, God gave me a nexus (a means of connection or the core/backbone of an idea) to help me understand and explain this very important topic.
 
+![A flow diagram titled Righteousness Nexus, running from “There is none righteous, no, not one” through “God alone is righteous”, “Righteousness is a gift”, “Present yourself to God”, “With the heart we believe” and “We obey from the heart” to “Grace reigns through righteousness”](in-images/righteousness-nexus.png "Righteousness Nexus")
+
 1. “There is none righteous, no, not one…” Romans 3:10
 
 Man without God is unrighteous. The best he can do is ‘good’ with the tree of knowledge of good and evil as his source.
@@ -701,6 +705,8 @@ It requires faith to obey. Unconditional obedience requires that you believe the
 We please and honour God when we obey Him.
 
 In 1 John 5:3 we saw that His commandments are not burdensome – it is not difficult to obey. Many people will not agree with this statement. Let me explain with the help of the following diagram:
+
+![A flow diagram: Come — present yourself to God; Hear — through fellowship with the Holy Spirit you receive spiritual understanding, in the mind; that understanding becomes the desire of your heart, in the heart; Do/Obey — you do what is in the heart, in the will](in-images/come-hear-desire-do.png)
 
 “For it is God who works in you both to will and to do for His good pleasure.” Philippians 2:13 If God works in you to will and to do, then it can’t be burdensome/difficult. From the incident in Chapter 15.2.4 where I explained how I became a Bible reader, I will explain the above:
 
@@ -1069,6 +1075,8 @@ When considering and meditating on these verses, it becomes evident that what Go
 
 In everything you do, be it work, dealing with people or a crisis, the tree of life (see Fig 2), the Spirit of Jesus, should be your source. You have been called to something much higher than mere religious rituals or observances. “God created man to be the partaker of His perfection and blessedness, and of showing in it the glory of His love, His wisdom, and His power. God wished to reveal Himself in and through created beings by communicating to them as much of His own goodness and glory as they were capable to receive.” (Andrew Murray: Humility.)
 
+![A tree diagram of the tree of life: Christ the root, love the trunk, faith feeding the tree, its branches the fruit and gifts of the Spirit and the works of Jesus](in-images/tree-of-life.png)
+
 Fig 2 Tree of Life
 
 ## 26. New Covenant Ministry
@@ -1266,7 +1274,9 @@ What then is good practical advice?
 
 Repentance! This is not a facetious answer. If focusing on self, being mindful of the things of man, has produced the wrong emotions, then the answer is to have a change of mind – thus, to rather focus on God and be mindful of the things of God.
 
-I once read that you only need to know two things: God’s heart and your own heart. As you get to know Him, your heart will be exposed. When your focus is God, you will get to know His heart. Fig 3 Knowing God’s heart
+I once read that you only need to know two things: God’s heart and your own heart. As you get to know Him, your heart will be exposed. When your focus is God, you will get to know His heart.
+
+![A diagram: knowing God’s heart and your own heart, branching into the fear of God, the sorrow of God, the joy of God and the love of God](in-images/knowing-gods-heart.png "Fig 3 Knowing God’s heart")
 
 The above figure lists some of God’s emotions: fear, sorrow, joy and love. For you to really know God, He needs to reveal His heart to you: His emotions that show how He feels.
 
@@ -1691,6 +1701,8 @@ In verse 11 and 13 we are instructed to put on the whole armour. In order to be 
 
 We are told four times to stand. God is very effective with words, so if He repeats Himself one should take note. The word “stand” in this context means not to break rank.
 
+![A photograph of Roman soldiers standing shoulder to shoulder behind their shields, holding the line](in-images/roman-shield-wall.jpg)
+
 Some important lessons to learn from the photo:
 
 • Drawing back/breaking rank has a devastating effect. It helps us understand why God’s soul has no pleasure in drawing back (Hebrews 10:38&39).
@@ -2027,3 +2039,5 @@ This could have been prevented. God’s heart was to keep me safe and to prevent
 Submitting to God and my husband is the safety net all around me. This was a very sad and difficult lesson I learnt the hard way.
 
 I realise now that God in His wisdom wanted to work many things in my character. Therefore, my healing was not instant, but instead I had to walk out of a valley of postpartum depression for two years. This taught me deep, enduring lessons: patience, trust, faith, not to live a life of feelings, and to share hope with others in the same situation. God has His own time for very good reasons, which I may perhaps never understand, but I trust that: HE IS GOOD, HE IS IN CONTROL, HE IS ABLE.
+
+![Calligraphy: “I am the vine, you are the branches. He who abides in Me, and I in him, bears much fruit, for without Me you can do nothing” — John 15:5](in-images/i-am-the-vine.png)

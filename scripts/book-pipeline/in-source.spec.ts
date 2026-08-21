@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   deregisterManifestBook,
@@ -14,12 +14,20 @@ import { parseRefOverrides } from './ref-overrides'
 // The golden test over the real curated source: the first release freezes
 // this grid forever (ADR 0002), so every section number, name and paragraph
 // count is spelled out here and a change to any of them is a deliberate one.
+const images = Object.fromEntries(
+  readdirSync('resources/in-images').map((file) => [
+    `in-images/${file}`,
+    `data:image/png;base64,${readFileSync(`resources/in-images/${file}`).toString('base64')}`,
+  ]),
+)
+
 const artifact = buildBookArtifact(
   readFileSync('resources/IN First Edition.md', 'utf8'),
   parseBookRegistry(readFileSync('scripts/book-registry.json', 'utf8')),
   parseRefOverrides(
     readFileSync('scripts/in-pipeline/ref-overrides.json', 'utf8'),
   ),
+  images,
 )
 
 describe('IN First Edition', () => {
@@ -147,6 +155,32 @@ describe('IN First Edition', () => {
         rows.slice(0, index).reduce((start, row) => start + row.length + 1, 0),
       ),
     )
+  })
+
+  it('stands the printed work’s seven figures beside their paragraphs', () => {
+    const placed = Object.entries(artifact.books[102]).flatMap(
+      ([verseId, paragraph]) =>
+        (paragraph.figures ?? []).map((figure) => ({
+          at: Number(verseId),
+          place: figure.place,
+          caption: figure.caption,
+          inlined: figure.image.startsWith('data:image/'),
+        })),
+    )
+    expect(placed).toEqual([
+      { at: makeVerseId(102, 7, 29), place: 'above', caption: undefined, inlined: true },
+      { at: makeVerseId(102, 13, 11), place: 'above', caption: 'Righteousness Nexus', inlined: true },
+      { at: makeVerseId(102, 17, 12), place: 'above', caption: undefined, inlined: true },
+      { at: makeVerseId(102, 25, 12), place: 'above', caption: undefined, inlined: true },
+      { at: makeVerseId(102, 28, 15), place: 'above', caption: 'Fig 3 Knowing God’s heart', inlined: true },
+      { at: makeVerseId(102, 30, 17), place: 'above', caption: undefined, inlined: true },
+      { at: makeVerseId(102, 35, 25), place: 'below', caption: undefined, inlined: true },
+    ])
+  })
+
+  it('keeps a figure out of the paragraph’s own text', () => {
+    for (const paragraph of Object.values(artifact.books[102]))
+      expect(paragraph.text).not.toMatch(/!\[/)
   })
 
   it('keeps Part and sub-section headings beside the paragraphs, never in them', () => {

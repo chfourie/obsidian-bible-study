@@ -5,7 +5,7 @@
 
 import { createHash } from 'node:crypto'
 import { BOOK_MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
-import type { RefSpan } from '../../src/modules/verse-content'
+import type { Figure, RefSpan } from '../../src/modules/verse-content'
 import { decodeVerseId, makeVerseId } from '../../src/reference/verse-id'
 import {
   bookPublication,
@@ -14,6 +14,7 @@ import {
 import {
   type BookParagraph,
   type Epigraph,
+  type FigureSource,
   type ParsedBookSection,
   parseBookMarkdown,
 } from './parse-book-markdown'
@@ -49,9 +50,20 @@ export type BookArtifactManifest = {
   book: BookManifestData
 }
 
+// The images the source's figures point at, keyed by the path they are
+// written as — each already a data URI, so the build stays a pure function of
+// values and the artifact carries its own pictures.
+export type BookImages = Record<string, string>
+
+// A paragraph as it is published: the source's figure paths resolved to the
+// images themselves.
+export type BookArtifactParagraph = Omit<BookParagraph, 'figures'> & {
+  figures?: Figure[]
+}
+
 export type BookArtifact = {
   manifest: BookArtifactManifest
-  books: Record<number, Record<number, BookParagraph>>
+  books: Record<number, Record<number, BookArtifactParagraph>>
   epigraphs: Record<number, Epigraph[]>
 }
 
@@ -77,6 +89,27 @@ const sectionTable = (sections: ParsedBookSection[]): BookSection[] => {
   })
 }
 
+const withFigures = (
+  paragraph: BookParagraph,
+  images: BookImages,
+  missing: string[],
+): BookArtifactParagraph => {
+  if (paragraph.figures === undefined) return paragraph as BookArtifactParagraph
+  const figures: Figure[] = paragraph.figures.map(
+    ({ path, alt, caption, place }: FigureSource) => {
+      const image = images[path]
+      if (image === undefined) missing.push(path)
+      return {
+        image: image ?? '',
+        alt,
+        ...(caption === undefined ? {} : { caption }),
+        place,
+      }
+    },
+  )
+  return { ...paragraph, figures }
+}
+
 const withRefs = <Atom extends { refs?: RefSpan[] }>(
   atom: Atom,
   refs: RefSpan[],
@@ -86,6 +119,7 @@ export const buildBookArtifact = (
   markdown: string,
   registry: readonly BookRegistryEntry[],
   refOverrides: RefOverrides = {},
+  images: BookImages = {},
 ): BookArtifact => {
   const { moduleId, language, sections } = parseBookMarkdown(markdown)
   const publication = bookPublication(registry, moduleId)
@@ -115,15 +149,16 @@ export const buildBookArtifact = (
     return withRefs(atom, refs)
   }
 
-  const paragraphs: Record<number, BookParagraph> = {}
+  const paragraphs: Record<number, BookArtifactParagraph> = {}
   const epigraphs: Record<number, Epigraph[]> = {}
+  const missingImages: string[] = []
   for (const section of sections) {
     section.paragraphs.forEach((paragraph, index) => {
       const at = `${section.chapter}.${index + 1}`
       paragraphs[makeVerseId(book, section.chapter, index + 1)] = attach(
         at,
         paragraph.text,
-        paragraph,
+        withFigures(paragraph, images, missingImages),
       )
     })
     if (section.epigraphs === undefined) continue
@@ -135,6 +170,11 @@ export const buildBookArtifact = (
       ),
     )
   }
+  if (missingImages.length > 0)
+    throw new Error(
+      `Figures point at images the build was not given:\n  ` +
+        `${missingImages.join('\n  ')}`,
+    )
   if (unresolved.length > 0)
     throw new Error(
       `Unresolved citations — add a fix or suppress entry to the ref ` +

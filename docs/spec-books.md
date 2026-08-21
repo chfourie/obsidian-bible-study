@@ -62,7 +62,7 @@ Visual reference: [book-reader-prototype](../prototypes/book-reader-prototype) (
 
 ## 7. Module packaging, catalogue & settings
 
-- **Manifest**: the existing `ModuleManifest` extended with `kind: 'book'` plus a required-when-book `book` sub-object — `{ number, editionCode, author, year, abbreviation, aliases?, sections: [{chapter, name, paragraphs, named?}] }`. One type, one store, one discovery path; `isTranslationManifest()` keeps translation-only code paths books-free. A book published or re-released from now on carries `BOOK_MODULE_FORMAT_VERSION`, which runs ahead of the shared `MODULE_FORMAT_VERSION` on the same field so a format gain of books alone (v6: Headings, and the Part each section sits under) leaves installed translations untouched; `hum-m1895` was published before that gain and stays at 5, loading as a book whose sections simply have no Headings; capability flags all false/absent; `source`/`sourceChecksum` filled at download exactly like BSB.
+- **Manifest**: the existing `ModuleManifest` extended with `kind: 'book'` plus a required-when-book `book` sub-object — `{ number, editionCode, author, year, abbreviation, aliases?, sections: [{chapter, name, paragraphs, named?}] }`. One type, one store, one discovery path; `isTranslationManifest()` keeps translation-only code paths books-free. A book published or re-released from now on carries `BOOK_MODULE_FORMAT_VERSION`, which runs ahead of the shared `MODULE_FORMAT_VERSION` on the same field so a format gain of books alone (v6: Headings, and the Part each section sits under; v7: Figures, and the line channel a table or list keeps its rows on) leaves installed translations untouched; `hum-m1895` was published before that gain and stays at 5, loading as a book whose sections simply have no Headings; capability flags all false/absent; `source`/`sourceChecksum` filled at download exactly like BSB.
 - **Module id & storage**: id = edition code lowercased (`hum-m1895`) — a future re-cut edition coexists instead of overwriting. Storage layout unchanged: `modules/hum-m1895/manifest.json` + `101.json` keyed by paragraph verse-ids. Same `saveModule()` wipe-then-write flow.
 - **Distribution** mirrors BSB per book: one release tag per book module (`hum-m1895-module`) carrying `hum-m1895-module.json` + `checksums.json`, sha256-verified. `BsbReleaseClient` generalizes into a parameterized release client (tag + filename + id) used by BSB and books; books register in the prebuilt-sources map so checksum-based update detection and cross-device re-download (`installedModuleIds` sync) work unchanged.
 - **Catalogue**: compiled-in book catalogue array (v1: one entry). A future remote catalogue replaces only the array.
@@ -78,7 +78,14 @@ Visual reference: [book-reader-prototype](../prototypes/book-reader-prototype) (
 - **No wording-mismatch mechanism**: the link is a citation, not a quotation-identity claim; navigation honors the user's translation like every other entry point.
 - **Internal "(See Note A.)" pointers** linkify via the same machinery (ranges into book 101); navigation stays within the book reader.
 
-## 9. Implementation notes
+## 9. Figures
+
+- A **Figure** is a picture printed inside a section (CONTEXT.md — Figure): section furniture beside the grid, exactly like a Heading. It consumes no id, never joins an atom's text, is never searched, and is never citable — a reference addresses paragraphs only.
+- **Attachment**: a figure rides on the paragraph it stands with and says which side it prints on — `place: 'above' | 'below'`. The curator writes it as a standalone Markdown image block, `![alt](in-images/tree-of-life.png "Fig 2 Tree of Life")`: it attaches to the paragraph that follows it, above it, the same rule a Heading follows; one that closes a section attaches below the last paragraph instead. The optional Markdown title is the printed caption. A caption the printed work sets as its own paragraph is left as the paragraph it already is — the figure simply stands above it.
+- **Storage**: the image travels inside the module as a base64 data URI on the paragraph (`figures: [{ image, alt, caption?, place }]`), so an installed Book carries its own pictures and reads no file of its own. The image files themselves are committed beside the curated source (`resources/in-images/`) and read relative to it at build time; a figure whose image the build was not given fails the build. Book format only — `BOOK_MODULE_FORMAT_VERSION` v7, which leaves installed translations untouched.
+- **Rendering**: the book reader prints a figure above or below its paragraph, outside the paragraph's own clickable body, with its caption beneath. Notes render text only — a citation quotes paragraphs, never plates.
+
+## 10. Implementation notes
 
 Surfaced by the code scan while resolving cross-reference semantics:
 

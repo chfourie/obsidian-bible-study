@@ -60,6 +60,27 @@ section table names the Part each numbered section sits under (`part`), read
 off the part-level Heading that opened it; front and back matter (`{named}`)
 stand outside the Parts, as the printed work has them.
 
+### Figures
+
+```markdown
+![A tree diagram of the tree of life](in-images/tree-of-life.png "Fig 2 Tree of Life")
+```
+
+A Markdown image standing alone as a block is a **Figure** — section
+furniture beside the grid, like a Heading (spec-books §9). It attaches to the
+paragraph that follows it and prints above it; one that closes a section
+attaches to the section's last paragraph and prints below it instead. The
+optional Markdown title is the printed caption; where the printed work set
+the caption as its own paragraph, that paragraph stays an atom and the figure
+simply stands above it. A figure consumes no id, is never searched and is
+never citable.
+
+The image files are committed beside the source — `resources/in-images/` for
+*IN* — and the path is written relative to the source file. The runner reads
+every image under the source's directory and the build inlines the ones the
+figures point at as base64 data URIs, so the module carries its own pictures;
+a figure pointing at an image the build was not given fails the build.
+
 ### Atoms
 
 A blank line separates atoms. Within one atom:

@@ -33,6 +33,12 @@ const source = [
   '> Not I, but Christ.',
   '> — Galatians 2:20',
   '',
+  '![The tree of life](in-images/tree-of-life.png "Fig 2 Tree of Life")',
+  '',
+  'The tree of life is the Spirit of Jesus.',
+  '',
+  '![I am the vine](in-images/i-am-the-vine.png)',
+  '',
 ].join('\n')
 
 describe('parseBookMarkdown', () => {
@@ -112,6 +118,35 @@ describe('parseBookMarkdown', () => {
     expect(parsed.sections[1].epigraphs).toEqual([
       { quote: 'Not I, but Christ.', attribution: 'Galatians 2:20' },
     ])
+  })
+
+  it('attaches a figure to the paragraph it precedes, printed above it', () => {
+    expect(parsed.sections[1].paragraphs[3].figures?.[0]).toEqual({
+      path: 'in-images/tree-of-life.png',
+      alt: 'The tree of life',
+      caption: 'Fig 2 Tree of Life',
+      place: 'above',
+    })
+  })
+
+  it('attaches a figure that closes a section to its last paragraph, below', () => {
+    const paragraphs = parsed.sections[1].paragraphs
+    const figures = paragraphs[paragraphs.length - 1].figures ?? []
+    expect(figures[figures.length - 1]).toEqual({
+      path: 'in-images/i-am-the-vine.png',
+      alt: 'I am the vine',
+      place: 'below',
+    })
+  })
+
+  it('leaves a paragraph no figure stands with without one', () => {
+    expect(parsed.sections[0].paragraphs[0].figures).toBeUndefined()
+  })
+
+  it('refuses a figure with no paragraph to stand with', () => {
+    expect(() =>
+      parseBookMarkdown('---\nmodule: x\n---\n\n## 1. A\n\n![a](a.png)\n'),
+    ).toThrow(/figure/i)
   })
 
   it('refuses a source whose front matter names no module', () => {

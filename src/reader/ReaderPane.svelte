@@ -13,6 +13,7 @@
     type VerseRowView,
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
+  import type { Figure } from '../modules'
   import { opensInNewPane } from '../ui'
   import CollectionStrip from '../study-material/CollectionStrip.svelte'
   import TranslationMenu from './TranslationMenu.svelte'
@@ -164,6 +165,17 @@
 {#snippet matchedText(row: VerseRowView, segment: VerseSegment)}{#if segment.emphasized}<mark
       class="scripture-study-match">{@render segmentText(row, segment)}</mark
     >{:else}{@render segmentText(row, segment)}{/if}{/snippet}
+
+<!-- A Figure is section furniture, like a Heading: it stands outside the
+     paragraph's own clickable body, is never searched and is never cited. -->
+{#snippet figurePlate(figure: Figure)}
+  <figure class="bsr-figure">
+    <img class="bsr-figure-image" src={figure.image} alt={figure.alt} />
+    {#if figure.caption !== undefined}
+      <figcaption class="bsr-figure-caption">{figure.caption}</figcaption>
+    {/if}
+  </figure>
+{/snippet}
 
 {#snippet verseText(row: VerseRowView)}
   {@const lineStructured =
@@ -386,6 +398,9 @@
                       >{:else}{segment.text}{/if}{/each}</div
                 >
               {/each}
+              {#each row.figures.filter((figure) => figure.place === 'above') as figure, at (at)}
+                {@render figurePlate(figure)}
+              {/each}
               <div
                 class="bsr-para"
                 class:bsr-para-numbered={view.toggles.paraNumbers === 'on'}
@@ -404,6 +419,9 @@
                 <span class="bsr-gutter-num">{row.label}</span>
                 <p class="bsr-book-prose">{@render verseText(row)}</p>
               </div>
+              {#each row.figures.filter((figure) => figure.place === 'below') as figure, at (at)}
+                {@render figurePlate(figure)}
+              {/each}
             {/each}
           {:else if view.toggles.layout === 'verse-per-line'}
             {#each view.rows as row (row.verseId)}
@@ -900,6 +918,29 @@
 
   /* Section furniture, printed above the paragraph it introduces and outside
      the paragraph's own clickable body. */
+  .bsr-figure {
+    margin: 1.4em 0;
+    text-align: center;
+  }
+
+  .bsr-figure-image {
+    max-width: 100%;
+    height: auto;
+    /* The figures are line drawings on white, so a dark theme would print
+       them as a bright plate — the radius and border keep them a plate on
+       purpose rather than by accident. */
+    background: var(--background-primary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+  }
+
+  .bsr-figure-caption {
+    margin-top: 0.4em;
+    font-size: 0.85em;
+    font-style: italic;
+    color: var(--text-muted);
+  }
+
   .bsr-heading {
     text-align: center;
     font-weight: 400;

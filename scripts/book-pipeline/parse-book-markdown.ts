@@ -4,6 +4,7 @@
 // about a book lives in the source, so a new book needs no new parser.
 
 import type {
+  FigurePlace,
   Heading,
   HeadingLevel,
   RefSpan,
@@ -12,8 +13,19 @@ import type {
 
 export type { Heading, HeadingLevel }
 
+// A Figure as the source has it: the image's path, relative to the source
+// file, rather than the image itself. The build reads the file and inlines it
+// (CONTEXT.md — Figure).
+export type FigureSource = {
+  path: string
+  alt: string
+  caption?: string
+  place: FigurePlace
+}
+
 export type BookParagraph = {
   text: string
+  figures?: FigureSource[]
   // Set only on an atom that keeps its own line breaks — a list or a table.
   // The channel addresses the stored text exactly as scripture's does, so a
   // reader that already prints poetry lines prints these rows unchanged.
@@ -50,6 +62,9 @@ const SECTION_HEAD = /^(\d+)\.\s+(.+?)(\s*\{named\})?$/
 // The first line of a block that keeps its line breaks: a list item or a row
 // of a table the curator has already flattened.
 const LINE_KEEPING = /^(?:[-*•]|\||\d+[.)])\s*/
+// A figure is a Markdown image standing alone as a block, its optional title
+// read as the printed caption: `![alt](in-images/x.png "Fig 2 Tree of Life")`.
+const FIGURE = /^!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)$/
 const QUOTE_LINE = /^>\s?(.*)$/
 const ATTRIBUTION_LINE = /^(?:—|–|--)\s*(.*)$/
 
@@ -148,6 +163,27 @@ export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
   const sections: ParsedBookSection[] = []
   let current: ParsedBookSection | null = null
   let pending: Heading[] = []
+  let pendingFigures: FigureSource[] = []
+
+  // A figure stands with the paragraph that follows it; one that closes a
+  // section has none, so it stands below the paragraph it followed instead.
+  const settleFigures = (): void => {
+    if (pendingFigures.length === 0) return
+    const paragraphs = current?.paragraphs ?? []
+    const last = paragraphs[paragraphs.length - 1]
+    if (last === undefined)
+      throw new Error(
+        `A figure has no paragraph to stand with: ${pendingFigures[0].path}`,
+      )
+    last.figures = [
+      ...(last.figures ?? []),
+      ...pendingFigures.map((figure) => ({
+        ...figure,
+        place: 'below' as const,
+      })),
+    ]
+    pendingFigures = []
+  }
 
   const atomsOf = (): BookParagraph[] => {
     if (current === null)
@@ -156,10 +192,24 @@ export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
   }
 
   for (const block of blocksOf(body)) {
+    const figure = FIGURE.exec(block)
+    if (figure !== null) {
+      pendingFigures = [
+        ...pendingFigures,
+        {
+          path: figure[2],
+          alt: figure[1],
+          ...(figure[3] === undefined ? {} : { caption: figure[3] }),
+          place: 'above',
+        },
+      ]
+      continue
+    }
     const heading = HEADING.exec(block)
     if (heading !== null) {
       const depth = heading[1].length
       if (depth === 2) {
+        settleFigures()
         current = openSection(heading[2].trim())
         sections.push(current)
         continue
@@ -174,9 +224,12 @@ export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
       continue
     }
     const paragraph: BookParagraph = atomOf(block)
+    if (pendingFigures.length > 0) paragraph.figures = pendingFigures
     atomsOf().push(pending.length === 0 ? paragraph : { ...paragraph, headings: pending })
     pending = []
+    pendingFigures = []
   }
+  settleFigures()
 
   return {
     moduleId,

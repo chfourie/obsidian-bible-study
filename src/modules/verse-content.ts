@@ -27,6 +27,21 @@ export type Heading = {
   level: HeadingLevel
 }
 
+// A picture printed inside a Book section — a diagram, a photograph, a table
+// the printed work set as an image (CONTEXT.md — Figure). Section furniture
+// like a Heading: it consumes no id, never joins the atom's text, is never
+// searched and is never citable. It rides on the paragraph it stands with,
+// printing above or below it as the printed work has it. The image travels
+// inside the module as a data URI, so an installed Book needs no other file.
+export type FigurePlace = 'above' | 'below'
+
+export type Figure = {
+  image: string
+  alt: string
+  caption?: string
+  place: FigurePlace
+}
+
 // A plain character range into the verse text — the shape shared by the
 // red-letter and supplied-word channels so segmentation can compose them
 // with Strong's tag spans.
@@ -56,6 +71,7 @@ export type StructuredVerse = {
   supplied?: FormatSpan[]
   refs?: RefSpan[]
   headings?: Heading[]
+  figures?: Figure[]
 }
 
 export type TaggedVerse = StructuredVerse & { tags: TagSpan[] }
@@ -86,3 +102,6 @@ export const verseRefsOf = (content: VerseContent): RefSpan[] =>
 
 export const verseHeadingsOf = (content: VerseContent): Heading[] =>
   isStructuredVerse(content) ? (content.headings ?? []) : []
+
+export const verseFiguresOf = (content: VerseContent): Figure[] =>
+  isStructuredVerse(content) ? (content.figures ?? []) : []

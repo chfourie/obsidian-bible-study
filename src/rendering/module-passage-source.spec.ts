@@ -337,6 +337,30 @@ describe('ModulePassageSource', () => {
     expect(second.headings).toBeUndefined()
   })
 
+  it('serves a book paragraph’s Figures beside its segments', async () => {
+    const figure = {
+      image: 'data:image/png;base64,AAA',
+      alt: 'The tree of life',
+      caption: 'Fig 2 Tree of Life',
+      place: 'above' as const,
+    }
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 1)]: { text: 'I am the true vine.', figures: [figure] },
+        [john(15, 2)]: 'He cuts off every branch in Me.',
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:1-2'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [{ verseId: john(15, 1), figures: [figure] }, { verseId: john(15, 2) }],
+    })
+    const second = (passage as { verses: { figures?: unknown }[] }).verses[1]
+    expect(second.figures).toBeUndefined()
+  })
+
   it('does not mark a paragraph start on a mid-verse line', async () => {
     const source = new ModulePassageSource({
       manifest: async () => webManifest('Public Domain'),

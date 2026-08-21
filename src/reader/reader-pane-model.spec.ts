@@ -3073,6 +3073,46 @@ describe('ReaderPaneModel book mode', () => {
     expect(model.view.rows.map((row) => row.keepsLines)).toEqual([true, false])
   })
 
+  it('carries a paragraph’s Figures onto its row, above and below', async () => {
+    const above = {
+      image: 'data:image/png;base64,AAA',
+      alt: 'The tree of life',
+      caption: 'Fig 2 Tree of Life',
+      place: 'above' as const,
+    }
+    const below = {
+      image: 'data:image/png;base64,BBB',
+      alt: 'I am the vine',
+      place: 'below' as const,
+    }
+    const model = bookModelWith({
+      passages: {
+        passage: async () => ({
+          status: 'ok' as const,
+          attribution: null,
+          verses: [
+            {
+              verseId: makeVerseId(HUMILITY, 1, 1),
+              segments: [{ text: 'A paragraph.', redLetter: false }],
+              figures: [above, below],
+            },
+            {
+              verseId: makeVerseId(HUMILITY, 1, 2),
+              segments: [{ text: 'Another.', redLetter: false }],
+            },
+          ],
+        }),
+      },
+    })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.rows.map((row) => row.figures)).toEqual([
+      [above, below],
+      [],
+    ])
+  })
+
   it('leaves a book printed without Headings with none on its rows', async () => {
     const model = bookModelWith()
 

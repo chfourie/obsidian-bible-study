@@ -1,11 +1,13 @@
 import type {
   BookContent,
+  Figure,
   FormatSpan,
   Heading,
   ModuleManifest,
   VerseContent,
 } from '../modules'
 import {
+  verseFiguresOf,
   verseHeadingsOf,
   verseLinesOf,
   verseRedLetterOf,
@@ -45,8 +47,9 @@ export type PassageVerse = {
   segments: VerseSegment[]
   hasLineData?: boolean
   startsParagraph?: boolean
-  // Book paragraphs only: the section furniture printed above this atom.
+  // Book paragraphs only: the section furniture printed with this atom.
   headings?: Heading[]
+  figures?: Figure[]
 }
 
 export type FallbackSubstitution = {
@@ -178,6 +181,8 @@ export class ModulePassageSource implements PassageSource {
         }
         const headings = verseHeadingsOf(verse)
         if (headings.length > 0) passageVerse.headings = headings
+        const figures = verseFiguresOf(verse)
+        if (figures.length > 0) passageVerse.figures = figures
         const lines = verseLinesOf(verse)
         if (lines.length > 0) passageVerse.hasLineData = true
         if (lines.some((line) => line.start === 0 && line.paragraph === true))

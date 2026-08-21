@@ -51,6 +51,41 @@ const registry: BookRegistryEntry[] = [entry]
 describe('buildBookArtifact', () => {
   const artifact = buildBookArtifact(source, registry)
 
+  describe('figures', () => {
+    const withFigure = source.replace(
+      '## 1. Man as God Intended\n',
+      '## 1. Man as God Intended\n\n![The tree of life](in-images/tree.png "Fig 2")\n',
+    )
+    const images = { 'in-images/tree.png': 'data:image/png;base64,AAA' }
+
+    it('inlines the image the source points at, beside the paragraph', () => {
+      const built = buildBookArtifact(withFigure, registry, {}, images)
+
+      expect(built.books[102][makeVerseId(102, 1, 1)].figures).toEqual([
+        {
+          image: 'data:image/png;base64,AAA',
+          alt: 'The tree of life',
+          caption: 'Fig 2',
+          place: 'above',
+        },
+      ])
+    })
+
+    it('fails the build on a figure whose image is missing', () => {
+      expect(() => buildBookArtifact(withFigure, registry, {}, {})).toThrow(
+        /in-images\/tree\.png/,
+      )
+    })
+
+    it('leaves a book without figures carrying none', () => {
+      expect(
+        Object.values(artifact.books[102]).some(
+          (paragraph) => paragraph.figures !== undefined,
+        ),
+      ).toBe(false)
+    })
+  })
+
   it('takes the module identity and licence from the Book Registry', () => {
     expect(artifact.manifest).toMatchObject({
       id: 'in-at-e1',

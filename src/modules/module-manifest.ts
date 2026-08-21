@@ -14,9 +14,11 @@ export const MODULE_FORMAT_VERSION = 5
 
 // What a book module is published at. Books run ahead of the shared version
 // on the same field so a format gain of theirs alone — v6: paragraphs carry
-// their Headings, sections name the Part they sit under — leaves every
-// installed translation exactly as current as it was.
-export const BOOK_MODULE_FORMAT_VERSION = 6
+// their Headings, sections name the Part they sit under; v7: a paragraph
+// carries the Figures printed beside it and the line channel a table or list
+// keeps its rows on — leaves every installed translation exactly as current
+// as it was.
+export const BOOK_MODULE_FORMAT_VERSION = 7
 
 // The oldest stored translation whose content is already everything the
 // current format asks of it. Later versions added only what can be re-derived
