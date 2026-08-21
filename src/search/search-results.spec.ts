@@ -12,6 +12,8 @@ const hit = (verseId: number, text: string): SearchHit => ({
   verseId,
   text,
   spans: [],
+  headingSpans: [],
+  headings: [],
 })
 
 describe('emphasizedSegments', () => {
@@ -81,6 +83,8 @@ describe('groupHitsByBook', () => {
         verseId: makeVerseId(43, 15, 1),
         text: 'I am the true vine.',
         spans: [{ start: 14, end: 18 }],
+        headingSpans: [],
+        headings: [],
       },
     ])
     expect(group.hits[0].segments).toEqual([
@@ -96,6 +100,8 @@ describe('groupHitsByBook', () => {
         verseId: makeVerseId(43, 15, 1),
         text: 'I am the true vine.',
         spans: [{ start: 14, end: 18 }],
+        headingSpans: [],
+        headings: [],
       },
     ])
     expect(group.hits[0].spans).toEqual([{ start: 14, end: 18 }])

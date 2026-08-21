@@ -6,9 +6,27 @@ import {
   loadSearchIndex,
   type IndexBuildProgress,
 } from './search-index-store'
-import { SEARCH_INDEX_FORMAT_VERSION, type SearchIndex } from './search-index'
+import {
+  searchIndex,
+  SEARCH_INDEX_FORMAT_VERSION,
+  type SearchIndex,
+} from './search-index'
+import { parseSearchQuery } from './search-query'
 
 const BOOKS = [1, 2, 43]
+
+const IN_BOOK = 102
+
+const IN_CONTENT = {
+  [IN_BOOK]: {
+    [makeVerseId(IN_BOOK, 1, 1)]: {
+      text: 'He would not be told anything.',
+      headings: [
+        { text: 'PART TWO: Redemption of Man', level: 'part' as const },
+      ],
+    },
+  },
+}
 
 const built = async (source = fakeSearchIndexSource()) =>
   buildAndPersistSearchIndex(source, 'web', BOOKS)
@@ -49,6 +67,18 @@ describe('buildAndPersistSearchIndex', () => {
       { done: 2, total: 3 },
       { done: 3, total: 3 },
     ])
+  })
+
+  it('indexes a Book paragraph together with its Headings', async () => {
+    const source = fakeSearchIndexSource({ in: IN_CONTENT }, undefined, {
+      in: IN_BOOK,
+    })
+    const index = await buildAndPersistSearchIndex(source, 'in', [IN_BOOK])
+    expect(
+      searchIndex(index, parseSearchQuery('redemption')).map(
+        (hit) => hit.verseId,
+      ),
+    ).toEqual([makeVerseId(IN_BOOK, 1, 1)])
   })
 
   it('indexes an uninstalled module as nothing at all', async () => {
@@ -97,6 +127,16 @@ describe('loadSearchIndex', () => {
         formatVersion: 1,
         texts: ['In the beginning God created the heavens and the earth.'],
       }),
+    )
+    expect(await loadSearchIndex(source, 'web', 'sha-web-1')).toBeNull()
+  })
+
+  it('rejects the format that indexed a paragraph without its Headings', async () => {
+    const source = fakeSearchIndexSource()
+    const index = await built(source)
+    await source.writeSearchIndex(
+      'web',
+      JSON.stringify({ ...index, formatVersion: 2 }),
     )
     expect(await loadSearchIndex(source, 'web', 'sha-web-1')).toBeNull()
   })

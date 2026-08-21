@@ -1,4 +1,4 @@
-import { verseTextOf, type BookContent } from '../modules'
+import { verseHeadingsOf, verseTextOf, type BookContent, type Heading } from '../modules'
 import { decodeVerseId } from '../reference'
 import type { MatchSpan } from './search-query'
 
@@ -8,6 +8,14 @@ import type { MatchSpan } from './search-query'
 export type SearchMatch = {
   verseId: number
   spans: MatchSpan[]
+  // The same, for the atom's Headings — by heading position, and only for the
+  // headings the query found something in.
+  headingSpans: HeadingMatch[]
+}
+
+export type HeadingMatch = {
+  heading: number
+  spans: MatchSpan[]
 }
 
 // A match with the atom's text read back from the module — the pane
@@ -15,6 +23,9 @@ export type SearchMatch = {
 // activated. Offsets index this text, the module's own stored atom text.
 export type SearchHit = SearchMatch & {
   text: string
+  // Every Heading the atom carries, matched or not: the result row prints them
+  // above the paragraph as the reader does.
+  headings: Heading[]
 }
 
 // One indexable unit of a module: an atom id and the text the index holds for
@@ -22,6 +33,9 @@ export type SearchHit = SearchMatch & {
 export type ModuleAtom = {
   verseId: number
   text: string
+  // The atom's Headings, indexed with its text — a Hit may be earned by words
+  // that appear only here (CONTEXT.md — Heading).
+  headings: string[]
 }
 
 // What the search asks of module storage: the content to index, and — since
@@ -48,7 +62,12 @@ export const hitsWithText = async (
       content = await source.bookContent(moduleId, book)
     }
     const verse = content?.[match.verseId]
-    if (verse !== undefined) hits.push({ ...match, text: verseTextOf(verse) })
+    if (verse !== undefined)
+      hits.push({
+        ...match,
+        text: verseTextOf(verse),
+        headings: verseHeadingsOf(verse),
+      })
   }
   return hits
 }
@@ -60,4 +79,8 @@ export const bookAtoms = (content: BookContent): ModuleAtom[] =>
   Object.keys(content)
     .map(Number)
     .sort((a, b) => a - b)
-    .map((verseId) => ({ verseId, text: verseTextOf(content[verseId]) }))
+    .map((verseId) => ({
+      verseId,
+      text: verseTextOf(content[verseId]),
+      headings: verseHeadingsOf(content[verseId]).map((heading) => heading.text),
+    }))

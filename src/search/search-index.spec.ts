@@ -13,6 +13,7 @@ import type { ModuleAtom, SearchMatch } from './search-scan'
 const atom = (verse: number, text: string): ModuleAtom => ({
   verseId: makeVerseId(43, 15, verse),
   text,
+  headings: [],
 })
 
 const JOHN15: ModuleAtom[] = [
@@ -143,6 +144,7 @@ describe('searchIndex', () => {
           { start: 9, end: 13 },
           { start: 14, end: 18 },
         ],
+        headingSpans: [],
       },
     ])
   })
@@ -165,5 +167,68 @@ describe('searchIndex', () => {
 
   it('finds nothing for a query with no words', () => {
     expect(verses(indexOf(), '""')).toEqual([])
+  })
+})
+
+const headed = (
+  verse: number,
+  text: string,
+  headings: string[],
+): ModuleAtom => ({ ...atom(verse, text), headings })
+
+describe('searchIndex over Headings', () => {
+  const SELF_RIGHTEOUS = 'Self-righteous men'
+  const HEADED: ModuleAtom[] = [
+    headed(1, 'He would not be told anything.', [
+      'PART TWO: Redemption of Man',
+      SELF_RIGHTEOUS,
+    ]),
+    atom(2, 'Men are not righteous of themselves.'),
+  ]
+
+  it('hits the paragraph a matched Heading is attached to', () => {
+    expect(verses(indexOf(HEADED), 'self-righteous')).toEqual([
+      makeVerseId(43, 15, 1),
+    ])
+  })
+
+  it('reports a Heading’s spans against that Heading, not the text', () => {
+    const [hit] = searchIndex(indexOf(HEADED), parseSearchQuery('righteous'))
+    expect(hit.spans).toEqual([])
+    expect(hit.headingSpans).toEqual([
+      { heading: 1, spans: [{ start: 5, end: 14 }] },
+    ])
+  })
+
+  it('takes a word from a Heading and a word from the text as one hit', () => {
+    const [hit] = searchIndex(indexOf(HEADED), parseSearchQuery('told redemption'))
+    expect(hit.verseId).toBe(makeVerseId(43, 15, 1))
+    expect(spanTexts(hit, 'He would not be told anything.')).toEqual(['told'])
+    expect(hit.headingSpans).toEqual([
+      { heading: 0, spans: [{ start: 10, end: 20 }] },
+    ])
+  })
+
+  it('refuses a phrase that runs from a Heading into the paragraph', () => {
+    expect(verses(indexOf(HEADED), '"men he"')).toEqual([])
+  })
+
+  it('refuses a phrase that runs from one Heading into the next', () => {
+    expect(verses(indexOf(HEADED), '"man self"')).toEqual([])
+  })
+
+  it('keeps a phrase inside one Heading', () => {
+    expect(verses(indexOf(HEADED), '"redemption of man"')).toEqual([
+      makeVerseId(43, 15, 1),
+    ])
+  })
+
+  it('keeps no copy of the Heading text either', () => {
+    expect(JSON.stringify(indexOf(HEADED))).not.toContain(SELF_RIGHTEOUS)
+  })
+
+  it('leaves an atom without Headings with none to report', () => {
+    const [hit] = searchIndex(indexOf(HEADED), parseSearchQuery('themselves'))
+    expect(hit.headingSpans).toEqual([])
   })
 })

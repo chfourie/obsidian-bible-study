@@ -44,6 +44,8 @@ describe('SearchEngine', () => {
         verseId: makeVerseId(43, 15, 1),
         text: 'I am the true vine.',
         spans: [{ start: 14, end: 18 }],
+        headingSpans: [],
+        headings: [],
       },
     ])
   })
@@ -87,16 +89,22 @@ describe('SearchEngine', () => {
           { start: 29, end: 32 },
           { start: 45, end: 48 },
         ],
+        headingSpans: [],
+        headings: [],
       },
       {
         verseId: makeVerseId(1, 1, 2),
         text: 'The earth was formless and empty.',
         spans: [{ start: 0, end: 3 }],
+        headingSpans: [],
+        headings: [],
       },
       {
         verseId: makeVerseId(43, 15, 1),
         text: 'I am the true vine.',
         spans: [{ start: 5, end: 8 }],
+        headingSpans: [],
+        headings: [],
       },
     ])
     expect(source.contentReads).toEqual(['web/1', 'web/43'])

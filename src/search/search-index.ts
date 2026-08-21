@@ -6,24 +6,41 @@ import {
   type SearchQuery,
   type SearchTerm,
 } from './search-query'
-import type { ModuleAtom, SearchMatch } from './search-scan'
+import type { HeadingMatch, ModuleAtom, SearchMatch } from './search-scan'
 
 // Bump whenever the serialized shape or the folding behind it changes: every
 // stored index that carries an older stamp is rebuilt whole on load.
-export const SEARCH_INDEX_FORMAT_VERSION = 2
+export const SEARCH_INDEX_FORMAT_VERSION = 3
 
-// One appearance of a term in the module: which atom, which word of it, and
-// the word's character offsets into that atom's stored text. Serialized flat,
-// four numbers per occurrence, because there is one of these per word of the
-// module.
-const POSTING_FIELDS = 4
+// One appearance of a term in the module: which atom, which word of it, the
+// word's character offsets, and which part of the atom those offsets address —
+// its text or one of its Headings. Serialized flat, five numbers per
+// occurrence, because there is one of these per word of the module.
+const POSTING_FIELDS = 5
+
+// The atom's own text; a Heading is its position in the atom's headings plus
+// one, so that every part has a number of its own.
+const TEXT_PART = 0
 
 type Occurrence = {
   atom: number
   token: number
   start: number
   end: number
+  part: number
 }
+
+// A matched run with the part of the atom it was found in, so text and heading
+// spans can be told apart once the query has settled.
+type PartSpan = MatchSpan & { part: number }
+
+// A heading is indexed with the atom's text but never continuous with it: the
+// word positions leave a gap between the parts, so no phrase can run across
+// the boundary.
+const indexedParts = (atom: ModuleAtom): { part: number; text: string }[] => [
+  { part: TEXT_PART, text: atom.text },
+  ...atom.headings.map((text, index) => ({ part: index + 1, text })),
+]
 
 // The whole persisted index. Atoms are numbered by build order — Canonical
 // Grid order — so hits sort by atom number alone. `terms` is sorted for the
@@ -43,11 +60,16 @@ export const buildSearchIndex = (
 ): SearchIndex => {
   const postingsByTerm = new Map<string, number[]>()
   atoms.forEach((atom, index) => {
-    tokenizeText(atom.text).forEach((token, position) => {
-      const postings = postingsByTerm.get(token.folded) ?? []
-      postings.push(index, position, token.start, token.end)
-      postingsByTerm.set(token.folded, postings)
-    })
+    let position = 0
+    for (const { part, text } of indexedParts(atom)) {
+      for (const token of tokenizeText(text)) {
+        const postings = postingsByTerm.get(token.folded) ?? []
+        postings.push(index, position, token.start, token.end, part)
+        postingsByTerm.set(token.folded, postings)
+        position += 1
+      }
+      position += 1
+    }
   })
   const terms = [...postingsByTerm.keys()].sort()
   return {
@@ -93,6 +115,7 @@ const occurrencesOf = (index: SearchIndex, prefix: string): Occurrence[] => {
         token: postings[at + 1],
         start: postings[at + 2],
         end: postings[at + 3],
+        part: postings[at + 4],
       })
     }
   }
@@ -115,11 +138,11 @@ const byAtom = (occurrences: Occurrence[]): Map<number, Occurrence[]> => {
 const wordSpans = (
   index: SearchIndex,
   word: string,
-): Map<number, MatchSpan[]> =>
+): Map<number, PartSpan[]> =>
   new Map(
     [...byAtom(occurrencesOf(index, word))].map(([atom, occurrences]) => [
       atom,
-      occurrences.map(({ start, end }) => ({ start, end })),
+      occurrences.map(({ start, end, part }) => ({ start, end, part })),
     ]),
   )
 
@@ -129,11 +152,11 @@ const wordSpans = (
 const phraseSpans = (
   index: SearchIndex,
   words: string[],
-): Map<number, MatchSpan[]> => {
+): Map<number, PartSpan[]> => {
   const perWord = words.map((word) => byAtom(occurrencesOf(index, word)))
-  const spansByAtom = new Map<number, MatchSpan[]>()
+  const spansByAtom = new Map<number, PartSpan[]>()
   for (const [atom, starts] of perWord[0]) {
-    const spans: MatchSpan[] = []
+    const spans: PartSpan[] = []
     for (const first of starts) {
       let last = first
       const contiguous = perWord.slice(1).every((word) => {
@@ -144,7 +167,8 @@ const phraseSpans = (
         last = next
         return true
       })
-      if (contiguous) spans.push({ start: first.start, end: last.end })
+      if (contiguous)
+        spans.push({ start: first.start, end: last.end, part: first.part })
     }
     if (spans.length > 0) spansByAtom.set(atom, spans)
   }
@@ -154,7 +178,7 @@ const phraseSpans = (
 const termSpans = (
   index: SearchIndex,
   term: SearchTerm,
-): Map<number, MatchSpan[]> =>
+): Map<number, PartSpan[]> =>
   term.kind === 'word'
     ? wordSpans(index, term.word)
     : phraseSpans(index, term.words)
@@ -162,10 +186,10 @@ const termSpans = (
 // Word-AND is postings intersection: an atom survives only while every term
 // so far has found it, and keeps the spans all of them matched.
 const intersect = (
-  matched: Map<number, MatchSpan[]>,
-  found: Map<number, MatchSpan[]>,
-): Map<number, MatchSpan[]> => {
-  const kept = new Map<number, MatchSpan[]>()
+  matched: Map<number, PartSpan[]>,
+  found: Map<number, PartSpan[]>,
+): Map<number, PartSpan[]> => {
+  const kept = new Map<number, PartSpan[]>()
   for (const [atom, spans] of found) {
     const already = matched.get(atom)
     if (already !== undefined) kept.set(atom, [...already, ...spans])
@@ -173,22 +197,39 @@ const intersect = (
   return kept
 }
 
+const spansOfPart = (spans: readonly PartSpan[], part: number): MatchSpan[] =>
+  mergeMatchSpans(
+    spans
+      .filter((span) => span.part === part)
+      .map(({ start, end }) => ({ start, end })),
+  )
+
+const headingMatches = (spans: readonly PartSpan[]): HeadingMatch[] =>
+  [...new Set(spans.map((span) => span.part))]
+    .filter((part) => part !== TEXT_PART)
+    .sort((a, b) => a - b)
+    .map((part) => ({ heading: part - 1, spans: spansOfPart(spans, part) }))
+
 export const searchIndex = (
   index: SearchIndex,
   query: SearchQuery,
 ): SearchMatch[] => {
   if (isEmptyQuery(query)) return []
-  let matched: Map<number, MatchSpan[]> | null = null
+  let matched: Map<number, PartSpan[]> | null = null
   for (const term of query.terms) {
     const found = termSpans(index, term)
     matched = matched === null ? found : intersect(matched, found)
     if (matched.size === 0) return []
   }
-  const hits = matched ?? new Map<number, MatchSpan[]>()
+  const hits = matched ?? new Map<number, PartSpan[]>()
   return [...hits.keys()]
     .sort((a, b) => a - b)
-    .map((atom) => ({
-      verseId: index.verseIds[atom],
-      spans: mergeMatchSpans(hits.get(atom) ?? []),
-    }))
+    .map((atom) => {
+      const spans = hits.get(atom) ?? []
+      return {
+        verseId: index.verseIds[atom],
+        spans: spansOfPart(spans, TEXT_PART),
+        headingSpans: headingMatches(spans),
+      }
+    })
 }
