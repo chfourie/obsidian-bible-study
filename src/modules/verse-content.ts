@@ -16,6 +16,17 @@ export type RefSpan = {
   ranges: VerseRange[]
 }
 
+// A title printed inside a Book section — a Part title or a sub-section head
+// — attached to the paragraph it precedes (CONTEXT.md — Heading). Section
+// furniture like an epigraph: it consumes no id and never joins the atom's
+// text, so highlight and Ref Span offsets are the same with it as without.
+export type HeadingLevel = 'part' | 'section' | 'sub-section'
+
+export type Heading = {
+  text: string
+  level: HeadingLevel
+}
+
 // A plain character range into the verse text — the shape shared by the
 // red-letter and supplied-word channels so segmentation can compose them
 // with Strong's tag spans.
@@ -44,6 +55,7 @@ export type StructuredVerse = {
   red?: FormatSpan[]
   supplied?: FormatSpan[]
   refs?: RefSpan[]
+  headings?: Heading[]
 }
 
 export type TaggedVerse = StructuredVerse & { tags: TagSpan[] }
@@ -71,3 +83,6 @@ export const verseSuppliedOf = (content: VerseContent): FormatSpan[] =>
 
 export const verseRefsOf = (content: VerseContent): RefSpan[] =>
   isStructuredVerse(content) ? (content.refs ?? []) : []
+
+export const verseHeadingsOf = (content: VerseContent): Heading[] =>
+  isStructuredVerse(content) ? (content.headings ?? []) : []

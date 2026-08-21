@@ -12,6 +12,12 @@
 // tagging a family on two words counts twice. Re-derived in place, as v4 was.
 export const MODULE_FORMAT_VERSION = 5
 
+// What a book module is published at. Books run ahead of the shared version
+// on the same field so a format gain of theirs alone — v6: paragraphs carry
+// their Headings, sections name the Part they sit under — leaves every
+// installed translation exactly as current as it was.
+export const BOOK_MODULE_FORMAT_VERSION = 6
+
 // The oldest stored translation whose content is already everything the
 // current format asks of it. Later versions added only what can be re-derived
 // from what such a module carries; anything older genuinely lacks content
@@ -42,6 +48,9 @@ export type BookSection = {
   name: string
   paragraphs: number
   named?: boolean
+  // The Part this section sits under, when the book is divided into Parts:
+  // the text of the part-level Heading opening the Part's first section.
+  part?: string
 }
 
 export type BookMetadata = {

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
+import {
+  BOOK_MODULE_FORMAT_VERSION,
+  MODULE_FORMAT_VERSION,
+} from '../../src/modules/module-manifest'
 import { makeVerseId } from '../../src/reference/verse-id'
 import type { BookRegistryEntry } from './book-registry'
 import { buildBookArtifact, refSpanCounts } from './build-book-artifact'
@@ -54,7 +57,7 @@ describe('buildBookArtifact', () => {
       name: 'IN',
       language: 'English',
       license: 'No rights reserved.',
-      formatVersion: MODULE_FORMAT_VERSION,
+      formatVersion: BOOK_MODULE_FORMAT_VERSION,
       kind: 'book',
       capabilities: { strongsTagged: false },
     })
@@ -67,7 +70,12 @@ describe('buildBookArtifact', () => {
       aliases: ['In'],
       sections: [
         { chapter: 0, name: 'Prologue', named: true, paragraphs: 2 },
-        { chapter: 1, name: 'Man as God Intended', paragraphs: 1 },
+        {
+          chapter: 1,
+          name: 'Man as God Intended',
+          paragraphs: 1,
+          part: 'PART ONE: Fall of man',
+        },
       ],
     })
   })
@@ -117,12 +125,32 @@ describe('buildBookArtifact', () => {
     ])
   })
 
-  // Headings reach the artifact with ticket #95; until then they must not
-  // silently become atoms and shift the grid.
-  it('leaves headings out of the artifact without turning them into atoms', () => {
+  it('hangs a heading on the paragraph it precedes, consuming no id', () => {
     expect(artifact.manifest.book.sections[0].paragraphs).toBe(2)
-    for (const paragraph of Object.values(artifact.books[102]))
-      expect(paragraph).not.toHaveProperty('headings')
+    expect(artifact.books[102][makeVerseId(102, 0, 2)]).toMatchObject({
+      text: 'Why the title IN?',
+      headings: [{ text: 'Introduction', level: 'section' }],
+    })
+    expect(artifact.books[102][makeVerseId(102, 0, 1)]).not.toHaveProperty(
+      'headings',
+    )
+  })
+
+  it('opens a Part on the first paragraph of its first section', () => {
+    expect(artifact.books[102][makeVerseId(102, 1, 1)].headings).toEqual([
+      { text: 'PART ONE: Fall of man', level: 'part' },
+    ])
+  })
+
+  it('names the Part each section sits under in the section table', () => {
+    expect(artifact.manifest.book.sections.map((section) => section.part)).toEqual(
+      [undefined, 'PART ONE: Fall of man'],
+    )
+  })
+
+  it('publishes a book module at the book format version', () => {
+    expect(artifact.manifest.formatVersion).toBe(BOOK_MODULE_FORMAT_VERSION)
+    expect(BOOK_MODULE_FORMAT_VERSION).toBeGreaterThan(MODULE_FORMAT_VERSION)
   })
 
   it('refuses a source whose book has no registry entry', () => {

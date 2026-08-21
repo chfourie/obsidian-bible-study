@@ -3,16 +3,13 @@
 // are documented in README.md beside this file; everything the parser knows
 // about a book lives in the source, so a new book needs no new parser.
 
-import type { RefSpan } from '../../src/modules/verse-content'
+import type {
+  Heading,
+  HeadingLevel,
+  RefSpan,
+} from '../../src/modules/verse-content'
 
-// A title printed inside a section, attached to the paragraph it precedes
-// and consuming no id of its own (CONTEXT.md — Heading).
-export type HeadingLevel = 'part' | 'section' | 'sub-section'
-
-export type Heading = {
-  text: string
-  level: HeadingLevel
-}
+export type { Heading, HeadingLevel }
 
 export type BookParagraph = {
   text: string

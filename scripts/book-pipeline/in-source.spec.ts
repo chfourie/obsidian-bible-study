@@ -44,7 +44,12 @@ describe('IN First Edition', () => {
   })
 
   it('lays the book out on 36 sections: front matter, 31 chapters, back matter', () => {
-    expect(artifact.manifest.book.sections).toEqual([
+    // The Part each section sits under has its own test below; this one
+    // holds the frozen grid — number, name and paragraph count.
+    const grid = artifact.manifest.book.sections.map(
+      ({ part: _part, ...section }) => section,
+    )
+    expect(grid).toEqual([
       { chapter: 0, name: 'Prologue', named: true, paragraphs: 23 },
       { chapter: 1, name: 'Man as God Intended', paragraphs: 9 },
       { chapter: 2, name: 'The Two Trees', paragraphs: 5 },
@@ -118,11 +123,60 @@ describe('IN First Edition', () => {
     expect(table.refs).toBeUndefined()
   })
 
-  it('keeps Part and sub-section headings out of the paragraphs', () => {
-    for (const paragraph of Object.values(artifact.books[102])) {
-      expect(paragraph).not.toHaveProperty('headings')
+  it('keeps Part and sub-section headings beside the paragraphs, never in them', () => {
+    const headings = Object.values(artifact.books[102]).flatMap(
+      (paragraph) => paragraph.headings ?? [],
+    )
+    expect(headings).toHaveLength(46)
+    for (const paragraph of Object.values(artifact.books[102]))
       expect(paragraph.text).not.toMatch(/^PART [A-Z]+:/)
-    }
+    expect(artifact.books[102][makeVerseId(102, 7, 2)].headings).toEqual([
+      {
+        text: '7.1 They Saw That They Were Naked – Self-Conscious',
+        level: 'section',
+      },
+    ])
+    expect(artifact.books[102][makeVerseId(102, 12, 43)].headings).toEqual([
+      { text: '12.4.1 Preparation', level: 'sub-section' },
+    ])
+    expect(artifact.books[102][makeVerseId(102, 0, 15)].headings).toEqual([
+      { text: 'Introduction', level: 'section' },
+    ])
+  })
+
+  it('opens each of the ten Parts on its first chapter’s first paragraph', () => {
+    const parts = Object.entries(artifact.books[102]).flatMap(([verseId, paragraph]) =>
+      (paragraph.headings ?? [])
+        .filter((heading) => heading.level === 'part')
+        .map((heading) => [Number(verseId), heading.text] as const),
+    )
+    expect(parts).toEqual([
+      [makeVerseId(102, 1, 1), 'PART ONE: Fall of Man – Death through Sin'],
+      [makeVerseId(102, 8, 1), 'PART TWO: Redemption of Man – Death for Sin'],
+      [makeVerseId(102, 11, 1), 'PART THREE: Translation of Man – Death to Sin'],
+      [makeVerseId(102, 13, 1), 'PART FOUR: Righteousness'],
+      [makeVerseId(102, 20, 1), 'PART FIVE: The Kingdom of God'],
+      [makeVerseId(102, 25, 1), 'PART SIX: Ministry'],
+      [makeVerseId(102, 27, 1), 'PART SEVEN: God’s Eternal Purpose'],
+      [makeVerseId(102, 28, 1), 'PART EIGHT: Eternal Life'],
+      [makeVerseId(102, 29, 1), 'PART NINE: Spiritual Warfare'],
+      [makeVerseId(102, 31, 1), 'PART TEN: Body of Christ – Church'],
+    ])
+  })
+
+  it('files every numbered chapter under its Part, front and back matter under none', () => {
+    const partOf = new Map(
+      artifact.manifest.book.sections.map((section) => [
+        section.chapter,
+        section.part,
+      ]),
+    )
+    expect(partOf.get(0)).toBeUndefined()
+    expect(partOf.get(7)).toBe('PART ONE: Fall of Man – Death through Sin')
+    expect(partOf.get(12)).toBe('PART THREE: Translation of Man – Death to Sin')
+    expect(partOf.get(31)).toBe('PART TEN: Body of Christ – Church')
+    for (const chapter of [32, 33, 34, 35])
+      expect(partOf.get(chapter)).toBeUndefined()
   })
 })
 

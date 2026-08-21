@@ -5,6 +5,7 @@ import { CONCORDANCE_INDEX_VERSION } from './concordance-index'
 import type { ModuleManifest } from './module-manifest'
 import { ModuleStore } from './module-store'
 import type { NormalizedModule } from './normalized-module'
+import { verseHeadingsOf } from './verse-content'
 
 const webManifest = (): ModuleManifest => ({
   id: 'web',
@@ -114,6 +115,44 @@ describe('ModuleStore', () => {
     expect(await store.epigraphs('hum-m1895')).toEqual({
       1: [{ quote: 'They shall cast their crowns.', attribution: 'Rev. iv. 11' }],
     })
+  })
+
+  it('round-trips a book paragraph’s Headings with its content', async () => {
+    const { store } = setup()
+    const paragraph = {
+      text: 'The Holy Spirit explained it.',
+      headings: [
+        { text: 'PART ONE: Fall of Man', level: 'part' as const },
+        { text: '7.1 They Saw That They Were Naked', level: 'section' as const },
+      ],
+    }
+    const book: NormalizedModule = {
+      ...webModule(),
+      manifest: { ...webManifest(), id: 'in-at-e1' },
+      books: new Map([[102, { [makeVerseId(102, 7, 2)]: paragraph }]]),
+    }
+
+    await store.saveModule(book)
+
+    const content = await store.bookContent('in-at-e1', 102)
+    expect(content?.[makeVerseId(102, 7, 2)]).toEqual(paragraph)
+    expect(await store.verseText('in-at-e1', makeVerseId(102, 7, 2))).toBe(
+      paragraph.text,
+    )
+  })
+
+  it('serves a book module stored before Headings existed unchanged', async () => {
+    const { store } = setup()
+    const book: NormalizedModule = {
+      ...webModule(),
+      manifest: { ...webManifest(), id: 'hum-m1895' },
+      books: new Map([[101, { [makeVerseId(101, 1, 1)]: 'When God created.' }]]),
+    }
+
+    await store.saveModule(book)
+
+    const content = await store.bookContent('hum-m1895', 101)
+    expect(verseHeadingsOf(content?.[makeVerseId(101, 1, 1)] ?? '')).toEqual([])
   })
 
   it('treats a module without an epigraph file as having none', async () => {

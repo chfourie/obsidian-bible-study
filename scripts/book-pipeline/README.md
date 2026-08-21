@@ -53,9 +53,12 @@ it opens lands on that chapter's first paragraph. `{named}` marks front and
 back matter, whose name replaces the chapter locator when a reference to it is
 displayed (spec-books §4).
 
-Headings are parsed but do not yet reach the artifact — ticket #95 gives them
-a place in the module format. Until then their only job here is to stay out of
-the grid.
+A Heading rides in the artifact on the paragraph it precedes, in source
+order, as `{ text, level }` — never inside the paragraph's own text, so
+highlight and Ref Span offsets are the same with a Heading as without. The
+section table names the Part each numbered section sits under (`part`), read
+off the part-level Heading that opened it; front and back matter (`{named}`)
+stand outside the Parts, as the printed work has them.
 
 ### Atoms
 

@@ -4,7 +4,7 @@
 // a test without touching a file the build writes.
 
 import { createHash } from 'node:crypto'
-import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
+import { BOOK_MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
 import type { RefSpan } from '../../src/modules/verse-content'
 import { decodeVerseId, makeVerseId } from '../../src/reference/verse-id'
 import { parseReference } from '../../src/reference/parse-reference'
@@ -16,6 +16,7 @@ import {
 import {
   type BookParagraph,
   type Epigraph,
+  type ParsedBookSection,
   parseBookMarkdown,
 } from './parse-book-markdown'
 import { scanBookRefSpans, sectionRangesOf } from './parse-book-refs'
@@ -26,6 +27,7 @@ export type BookSection = {
   name: string
   named?: true
   paragraphs: number
+  part?: string
 }
 
 export type BookManifestData = {
@@ -49,14 +51,32 @@ export type BookArtifactManifest = {
   book: BookManifestData
 }
 
-// The atom as it is published: headings stay out of the artifact until
-// ticket #95 gives them a place in the format.
-export type PublishedParagraph = Omit<BookParagraph, 'headings'>
-
 export type BookArtifact = {
   manifest: BookArtifactManifest
-  books: Record<number, Record<number, PublishedParagraph>>
+  books: Record<number, Record<number, BookParagraph>>
   epigraphs: Record<number, Epigraph[]>
+}
+
+// The Part a section sits under runs on from the part-level Heading that
+// opened it until the next one — the picker's group labels, resolved once at
+// build time so the reader needs only the section table to draw them. Front
+// and back matter stand outside the Parts, as the printed work has them.
+const sectionTable = (sections: ParsedBookSection[]): BookSection[] => {
+  let part: string | undefined
+  return sections.map((section) => {
+    const opening = section.paragraphs[0]?.headings?.find(
+      (heading) => heading.level === 'part',
+    )
+    if (opening !== undefined) part = opening.text
+    const named = section.named === true
+    return {
+      chapter: section.chapter,
+      name: section.name,
+      ...(named ? { named: true as const } : {}),
+      paragraphs: section.paragraphs.length,
+      ...(part === undefined || named ? {} : { part }),
+    }
+  })
 }
 
 const withRefs = <Atom extends { refs?: RefSpan[] }>(
@@ -105,10 +125,10 @@ export const buildBookArtifact = (
     return withRefs(atom, refs)
   }
 
-  const paragraphs: Record<number, PublishedParagraph> = {}
+  const paragraphs: Record<number, BookParagraph> = {}
   const epigraphs: Record<number, Epigraph[]> = {}
   for (const section of sections) {
-    section.paragraphs.forEach(({ headings: _headings, ...paragraph }, index) => {
+    section.paragraphs.forEach((paragraph, index) => {
       const at = `${section.chapter}.${index + 1}`
       paragraphs[makeVerseId(book, section.chapter, index + 1)] = attach(
         at,
@@ -138,7 +158,7 @@ export const buildBookArtifact = (
       name: publication.title,
       language,
       license: publication.license,
-      formatVersion: MODULE_FORMAT_VERSION,
+      formatVersion: BOOK_MODULE_FORMAT_VERSION,
       kind: 'book',
       capabilities: { strongsTagged: false },
       book: {
@@ -148,12 +168,7 @@ export const buildBookArtifact = (
         year: publication.year,
         abbreviation: publication.abbreviation,
         aliases: publication.aliases,
-        sections: sections.map((section) => ({
-          chapter: section.chapter,
-          name: section.name,
-          ...(section.named === true ? { named: true as const } : {}),
-          paragraphs: section.paragraphs.length,
-        })),
+        sections: sectionTable(sections),
       },
     },
     books: { [book]: paragraphs },
