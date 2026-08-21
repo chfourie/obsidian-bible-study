@@ -153,6 +153,33 @@ describe('buildBookArtifact', () => {
     expect(BOOK_MODULE_FORMAT_VERSION).toBeGreaterThan(MODULE_FORMAT_VERSION)
   })
 
+  it('lets the ref overrides pin what the scanner could not', () => {
+    const overridden = buildBookArtifact(source, registry, {
+      fix: [
+        {
+          at: '0.1',
+          text: '2 Peter 1:11',
+          reference: '2 Peter 1:10-11',
+        },
+      ],
+      suppress: [{ at: '1.1', text: 'Chapter 0' }],
+    })
+    const prologue = overridden.books[102][makeVerseId(102, 0, 1)]
+    expect(
+      prologue.refs?.map(({ start, end, ranges }) => [
+        prologue.text.slice(start, end),
+        ranges,
+      ]),
+    ).toEqual([
+      [
+        '2 Peter 1:11',
+        [{ startId: makeVerseId(61, 1, 10), endId: makeVerseId(61, 1, 11) }],
+      ],
+      ['2 Peter 3:13', [{ startId: makeVerseId(61, 3, 13), endId: makeVerseId(61, 3, 13) }]],
+    ])
+    expect(overridden.books[102][makeVerseId(102, 1, 1)].refs).toBeUndefined()
+  })
+
   it('refuses a source whose book has no registry entry', () => {
     expect(() => buildBookArtifact(source, [])).toThrow(
       /in-at-e1 is not in the Book Registry/,

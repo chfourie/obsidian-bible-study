@@ -14,12 +14,15 @@ import type { ParsedBookSection } from './parse-book-markdown'
 // A book name (optionally preceded by its ordinal and abbreviated with a
 // period), then arabic chapter:verse with the author's own list punctuation:
 // `&`, `,` and `;` continue one citation, while `and` starts a fresh one.
+// A list stops short of an ordinal that belongs to the next book's name, so
+// `Ephesians 1:19-23, 1 Peter 3:22` reads as two citations, not a verse 1.
 const SCRIPTURE_CITATION =
-  /(?:\b([1-3])\s+)?\b([A-Z][A-Za-z]+)\.?\s+(\d+:\d+(?:\s*[-–]\s*\d+)?(?:\s*[,&;]\s*\d+(?::\d+)?(?:\s*[-–]\s*\d+)?)*)/g
+  /(?:\b([1-3])\s+)?\b([A-Z][A-Za-z]+)\.?\s+(\d+:\d+(?:\s*[-–]\s*\d+)?(?:\s*[,&;]\s*(?![1-3]\s+[A-Z])\d+(?::\d+)?(?:\s*[-–]\s*\d+)?)*)/g
 
 // The author's own cross-walks: a printed chapter number, a named back-matter
-// section, or a sub-section head standing for the chapter that holds it.
-const SELF_CITATION = /\b(Chapter\s+\d+|Appendix\s+[A-Z])\b/g
+// section, or a sub-section head standing for the chapter that holds it. The
+// book prints its chapter cross-walks both `Chapter 12` and `see chapter 12`.
+const SELF_CITATION = /\b([Cc]hapter\s+\d+|Appendix\s+[A-Z])\b/g
 const SUB_SECTION_CITATION = /\b(\d{1,2})\.\d(?:\.\d)?\b/g
 
 export type SectionRanges = ReadonlyMap<string, VerseRange>
