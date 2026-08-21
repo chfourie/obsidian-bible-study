@@ -8,6 +8,7 @@
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
   import {
     paragraphsOf,
+    sectionGroups,
     type ReaderPaneModel,
     type ReaderToggles,
     type VerseRowView,
@@ -240,8 +241,18 @@
       <span class="bsr-crumb-book">{view.book.title}</span>
       <span class="bsr-crumb-sep">›</span>
       <select class="dropdown" value={String(view.position.chapter)} onchange={onChapterPicked}>
-        {#each view.book.sections as section (section.chapter)}
-          <option value={String(section.chapter)}>{section.name}</option>
+        {#each sectionGroups(view.book.sections) as group, index (index)}
+          {#if group.label === null}
+            {#each group.sections as section (section.chapter)}
+              <option value={String(section.chapter)}>{section.name}</option>
+            {/each}
+          {:else}
+            <optgroup label={group.label}>
+              {#each group.sections as section (section.chapter)}
+                <option value={String(section.chapter)}>{section.name}</option>
+              {/each}
+            </optgroup>
+          {/if}
         {/each}
       </select>
     </div>
@@ -266,13 +277,18 @@
       <div class="bsr-tree">
         <div class="bsr-toc-title">{view.book.title}</div>
         <div class="bsr-toc-author">{view.book.author}</div>
-        {#each view.book.sections as section (section.chapter)}
-          <button
-            type="button"
-            class="bsr-toc-item"
-            class:bsr-on={section.current}
-            onclick={(event) => void model.goTo(view.position.book, section.chapter, navIntent(event))}
-          >{section.name}</button>
+        {#each sectionGroups(view.book.sections) as group, index (index)}
+          {#if group.label !== null}
+            <div class="bsr-toc-part">{group.label}</div>
+          {/if}
+          {#each group.sections as section (section.chapter)}
+            <button
+              type="button"
+              class="bsr-toc-item"
+              class:bsr-on={section.current}
+              onclick={(event) => void model.goTo(view.position.book, section.chapter, navIntent(event))}
+            >{section.name}</button>
+          {/each}
         {/each}
       </div>
     {:else if view.toggles.nav === 'tree'}
@@ -363,6 +379,9 @@
             <div class="bsr-nudge">{view.title} is unavailable in this translation.</div>
           {:else if view.book !== null}
             {#each view.rows as row (row.verseId)}
+              {#each row.headings as heading, index (index)}
+                <div class="bsr-heading bsr-heading-{heading.level}">{heading.text}</div>
+              {/each}
               <div
                 class="bsr-para"
                 class:bsr-para-numbered={view.toggles.paraNumbers === 'on'}
@@ -801,6 +820,14 @@
     font-style: italic;
   }
 
+  .bsr-toc-part {
+    padding: 10px 12px 2px;
+    color: var(--text-faint);
+    font-size: var(--font-smallest);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
   .bsr-toc-item {
     display: block;
     width: 100%;
@@ -865,6 +892,38 @@
     margin-top: 8px;
     font-style: normal;
     font-size: 0.85em;
+  }
+
+  /* Section furniture, printed above the paragraph it introduces and outside
+     the paragraph's own clickable body. */
+  .bsr-heading {
+    text-align: center;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .bsr-heading-part {
+    margin: 1.4em 0 1.6em;
+    padding-top: 1em;
+    border-top: 1px solid var(--background-modifier-border);
+    font-size: 1.15em;
+    font-variant: small-caps;
+    letter-spacing: 0.08em;
+    color: var(--text-normal);
+  }
+
+  .bsr-heading-section {
+    margin: 1.6em 0 0.9em;
+    font-size: 1.05em;
+    font-weight: 600;
+    color: var(--text-normal);
+  }
+
+  .bsr-heading-sub-section {
+    margin: 1.2em 0 0.7em;
+    font-size: 0.95em;
+    font-style: italic;
+    color: var(--text-muted);
   }
 
   .bsr-para {

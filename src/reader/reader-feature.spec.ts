@@ -1055,6 +1055,47 @@ describe('ReaderFeature book mode', () => {
     expect(view.banner).toBe('Opened at Humility ch. 1, par. 2')
   })
 
+  // A book printed in Parts, with a sub-section head above its first
+  // paragraph: both reach the pane from the installed module alone.
+  it('carries a book’s Headings and Parts from the module to the pane', async () => {
+    const heading = { text: '1.1 The Glory', level: 'section' as const }
+    const partOne = 'PART ONE: The Creature'
+    const inParts = (): ModuleStore =>
+      ({
+        ...bookStore(),
+        installedManifests: async () => [
+          {
+            ...humilityManifest(),
+            book: {
+              ...humilityManifest().book,
+              sections: HUMILITY_SECTIONS.map((section) => ({
+                ...section,
+                ...(section.chapter === 0 ? {} : { part: partOne }),
+              })),
+            },
+          } as ModuleManifest,
+        ],
+        bookContent: async () => ({
+          [makeVerseId(HUMILITY, 1, 1)]: {
+            text: 'When God created the universe.',
+            headings: [heading],
+          },
+        }),
+      }) as unknown as ModuleStore
+    const { feature, leaves } = harness({}, { store: inParts() })
+    await feature.load()
+
+    feature.openReference(bookReference(1, 1), null)
+    await flushAsync()
+
+    const view = (leaves[0].view as ReaderView).model.view
+    expect(view.rows.map((row) => row.headings)).toEqual([[heading]])
+    expect(view.book?.sections.map((section) => section.part)).toEqual([
+      undefined,
+      ...HUMILITY_SECTIONS.slice(1).map(() => partOne),
+    ])
+  })
+
   // What the ribbon panel's Books section renders and activates (ticket #78).
   it('lists the installed books for the ribbon menu', async () => {
     const { feature } = harness({}, { store: bookStore() })

@@ -148,9 +148,10 @@ export class ReaderFeature
         author: manifest.book.author,
         year: manifest.book.year,
         editionId: manifest.id,
-        sections: manifest.book.sections.map(({ chapter, name }) => ({
+        sections: manifest.book.sections.map(({ chapter, name, part }) => ({
           chapter,
           name,
+          ...(part === undefined ? {} : { part }),
         })),
       }))
   }

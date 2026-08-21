@@ -51,7 +51,7 @@ import {
 } from '../data-access'
 import { isPoetryVerse, markSpanChannel, verseSegments } from '../rendering'
 import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
-import type { Epigraph } from '../modules'
+import type { Epigraph, Heading } from '../modules'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
 import { isAnnotation, type OccurrenceGroup } from '../vault-index'
@@ -66,7 +66,12 @@ export type ReaderToggles = {
   paraNumbers: 'on' | 'hover'
 }
 
-export type ReaderBookSection = { chapter: number; name: string }
+export type ReaderBookSection = {
+  chapter: number
+  name: string
+  // The Part this section sits under, for books printed in Parts.
+  part?: string
+}
 
 // An installed book as the reader needs it: its own contents table plus the
 // edition module that fills the translation slot (ADR 0002).
@@ -168,6 +173,9 @@ export type VerseRowView = {
   verseId: number
   label: string
   segments: VerseSegment[]
+  // The Headings printed above this atom, in order — empty for scripture and
+  // for any book paragraph without furniture of its own.
+  headings: Heading[]
   highlighted: boolean
   annotations: number
   mentions: number
@@ -214,6 +222,29 @@ export type BookSectionOption = {
   chapter: number
   name: string
   current: boolean
+  part?: string
+}
+
+// The section options of one Part, under the Part title the picker shows as
+// a group label — a label, never a destination. A book printed without Parts
+// is one unlabelled run (spec-books §5).
+export type BookSectionGroup = {
+  label: string | null
+  sections: BookSectionOption[]
+}
+
+export const sectionGroups = (
+  sections: BookSectionOption[],
+): BookSectionGroup[] => {
+  const groups: BookSectionGroup[] = []
+  for (const section of sections) {
+    const label = section.part ?? null
+    const current = groups[groups.length - 1]
+    if (current === undefined || current.label !== label)
+      groups.push({ label, sections: [section] })
+    else current.sections.push(section)
+  }
+  return groups
 }
 
 // The attribution comes through as segments so its citation lights up on the
@@ -536,6 +567,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
         chapter: section.chapter,
         name: section.name,
         current: section.chapter === this.#position.chapter,
+        ...(section.part === undefined ? {} : { part: section.part }),
       })),
       epigraphs: this.#epigraphs.map(epigraphView),
     }
@@ -1257,6 +1289,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       verseId: verse.verseId,
       label: `${decodeVerseId(verse.verseId).verse}`,
       segments: this.#emphasizedSegments(verse),
+      headings: verse.headings ?? [],
       poetry: isPoetryVerse(verse.segments, this.#position.book),
       startsParagraph: verse.startsParagraph === true,
       highlighted:

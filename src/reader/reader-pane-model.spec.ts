@@ -12,7 +12,7 @@ import {
   type Reference,
   type RegisteredBook,
 } from '../reference'
-import type { Epigraph } from '../modules'
+import type { Epigraph, Heading } from '../modules'
 import type { Passage, PassageSource } from '../rendering'
 import type {
   CrossReference,
@@ -23,6 +23,7 @@ import type { StudyMaterialSource, VerseDetailsView } from '../contracts'
 import {
   paragraphsOf,
   ReaderPaneModel,
+  sectionGroups,
   type ReaderBook,
   type ReaderBookSection,
   type ReaderBookSource,
@@ -3035,6 +3036,14 @@ describe('ReaderPaneModel book mode', () => {
     deregisterBook(HUMILITY)
   })
 
+  it('leaves a book printed without Headings with none on its rows', async () => {
+    const model = bookModelWith()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.rows.every((row) => row.headings.length === 0)).toBe(true)
+  })
+
   it('renders a section as book prose with its epigraph and paragraph numbers', async () => {
     const model = bookModelWith()
 
@@ -3639,5 +3648,171 @@ describe('opening a nav target in a new tab', () => {
     await model.goTo(1, 1, { newTab: true })
 
     expect(model.view.position).toEqual({ book: 1, chapter: 1 })
+  })
+})
+
+// *IN* (book 102) is the first book printed in Parts, with sub-section heads
+// inside its chapters: the pane hands both to the reader as furniture beside
+// the grid, never as text on it.
+const IN = 102
+
+const IN_SECTIONS: ReaderBookSection[] = [
+  { chapter: 0, name: 'Prologue' },
+  { chapter: 1, name: 'Man as God Intended', part: 'PART ONE: Fall of Man' },
+  { chapter: 2, name: 'The Two Trees', part: 'PART ONE: Fall of Man' },
+  { chapter: 3, name: 'Death for Sin', part: 'PART TWO: Redemption of Man' },
+  { chapter: 4, name: 'Epilogue' },
+]
+
+const IN_HEADINGS: Heading[] = [
+  { text: 'PART ONE: Fall of Man', level: 'part' },
+  { text: '1.1 In God’s Image', level: 'section' },
+]
+
+const inBook = (): ReaderBook => ({
+  number: IN,
+  title: 'IN',
+  author: 'A Team',
+  year: 2026,
+  editionId: 'in-at-e1',
+  sections: IN_SECTIONS,
+})
+
+// The first paragraph of the Part's first chapter carries both the Part
+// title and the sub-section head printed above it; the next carries neither.
+const inPassages: PassageSource = {
+  passage: async (reference) => ({
+    status: 'ok',
+    attribution: null,
+    verses: [
+      {
+        verseId: reference.ranges[0].startId,
+        segments: [{ text: 'Mankind was created.', redLetter: false }],
+        headings: IN_HEADINGS,
+      },
+      {
+        verseId: reference.ranges[0].startId + 1,
+        segments: [{ text: 'God breathed into him.', redLetter: false }],
+      },
+    ],
+  }),
+}
+
+describe('ReaderPaneModel book mode with Parts and Headings', () => {
+  beforeEach(() => {
+    registerBookVersification({
+      book: IN,
+      sections: IN_SECTIONS.map(({ chapter }) => ({ chapter, paragraphs: 20 })),
+    })
+  })
+
+  afterEach(() => {
+    deregisterBookVersification(IN)
+  })
+
+  const model = (): ReaderPaneModel =>
+    bookModelWith({
+      passages: inPassages,
+      books: { installed: async () => [inBook()], epigraphs: async () => [] },
+    })
+
+  it('hangs a paragraph’s Headings on its row, in printed order', async () => {
+    const pane = model()
+
+    await pane.openPosition({ book: IN, chapter: 1 })
+
+    expect(pane.view.rows.map((row) => row.headings)).toEqual([IN_HEADINGS, []])
+  })
+
+  it('leaves the paragraph’s own text and offsets untouched by a Heading', async () => {
+    const pane = model()
+
+    await pane.openPosition({ book: IN, chapter: 1 })
+
+    expect(pane.view.rows[0].segments).toEqual([
+      { text: 'Mankind was created.', redLetter: false },
+    ])
+  })
+
+  it('names the Part on every section option that sits under one', async () => {
+    const pane = model()
+
+    await pane.openPosition({ book: IN, chapter: 1 })
+
+    expect(pane.view.book?.sections).toEqual([
+      { chapter: 0, name: 'Prologue', current: false },
+      {
+        chapter: 1,
+        name: 'Man as God Intended',
+        current: true,
+        part: 'PART ONE: Fall of Man',
+      },
+      {
+        chapter: 2,
+        name: 'The Two Trees',
+        current: false,
+        part: 'PART ONE: Fall of Man',
+      },
+      {
+        chapter: 3,
+        name: 'Death for Sin',
+        current: false,
+        part: 'PART TWO: Redemption of Man',
+      },
+      { chapter: 4, name: 'Epilogue', current: false },
+    ])
+  })
+
+  it('titles the pane by book and section, Parts notwithstanding', async () => {
+    const pane = model()
+
+    await pane.openPosition({ book: IN, chapter: 1 })
+
+    expect(pane.view.title).toBe('IN — Man as God Intended')
+    expect(pane.view.book?.sectionName).toBe('Man as God Intended')
+  })
+})
+
+describe('sectionGroups', () => {
+  it('runs the sections of a Part under one non-selectable label', async () => {
+    const pane = bookModelWith({
+      passages: inPassages,
+      books: { installed: async () => [inBook()], epigraphs: async () => [] },
+    })
+    registerBookVersification({
+      book: IN,
+      sections: IN_SECTIONS.map(({ chapter }) => ({ chapter, paragraphs: 20 })),
+    })
+    await pane.openPosition({ book: IN, chapter: 1 })
+    deregisterBookVersification(IN)
+
+    expect(
+      sectionGroups(pane.view.book?.sections ?? []).map((group) => [
+        group.label,
+        group.sections.map((section) => section.chapter),
+      ]),
+    ).toEqual([
+      [null, [0]],
+      ['PART ONE: Fall of Man', [1, 2]],
+      ['PART TWO: Redemption of Man', [3]],
+      [null, [4]],
+    ])
+  })
+
+  it('leaves a book printed without Parts as one unlabelled run', () => {
+    expect(
+      sectionGroups([
+        { chapter: 0, name: 'Preface', current: false },
+        { chapter: 1, name: 'The Glory of the Creature', current: true },
+      ]),
+    ).toEqual([
+      {
+        label: null,
+        sections: [
+          { chapter: 0, name: 'Preface', current: false },
+          { chapter: 1, name: 'The Glory of the Creature', current: true },
+        ],
+      },
+    ])
   })
 })

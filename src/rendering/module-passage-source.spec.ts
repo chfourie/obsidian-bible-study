@@ -309,6 +309,34 @@ describe('ModulePassageSource', () => {
     expect(second.startsParagraph).toBeUndefined()
   })
 
+  it('serves a book paragraph’s Headings beside its segments', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [john(15, 1)]: {
+          text: 'I am the true vine.',
+          headings: [{ text: '15.1 The Vine', level: 'section' as const }],
+        },
+        [john(15, 2)]: 'He cuts off every branch in Me.',
+      }),
+    })
+
+    const passage = await source.passage(ref('John 15:1-2'), 'web')
+
+    expect(passage).toMatchObject({
+      verses: [
+        {
+          verseId: john(15, 1),
+          headings: [{ text: '15.1 The Vine', level: 'section' }],
+          segments: [{ text: 'I am the true vine.' }],
+        },
+        { verseId: john(15, 2) },
+      ],
+    })
+    const second = (passage as { verses: { headings?: unknown }[] }).verses[1]
+    expect(second.headings).toBeUndefined()
+  })
+
   it('does not mark a paragraph start on a mid-verse line', async () => {
     const source = new ModulePassageSource({
       manifest: async () => webManifest('Public Domain'),
