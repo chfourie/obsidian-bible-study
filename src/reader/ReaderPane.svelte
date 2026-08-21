@@ -380,7 +380,11 @@
           {:else if view.book !== null}
             {#each view.rows as row (row.verseId)}
               {#each row.headings as heading, index (index)}
-                <div class="bsr-heading bsr-heading-{heading.level}">{heading.text}</div>
+                <div class="bsr-heading bsr-heading-{heading.level}"
+                  >{#each heading.segments as segment, at (at)}{#if segment.emphasized}<mark
+                        class="scripture-study-match">{segment.text}</mark
+                      >{:else}{segment.text}{/if}{/each}</div
+                >
               {/each}
               <div
                 class="bsr-para"

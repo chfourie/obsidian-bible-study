@@ -1089,7 +1089,14 @@ describe('ReaderFeature book mode', () => {
     await flushAsync()
 
     const view = (leaves[0].view as ReaderView).model.view
-    expect(view.rows.map((row) => row.headings)).toEqual([[heading]])
+    expect(view.rows.map((row) => row.headings)).toEqual([
+      [
+        {
+          level: heading.level,
+          segments: [{ text: heading.text, redLetter: false }],
+        },
+      ],
+    ])
     expect(view.book?.sections.map((section) => section.part)).toEqual([
       undefined,
       ...HUMILITY_SECTIONS.slice(1).map(() => partOne),

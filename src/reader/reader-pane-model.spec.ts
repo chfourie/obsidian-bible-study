@@ -3721,7 +3721,56 @@ describe('ReaderPaneModel book mode with Parts and Headings', () => {
 
     await pane.openPosition({ book: IN, chapter: 1 })
 
-    expect(pane.view.rows.map((row) => row.headings)).toEqual([IN_HEADINGS, []])
+    expect(pane.view.rows.map((row) => row.headings)).toEqual([
+      [
+        {
+          level: 'part',
+          segments: [{ text: 'PART ONE: Fall of Man', redLetter: false }],
+        },
+        {
+          level: 'section',
+          segments: [{ text: '1.1 In God’s Image', redLetter: false }],
+        },
+      ],
+      [],
+    ])
+  })
+
+  it('emphasizes an entry’s matched words inside the Heading they were found in', async () => {
+    const pane = model()
+
+    await pane.openAt(
+      { book: IN, ranges: [{ startId: makeVerseId(IN, 1, 1), endId: makeVerseId(IN, 1, 1) }] },
+      null,
+      [{ verseId: makeVerseId(IN, 1, 1), start: 4, end: 6, heading: 1 }],
+    )
+
+    expect(pane.view.rows[0].headings.map((heading) => heading.segments)).toEqual([
+      [{ text: 'PART ONE: Fall of Man', redLetter: false }],
+      [
+        { text: '1.1 ', redLetter: false },
+        { text: 'In', redLetter: false, emphasized: true },
+        { text: ' God’s Image', redLetter: false },
+      ],
+    ])
+  })
+
+  it('leaves a Heading unemphasized by the spans of the paragraph’s own text', async () => {
+    const pane = model()
+
+    await pane.openAt(
+      { book: IN, ranges: [{ startId: makeVerseId(IN, 1, 1), endId: makeVerseId(IN, 1, 1) }] },
+      null,
+      [{ verseId: makeVerseId(IN, 1, 1), start: 0, end: 7 }],
+    )
+
+    expect(pane.view.rows[0].headings[0].segments).toEqual([
+      { text: 'PART ONE: Fall of Man', redLetter: false },
+    ])
+    expect(pane.view.rows[0].segments).toEqual([
+      { text: 'Mankind', redLetter: false, emphasized: true },
+      { text: ' was created.', redLetter: false },
+    ])
   })
 
   it('leaves the paragraph’s own text and offsets untouched by a Heading', async () => {

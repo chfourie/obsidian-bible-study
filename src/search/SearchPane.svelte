@@ -171,6 +171,13 @@ Activating a hit opens the reader at that verse or paragraph.
               onkeydown={activate((event) => open(hit, event))}
             >
               <span class="bss-hit-label">{hit.label}</span>
+              {#each hit.headings as heading, index (index)}
+                <span class="bss-hit-heading bss-hit-heading-{heading.level}"
+                  >{#each heading.segments as segment, at (at)}{#if segment.matched}<mark
+                        class="scripture-study-match">{segment.text}</mark
+                      >{:else}{segment.text}{/if}{/each}</span
+                >
+              {/each}
               <span class="bss-hit-text"
                 >{#each hit.segments as segment, index (index)}{#if segment.matched}<mark
                       class="scripture-study-match">{segment.text}</mark
@@ -394,5 +401,24 @@ Activating a hit opens the reader at that verse or paragraph.
     margin-right: 0.35rem;
     color: var(--text-muted);
     font-size: var(--font-ui-smaller);
+  }
+
+  .bss-hit-heading {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+  }
+
+  .bss-hit-heading-part {
+    font-variant: small-caps;
+    letter-spacing: 0.05em;
+  }
+
+  .bss-hit-heading-section {
+    font-weight: 600;
+  }
+
+  .bss-hit-heading-sub-section {
+    font-style: italic;
   }
 </style>

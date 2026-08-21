@@ -51,7 +51,7 @@ import {
 } from '../data-access'
 import { isPoetryVerse, markSpanChannel, verseSegments } from '../rendering'
 import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
-import type { Epigraph, Heading } from '../modules'
+import type { Epigraph, HeadingLevel } from '../modules'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
 import { isAnnotation, type OccurrenceGroup } from '../vault-index'
@@ -169,13 +169,20 @@ export type ReaderPaneConfig = {
 const clampFontScale = (percent: number): number =>
   Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, percent))
 
+// A Heading printed above the atom, in segments like the atom's own text so
+// that an entry's matched words are emphasized here too (CONTEXT.md — Hit).
+export type HeadingRowView = {
+  level: HeadingLevel
+  segments: VerseSegment[]
+}
+
 export type VerseRowView = {
   verseId: number
   label: string
   segments: VerseSegment[]
   // The Headings printed above this atom, in order — empty for scripture and
   // for any book paragraph without furniture of its own.
-  headings: Heading[]
+  headings: HeadingRowView[]
   highlighted: boolean
   annotations: number
   mentions: number
@@ -1274,14 +1281,35 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   #emphasizedSegments(verse: PassageVerse): VerseSegment[] {
+    return this.#emphasized(verse.segments, verse.verseId, undefined)
+  }
+
+  // A span belongs to the atom's text or to one of its Headings, never to
+  // both: each is emphasized only by the spans addressed to it.
+  #emphasized(
+    segments: readonly VerseSegment[],
+    verseId: number,
+    heading: number | undefined,
+  ): VerseSegment[] {
     const spans = this.#emphasis.filter(
-      (span) => span.verseId === verse.verseId,
+      (span) => span.verseId === verseId && span.heading === heading,
     )
     return spans.length === 0
-      ? verse.segments
-      : markSpanChannel(verse.segments, spans, (segment) => {
+      ? [...segments]
+      : markSpanChannel(segments, spans, (segment) => {
           segment.emphasized = true
         })
+  }
+
+  #headingRows(verse: PassageVerse): HeadingRowView[] {
+    return (verse.headings ?? []).map((heading, index) => ({
+      level: heading.level,
+      segments: this.#emphasized(
+        [{ text: heading.text, redLetter: false }],
+        verse.verseId,
+        index,
+      ),
+    }))
   }
 
   #rowsOf(verses: PassageVerse[]): VerseRowView[] {
@@ -1289,7 +1317,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       verseId: verse.verseId,
       label: `${decodeVerseId(verse.verseId).verse}`,
       segments: this.#emphasizedSegments(verse),
-      headings: verse.headings ?? [],
+      headings: this.#headingRows(verse),
       poetry: isPoetryVerse(verse.segments, this.#position.book),
       startsParagraph: verse.startsParagraph === true,
       highlighted:

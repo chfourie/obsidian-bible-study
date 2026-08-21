@@ -6,7 +6,15 @@ import {
 } from '../../tests/fixtures/humility-book'
 import type { NavigationOptions } from '../contracts'
 import type { BookContent } from '../modules'
-import { BOOKS, makeVerseId, type Reference } from '../reference'
+import {
+  BOOKS,
+  deregisterBook,
+  deregisterBookVersification,
+  makeVerseId,
+  registerBook,
+  registerBookVersification,
+  type Reference,
+} from '../reference'
 import { SearchEngine } from './search-engine'
 import { SearchPaneModel, type SearchPaneDeps } from './search-pane-model'
 import type { SearchQuery } from './search-query'
@@ -551,6 +559,106 @@ describe('SearchPaneModel result list', () => {
     expect(model.view.books.map((view) => view.collapsed)).toEqual([
       false,
       false,
+    ])
+  })
+})
+
+const IN_BOOK = 102
+
+const IN_BOOK_OPTION: SearchScopeBook = {
+  moduleId: 'in-at-e1',
+  bookId: IN_BOOK,
+  label: 'IN',
+}
+
+const IN_SECTIONS = [{ chapter: 1, name: 'Man as God Intended', paragraphs: 4 }]
+
+// A Book printed with section furniture: the paragraph's Headings are indexed
+// with its text, so a word printed only above it still earns the Hit.
+const IN_CONTENT: Record<number, BookContent> = {
+  [IN_BOOK]: {
+    [makeVerseId(IN_BOOK, 1, 1)]: {
+      text: 'He would not be told anything.',
+      headings: [
+        { text: 'PART TWO: Redemption of Man', level: 'part' },
+        { text: 'Self-righteous men', level: 'section' },
+      ],
+    },
+  },
+}
+
+const installInBook = (): void => {
+  registerBookVersification({ book: IN_BOOK, sections: IN_SECTIONS })
+  registerBook({
+    id: IN_BOOK,
+    name: 'IN',
+    abbrev: 'IN',
+    aliases: [],
+    moduleId: 'in-at-e1',
+    editionCode: 'IN-AT-E1',
+    author: 'A Team',
+    year: 2026,
+    sections: IN_SECTIONS,
+  })
+}
+
+const uninstallInBook = (): void => {
+  deregisterBookVersification(IN_BOOK)
+  deregisterBook(IN_BOOK)
+}
+
+const inHarness = () =>
+  harness({
+    books: [IN_BOOK_OPTION],
+    content: { web: WEB_CONTENT, 'in-at-e1': IN_CONTENT },
+    bookNumbers: { 'in-at-e1': IN_BOOK },
+  })
+
+describe('SearchPaneModel over a Book with Headings', () => {
+  beforeEach(installInBook)
+  afterEach(uninstallInBook)
+
+  const searched = async (query: string) => {
+    const found = inHarness()
+    found.model.setQuery(query)
+    await found.model.submit()
+    return found
+  }
+
+  it('hits the paragraph a word printed only in its Heading belongs to', async () => {
+    const { model } = await searched('self-righteous')
+    expect(labels(model)).toEqual(['IN ch. 1, par. 1'])
+  })
+
+  it('prints the hit’s Headings, matched words emphasized', async () => {
+    const { model } = await searched('righteous')
+    expect(model.view.books[0].hits[0].headings).toEqual([
+      {
+        level: 'part',
+        segments: [{ text: 'PART TWO: Redemption of Man', matched: false }],
+      },
+      {
+        level: 'section',
+        segments: [
+          { text: 'Self-', matched: false },
+          { text: 'righteous', matched: true },
+          { text: ' men', matched: false },
+        ],
+      },
+    ])
+  })
+
+  it('emphasizes the Heading words in the reader when the hit is opened', async () => {
+    const { model, opened } = await searched('righteous told')
+    model.openHit(model.view.books[0].hits[0])
+    expect(opened[0].options?.emphasis).toEqual([
+      { verseId: makeVerseId(IN_BOOK, 1, 1), start: 16, end: 20 },
+      {
+        verseId: makeVerseId(IN_BOOK, 1, 1),
+        start: 5,
+        end: 14,
+        heading: 1,
+      },
     ])
   })
 })

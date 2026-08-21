@@ -107,6 +107,50 @@ describe('groupHitsByBook', () => {
     expect(group.hits[0].spans).toEqual([{ start: 14, end: 18 }])
   })
 
+  it('prints every Heading of a hit, matched runs emphasized', () => {
+    const [group] = groupHitsByBook([
+      {
+        verseId: makeVerseId(102, 1, 1),
+        text: 'He would not be told anything.',
+        spans: [],
+        headingSpans: [{ heading: 1, spans: [{ start: 5, end: 14 }] }],
+        headings: [
+          { text: 'PART TWO: Redemption of Man', level: 'part' },
+          { text: 'Self-righteous men', level: 'section' },
+        ],
+      },
+    ])
+    expect(group.hits[0].headings).toEqual([
+      {
+        level: 'part',
+        segments: [{ text: 'PART TWO: Redemption of Man', matched: false }],
+      },
+      {
+        level: 'section',
+        segments: [
+          { text: 'Self-', matched: false },
+          { text: 'righteous', matched: true },
+          { text: ' men', matched: false },
+        ],
+      },
+    ])
+  })
+
+  it('keeps the Heading spans, so the reader can emphasize the same words', () => {
+    const [group] = groupHitsByBook([
+      {
+        verseId: makeVerseId(102, 1, 1),
+        text: 'He would not be told anything.',
+        spans: [],
+        headingSpans: [{ heading: 0, spans: [{ start: 5, end: 14 }] }],
+        headings: [{ text: 'Self-righteous men', level: 'section' }],
+      },
+    ])
+    expect(group.hits[0].headingSpans).toEqual([
+      { heading: 0, spans: [{ start: 5, end: 14 }] },
+    ])
+  })
+
   it('has no groups for no hits', () => {
     expect(groupHitsByBook([])).toEqual([])
   })

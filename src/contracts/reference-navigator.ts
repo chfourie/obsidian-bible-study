@@ -4,7 +4,14 @@ import type { Reference } from '../reference'
 // Words the opened passage emphasizes, addressed as character offsets into
 // one atom's stored text in the translation the caller searched. Computed by
 // whoever knows the words — the reader never learns the tokenizer.
-export type EmphasisSpan = { verseId: number; start: number; end: number }
+// Offsets into the atom's stored text, or — with `heading` given — into that
+// Heading of the atom, which is emphasized in the reader as its text is.
+export type EmphasisSpan = {
+  verseId: number
+  start: number
+  end: number
+  heading?: number
+}
 
 // Cmd/Ctrl-activated references ask for their own reader pane instead of
 // taking over the open one; emphasis rides along with the entry and lives as

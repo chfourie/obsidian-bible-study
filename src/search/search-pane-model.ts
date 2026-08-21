@@ -252,11 +252,21 @@ export class SearchPaneModel {
   openHit(hit: SearchHitView, options?: NavigationOptions): void {
     const entry: NavigationOptions = {
       ...options,
-      emphasis: hit.spans.map((span) => ({
-        verseId: hit.verseId,
-        start: span.start,
-        end: span.end,
-      })),
+      emphasis: [
+        ...hit.spans.map((span) => ({
+          verseId: hit.verseId,
+          start: span.start,
+          end: span.end,
+        })),
+        ...hit.headingSpans.flatMap((matched) =>
+          matched.spans.map((span) => ({
+            verseId: hit.verseId,
+            start: span.start,
+            end: span.end,
+            heading: matched.heading,
+          })),
+        ),
+      ],
     }
     const { book } = decodeVerseId(hit.verseId)
     if (isNonBiblicalBook(book)) {

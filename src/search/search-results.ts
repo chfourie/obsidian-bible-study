@@ -4,8 +4,9 @@ import {
   referenceLabel,
   type Reference,
 } from '../reference'
+import type { HeadingLevel } from '../modules'
 import type { MatchSpan } from './search-query'
-import type { SearchHit } from './search-scan'
+import type { HeadingMatch, SearchHit } from './search-scan'
 
 // One run of a hit's text, told apart by whether the query matched it: the
 // view emphasizes the matched runs and prints the rest as it stands.
@@ -14,14 +15,24 @@ export type SearchHitSegment = {
   matched: boolean
 }
 
+// A Heading printed above the hit, emphasized wherever the query found it —
+// headings are searched with their paragraph, so a row shows why it matched
+// there as readily as in the text (CONTEXT.md — Heading).
+export type SearchHitHeadingView = {
+  level: HeadingLevel
+  segments: SearchHitSegment[]
+}
+
 export type SearchHitView = {
   verseId: number
   reference: Reference
   label: string
   segments: SearchHitSegment[]
+  headings: SearchHitHeadingView[]
   // The matched spans as the searched module stores them, kept so activating
   // the hit can emphasize the same words in the reader.
   spans: readonly MatchSpan[]
+  headingSpans: readonly HeadingMatch[]
 }
 
 // How many of a book's hits the list prints before the rest wait behind an
@@ -62,6 +73,9 @@ export const emphasizedSegments = (
   return segments
 }
 
+const spansOfHeading = (hit: SearchHit, heading: number): MatchSpan[] =>
+  hit.headingSpans.find((matched) => matched.heading === heading)?.spans ?? []
+
 const hitView = (hit: SearchHit): SearchHitView => {
   const reference: Reference = {
     book: decodeVerseId(hit.verseId).book,
@@ -72,7 +86,12 @@ const hitView = (hit: SearchHit): SearchHitView => {
     reference,
     label: referenceLabel(reference),
     segments: emphasizedSegments(hit.text, hit.spans),
+    headings: hit.headings.map((heading, index) => ({
+      level: heading.level,
+      segments: emphasizedSegments(heading.text, spansOfHeading(hit, index)),
+    })),
     spans: hit.spans,
+    headingSpans: hit.headingSpans,
   }
 }
 
