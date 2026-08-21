@@ -19,11 +19,16 @@ import type { ParsedBookSection } from './parse-book-markdown'
 const SCRIPTURE_CITATION =
   /(?:\b([1-3])\s+)?\b([A-Z][A-Za-z]+)\.?\s+(\d+:\d+(?:\s*[-–]\s*\d+)?(?:\s*[,&;]\s*(?![1-3]\s+[A-Z])\d+(?::\d+)?(?:\s*[-–]\s*\d+)?)*)/g
 
-// The author's own cross-walks: a printed chapter number, a named back-matter
-// section, or a sub-section head standing for the chapter that holds it. The
-// book prints its chapter cross-walks both `Chapter 12` and `see chapter 12`.
+// The author's own cross-walks: a printed chapter number or a named
+// back-matter section. The book prints its chapter cross-walks both
+// `Chapter 12` and `see chapter 12`.
 const SELF_CITATION = /\b([Cc]hapter\s+\d+|Appendix\s+[A-Z])\b/g
-const SUB_SECTION_CITATION = /\b(\d{1,2})\.\d(?:\.\d)?\b/g
+// A sub-section head standing for the chapter that holds it. Only a decimal
+// the author introduced as a cross-walk — after `see`, `section` or `chapter`,
+// or opening a bracket — counts, so a decimal in the prose itself (`2.5
+// times`) stays prose.
+const SUB_SECTION_CITATION =
+  /(?<=\b(?:[Ss]ee|[Ss]ection|[Cc]hapter)\s+|\()(\d{1,2})\.\d(?:\.\d)?\b/g
 
 export type SectionRanges = ReadonlyMap<string, VerseRange>
 

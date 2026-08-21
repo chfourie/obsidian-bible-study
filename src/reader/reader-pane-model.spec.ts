@@ -3836,7 +3836,7 @@ describe('sectionGroups', () => {
     deregisterBookVersification(IN)
 
     expect(
-      sectionGroups(pane.view.book?.sections ?? []).map((group) => [
+      (pane.view.book?.sectionGroups ?? []).map((group) => [
         group.label,
         group.sections.map((section) => section.chapter),
       ]),

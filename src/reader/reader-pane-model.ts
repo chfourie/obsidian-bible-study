@@ -270,6 +270,7 @@ export type BookModeView = {
   edition: string
   sectionName: string
   sections: BookSectionOption[]
+  sectionGroups: BookSectionGroup[]
   epigraphs: EpigraphView[]
 }
 
@@ -565,17 +566,19 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   #bookView(book: ReaderBook): BookModeView {
+    const sections = book.sections.map((section) => ({
+      chapter: section.chapter,
+      name: section.name,
+      current: section.chapter === this.#position.chapter,
+      ...(section.part === undefined ? {} : { part: section.part }),
+    }))
     return {
       title: book.title,
       author: book.author,
       edition: `${book.title} ${book.year}`,
       sectionName: this.#sectionOf(book)?.name ?? '',
-      sections: book.sections.map((section) => ({
-        chapter: section.chapter,
-        name: section.name,
-        current: section.chapter === this.#position.chapter,
-        ...(section.part === undefined ? {} : { part: section.part }),
-      })),
+      sections,
+      sectionGroups: sectionGroups(sections),
       epigraphs: this.#epigraphs.map(epigraphView),
     }
   }

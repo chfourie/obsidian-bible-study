@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
 import { makeVerseId } from '../../src/reference/verse-id'
-import type { BookRegistryEntry } from './book-registry'
+import type { BookRegistryEntry } from '../book-pipeline/book-registry'
 import {
   buildHumilityArtifact,
   refSpanCounts,

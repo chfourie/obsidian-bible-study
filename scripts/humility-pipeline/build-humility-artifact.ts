@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
 import { decodeVerseId, makeVerseId } from '../../src/reference/verse-id'
-import { type BookRegistryEntry, assertRegisteredBook } from './book-registry'
+import { type BookRegistryEntry, assertRegisteredBook } from '../book-pipeline/book-registry'
 import { attachRefSpans, type RefOverrides } from './attach-ref-spans'
 import {
   type BookParagraph,
@@ -136,5 +136,5 @@ export const refSpanCounts = (
 export const sha256Hex = (text: string): string =>
   createHash('sha256').update(text, 'utf8').digest('hex')
 
-export { parseBookRegistry } from './book-registry'
+export { parseBookRegistry } from '../book-pipeline/book-registry'
 export { parseRefOverrides } from './attach-ref-spans'

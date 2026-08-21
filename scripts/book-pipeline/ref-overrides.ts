@@ -5,6 +5,7 @@
 // cannot rot the annotations.
 
 import type { RefSpan } from '../../src/modules/verse-content'
+import { parseReference } from '../../src/reference/parse-reference'
 
 // Supplies the ranges for a citation the scanner missed or could not resolve.
 export type RefFix = {
@@ -76,13 +77,17 @@ const soleOffset = (atom: string, text: string, at: string): number => {
 
 export type AppliedRefs = { refs: RefSpan[]; accounted: RefSpan[] }
 
+const scriptureRanges = (reference: string): RefSpan['ranges'] => {
+  const parsed = parseReference(reference)
+  if (parsed === null)
+    throw new Error(`Fix override cites an unreadable reference: ${reference}`)
+  return parsed.reference.ranges
+}
+
 export class OverrideLedger {
   readonly #unused: Set<RefFix | RefSuppression>
 
-  constructor(
-    private readonly overrides: Required<RefOverrides>,
-    private readonly rangesOf: (reference: string) => RefSpan['ranges'],
-  ) {
+  constructor(private readonly overrides: Required<RefOverrides>) {
     this.#unused = new Set([...overrides.fix, ...overrides.suppress])
   }
 
@@ -114,7 +119,7 @@ export class OverrideLedger {
       const span = {
         start,
         end: start + entry.text.length,
-        ranges: this.rangesOf(entry.reference),
+        ranges: scriptureRanges(entry.reference),
       }
       // A fix is the last word on the citation it names, so it displaces
       // whatever the scanner made of the same stretch of text.

@@ -130,6 +130,10 @@ describe('scanBookRefSpans', () => {
     ])
   })
 
+  it('leaves a decimal that cites nothing as prose', () => {
+    expect(spansIn('the pressure grew 7.5 times over')).toEqual([])
+  })
+
   it('stays silent about a capitalised word that only looks like a citation', () => {
     const scanned = scanBookRefSpans('In Him we have redemption 1:7', selfRanges)
     expect(scanned.spans).toEqual([])

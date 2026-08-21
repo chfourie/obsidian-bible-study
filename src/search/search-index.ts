@@ -22,6 +22,9 @@ const POSTING_FIELDS = 5
 // one, so that every part has a number of its own.
 const TEXT_PART = 0
 
+const partOfHeading = (index: number): number => index + 1
+const headingOfPart = (part: number): number => part - 1
+
 type Occurrence = {
   atom: number
   token: number
@@ -39,7 +42,7 @@ type PartSpan = MatchSpan & { part: number }
 // the boundary.
 const indexedParts = (atom: ModuleAtom): { part: number; text: string }[] => [
   { part: TEXT_PART, text: atom.text },
-  ...atom.headings.map((text, index) => ({ part: index + 1, text })),
+  ...atom.headings.map((text, index) => ({ part: partOfHeading(index), text })),
 ]
 
 // The whole persisted index. Atoms are numbered by build order — Canonical
@@ -208,7 +211,10 @@ const headingMatches = (spans: readonly PartSpan[]): HeadingMatch[] =>
   [...new Set(spans.map((span) => span.part))]
     .filter((part) => part !== TEXT_PART)
     .sort((a, b) => a - b)
-    .map((part) => ({ heading: part - 1, spans: spansOfPart(spans, part) }))
+    .map((part) => ({
+      heading: headingOfPart(part),
+      spans: spansOfPart(spans, part),
+    }))
 
 export const searchIndex = (
   index: SearchIndex,

@@ -4,7 +4,6 @@
 
 import type { RefSpan } from '../../src/modules/verse-content'
 import { OverrideLedger, type RefOverrides } from '../book-pipeline/ref-overrides'
-import { parseReference } from '../../src/reference/parse-reference'
 import { makeVerseId } from '../../src/reference/verse-id'
 import type { VerseRange } from '../../src/reference/verse-range'
 import type { Epigraph, ParsedSection } from './parse-humility-text'
@@ -16,13 +15,6 @@ import {
 } from './parse-ref-spans'
 
 const NOTE_SECTION = /^Note ([A-Z])$/
-
-const scriptureRanges = (reference: string): VerseRange[] => {
-  const parsed = parseReference(reference)
-  if (parsed === null)
-    throw new Error(`Fix override cites an unreadable reference: ${reference}`)
-  return parsed.reference.ranges
-}
 
 const noteRangesOf = (
   book: number,
@@ -54,10 +46,10 @@ export const attachRefSpans = (
   sections: readonly ParsedSection[],
   overrides: RefOverrides,
 ): ParsedSection[] => {
-  const ledger = new OverrideLedger(
-    { fix: overrides.fix ?? [], suppress: overrides.suppress ?? [] },
-    scriptureRanges,
-  )
+  const ledger = new OverrideLedger({
+    fix: overrides.fix ?? [],
+    suppress: overrides.suppress ?? [],
+  })
   const noteRanges = noteRangesOf(book, sections)
   const attached = sections.map((section) => {
     const paragraphs = section.paragraphs.map((paragraph, index) => {

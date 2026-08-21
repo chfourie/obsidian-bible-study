@@ -8,7 +8,6 @@
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
   import {
     paragraphsOf,
-    sectionGroups,
     type ReaderPaneModel,
     type ReaderToggles,
     type VerseRowView,
@@ -241,7 +240,7 @@
       <span class="bsr-crumb-book">{view.book.title}</span>
       <span class="bsr-crumb-sep">›</span>
       <select class="dropdown" value={String(view.position.chapter)} onchange={onChapterPicked}>
-        {#each sectionGroups(view.book.sections) as group, index (index)}
+        {#each view.book.sectionGroups as group, index (index)}
           {#if group.label === null}
             {#each group.sections as section (section.chapter)}
               <option value={String(section.chapter)}>{section.name}</option>
@@ -277,7 +276,7 @@
       <div class="bsr-tree">
         <div class="bsr-toc-title">{view.book.title}</div>
         <div class="bsr-toc-author">{view.book.author}</div>
-        {#each sectionGroups(view.book.sections) as group, index (index)}
+        {#each view.book.sectionGroups as group, index (index)}
           {#if group.label !== null}
             <div class="bsr-toc-part">{group.label}</div>
           {/if}

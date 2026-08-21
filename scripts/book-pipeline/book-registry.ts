@@ -102,10 +102,6 @@ const PUBLICATION_FIELDS = [
   'sourceChecksum',
 ] as const
 
-// The registry is the single authority on a book's identity, so the pipeline
-// asks it for one rather than carrying per-book constants. A source whose
-// book is unregistered — or registered too thinly to publish — fails the
-// build here, before anything is written.
 export const bookPublication = (
   registry: readonly BookRegistryEntry[],
   moduleId: string,

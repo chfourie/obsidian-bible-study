@@ -54,9 +54,8 @@ const provenance = registry.find((entry) => entry.moduleId === MODULE_ID)
 const pdf = await readFile(path.join('resources', provenance.source)).catch(
   () => null,
 )
-if (pdf !== null && sha256Hex(pdf.toString('binary')) !== provenance.sourceChecksum) {
-  const { createHash } = await import('node:crypto')
-  const actual = createHash('sha256').update(pdf).digest('hex')
+if (pdf !== null) {
+  const actual = sha256Hex(pdf)
   if (actual !== provenance.sourceChecksum)
     throw new Error(
       `${provenance.source} is sha256 ${actual}, but the registry records ` +

@@ -7,8 +7,6 @@ import { createHash } from 'node:crypto'
 import { BOOK_MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
 import type { RefSpan } from '../../src/modules/verse-content'
 import { decodeVerseId, makeVerseId } from '../../src/reference/verse-id'
-import { parseReference } from '../../src/reference/parse-reference'
-import type { VerseRange } from '../../src/reference/verse-range'
 import {
   bookPublication,
   type BookRegistryEntry,
@@ -84,13 +82,6 @@ const withRefs = <Atom extends { refs?: RefSpan[] }>(
   refs: RefSpan[],
 ): Atom => (refs.length === 0 ? atom : { ...atom, refs })
 
-const scriptureRanges = (reference: string): VerseRange[] => {
-  const parsed = parseReference(reference)
-  if (parsed === null)
-    throw new Error(`Fix override cites an unreadable reference: ${reference}`)
-  return parsed.reference.ranges
-}
-
 export const buildBookArtifact = (
   markdown: string,
   registry: readonly BookRegistryEntry[],
@@ -101,14 +92,13 @@ export const buildBookArtifact = (
   const book = publication.bookNumber
 
   const sectionRanges = sectionRangesOf(book, sections)
-  const ledger = new OverrideLedger(
-    { fix: refOverrides.fix ?? [], suppress: refOverrides.suppress ?? [] },
-    scriptureRanges,
-  )
+  const ledger = new OverrideLedger({
+    fix: refOverrides.fix ?? [],
+    suppress: refOverrides.suppress ?? [],
+  })
 
-  // Every unresolved citation in the book is collected before the build
-  // gives up, so one pass over a fresh source lists all of them rather than
-  // making the curator rebuild once per citation.
+  // Collected rather than thrown on, so one pass over a fresh source lists
+  // every unresolved citation instead of one per rebuild.
   const unresolved: string[] = []
   const attach = <Atom extends { refs?: RefSpan[] }>(
     at: string,
@@ -176,8 +166,6 @@ export const buildBookArtifact = (
   }
 }
 
-// How many live citations each section came out with — the build's own report
-// on what the refs channel picked up (spec-books §8).
 export const refSpanCounts = (artifact: BookArtifact): Map<number, number> => {
   const counts = new Map<number, number>(
     artifact.manifest.book.sections.map((section) => [section.chapter, 0]),
@@ -195,8 +183,10 @@ export const refSpanCounts = (artifact: BookArtifact): Map<number, number> => {
   return counts
 }
 
-export const sha256Hex = (text: string): string =>
-  createHash('sha256').update(text, 'utf8').digest('hex')
+export const sha256Hex = (data: string | Uint8Array): string =>
+  typeof data === 'string'
+    ? createHash('sha256').update(data, 'utf8').digest('hex')
+    : createHash('sha256').update(data).digest('hex')
 
 export { parseBookRegistry } from './book-registry'
 export { parseRefOverrides } from './ref-overrides'
