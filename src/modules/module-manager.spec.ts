@@ -3,9 +3,11 @@ import { SettingsStore } from '../data-access'
 import { InMemoryModuleDataDir } from '../../tests/fixtures/in-memory-module-data-dir'
 import {
   chapterCount,
+  deregisterBook,
   deregisterBookVersification,
   isValidVerseId,
   makeVerseId,
+  registeredBooks,
 } from '../reference'
 import { ChecksumMismatchError, ModuleManager } from './module-manager'
 import { ModuleStore } from './module-store'
@@ -154,7 +156,10 @@ const setup = () => {
   }
 }
 
-afterEach(() => deregisterBookVersification(HUMILITY_BOOK))
+afterEach(() => {
+  deregisterBookVersification(HUMILITY_BOOK)
+  deregisterBook(HUMILITY_BOOK)
+})
 
 describe('ModuleManager download', () => {
   it('installs the module the source serves for the requested id', async () => {
@@ -278,6 +283,22 @@ describe('ModuleManager book modules', () => {
 
     expect(chapterCount(HUMILITY_BOOK)).toBe(2)
     expect(isValidVerseId(makeVerseId(HUMILITY_BOOK, 1, 9))).toBe(true)
+  })
+
+  // Everything that lists the installed Books — the Search Scope picker
+  // above all — reads the registry the moment the settings write announces
+  // the install. A book registered after that announcement is missing from
+  // the picker until the next plugin load.
+  it('registers the book before the install is announced', async () => {
+    const { settingsStore, manager } = setup()
+    const announced: number[][] = []
+    settingsStore.onSettingsChanged(() =>
+      announced.push(registeredBooks().map((book) => book.id)),
+    )
+
+    await manager.downloadModule('hum-m1895')
+
+    expect(announced[announced.length - 1]).toEqual([HUMILITY_BOOK])
   })
 
   it('deregisters the book versification table on uninstall', async () => {

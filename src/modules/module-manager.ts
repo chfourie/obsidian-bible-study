@@ -88,14 +88,18 @@ export class ModuleManager {
     return updated.filter((moduleId) => moduleId !== null)
   }
 
+  // The book joins the runtime registry before the settings write announces
+  // the install: everything that lists the installed Books — the Search Scope
+  // picker above all — reads the registry on that announcement, and a book
+  // registered after it would be missing until the next plugin load.
   async #completeInstall(
     moduleId: string,
     manifest: ModuleManifest,
   ): Promise<void> {
+    registerManifestBook(manifest)
     await this.settingsStore.updateSettings((settings) =>
       withModuleInstalled(settings, moduleId),
     )
-    registerManifestBook(manifest)
     await this.#buildSearchIndex(moduleId)
     this.onModulesChanged()
   }
