@@ -78,6 +78,20 @@ describe('scanBookRefSpans', () => {
     ).toEqual(['2 Peter 1:11', '2 Peter 3:13'])
   })
 
+  it('keeps a following ordinal-prefixed citation out of a verse list', () => {
+    expect(
+      spansIn('Acts 2:33, Ephesians 1:19-23, 1 Peter 3:22.').map(
+        ({ text }) => text,
+      ),
+    ).toEqual(['Acts 2:33', 'Ephesians 1:19-23', '1 Peter 3:22'])
+  })
+
+  it('links a parenthesised citation without its brackets', () => {
+    expect(spansIn('the whole armour (Ephesians 6:10-20).')).toEqual([
+      { text: 'Ephesians 6:10-20', ranges: [range(49, 6, 10, 20)] },
+    ])
+  })
+
   it('reads an abbreviated book name', () => {
     expect(spansIn('as in Matt. 18:3.')).toEqual([
       { text: 'Matt. 18:3', ranges: [range(40, 18, 3, 3)] },
@@ -95,6 +109,12 @@ describe('scanBookRefSpans', () => {
   it('links the book to its own chapter by printed number', () => {
     expect(spansIn('as you saw in Chapter 7.')).toEqual([
       { text: 'Chapter 7', ranges: [range(BOOK, 7, 1, 2)] },
+    ])
+  })
+
+  it('links the book to its own chapter however the author capitalises it', () => {
+    expect(spansIn('See chapter 7 on the flesh.')).toEqual([
+      { text: 'chapter 7', ranges: [range(BOOK, 7, 1, 2)] },
     ])
   })
 

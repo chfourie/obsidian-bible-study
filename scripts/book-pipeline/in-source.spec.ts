@@ -109,7 +109,7 @@ describe('IN First Edition', () => {
         (total, refs) => total + refs,
         0,
       ),
-    ).toBe(533)
+    ).toBe(538)
   })
 
   it('leaves the flattened table’s bare chapter:verse cells unlinked', () => {
