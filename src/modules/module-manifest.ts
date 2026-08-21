@@ -16,9 +16,10 @@ export const MODULE_FORMAT_VERSION = 5
 // on the same field so a format gain of theirs alone — v6: paragraphs carry
 // their Headings, sections name the Part they sit under; v7: a paragraph
 // carries the Figures printed beside it and the line channel a table or list
-// keeps its rows on — leaves every installed translation exactly as current
-// as it was.
-export const BOOK_MODULE_FORMAT_VERSION = 7
+// keeps its rows on; v8: a table's rows carry their cells, so the reader and
+// a note's citation print the grid the printed work had — leaves every
+// installed translation exactly as current as it was.
+export const BOOK_MODULE_FORMAT_VERSION = 8
 
 // The oldest stored translation whose content is already everything the
 // current format asks of it. Later versions added only what can be re-derived

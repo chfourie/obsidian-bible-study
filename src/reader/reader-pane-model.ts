@@ -50,7 +50,12 @@ import {
   FONT_SCALE_STEP,
   type AnnotationOrdering,
 } from '../data-access'
-import { isPoetryVerse, markSpanChannel, verseSegments } from '../rendering'
+import {
+  isPoetryVerse,
+  markSpanChannel,
+  spanSegments,
+  verseSegments,
+} from '../rendering'
 import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
 import type { Epigraph, Figure, HeadingLevel } from '../modules'
 
@@ -177,6 +182,15 @@ export type HeadingRowView = {
   segments: VerseSegment[]
 }
 
+// One row of a Book atom the curator flattened from a printed table: its
+// cells, each in the atom's own segments, so a Ref Span link, a highlight or
+// a search hit's emphasis inside a cell renders there exactly as it does in
+// prose. A blank cell is simply a cell with no segments.
+export type TableRowView = {
+  cells: VerseSegment[][]
+  header: boolean
+}
+
 export type VerseRowView = {
   verseId: number
   label: string
@@ -191,6 +205,8 @@ export type VerseRowView = {
   // items — prints them whatever the layout is. Scripture's line data is
   // poetry structure the layout toggle governs, so it never sets this.
   keepsLines: boolean
+  // A table atom's rows; null for every atom that is no table.
+  table: TableRowView[] | null
   highlighted: boolean
   annotations: number
   mentions: number
@@ -1323,22 +1339,42 @@ export class ReaderPaneModel implements StudyMaterialSource {
     }))
   }
 
-  #rowsOf(verses: PassageVerse[]): VerseRowView[] {
-    return verses.map((verse) => ({
-      verseId: verse.verseId,
-      label: `${decodeVerseId(verse.verseId).verse}`,
-      segments: this.#emphasizedSegments(verse),
-      headings: this.#headingRows(verse),
-      figures: verse.figures ?? [],
-      keepsLines:
-        verse.hasLineData === true && isNonBiblicalBook(this.#position.book),
-      poetry: isPoetryVerse(verse.segments, this.#position.book),
-      startsParagraph: verse.startsParagraph === true,
-      highlighted:
-        this.#entry !== null &&
-        this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),
-      ...this.#markerCounts(verse.verseId),
+  // The cells are read off the segments the atom is already rendered as, so a
+  // cell's own marks travel into the grid untouched and the stored text is
+  // never re-parsed for a delimiter.
+  #tableRows(
+    verse: PassageVerse,
+    segments: VerseSegment[],
+  ): TableRowView[] | null {
+    if (verse.table === undefined) return null
+    return verse.table.map((row) => ({
+      header: row.header,
+      cells: row.cells.map((cell) => spanSegments(segments, cell)),
     }))
+  }
+
+  #rowsOf(verses: PassageVerse[]): VerseRowView[] {
+    return verses.map((verse) => {
+      const segments = this.#emphasizedSegments(verse)
+      return {
+        verseId: verse.verseId,
+        label: `${decodeVerseId(verse.verseId).verse}`,
+        segments,
+        table: this.#tableRows(verse, segments),
+        headings: this.#headingRows(verse),
+        figures: verse.figures ?? [],
+        keepsLines:
+          verse.hasLineData === true && isNonBiblicalBook(this.#position.book),
+        poetry: isPoetryVerse(verse.segments, this.#position.book),
+        startsParagraph: verse.startsParagraph === true,
+        highlighted:
+          this.#entry !== null &&
+          this.#entry.ranges.some((range) =>
+            rangeContains(range, verse.verseId),
+          ),
+        ...this.#markerCounts(verse.verseId),
+      }
+    })
   }
 
   async refreshTranslations(): Promise<void> {

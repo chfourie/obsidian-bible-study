@@ -42,10 +42,21 @@ export type VerseSegment = {
   refs?: VerseRange[]
 }
 
+// One row of a Book atom the curator flattened from a printed table: the
+// spans its cells cover in the atom's stored text, and whether the row is the
+// table's header row. The text itself stays the flat row a citation reads —
+// the grid is drawn from the spans beside it.
+export type PassageTableRow = {
+  cells: FormatSpan[]
+  header: boolean
+}
+
 export type PassageVerse = {
   verseId: number
   segments: VerseSegment[]
   hasLineData?: boolean
+  // Set only on a table atom: its rows, in order.
+  table?: PassageTableRow[]
   startsParagraph?: boolean
   // Book paragraphs only: the section furniture printed with this atom.
   headings?: Heading[]
@@ -185,6 +196,13 @@ export class ModulePassageSource implements PassageSource {
         if (figures.length > 0) passageVerse.figures = figures
         const lines = verseLinesOf(verse)
         if (lines.length > 0) passageVerse.hasLineData = true
+        const rows = lines
+          .filter((line) => line.cells !== undefined)
+          .map((line) => ({
+            cells: line.cells ?? [],
+            header: line.header === true,
+          }))
+        if (rows.length > 0) passageVerse.table = rows
         if (lines.some((line) => line.start === 0 && line.paragraph === true))
           passageVerse.startsParagraph = true
         verses.push(passageVerse)

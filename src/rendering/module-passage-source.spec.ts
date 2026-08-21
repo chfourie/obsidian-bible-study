@@ -164,6 +164,66 @@ describe('ModulePassageSource', () => {
     })
   })
 
+  it('carries a flattened table’s rows and cells onto the passage verse', async () => {
+    const text = 'Faithful in Christ | 1:1\nWere dead | 2:1'
+    const cell = (of: string) => ({
+      start: text.indexOf(of),
+      end: text.indexOf(of) + of.length,
+    })
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [makeVerseId(19, 23, 1)]: {
+          text,
+          lines: [
+            {
+              start: 0,
+              header: true,
+              cells: [cell('Faithful in Christ'), cell('1:1')],
+            },
+            { start: 25, cells: [cell('Were dead'), cell('2:1')] },
+          ],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('Psalms 23:1'), 'web')
+
+    expect(passage).toMatchObject({
+      status: 'ok',
+      verses: [
+        {
+          hasLineData: true,
+          table: [
+            {
+              header: true,
+              cells: [cell('Faithful in Christ'), cell('1:1')],
+            },
+            { header: false, cells: [cell('Were dead'), cell('2:1')] },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('leaves a verse whose lines are no table without table rows', async () => {
+    const source = new ModulePassageSource({
+      manifest: async () => webManifest('Public Domain'),
+      bookContent: async () => ({
+        [makeVerseId(19, 23, 1)]: {
+          text: 'The LORD is my shepherd, I lack nothing.',
+          lines: [{ start: 0 }, { start: 25 }],
+        },
+      }),
+    })
+
+    const passage = await source.passage(ref('Psalms 23:1'), 'web')
+
+    expect(
+      passage.status === 'ok' ? passage.verses[0].table : 'no passage',
+    ).toBeUndefined()
+  })
+
   it('carries indent and psalm-heading line properties onto segments', async () => {
     const source = new ModulePassageSource({
       manifest: async () => webManifest('Public Domain'),

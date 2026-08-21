@@ -28,7 +28,9 @@ const source = [
   '- Be of no reputation.',
   '',
   '| God’s kingdom | 1:1',
+  '| --- | ---',
   '| World | 2:1',
+  '|  | 2:2',
   '',
   '> Not I, but Christ.',
   '> — Galatians 2:20',
@@ -76,8 +78,36 @@ describe('parseBookMarkdown', () => {
 
   it('keeps a pre-flattened table whole as a single atom, one row per line', () => {
     expect(parsed.sections[1].paragraphs[2].text).toBe(
-      'God’s kingdom | 1:1\nWorld | 2:1',
+      'God’s kingdom | 1:1\nWorld | 2:1\n2:2',
     )
+  })
+
+  it('marks every row’s cells, an empty one as a span of no width', () => {
+    const table = parsed.sections[1].paragraphs[2]
+    expect(
+      table.lines?.map((line) =>
+        (line.cells ?? []).map((cell) => table.text.slice(cell.start, cell.end)),
+      ),
+    ).toEqual([
+      ['God’s kingdom', '1:1'],
+      ['World', '2:1'],
+      ['', '2:2'],
+    ])
+  })
+
+  it('reads the row above a `---` rule as the table’s header row', () => {
+    const table = parsed.sections[1].paragraphs[2]
+    expect(table.lines?.map((line) => line.header)).toEqual([
+      true,
+      undefined,
+      undefined,
+    ])
+  })
+
+  it('leaves a list’s lines without cells — a list is no table', () => {
+    const list = parsed.sections[1].paragraphs[1]
+    expect(list.lines?.every((line) => line.cells === undefined)).toBe(true)
+    expect(list.lines?.every((line) => line.header === undefined)).toBe(true)
   })
 
   it('says where every kept line starts, so the reader prints the breaks', () => {
@@ -85,9 +115,10 @@ describe('parseBookMarkdown', () => {
       { start: 0 },
       { start: '- Be free from comfort.'.length + 1 },
     ])
-    expect(parsed.sections[1].paragraphs[2].lines).toEqual([
-      { start: 0 },
-      { start: 'God’s kingdom | 1:1'.length + 1 },
+    expect(parsed.sections[1].paragraphs[2].lines?.map((line) => line.start)).toEqual([
+      0,
+      'God’s kingdom | 1:1'.length + 1,
+      'God’s kingdom | 1:1\nWorld | 2:1'.length + 1,
     ])
   })
 

@@ -54,3 +54,20 @@ export const markSpanChannel = <Span extends TextSpan>(
   }
   return marked
 }
+
+// The pieces of one span, in order: the segments already built for the whole
+// atom, cut down to the stretch the span covers. A table cell reads its own
+// segments this way, so the marks the cell's text carries — a Ref Span link,
+// a highlight, a search hit's emphasis — travel into the cell unchanged. A
+// span of no width covers nothing, which is what a blank cell is.
+export const spanSegments = (
+  segments: readonly VerseSegment[],
+  span: TextSpan,
+): VerseSegment[] => {
+  if (span.end <= span.start) return []
+  const covered = new Set<VerseSegment>()
+  const cut = markSpanChannel(segments, [span], (piece) => {
+    covered.add(piece)
+  })
+  return cut.filter((piece) => covered.has(piece))
+}

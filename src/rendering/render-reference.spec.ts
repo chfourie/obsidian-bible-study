@@ -6,7 +6,12 @@ import {
 } from '../../tests/fixtures/humility-book'
 import { makeVerseId } from '../reference'
 import type { OccurrenceGroup } from '../vault-index'
-import type { Passage, PassageSource } from './module-passage-source'
+import {
+  verseSegments,
+  type Passage,
+  type PassageSource,
+} from './module-passage-source'
+import { VERSE_TEXT_CLASS } from './passage-selection'
 import {
   buildReferenceRenderModel,
   type ReferenceRenderModel,
@@ -1044,6 +1049,73 @@ describe('renderReference book references', () => {
     expect(
       passage?.querySelector('.scripture-study-attribution')?.textContent,
     ).toBe('Andrew Murray, Humility (1895), ch. 2, pars. 2-3')
+  })
+
+  // A flattened table's rows are stored as flat text with the cells beside
+  // it, so the grid is drawn without the stored text ever changing.
+  const TABLE_TEXT = 'Faithful in Christ | 1:1\nWere dead | 2:1'
+
+  const tableAtom = (): Passage => {
+    const cell = (of: string) => ({
+      start: TABLE_TEXT.indexOf(of),
+      end: TABLE_TEXT.indexOf(of) + of.length,
+    })
+    const verse = {
+      text: TABLE_TEXT,
+      lines: [
+        {
+          start: 0,
+          header: true,
+          cells: [cell('Faithful in Christ'), cell('1:1')],
+        },
+        { start: 25, cells: [cell('Were dead'), cell('2:1')] },
+      ],
+    }
+    return {
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: makeVerseId(HUMILITY_BOOK, 2, 2),
+          segments: verseSegments(verse, []),
+          hasLineData: true,
+          table: [
+            {
+              header: true,
+              cells: [cell('Faithful in Christ'), cell('1:1')],
+            },
+            { header: false, cells: [cell('Were dead'), cell('2:1')] },
+          ],
+        },
+      ],
+    }
+  }
+
+  it('renders a cited table atom as a grid, its header row as headings', async () => {
+    const { parent, deps } = setup(tableAtom())
+
+    await renderReference(parent, model('Humility 2:2 block'), deps)
+
+    const table = parent.querySelector('table.scripture-study-table')
+    expect(
+      [...(table?.querySelectorAll('th') ?? [])].map((cell) => cell.textContent),
+    ).toEqual(['Faithful in Christ', '1:1'])
+    expect(
+      [...(table?.querySelectorAll('td') ?? [])].map((cell) => cell.textContent),
+    ).toEqual(['Were dead', '2:1'])
+  })
+
+  // The cells break the atom's text into runs of their own, so a drag over
+  // them cannot be mapped back onto the stored offsets: the grid stays out of
+  // the highlight surface, and cues already stored still paint.
+  it('leaves a cited table out of the highlight surface, verse id and all', async () => {
+    const { parent, deps } = setup(tableAtom())
+
+    await renderReference(parent, model('Humility 2:2 block'), deps)
+
+    const holder = parent.querySelector(`.${VERSE_TEXT_CLASS}`)
+    expect(holder).not.toBeNull()
+    expect(holder?.getAttribute('data-verse-id')).toBeNull()
   })
 
   it('hides the chip on a book block, leaving the citation as the only nav target', async () => {

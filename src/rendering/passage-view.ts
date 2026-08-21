@@ -1,6 +1,11 @@
 import { highlightSpans } from '../highlights'
 import { decodeVerseId, type HighlightCue } from '../reference'
-import type { Passage, PassageVerse, VerseSegment } from './module-passage-source'
+import type {
+  Passage,
+  PassageTableRow,
+  PassageVerse,
+  VerseSegment,
+} from './module-passage-source'
 import type { ReferenceRenderModel } from './reference-render-model'
 import { markSpanChannel } from './segment-spans'
 
@@ -9,6 +14,9 @@ export type VerseBlock = {
   label: string | null
   segments: VerseSegment[]
   startsNewLine: boolean
+  // A Book atom flattened from a printed table: its rows, each the spans its
+  // cells cover in this block's segments. Null for every other atom.
+  table: PassageTableRow[] | null
 }
 
 const PSALMS_BOOK = 19
@@ -78,6 +86,7 @@ export const buildPassageView = (
       verseId: verse.verseId,
       label: numbered ? labels[index] : null,
       segments: highlightedSegments(verse, cues),
+      table: verse.table ?? null,
       startsNewLine:
         verse.hasLineData === true || model.reference.book === PSALMS_BOOK,
     })),

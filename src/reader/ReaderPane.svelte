@@ -10,6 +10,7 @@
     paragraphsOf,
     type ReaderPaneModel,
     type ReaderToggles,
+    type TableRowView,
     type VerseRowView,
   } from './reader-pane-model'
   import type { VerseSegment } from '../rendering'
@@ -177,6 +178,15 @@
   </figure>
 {/snippet}
 
+{#snippet rowMarks(row: VerseRowView)}
+  {#if row.annotations > 0}
+    <span class="bsr-mark-anno" title={row.annotations > 1 ? `${row.annotations} annotations` : 'Annotation'}>●{row.annotations > 1 ? row.annotations : ''}</span>
+  {/if}
+  {#if row.mentions > 0}
+    <span class="bsr-mark-inter" title="{row.mentions} intersecting notes">◆{row.mentions > 1 ? row.mentions : ''}</span>
+  {/if}
+{/snippet}
+
 {#snippet verseText(row: VerseRowView)}
   {@const lineStructured =
     view.toggles.layout === 'verse-per-line' || row.poetry || row.keepsLines}
@@ -186,12 +196,30 @@
         class="scripture-study-indent-{segment.indent}"
       >{@render matchedText(row, segment)}</span>{:else}{@render matchedText(row, segment)}{/if}
   {/each}
-  {#if row.annotations > 0}
-    <span class="bsr-mark-anno" title={row.annotations > 1 ? `${row.annotations} annotations` : 'Annotation'}>●{row.annotations > 1 ? row.annotations : ''}</span>
-  {/if}
-  {#if row.mentions > 0}
-    <span class="bsr-mark-inter" title="{row.mentions} intersecting notes">◆{row.mentions > 1 ? row.mentions : ''}</span>
-  {/if}
+  {@render rowMarks(row)}
+{/snippet}
+
+<!-- A Book atom the curator flattened from a printed table prints as the grid
+     it was: each cell reads its own stretch of the atom's segments, so a Ref
+     Span link or a hit's emphasis inside a cell renders there as in prose. -->
+{#snippet cellText(row: VerseRowView, cell: VerseSegment[])}{#each cell as segment, index (index)}{@render matchedText(row, segment)}{/each}{/snippet}
+
+{#snippet verseTable(row: VerseRowView, rows: TableRowView[])}
+  <div class="bsr-book-prose bsr-book-table-holder">
+    <table class="bsr-book-table">
+      <tbody>
+        {#each rows as tableRow, at (at)}
+          <tr>
+            {#each tableRow.cells as cell, index (index)}
+              {#if tableRow.header}<th>{@render cellText(row, cell)}</th
+                >{:else}<td>{@render cellText(row, cell)}</td>{/if}
+            {/each}
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+    {@render rowMarks(row)}
+  </div>
 {/snippet}
 
 <div class="bsr-shell">
@@ -417,7 +445,11 @@
                 }}
               >
                 <span class="bsr-gutter-num">{row.label}</span>
-                <p class="bsr-book-prose">{@render verseText(row)}</p>
+                {#if row.table !== null}
+                  {@render verseTable(row, row.table)}
+                {:else}
+                  <p class="bsr-book-prose">{@render verseText(row)}</p>
+                {/if}
               </div>
               {#each row.figures.filter((figure) => figure.place === 'below') as figure, at (at)}
                 {@render figurePlate(figure)}
@@ -983,6 +1015,34 @@
     line-height: 1.9;
     text-align: justify;
     hyphens: auto;
+  }
+
+  .bsr-book-table-holder {
+    /* The grid sets its own measure — justified prose rules read as nonsense
+       inside a cell. */
+    text-align: left;
+    hyphens: none;
+    overflow-x: auto;
+  }
+
+  .bsr-book-table {
+    width: 100%;
+    border-collapse: collapse;
+    line-height: 1.5;
+    font-size: 0.92em;
+  }
+
+  .bsr-book-table th,
+  .bsr-book-table td {
+    padding: 0.35em 0.6em;
+    border: 1px solid var(--background-modifier-border);
+    vertical-align: top;
+    text-align: left;
+  }
+
+  .bsr-book-table th {
+    background: var(--background-secondary);
+    font-weight: 600;
   }
 
   .bsr-gutter-num {

@@ -5,6 +5,7 @@
 
 import type {
   FigurePlace,
+  FormatSpan,
   Heading,
   HeadingLevel,
   RefSpan,
@@ -103,14 +104,38 @@ const blocksOf = (body: string): string[] =>
 
 // A table row reads as cells, not as pipes: the leading pipe is the curator's
 // row marker and carries no text, and the ones between cells become a single
-// spaced separator. What is stored is what a citation of the row reads as.
+// spaced separator. What is stored is what a citation of the row reads as;
+// the cells ride beside it as spans, so the reader prints the grid without
+// looking for a delimiter in the text.
 const TABLE_ROW = /^\|/
 const CELL_SEPARATOR = /\s*\|\s*/
+const CELL_JOIN = ' | '
+// Markdown's own header rule: the row under a table's header row is pipes
+// and dashes alone. It marks the row above it and is stored as no row of its
+// own — a table the printed work gives no headings simply carries none.
+const HEADER_RULE = /^\|[\s|:-]*-[\s|:-]*$/
 
-const rowTextOf = (line: string): string =>
-  TABLE_ROW.test(line)
-    ? line.replace(TABLE_ROW, '').split(CELL_SEPARATOR).map((cell) => cell.trim()).filter((cell) => cell !== '').join(' | ')
-    : line
+type Row = { text: string; cells?: FormatSpan[] }
+
+const rowOf = (line: string, start: number): Row => {
+  if (!TABLE_ROW.test(line)) return { text: line }
+  const cells: FormatSpan[] = []
+  let text = ''
+  for (const cell of line
+    .replace(TABLE_ROW, '')
+    .split(CELL_SEPARATOR)
+    .map((cell) => cell.trim())) {
+    if (cell === '') {
+      cells.push({ start: start + text.length, end: start + text.length })
+      continue
+    }
+    if (text !== '') text += CELL_JOIN
+    const at = start + text.length
+    text += cell
+    cells.push({ start: at, end: start + text.length })
+  }
+  return { text, cells }
+}
 
 // A block whose first line opens a list or a table keeps its line breaks: the
 // lines stay in the stored text, and a line channel beside them says where
@@ -118,14 +143,22 @@ const rowTextOf = (line: string): string =>
 const atomOf = (block: string): { text: string; lines?: VerseLine[] } => {
   const lines = block.split('\n').map((line) => line.trim())
   if (!LINE_KEEPING.test(lines[0])) return { text: lines.join(' ') }
-  const rows = lines.map(rowTextOf)
-  const starts: VerseLine[] = []
+  const rows: string[] = []
+  const kept: VerseLine[] = []
   let start = 0
-  for (const row of rows) {
-    starts.push({ start })
-    start += row.length + 1
+  let headerRow = -1
+  for (const line of lines) {
+    if (HEADER_RULE.test(line)) {
+      headerRow = rows.length - 1
+      continue
+    }
+    const row = rowOf(line, start)
+    rows.push(row.text)
+    kept.push({ start, ...(row.cells === undefined ? {} : { cells: row.cells }) })
+    start += row.text.length + 1
   }
-  return { text: rows.join('\n'), lines: starts }
+  if (headerRow >= 0) kept[headerRow].header = true
+  return { text: rows.join('\n'), lines: kept }
 }
 
 const epigraphOf = (block: string): Epigraph => {

@@ -50,6 +50,7 @@ These verses clearly show the importance of the little word “in”. If I am no
 Let’s look at some verses in the first few chapters of Ephesians to illustrate this point.
 
 | God’s kingdom | Chapter: verse | World | Chapter: verse
+| --- | --- | --- | ---
 | Faithful in Christ | 1:1 | Were dead in trespasses and sins | 2:1
 | Blessed us with every spiritual blessing in Christ | 1:3 | In which you once walked | 2:2
 | He chose us in Him | 1:4 | The spirit who now works in the sons of disobedience | 2:2
@@ -908,6 +909,7 @@ In bearing fruit and submitting to God’s culture first and foremost, the follo
 The above background is crucial to having a spiritual understanding of “submitting to one another in the fear of God” (Ephesians 5:21). This is a clear command from God.
 
 | Way of the flesh (Tree of the Knowledge of good & evil): | | Way of the Spirit (Tree of Life):
+| --- | --- | ---
 | Insecure (Timid) | Insecure (Arrogant) | Secure (Humble)
 | Flight | Fight | Lay down life (submission)
 | Jn 18:17, 25&26 Peter denies Jesus | Jn 18:10 He cuts off ear | Acts 8:32 As a sheep to the slaughter — 1 Pet 2:23
@@ -1084,6 +1086,7 @@ Fig 2 Tree of Life
 2 Corinthians 3 is probably the best chapter in Scripture to help understand the New Covenant spiritually. Before getting into the detail, it is crucial to take note that under the Old Covenant the glory passes away, becomes less, and under the New Covenant the glory increases.
 
 | Old – glory passes away | New – from glory to glory
+| --- | ---
 | which glory was passing away (vs 7) | how will the ministry of the Spirit not be more glorious? (8)
 | ministry of condemnation had glory (9) | ministry of righteousness exceeds much more in glory (9)
 | had no glory in this respect (10) | because of the glory that excels (10)
@@ -1097,6 +1100,7 @@ This is a handy diagnostic tool to determine whether you are living in the New o
 In the table below, the right-hand column (2 Corinthians 3:16-18) applies to all believers and is the foundation for making it possible to submit to one another in the fear of the Lord (Chapter 22). Our focus shall be on the left-hand column, where you as a disciple maker have people submitting to you. As God wants all disciples to be disciple makers, this applies to all of us.
 
 | 2 Corinthians 3:1-6 | 2 Corinthians 3:16-18
+| --- | ---
 | Leadership/disciple makers | All Believers
 | 1. You are our epistle | 1. When one turns to the Lord, the veil is taken away
 | 2. Known and read by all men | 2. The Lord is the Spirit. Where the Spirit is, there is liberty (from sin and self)

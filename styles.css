@@ -114,6 +114,29 @@ body {
   margin-top: 0.4em;
 }
 
+/* A cited Book atom the curator flattened from a printed table prints as the
+   grid it was, the header row as headings. */
+.scripture-study-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-indent: 0;
+  margin: 0.3em 0;
+  font-size: 0.92em;
+}
+
+.scripture-study-table th,
+.scripture-study-table td {
+  padding: 0.3em 0.55em;
+  border: 1px solid var(--background-modifier-border);
+  vertical-align: top;
+  text-align: left;
+}
+
+.scripture-study-table th {
+  background: var(--background-secondary);
+  font-weight: 600;
+}
+
 .scripture-study-indent-1 {
   padding-left: 1.25em;
 }

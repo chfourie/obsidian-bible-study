@@ -51,6 +51,7 @@ describe('buildPassageView', () => {
         label: null,
         segments: [{ text: 'Remain in me.', redLetter: false }],
         startsNewLine: false,
+        table: null,
       },
     ])
   })

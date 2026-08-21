@@ -61,6 +61,14 @@ export type VerseLine = {
   paragraph?: boolean
   // Psalm superscription line, e.g. "A Psalm of David."
   psalmHeading?: boolean
+  // Book atoms only: this line is a row of a table the curator flattened,
+  // and these are its cells as spans over the atom's stored text. The text
+  // is the flat row a citation reads — the separators between the cells lie
+  // outside every span, and a cell the printed table leaves blank is a span
+  // of no width, so a row's cells stay in their columns.
+  cells?: FormatSpan[]
+  // Set on the one row whose cells print as the table's column headings.
+  header?: boolean
 }
 
 export type StructuredVerse = {

@@ -97,6 +97,22 @@ A blank line separates atoms. Within one atom:
   not stored; the cells are stored separated by ` | `, so a row reads as
   `Faithful in Christ | 1:1 | Were dead in trespasses and sins | 2:1`. Bare
   `chapter:verse` cells are never linked — a citation needs its book name.
+  Beside that flat text every row carries its **cells** as spans over it, so
+  the reader and a note's citation print the grid the printed work had
+  without ever re-reading the text for a delimiter. A cell the printed table
+  leaves blank (`| | Infallible | Inquire of God`) stays out of the text and
+  rides as a span of no width, which keeps the row in its columns. Writing a
+  Markdown header rule under the first row marks it as the table's header
+  row; the rule is a marker, not a row, and is stored as nothing:
+
+  ```markdown
+  | God’s kingdom | Chapter: verse | World | Chapter: verse
+  | --- | --- | --- | ---
+  | Faithful in Christ | 1:1 | Were dead in trespasses and sins | 2:1
+  ```
+
+  A table the printed work gives no headings — *IN*'s prayer table in
+  Appendix A — simply carries no rule, and every row prints as a plain row.
 - **A scripture block quote merges into its lead-in paragraph**; a quote that
   opens a section stands as that section's first atom.
 - `>` blocks are epigraphs, kept beside the prose as section metadata. The

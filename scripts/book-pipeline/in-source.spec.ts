@@ -157,6 +157,38 @@ describe('IN First Edition', () => {
     )
   })
 
+  it('marks the header row of a table the printed work gives headings', () => {
+    const table = artifact.books[102][makeVerseId(102, 0, 21)]
+    const header = table.lines?.[0]
+    expect(header?.header).toBe(true)
+    expect(
+      header?.cells?.map((cell) => table.text.slice(cell.start, cell.end)),
+    ).toEqual(['God’s kingdom', 'Chapter: verse', 'World', 'Chapter: verse'])
+    expect(table.lines?.slice(1).every((line) => line.header === undefined)).toBe(
+      true,
+    )
+  })
+
+  it('keeps a blank cell in its column, as a span of no width', () => {
+    const prayer = Object.values(artifact.books[102]).find((paragraph) =>
+      paragraph.text.startsWith('Gen 1:26 | Let Us |'),
+    )
+    const rows = prayer?.lines?.map((line) =>
+      (line.cells ?? []).map((cell) => prayer.text.slice(cell.start, cell.end)),
+    )
+    expect(rows?.[0][0]).toBe('Gen 1:26')
+    expect(rows?.[1][0]).toBe('')
+    expect(rows?.[1][1]).toBe('Create man')
+    expect(rows?.every((row) => row.length === 3)).toBe(true)
+  })
+
+  it('gives the prayer table no header row — the printed work heads none', () => {
+    const prayer = Object.values(artifact.books[102]).find((paragraph) =>
+      paragraph.text.startsWith('Gen 1:26 | Let Us |'),
+    )
+    expect(prayer?.lines?.every((line) => line.header === undefined)).toBe(true)
+  })
+
   it('stands the printed work’s seven figures beside their paragraphs', () => {
     const placed = Object.entries(artifact.books[102]).flatMap(
       ([verseId, paragraph]) =>

@@ -4,8 +4,13 @@ import type { Reference } from '../reference'
 import { opensInNewPane } from '../ui'
 import { isAnnotation, noteTitle, type OccurrenceGroup } from '../vault-index'
 import type { HighlightEditContext } from './highlight-editing'
-import type { Passage, PassageSource } from './module-passage-source'
+import type {
+  Passage,
+  PassageSource,
+  VerseSegment,
+} from './module-passage-source'
 import { VERSE_TEXT_CLASS } from './passage-selection'
+import { spanSegments } from './segment-spans'
 import {
   buildPassageView,
   loadingText,
@@ -182,6 +187,47 @@ const renderInvalidTokens = (
   }
 }
 
+const renderSegment = (parent: HTMLElement, segment: VerseSegment): void => {
+  const indented = segment.lineStart === true && segment.indent !== undefined
+  const classes = [
+    ...(segment.highlightSlot === undefined
+      ? []
+      : [
+          'scripture-study-highlight',
+          `scripture-study-highlight-${segment.highlightSlot}`,
+        ]),
+    ...(segment.redLetter ? ['scripture-study-red-letter'] : []),
+    ...(segment.supplied ? ['scripture-study-supplied'] : []),
+    ...(segment.psalmHeading ? ['scripture-study-psalm-heading'] : []),
+    ...(indented ? [`scripture-study-indent-${segment.indent}`] : []),
+  ]
+  if (classes.length > 0) {
+    parent.createSpan({ cls: classes.join(' '), text: segment.text })
+  } else {
+    parent.appendChild(parent.ownerDocument.createTextNode(segment.text))
+  }
+}
+
+// A Book atom flattened from a printed table prints as the grid it was, the
+// header row as headings. Each cell reads its own stretch of the atom's
+// segments, so a Ref Span link or a highlight inside a cell renders there as
+// it does in prose.
+const renderTable = (
+  holder: HTMLElement,
+  rows: NonNullable<PassageView['verses'][number]['table']>,
+  segments: VerseSegment[],
+): void => {
+  const table = holder.createEl('table', { cls: 'scripture-study-table' })
+  for (const row of rows) {
+    const line = table.createEl('tr')
+    for (const cell of row.cells) {
+      const holderCell = line.createEl(row.header ? 'th' : 'td')
+      for (const segment of spanSegments(segments, cell))
+        renderSegment(holderCell, segment)
+    }
+  }
+}
+
 const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number]): void => {
   if (block.label !== null) {
     parent.createEl('sup', {
@@ -190,31 +236,24 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
     })
   }
   // The verse text lives in its own holder so a drag can be mapped back to
-  // character offsets in this verse, with the number and chrome left out.
+  // character offsets in this verse, with the number and chrome left out. A
+  // table's cells are runs of their own — the separators between them print
+  // as the grid rather than as text — so its holder carries no verse id and
+  // stays out of the highlight surface. Cues already stored still paint: they
+  // are marked onto the segments before a cell ever reads them.
   const holder = parent.createSpan({
     cls: VERSE_TEXT_CLASS,
-    attr: { 'data-verse-id': block.verseId },
+    ...(block.table === null
+      ? { attr: { 'data-verse-id': block.verseId } }
+      : {}),
   })
+  if (block.table !== null) {
+    renderTable(holder, block.table, block.segments)
+    return
+  }
   for (const segment of block.segments) {
     if (segment.lineBreakBefore) holder.createEl('br')
-    const indented = segment.lineStart === true && segment.indent !== undefined
-    const classes = [
-      ...(segment.highlightSlot === undefined
-        ? []
-        : [
-            'scripture-study-highlight',
-            `scripture-study-highlight-${segment.highlightSlot}`,
-          ]),
-      ...(segment.redLetter ? ['scripture-study-red-letter'] : []),
-      ...(segment.supplied ? ['scripture-study-supplied'] : []),
-      ...(segment.psalmHeading ? ['scripture-study-psalm-heading'] : []),
-      ...(indented ? [`scripture-study-indent-${segment.indent}`] : []),
-    ]
-    if (classes.length > 0) {
-      holder.createSpan({ cls: classes.join(' '), text: segment.text })
-    } else {
-      holder.appendChild(holder.ownerDocument.createTextNode(segment.text))
-    }
+    renderSegment(holder, segment)
   }
 }
 

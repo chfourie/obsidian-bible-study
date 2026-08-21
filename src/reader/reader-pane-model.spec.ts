@@ -3073,6 +3073,57 @@ describe('ReaderPaneModel book mode', () => {
     expect(model.view.rows.map((row) => row.keepsLines)).toEqual([true, false])
   })
 
+  it('lays a table atom out as rows of cells, the links inside them intact', async () => {
+    const cited = [
+      { startId: makeVerseId(49, 1, 1), endId: makeVerseId(49, 1, 1) },
+    ]
+    const model = bookModelWith({
+      passages: {
+        passage: async () => ({
+          status: 'ok' as const,
+          attribution: null,
+          verses: [
+            {
+              verseId: makeVerseId(HUMILITY, 1, 1),
+              segments: [
+                { text: 'Faithful in Christ | ', redLetter: false },
+                { text: 'Eph 1:1', redLetter: false, refs: cited },
+              ],
+              hasLineData: true,
+              table: [
+                {
+                  header: true,
+                  cells: [
+                    { start: 0, end: 18 },
+                    { start: 21, end: 28 },
+                  ],
+                },
+              ],
+            },
+            {
+              verseId: makeVerseId(HUMILITY, 1, 2),
+              segments: [{ text: 'Plain prose.', redLetter: false }],
+            },
+          ],
+        }),
+      },
+    })
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    const [table, prose] = model.view.rows
+    expect(
+      table.table?.map((row) =>
+        row.cells.map((cell) =>
+          cell.map((segment) => segment.text).join(''),
+        ),
+      ),
+    ).toEqual([['Faithful in Christ', 'Eph 1:1']])
+    expect(table.table?.[0].header).toBe(true)
+    expect(table.table?.[0].cells[1][0].refs).toEqual(cited)
+    expect(prose.table).toBeNull()
+  })
+
   it('carries a paragraph’s Figures onto its row, above and below', async () => {
     const above = {
       image: 'data:image/png;base64,AAA',
