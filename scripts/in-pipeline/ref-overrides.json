@@ -12,6 +12,42 @@
       "text": "2 Timothy 2:25-2",
       "reference": "2 Timothy 2:25-26",
       "note": "The printed citation lost the last digit of verse 26."
+    },
+    {
+      "at": "19.27",
+      "text": "Revelations 3:21",
+      "reference": "Revelation 3:21",
+      "note": "The book is Revelation; the printed citation pluralises it."
+    },
+    {
+      "at": "22.4",
+      "text": "Jn 18:17, 25&26",
+      "reference": "John 18:17,25-26",
+      "note": "The table abbreviates John as Jn, which scripture does not answer to."
+    },
+    {
+      "at": "22.4",
+      "text": "Jn 18:10",
+      "reference": "John 18:10",
+      "note": "The table abbreviates John as Jn, which scripture does not answer to."
+    },
+    {
+      "at": "22.4",
+      "text": "Jn 7:16&17",
+      "reference": "John 7:16-17",
+      "note": "The table abbreviates John as Jn, which scripture does not answer to."
+    },
+    {
+      "at": "33.2",
+      "text": "Math 27:45-46",
+      "reference": "Matthew 27:45-46",
+      "note": "The prayer table abbreviates Matthew as Math."
+    },
+    {
+      "at": "33.2",
+      "text": "Jn 12:31",
+      "reference": "John 12:31",
+      "note": "The prayer table abbreviates John as Jn."
     }
   ],
   "suppress": [

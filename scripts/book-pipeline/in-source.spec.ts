@@ -109,7 +109,20 @@ describe('IN First Edition', () => {
         (total, refs) => total + refs,
         0,
       ),
-    ).toBe(538)
+    ).toBe(544)
+  })
+
+  it('pins the citations the scanner cannot carry from the overrides file', () => {
+    const fixed = artifact.books[102][makeVerseId(102, 19, 1)]
+    const printed = fixed.refs?.find(
+      (span) => fixed.text.slice(span.start, span.end) === 'John 1:16-1',
+    )
+    expect(printed?.ranges).toEqual([
+      { startId: makeVerseId(43, 1, 16), endId: makeVerseId(43, 1, 17) },
+    ])
+    const murray = artifact.books[102][makeVerseId(102, 1, 4)]
+    expect(murray.text).toContain('Chapter 1')
+    expect(murray.refs).toBeUndefined()
   })
 
   it('leaves the flattened table’s bare chapter:verse cells unlinked', () => {
