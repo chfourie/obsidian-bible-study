@@ -21,6 +21,14 @@ export const BOOK_CATALOGUE: readonly BookCatalogueEntry[] = [
     tag: 'hum-m1895-module',
     filename: 'hum-m1895-module.json',
   },
+  {
+    moduleId: 'in-at-e1',
+    title: 'IN',
+    author: 'A Team',
+    editionCode: 'IN-AT-E1',
+    tag: 'in-at-e1-module',
+    filename: 'in-at-e1-module.json',
+  },
 ]
 
 export const BOOK_MODULE_IDS: readonly string[] = BOOK_CATALOGUE.map(

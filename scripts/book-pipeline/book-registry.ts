@@ -9,7 +9,22 @@ export type BookRegistryEntry = {
   author: string
   moduleId: string
   editionCode: string
+  // What the generic Markdown pipeline needs to publish a module without
+  // knowing anything about the book itself. Humility's bespoke pipeline
+  // predates the registry carrying them, so they stay optional here and are
+  // insisted on where a publication is actually asked for.
+  year?: number
+  abbreviation?: string
+  aliases?: string[]
+  license?: string
+  // Provenance of the work the curated source was made from: a filename in
+  // resources/ and its SHA-256.
+  source?: string
+  sourceChecksum?: string
 }
+
+// A registry entry complete enough to publish from.
+export type BookPublication = Required<BookRegistryEntry>
 
 // Scripture holds 1–66 and 67–100 is reserved for canon extensions.
 export const FIRST_BOOK_NUMBER = 101
@@ -76,4 +91,30 @@ export const assertRegisteredBook = (
         `Manifest ${field} "${registration[field]}" disagrees with ` +
           `registry "${entry[field]}"`,
       )
+}
+
+const PUBLICATION_FIELDS = [
+  'year',
+  'abbreviation',
+  'aliases',
+  'license',
+  'source',
+  'sourceChecksum',
+] as const
+
+// The registry is the single authority on a book's identity, so the pipeline
+// asks it for one rather than carrying per-book constants. A source whose
+// book is unregistered — or registered too thinly to publish — fails the
+// build here, before anything is written.
+export const bookPublication = (
+  registry: readonly BookRegistryEntry[],
+  moduleId: string,
+): BookPublication => {
+  const entry = registry.find((candidate) => candidate.moduleId === moduleId)
+  if (entry === undefined)
+    throw new Error(`Module ${moduleId} is not in the Book Registry`)
+  for (const field of PUBLICATION_FIELDS)
+    if (entry[field] === undefined)
+      throw new Error(`Registry entry ${moduleId} is missing "${field}"`)
+  return entry as BookPublication
 }

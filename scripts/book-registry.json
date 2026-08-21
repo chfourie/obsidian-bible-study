@@ -5,5 +5,20 @@
     "author": "Andrew Murray",
     "moduleId": "hum-m1895",
     "editionCode": "HUM-M1895"
+  },
+  {
+    "bookNumber": 102,
+    "title": "IN",
+    "author": "A Team",
+    "moduleId": "in-at-e1",
+    "editionCode": "IN-AT-E1",
+    "year": 2026,
+    "abbreviation": "IN",
+    "aliases": [
+      "In"
+    ],
+    "license": "No rights reserved. Any part of this publication may be reproduced in its context. Copies may be distributed by any means.",
+    "source": "IN First Edition.pdf",
+    "sourceChecksum": "adb9dc5b18e5f8769522e5ec42b8b0b7802e87ce4df29fa76599358de968ddde"
   }
 ]

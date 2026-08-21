@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   type BookRegistryEntry,
   assertRegisteredBook,
+  bookPublication,
   parseBookRegistry,
 } from './book-registry'
 
@@ -85,6 +86,42 @@ describe('assertRegisteredBook', () => {
   })
 })
 
+describe('bookPublication', () => {
+  const inBook: BookRegistryEntry = {
+    bookNumber: 102,
+    title: 'IN',
+    author: 'A Team',
+    moduleId: 'in-at-e1',
+    editionCode: 'IN-AT-E1',
+    year: 2026,
+    abbreviation: 'IN',
+    aliases: ['In'],
+    license: 'No rights reserved.',
+    source: 'IN First Edition.pdf',
+    sourceChecksum: 'adb9dc5b',
+  }
+
+  it('answers with the entry a module can be published from', () => {
+    expect(bookPublication([humility, inBook], 'in-at-e1')).toEqual(inBook)
+  })
+
+  it('fails when the module has no registry entry at all', () => {
+    expect(() => bookPublication([humility], 'in-at-e1')).toThrow(
+      /in-at-e1 is not in the Book Registry/,
+    )
+  })
+
+  it.each(['year', 'abbreviation', 'aliases', 'license', 'source', 'sourceChecksum'])(
+    'fails when the entry carries no %s to publish with',
+    (field) => {
+      const { [field as keyof BookRegistryEntry]: _missing, ...thin } = inBook
+      expect(() => bookPublication([thin], 'in-at-e1')).toThrow(
+        new RegExp(`missing "${field}"`),
+      )
+    },
+  )
+})
+
 describe('scripts/book-registry.json', () => {
   const registry = parseBookRegistry(
     readFileSync('scripts/book-registry.json', 'utf8'),
@@ -92,5 +129,17 @@ describe('scripts/book-registry.json', () => {
 
   it('registers Humility as book 101', () => {
     expect(registry).toContainEqual(humility)
+  })
+
+  it('registers IN as book 102, complete enough to publish', () => {
+    expect(bookPublication(registry, 'in-at-e1')).toMatchObject({
+      bookNumber: 102,
+      title: 'IN',
+      author: 'A Team',
+      editionCode: 'IN-AT-E1',
+      year: 2026,
+      abbreviation: 'IN',
+      aliases: ['In'],
+    })
   })
 })

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { BOOK_CATALOGUE, BOOK_MODULE_IDS, bookRelease } from './book-catalogue'
 
 describe('BOOK_CATALOGUE', () => {
-  it('ships Humility as the compiled-in v1 entry', () => {
+  it('ships every compiled-in book', () => {
     expect(BOOK_CATALOGUE).toEqual([
       {
         moduleId: 'hum-m1895',
@@ -11,6 +11,14 @@ describe('BOOK_CATALOGUE', () => {
         editionCode: 'HUM-M1895',
         tag: 'hum-m1895-module',
         filename: 'hum-m1895-module.json',
+      },
+      {
+        moduleId: 'in-at-e1',
+        title: 'IN',
+        author: 'A Team',
+        editionCode: 'IN-AT-E1',
+        tag: 'in-at-e1-module',
+        filename: 'in-at-e1-module.json',
       },
     ])
   })
@@ -22,7 +30,7 @@ describe('BOOK_CATALOGUE', () => {
   })
 
   it('lists every catalogued book module id', () => {
-    expect(BOOK_MODULE_IDS).toEqual(['hum-m1895'])
+    expect(BOOK_MODULE_IDS).toEqual(['hum-m1895', 'in-at-e1'])
   })
 
   it('derives the release coordinates a prebuilt client downloads from', () => {
