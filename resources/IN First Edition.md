@@ -1886,45 +1886,45 @@ So, I want to exhort you to open your heart for the Holy Spirit to reveal your n
 
 ### Warfare Prayer / Offensive Prayer
 
-1st Transaction
+#### 1st Transaction
 
-Gen 1:26 Let Us Father, I thank You that I am now part of Us. Create man Lord, I was created by You, for You, to be inhabited by You. I acknowledge that I wholly belong to You. In Our image and likeness Lord, You created me in Your image to have a relationship with You and for me to be part of Your eternal companion. Gen 2:9 God is good and gave us everything we Thank You, Father, that You give us everything that we need. I needed in the garden am especially thankful for the tree of life from which we may partake. Guard my heart and mind against wanting to partake of the tree of knowledge of good and evil. Gen 2:16-17 The day you eat of it you will surely die Father, I acknowledge that sin brings separation from You. Grant me a tender heart and spirit.
+| Gen 1:26 | Let Us | Father, I thank You that I am now part of Us.
+|  | Create man | Lord, I was created by You, for You, to be inhabited by You. I acknowledge that I wholly belong to You.
+|  | In Our image and likeness | Lord, You created me in Your image to have a relationship with You and for me to be part of Your eternal companion.
+| Gen 2:9 | God is good and gave us everything we needed in the garden | Thank You, Father, that You give us everything that we need. I am especially thankful for the tree of life from which we may partake. Guard my heart and mind against wanting to partake of the tree of knowledge of good and evil.
+| Gen 2:16-17 | The day you eat of it you will surely die | Father, I acknowledge that sin brings separation from You. Grant me a tender heart and spirit.
+| Gen 3:1-5 | Satan’s tactics | Lord, make me aware of the doubts, lies and accusations of the devil.
+| Gen 3:6 | Lust of the flesh, eyes and pride of life | Father, I ask that our relationship will satisfy me completely. Lord, that I may know You for who You truly are.
+| Gen 3:7-12 | Fruit of the flesh | Father, make me sensitive to the fruit of the flesh (Pray about those you battle with).
 
-Gen 3:1-5 Satan’s tactics Lord, make me aware of the doubts, lies and accusations of the devil.
+#### 2nd Transaction
 
-Gen 3:6 Lust of the flesh, eyes and pride of life Father, I ask that our relationship will satisfy me completely. Lord, that I may know You for who You truly are. Gen 3:7-12 Fruit of the flesh Father, make me sensitive to the fruit of the flesh (Pray about those you battle with).
+| Rom 6:16 | You are a slave of whom you choose to obey | Father, I choose to obey You and to submit to You in everything.
+| Phil 2:5-8 | Jesus left His position as God | I volunteer to give up comfort.
+|  | Made Himself of no reputation | I submit to being of no reputation and ask Father to give me training in it.
+|  | Took the form of a bondservant | Father, please give me opportunity to serve.
+|  | Humbled Himself by becoming obedient to the point of death | Father, I humble myself by choosing to be obedient to You and to do Your will and not my will.
+| Heb 12:4 | Resist to bloodshed striving against sin | Jesus, I ask that Your Spirit in me will enable me to resist sin. I choose a holy life.
+| Luke 22:41-45 | Jesus did His Father’s will | Father, I submit to You, Your will and not my will, Lord.
+| Math 27:45-46 | My God, my God, why have You forsaken me | Lord Jesus, thank You that You suffered separation from Father, so that I can be reconciled.
+| Eph 1:7 | In Him we have redemption | Thank You, Lord, that You purchased/redeemed me with Your blood. I acknowledged that I belong to You.
+| 1 Jn 3:8 | Christ came to destroy the work of the devil | Lord, I want to be Your fellow worker in destroying the works of the devil.
+| Jn 12:31 | Satan is cast out | Thank You, Lord, that You have dominion and that I am under Your dominion.
+| Col 2:15 | Having disarmed principalities and powers | Satan, you have been disarmed and have no power over me. I resist you and you will flee.
+| Eph 1:19-23 | Jesus at the right hand of the Father and all things under His feet | Jesus, I acknowledge that You have dominion and that all things are under Your feet, including me. I submit to You in all things.
+| 1 Cor 10:4 | Christ was smitten so that the Holy Spirit could be poured out | Thank You, Lord, that You live in me through Your Spirit. I pray that your Holy Spirit will lead me.
 
-2nd Transaction
+#### 3rd Transaction
 
-Rom 6:16 You are a slave of whom you choose to Father, I choose to obey You and to submit to You in everything. obey
-
-Phil 2:5-8 Jesus left His position as God I volunteer to give up comfort. Made Himself of no reputation I submit to being of no reputation and ask Father to give me training in it. Took the form of a bondservant Father, please give me opportunity to serve. Humbled Himself by becoming Father, I humble myself by choosing to be obedient to You and obedient to the point of death to do Your will and not my will.
-
-Heb 12:4 Resist to bloodshed striving against sin Jesus, I ask that Your Spirit in me will enable me to resist sin. I choose a holy life.
-
-Luke 22:41-45 Jesus did His Father’s will Father, I submit to You, Your will and not my will, Lord. Math 27:45-46 My God, my God, why have You Lord Jesus, thank You that You suffered separation from Father, forsaken me so that I can be reconciled.
-
-Eph 1:7 In Him we have redemption Thank You, Lord, that You purchased/redeemed me with Your blood. I acknowledged that I belong to You. 1 Jn 3:8 Christ came to destroy the work of the Lord, I want to be Your fellow worker in destroying the works of devil the devil.
-
-Jn 12:31 Satan is cast out Thank You, Lord, that You have dominion and that I am under Your dominion.
-
-Col 2:15 Having disarmed principalities and Satan, you have been disarmed and have no power over me. I powers resist you and you will flee.
-
-Eph 1:19-23 Jesus at the right hand of the Father Jesus, I acknowledge that You have dominion and that all things and all things under His feet are under Your feet, including me. I submit to You in all things. 1 Cor 10:4 Christ was smitten so that the Holy Thank You, Lord, that You live in me through Your Spirit. I pray Spirit could be poured out that your Holy Spirit will lead me. 3rd Transaction
-
-Ps 85:13 His footsteps shall be our pathway Lord, I want to follow You in all Your ways. Gal 2:20, Rom I have been crucified with Christ Lord, I acknowledge that I have been crucified with You and I 6:6 choose to no longer live for myself, but for You who died for me and rose again.
-
-Rom 6:4 Having been buried with Christ into Thank You, Lord, that I have been buried with You and that I death have been raised for a new life.
-
-Gal 2:20 I have been crucified Thank You, Lord, for saving me from self. Rom 6:7 He who has died has been freed from Thank You, Lord, for saving me from the power of sin. sin
-
-Heb 8:12, 1 Pet The answer of a good conscience Thank You, Lord, for setting me free from my past and giving me 3:21 towards God a good conscience.
-
-Ex 14 Red Sea: a type of baptism Thank You, Lord, for delivering me from all demons and demonic bondage.
-
-Rom 8:2 Spirit sets free from the law of sin and Thank You, Lord, for giving me Your Holy Spirit to lead me and to death enable me to live a holy life.
-
-Gal 4:6 Spirit cries out “Abba Father” Thank You, Lord, that the Holy Spirit confirms to me that I am your child.
+| Ps 85:13 | His footsteps shall be our pathway | Lord, I want to follow You in all Your ways.
+| Gal 2:20, Rom 6:6 | I have been crucified with Christ | Lord, I acknowledge that I have been crucified with You and I choose to no longer live for myself, but for You who died for me and rose again.
+| Rom 6:4 | Having been buried with Christ into death | Thank You, Lord, that I have been buried with You and that I have been raised for a new life.
+| Gal 2:20 | I have been crucified | Thank You, Lord, for saving me from self.
+| Rom 6:7 | He who has died has been freed from sin | Thank You, Lord, for saving me from the power of sin.
+| Heb 8:12, 1 Pet 3:21 | The answer of a good conscience towards God | Thank You, Lord, for setting me free from my past and giving me a good conscience.
+| Ex 14 | Red Sea: a type of baptism | Thank You, Lord, for delivering me from all demons and demonic bondage.
+| Rom 8:2 | Spirit sets free from the law of sin and death | Thank You, Lord, for giving me Your Holy Spirit to lead me and to enable me to live a holy life.
+| Gal 4:6 | Spirit cries out “Abba Father” | Thank You, Lord, that the Holy Spirit confirms to me that I am your child.
 
 ## 34. Appendix B {named}
 

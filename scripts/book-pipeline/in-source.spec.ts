@@ -78,7 +78,7 @@ describe('IN First Edition', () => {
       { chapter: 30, name: 'Armour of God', paragraphs: 49 },
       { chapter: 31, name: 'Body of Jesus', paragraphs: 42 },
       { chapter: 32, name: 'Epilogue', named: true, paragraphs: 8 },
-      { chapter: 33, name: 'Appendix A', named: true, paragraphs: 20 },
+      { chapter: 33, name: 'Appendix A', named: true, paragraphs: 3 },
       { chapter: 34, name: 'Appendix B', named: true, paragraphs: 14 },
       { chapter: 35, name: 'Appendix C', named: true, paragraphs: 25 },
     ])
@@ -86,7 +86,7 @@ describe('IN First Edition', () => {
 
   it('carries every paragraph the sections promise', () => {
     const paragraphs = artifact.books[102]
-    expect(Object.keys(paragraphs)).toHaveLength(834)
+    expect(Object.keys(paragraphs)).toHaveLength(817)
     for (const section of artifact.manifest.book.sections) {
       expect(
         paragraphs[makeVerseId(102, section.chapter, section.paragraphs)],
@@ -109,7 +109,7 @@ describe('IN First Edition', () => {
         (total, refs) => total + refs,
         0,
       ),
-    ).toBe(532)
+    ).toBe(533)
   })
 
   it('leaves the flattened table’s bare chapter:verse cells unlinked', () => {
