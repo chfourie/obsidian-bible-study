@@ -111,10 +111,19 @@ describe('bookPublication', () => {
     )
   })
 
-  it.each(['year', 'abbreviation', 'aliases', 'license', 'source', 'sourceChecksum'])(
+  const PUBLICATION_FIELDS = [
+    'year',
+    'abbreviation',
+    'aliases',
+    'license',
+    'source',
+    'sourceChecksum',
+  ] as const
+
+  it.each(PUBLICATION_FIELDS)(
     'fails when the entry carries no %s to publish with',
     (field) => {
-      const { [field as keyof BookRegistryEntry]: _missing, ...thin } = inBook
+      const thin: BookRegistryEntry = { ...inBook, [field]: undefined }
       expect(() => bookPublication([thin], 'in-at-e1')).toThrow(
         new RegExp(`missing "${field}"`),
       )

@@ -86,6 +86,10 @@ export const buildBookArtifact = (
     scriptureRanges,
   )
 
+  // Every unresolved citation in the book is collected before the build
+  // gives up, so one pass over a fresh source lists all of them rather than
+  // making the curator rebuild once per citation.
+  const unresolved: string[] = []
   const attach = <Atom extends { refs?: RefSpan[] }>(
     at: string,
     text: string,
@@ -93,17 +97,11 @@ export const buildBookArtifact = (
   ): Atom => {
     const scanned = scanBookRefSpans(text, sectionRanges)
     const { refs, accounted } = ledger.apply(at, text, scanned.spans)
-    const unresolved = scanned.unresolved.filter(
-      (citation) =>
-        !accounted.some(
-          (span) => text.slice(span.start, span.end) === citation,
-        ),
-    )
-    if (unresolved.length > 0)
-      throw new Error(
-        `Unresolved citation at ${at}: ${unresolved.join(' ')} — ` +
-          'add a fix or suppress entry to the ref overrides file',
+    for (const citation of scanned.unresolved)
+      if (
+        !accounted.some((span) => text.slice(span.start, span.end) === citation)
       )
+        unresolved.push(`${at}: ${citation}`)
     return withRefs(atom, refs)
   }
 
@@ -127,6 +125,11 @@ export const buildBookArtifact = (
       ),
     )
   }
+  if (unresolved.length > 0)
+    throw new Error(
+      `Unresolved citations — add a fix or suppress entry to the ref ` +
+        `overrides file for each:\n  ${unresolved.join('\n  ')}`,
+    )
   ledger.assertAllUsed()
 
   return {

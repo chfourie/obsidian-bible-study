@@ -110,6 +110,12 @@ describe('scanBookRefSpans', () => {
     ])
   })
 
+  it('stays silent about a capitalised word that only looks like a citation', () => {
+    const scanned = scanBookRefSpans('In Him we have redemption 1:7', selfRanges)
+    expect(scanned.spans).toEqual([])
+    expect(scanned.unresolved).toEqual([])
+  })
+
   it('reports a citation whose verse is off the target grid', () => {
     const scanned = scanBookRefSpans('quoting Matthew 33:11 here', selfRanges)
     expect(scanned.spans).toEqual([])

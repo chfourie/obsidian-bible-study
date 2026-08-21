@@ -522,6 +522,16 @@ describe('SettingsTabModel books section', () => {
         error: null,
         updateAvailable: false,
       },
+      {
+        id: 'in-at-e1',
+        title: 'IN',
+        author: 'A Team',
+        editionCode: 'IN-AT-E1',
+        installed: false,
+        busy: null,
+        error: null,
+        updateAvailable: false,
+      },
     ])
   })
 
@@ -569,6 +579,7 @@ describe('SettingsTabModel books section', () => {
 
     expect(model.view.bookRows.map((row) => row.id)).toEqual([
       'hum-m1895',
+      'in-at-e1',
       'hum-m1901',
     ])
   })

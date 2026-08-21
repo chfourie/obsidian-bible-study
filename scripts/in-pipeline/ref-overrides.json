@@ -1,0 +1,29 @@
+{
+  "comment": "Hand-kept corrections to the citations scripts/book-pipeline/parse-book-refs.ts cannot carry on its own (spec-books §8). `at` is chapter.paragraph, or chapter.eN for a section's Nth epigraph; `text` must still match its atom exactly once or the build fails. `note` is documentation only.",
+  "fix": [
+    {
+      "at": "19.1",
+      "text": "John 1:16-1",
+      "reference": "John 1:16-17",
+      "note": "The printed citation lost the last digit of verse 17."
+    },
+    {
+      "at": "29.58",
+      "text": "2 Timothy 2:25-2",
+      "reference": "2 Timothy 2:25-26",
+      "note": "The printed citation lost the last digit of verse 26."
+    }
+  ],
+  "suppress": [
+    {
+      "at": "1.4",
+      "text": "Chapter 1",
+      "note": "Cites chapter 1 of Andrew Murray's Humility, not of this book."
+    },
+    {
+      "at": "1.8",
+      "text": "Chapter 3",
+      "note": "Cites chapter 3 of Andrew Murray's Humility, not of this book."
+    }
+  ]
+}

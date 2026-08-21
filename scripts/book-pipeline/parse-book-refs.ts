@@ -5,6 +5,7 @@
 // citations become spans — an allusion the author did not cite stays prose.
 
 import type { RefSpan } from '../../src/modules/verse-content'
+import { bookIdForName } from '../../src/reference/books'
 import { parseReference } from '../../src/reference/parse-reference'
 import { makeVerseId } from '../../src/reference/verse-id'
 import type { VerseRange } from '../../src/reference/verse-range'
@@ -54,14 +55,17 @@ export const sectionRangesOf = (
 const normalizeSpec = (spec: string): string =>
   spec.replace(/–/g, '-').replace(/[;&]/g, ',').replace(/\s+/g, '')
 
+// `null` means the citation is mangled and must be reported; `undefined`
+// means the capitalised word is not a book name at all, so the digits after
+// it were never a citation — a table cell, not a mistake.
 const scriptureRanges = (
   ordinal: string | undefined,
   name: string,
   spec: string,
-): VerseRange[] | null => {
-  const parsed = parseReference(
-    `${ordinal === undefined ? '' : `${ordinal} `}${name} ${normalizeSpec(spec)}`,
-  )
+): VerseRange[] | null | undefined => {
+  const book = `${ordinal === undefined ? '' : `${ordinal} `}${name}`
+  if (bookIdForName(book) === null) return undefined
+  const parsed = parseReference(`${book} ${normalizeSpec(spec)}`)
   return parsed === null || parsed.invalidTokens.length > 0
     ? null
     : parsed.reference.ranges
@@ -77,6 +81,7 @@ export const scanBookRefSpans = (
   for (const match of text.matchAll(SCRIPTURE_CITATION)) {
     const [citation, ordinal, name, spec] = match
     const ranges = scriptureRanges(ordinal, name, spec)
+    if (ranges === undefined) continue
     if (ranges === null) unresolved.push(citation)
     else spans.push({ start: match.index, end: match.index + citation.length, ranges })
   }
