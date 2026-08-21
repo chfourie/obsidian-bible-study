@@ -83,7 +83,14 @@ The scanner links the author's explicit citations only. It reads
 punctuation — `&`, `,` and `;` continue one citation, `and` starts a fresh
 one. It also links the book's cross-walks onto its own grid: `Chapter 12`, a
 named back-matter section such as `Appendix C`, and a sub-section pointer such
-as `7.3` (which resolves to the chapter that holds it).
+as `7.3` (which resolves to the chapter that holds it). A cross-walk reads the
+same lower-cased (`see chapter 20`), and a verse list stops short of the
+ordinal that belongs to the next citation's book name (`Ephesians 1:19-23,
+1 Peter 3:22` is two citations).
+
+A citation the scanner deliberately leaves as prose: a verse-less chapter or
+chapter range (`Psalm 51`, `Romans 5-8`), and a bare `chapter:verse` with no
+book name, which is how a flattened table's cells read.
 
 Text that is shaped like a citation but resolves to nothing fails the build,
 listed atom by atom, rather than vanishing. Each one is answered in the book's
