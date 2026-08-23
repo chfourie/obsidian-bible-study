@@ -77,9 +77,17 @@ export type WordCloudSourceView = {
 // or unavailable while Strong's is not enabled — no Tagged Translation
 // installed, or no dictionaries — when the panel shows the "Enable Strong's"
 // hint in place of words.
+// `excluded` says whether this view has left any families out of its own
+// accord — the exclusions a reader makes from the cloud's menu, held by the
+// pane for its lifetime.
 export type WordCloudView =
   | { kind: 'unavailable' }
-  | { kind: 'counted'; source: WordCloudSourceView; words: WordCloudWordView[] }
+  | {
+      kind: 'counted'
+      source: WordCloudSourceView
+      words: WordCloudWordView[]
+      excluded: boolean
+    }
 
 // A selected span of book paragraphs: the paragraphs themselves are already
 // on screen in the reader, so only their full citation stands where a
@@ -179,6 +187,12 @@ export interface StudyMaterialSource {
   // that family is already the active one, and over to it from any other —
   // one family at a time (CONTEXT.md — Occurrence Emphasis).
   toggleCloudWord(family: string): void
+  // Leaves a family out of this view's Word Cloud for the pane's lifetime —
+  // never another pane's, never the settings. An emphasized family loses its
+  // emphasis with its word.
+  excludeCloudWord(family: string): void
+  // Brings back every family this view excluded.
+  resetCloudExclusions(): void
   // Dismisses the selection outright: details and row highlight go with it.
   // Never fires the selection feed — clearing is not a deliberate selection.
   clearSelection(): void

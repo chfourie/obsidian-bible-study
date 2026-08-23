@@ -13,7 +13,6 @@ import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
 import type { WordCloudWordView } from '../contracts'
-import { ExcludeCloudWordModal } from './exclude-cloud-word-modal'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelFeature } from './study-panel-feature'
 import { StudyPanelView } from './study-panel-view'
 
@@ -127,7 +126,6 @@ const harness = (
   settings: Partial<ScriptureStudySettings> = {},
   options: {
     wordStudy?: WordStudyOpener
-    excludeFromWordCloud?: (family: string) => Promise<void>
   } = {},
 ) => {
   const readGates: Record<string, Promise<void>> = {}
@@ -201,7 +199,6 @@ const harness = (
     studyMaterial,
     index,
     wordStudy: options.wordStudy,
-    excludeFromWordCloud: options.excludeFromWordCloud,
   })
   feature.useSettings({
     ...DEFAULT_SETTINGS,
@@ -557,19 +554,26 @@ describe('StudyPanelFeature entry points', () => {
     })
 
     // A reader tab whose cloud was counted from the KJV.
-    const cloudSource = () => {
+    const cloudSource = (excluded = false) => {
       const toggled: string[] = []
+      const excludedFamilies: string[] = []
+      let resets = 0
       const source = {
         studyMaterial: {
           wordCloud: {
             kind: 'counted',
             source: { translationId: 'kjv', label: 'KJV', fallback: false },
             words: [cloudWord()],
+            excluded,
           },
         },
         toggleCloudWord: (family: string) => toggled.push(family),
+        excludeCloudWord: (family: string) => excludedFamilies.push(family),
+        resetCloudExclusions: () => {
+          resets += 1
+        },
       } as unknown as StudyMaterialSource
-      return { source, toggled }
+      return { source, toggled, excludedFamilies, resets: () => resets }
     }
 
     it('toggles the emphasis of the word on the tab it came from', () => {
@@ -601,25 +605,26 @@ describe('StudyPanelFeature entry points', () => {
       ])
     })
 
-    it('excludes the family only once the modal confirms', async () => {
-      const excluded = vi.fn(async () => {})
-      const { feature } = harness({}, {}, { excludeFromWordCloud: excluded })
-      let confirm: (() => void) | null = null
-      const open = vi
-        .spyOn(ExcludeCloudWordModal.prototype, 'open')
-        .mockImplementation(function (this: ExcludeCloudWordModal) {
-          confirm = (this as unknown as { confirm: () => void }).confirm
-        })
+    it('excludes the family from the tab the cloud came from, without asking', () => {
+      const { feature } = harness()
+      const { source, excludedFamilies } = cloudSource()
 
-      feature.cloudWordMenuItems(cloudWord(), cloudSource().source)[2].onClick(new MouseEvent('click'))
-      expect(open).toHaveBeenCalledOnce()
-      expect(excluded).not.toHaveBeenCalled()
+      feature.cloudWordMenuItems(cloudWord(), source)[2].onClick(new MouseEvent('click'))
 
-      confirm!()
-      await flushAsync()
+      expect(excludedFamilies).toEqual(['G0026'])
+    })
 
-      expect(excluded).toHaveBeenCalledWith('G0026')
-      open.mockRestore()
+    it('offers a reset of the view exclusions only once it has some', () => {
+      const { feature } = harness()
+      const plain = cloudSource()
+      const { source, resets } = cloudSource(true)
+
+      expect(feature.cloudWordMenuItems(cloudWord(), plain.source)).toHaveLength(3)
+      const items = feature.cloudWordMenuItems(cloudWord(), source)
+      items[3].onClick(new MouseEvent('click'))
+
+      expect(items).toHaveLength(4)
+      expect(resets()).toBe(1)
     })
   })
 

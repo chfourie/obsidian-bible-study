@@ -398,6 +398,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #wordCloudWanted = false
   #wordCloudToken = 0
   #cloudExclusions: ReadonlySet<string>
+  #viewCloudExclusions = new Set<string>()
   #dictionariesInstalled = false
   // The Strong's Family whose Occurrence Emphasis is on, or null: set by a
   // cloud word, dropped with the chapter it was computed for.
@@ -1121,14 +1122,33 @@ export class ReaderPaneModel implements StudyMaterialSource {
     void this.#refreshWordCloud()
   }
 
-  // A family excluded while emphasized loses its emphasis with its word.
   setWordCloudExclusions(families: readonly string[]): void {
     const exclusions = cloudExclusions(families)
     if (sameSet(exclusions, this.#cloudExclusions)) return
     this.#cloudExclusions = exclusions
+    this.#applyCloudExclusions()
+  }
+
+  excludeCloudWord(family: string): void {
+    this.#viewCloudExclusions.add(paddedFamily(family))
+    this.#applyCloudExclusions()
+  }
+
+  resetCloudExclusions(): void {
+    if (this.#viewCloudExclusions.size === 0) return
+    this.#viewCloudExclusions.clear()
+    this.#applyCloudExclusions()
+  }
+
+  #effectiveCloudExclusions(): ReadonlySet<string> {
+    return new Set([...this.#cloudExclusions, ...this.#viewCloudExclusions])
+  }
+
+  // A family excluded while emphasized loses its emphasis with its word.
+  #applyCloudExclusions(): void {
     if (
       this.#emphasizedFamily !== null &&
-      exclusions.has(paddedFamily(this.#emphasizedFamily))
+      this.#effectiveCloudExclusions().has(paddedFamily(this.#emphasizedFamily))
     )
       this.toggleCloudWord(this.#emphasizedFamily)
     if (this.#wordCloudWanted) void this.#refreshWordCloud()
@@ -1177,7 +1197,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     }
     const verses = await this.#wordCloudVerses(source)
     if (token !== this.#wordCloudToken) return
-    const families = cloudFamilies(verses, this.#cloudExclusions)
+    const families = cloudFamilies(verses, this.#effectiveCloudExclusions())
     const entries = await this.deps.strongs.entriesFor(
       families.map(({ family }) => family),
     )
@@ -1186,6 +1206,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       kind: 'counted',
       source,
       words: chapterWordCloud(families, entries),
+      excluded: this.#viewCloudExclusions.size > 0,
     }
     this.#notify()
   }

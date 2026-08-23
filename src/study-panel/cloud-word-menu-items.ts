@@ -8,12 +8,15 @@ export type CloudWordMenuActions = {
   toggleEmphasis: () => void
   openWordStudy: (event: MouseEvent | KeyboardEvent) => void
   exclude: () => void
+  resetExclusions: () => void
 }
 
 // The menu a Word Cloud word opens on a right-click: its Occurrence
-// Emphasis, the family's word study and its exclusion.
+// Emphasis, the family's word study, its exclusion from this view and — once
+// the view has excluded anything — a reset.
 export const buildCloudWordMenuItems = (
   word: WordCloudWordView,
+  viewHasExclusions: boolean,
   actions: CloudWordMenuActions,
 ): MenuItem[] => [
   {
@@ -28,8 +31,17 @@ export const buildCloudWordMenuItems = (
     onClick: (event) => actions.openWordStudy(event),
   },
   {
-    title: 'Exclude from top words…',
+    title: 'Exclude from this view',
     icon: 'eye-off',
     onClick: () => actions.exclude(),
   },
+  ...(viewHasExclusions
+    ? [
+        {
+          title: 'Reset excluded words',
+          icon: 'rotate-ccw',
+          onClick: () => actions.resetExclusions(),
+        },
+      ]
+    : []),
 ]

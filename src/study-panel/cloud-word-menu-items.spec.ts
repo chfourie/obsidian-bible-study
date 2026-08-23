@@ -20,21 +20,36 @@ const actions = (): CloudWordMenuActions => ({
   toggleEmphasis: vi.fn(),
   openWordStudy: vi.fn(),
   exclude: vi.fn(),
+  resetExclusions: vi.fn(),
 })
 
 describe('buildCloudWordMenuItems', () => {
   it('offers highlighting, a word study and exclusion, in that order', () => {
-    const items = buildCloudWordMenuItems(word(), actions())
+    const items = buildCloudWordMenuItems(word(), false, actions())
 
     expect(items.map((item) => [item.title, item.icon, item.checked])).toEqual([
       ['Highlight occurrences', 'highlighter', false],
       ['Word study', 'book-open', undefined],
-      ['Exclude from top words…', 'eye-off', undefined],
+      ['Exclude from this view', 'eye-off', undefined],
     ])
   })
 
+  it('offers a reset only while the view has excluded words', () => {
+    const given = actions()
+    const items = buildCloudWordMenuItems(word(), true, given)
+
+    expect(items.map((item) => item.title)).toEqual([
+      'Highlight occurrences',
+      'Word study',
+      'Exclude from this view',
+      'Reset excluded words',
+    ])
+    items[3].onClick(new MouseEvent('click'))
+    expect(given.resetExclusions).toHaveBeenCalledOnce()
+  })
+
   it('offers to clear the highlight, checked, while the word is active', () => {
-    const [highlight] = buildCloudWordMenuItems(word(true), actions())
+    const [highlight] = buildCloudWordMenuItems(word(true), false, actions())
 
     expect(highlight.title).toBe('Clear highlight')
     expect(highlight.checked).toBe(true)
@@ -42,7 +57,7 @@ describe('buildCloudWordMenuItems', () => {
 
   it('routes each item to its action, the word study with its own event', () => {
     const given = actions()
-    const items = buildCloudWordMenuItems(word(), given)
+    const items = buildCloudWordMenuItems(word(), false, given)
     const studyClick = new MouseEvent('click', { metaKey: true })
 
     items[0].onClick(new MouseEvent('click'))

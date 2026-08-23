@@ -1684,6 +1684,7 @@ describe('the word cloud in the study material', () => {
 
     expect(cloudOf(model)).toEqual({
       kind: 'counted',
+      excluded: false,
       source: { translationId: 'bsb', label: 'BSB', fallback: false },
       words: [
         {
@@ -1866,6 +1867,7 @@ describe('the word cloud in the study material', () => {
 
     expect(cloudOf(model)).toEqual({
       kind: 'counted',
+      excluded: false,
       source: { translationId: 'bsb', label: 'BSB', fallback: true },
       words: [],
     })
@@ -1986,6 +1988,70 @@ describe('the word cloud in the study material', () => {
     model.toggleCloudWord('G288')
 
     model.setWordCloudExclusions(['G288'])
+    await flushAsync()
+
+    expect(
+      model.view.rows.some((row) =>
+        row.segments.some((segment) => segment.emphasized === true),
+      ),
+    ).toBe(false)
+  })
+
+  it('leaves out a family excluded from this view and says the view has exclusions', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    model.excludeCloudWord('G288')
+    await flushAsync()
+
+    expect(familiesOf(model)).toEqual(['G1473', 'G3306', 'G1722'])
+    expect(countedOf(model)?.excluded).toBe(true)
+  })
+
+  it('reports no view exclusions until one is made', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(countedOf(model)?.excluded).toBe(false)
+  })
+
+  it('keeps a view exclusion across a chapter step', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    model.excludeCloudWord('G288')
+    await flushAsync()
+
+    await model.nextChapter()
+    await model.previousChapter()
+
+    expect(familiesOf(model)).toEqual(['G1473', 'G3306', 'G1722'])
+  })
+
+  it('brings the excluded families back when the view exclusions are reset', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    model.excludeCloudWord('G288')
+    model.excludeCloudWord('G1722')
+    await flushAsync()
+
+    model.resetCloudExclusions()
+    await flushAsync()
+
+    expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
+    expect(countedOf(model)?.excluded).toBe(false)
+  })
+
+  it('drops the emphasis of a family excluded from this view', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    model.toggleCloudWord('G288')
+
+    model.excludeCloudWord('G288')
     await flushAsync()
 
     expect(

@@ -29,7 +29,6 @@ import {
 import { extractOccurrences, type OccurrenceGroup } from '../vault-index'
 import { opensInNewPane, type MenuItem } from '../ui'
 import { buildCloudWordMenuItems } from './cloud-word-menu-items'
-import { ExcludeCloudWordModal } from './exclude-cloud-word-modal'
 import { StudyPanelModel, type ActiveNote } from './study-panel-model'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelView } from './study-panel-view'
 import { TabMemory, type StudyTabState } from './tab-memory'
@@ -58,7 +57,6 @@ export type StudyPanelFeatureOptions = {
   wordStudy?: WordStudyOpener
   // Adds a family to the user's Cloud Exclusions in settings; the readers
   // recount from the settings change.
-  excludeFromWordCloud?: (family: string) => Promise<void>
 }
 
 // The focused leaf's note, when it shows one. Reader tabs are not file views,
@@ -93,7 +91,6 @@ export class StudyPanelFeature extends PluginFeature {
   readonly #tabs = new TabMemory<WorkspaceLeaf>()
   readonly #index: StudyPanelVaultIndex
   readonly #wordStudy: WordStudyOpener
-  readonly #excludeFromWordCloud: (family: string) => Promise<void>
   #unsubscribeCrossReferences: (() => void) | null = null
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeSelection: (() => void) | null = null
@@ -114,8 +111,6 @@ export class StudyPanelFeature extends PluginFeature {
       options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
     this.#index = options.index ?? INERT_VAULT_INDEX
     this.#wordStudy = options.wordStudy ?? NO_WORD_STUDY
-    this.#excludeFromWordCloud =
-      options.excludeFromWordCloud ?? (async () => {})
   }
 
   override async load(): Promise<void> {
@@ -263,22 +258,22 @@ export class StudyPanelFeature extends PluginFeature {
 
   // A cloud word's menu acts on the tab the cloud was counted for: its
   // emphasis toggles there, its word study reads the concordance of the
-  // translation the cloud came from, and its exclusion asks first.
+  // translation the cloud came from, and its exclusions are that tab's own.
   cloudWordMenuItems(
     word: WordCloudWordView,
     source: StudyMaterialSource,
   ): MenuItem[] {
-    return buildCloudWordMenuItems(word, {
+    const cloud = source.studyMaterial.wordCloud
+    const viewHasExclusions = cloud?.kind === 'counted' && cloud.excluded
+    return buildCloudWordMenuItems(word, viewHasExclusions, {
       toggleEmphasis: () => source.toggleCloudWord(word.family),
       openWordStudy: (clicked) =>
         void this.openWordStudy(word.family, {
           newPane: opensInNewPane(clicked),
           translationId: cloudTranslationOf(source),
         }),
-      exclude: () =>
-        new ExcludeCloudWordModal(this.plugin.app, word, () =>
-          void this.#excludeFromWordCloud(word.family),
-        ).open(),
+      exclude: () => source.excludeCloudWord(word.family),
+      resetExclusions: () => source.resetCloudExclusions(),
     })
   }
 
