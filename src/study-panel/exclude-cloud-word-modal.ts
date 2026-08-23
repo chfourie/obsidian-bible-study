@@ -15,9 +15,9 @@ export class ExcludeCloudWordModal extends Modal {
   override onOpen(): void {
     const { word } = this
     const shown = word.rendering === '' ? word.gloss : word.rendering
-    this.titleEl.setText('Exclude from word cloud')
+    this.titleEl.setText('Exclude from key words')
     this.contentEl.createEl('p', {
-      text: `Leave "${shown}" (${word.family}) out of every chapter's word cloud? It can be brought back under Settings › Word cloud.`,
+      text: `Leave "${shown}" (${word.family}) out of every chapter's key words? It can be brought back under Settings › Key words.`,
     })
     const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' })
     buttons

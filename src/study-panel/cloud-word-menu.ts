@@ -34,7 +34,7 @@ export const showCloudWordMenu = (
   )
   menu.addItem((item) =>
     item
-      .setTitle('Exclude from word cloud…')
+      .setTitle('Exclude from key words…')
       .setIcon('eye-off')
       .onClick(() => actions.exclude()),
   )

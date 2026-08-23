@@ -595,13 +595,13 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         ? [
             {
               name: 'No words excluded',
-              desc: 'Exclude a word from its menu in the Study Panel word cloud.',
+              desc: 'Exclude a word from its menu in the Study Panel key words.',
               render: () => {},
             },
           ]
         : view.wordCloudExclusions.map((exclusion) => ({
             name: exclusion.label,
-            desc: 'Excluded from the word cloud.',
+            desc: 'Excluded from the key words.',
             render: (setting: Setting) =>
               void setting.addButton((button) =>
                 button
@@ -611,7 +611,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
                   ),
               ),
           }))
-    return { type: 'group', heading: 'Word cloud', items }
+    return { type: 'group', heading: 'Key words', items }
   }
 
   #lsjDesc(view: SettingsTabView): string | DocumentFragment {

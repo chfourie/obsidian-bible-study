@@ -31,7 +31,7 @@ it.
   } = $props()
 
   const heading = (source: WordCloudSourceView): string =>
-    source.fallback ? `Word Cloud · ${source.label}` : 'Word Cloud'
+    source.fallback ? `Key Words · ${source.label}` : 'Key Words'
 
   const headline = (word: WordCloudWordView): string =>
     word.rendering === '' ? word.gloss : word.rendering
@@ -43,8 +43,8 @@ it.
 </script>
 
 {#if cloud?.kind === 'unavailable'}
-  <SectionHeading label="Word Cloud" />
-  <div class="bsm-cloud-hint">Enable Strong's to see the word cloud.</div>
+  <SectionHeading label="Key Words" />
+  <div class="bsm-cloud-hint">Enable Strong's to see the key words.</div>
 {:else if cloud !== null && cloud.words.length > 0}
   <SectionHeading label={heading(cloud.source)} />
   <div class="bsm-word-cloud">
@@ -90,8 +90,8 @@ it.
 
   .bsm-cloud-word {
     display: inline-flex;
-    flex-direction: column;
-    align-items: center;
+    align-items: baseline;
+    gap: 0.5em;
     padding: 0.1em 0.3em;
     border-radius: var(--radius-s);
     color: var(--text-normal);

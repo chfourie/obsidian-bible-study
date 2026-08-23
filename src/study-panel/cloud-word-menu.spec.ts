@@ -38,7 +38,7 @@ describe('showCloudWordMenu', () => {
     expect(titles()).toEqual([
       'Highlight occurrences',
       'Word study',
-      'Exclude from word cloud…',
+      'Exclude from key words…',
     ])
   })
 
