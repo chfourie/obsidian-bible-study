@@ -131,3 +131,33 @@ describe('suggestReference — installed books', () => {
     expect(labels('John ')).toEqual([])
   })
 })
+
+describe('suggestReference — relative spec', () => {
+  it('offers display keywords and translations after a relative spec', () => {
+    expect(labels(':5 ')).toEqual(['inline', 'block', 'nkjv', 'web', 'kjv'])
+    expect(labels('15:2 ')).toEqual(['inline', 'block', 'nkjv', 'web', 'kjv'])
+    expect(labels(':5-:7 ')).toEqual(['inline', 'block', 'nkjv', 'web', 'kjv'])
+  })
+
+  it('carries the option suggestions past a comma-separated spec', () => {
+    expect(labels(':5, :7 ')).toEqual(['inline', 'block', 'nkjv', 'web', 'kjv'])
+  })
+
+  it('omits option kinds already present on the relative reference', () => {
+    expect(labels(':5 block ')).toEqual(['nkjv', 'web', 'kjv'])
+    expect(labels(':5 kjv ')).toEqual(['inline', 'block'])
+  })
+
+  it('replaces only the partial option token', () => {
+    expect(suggestReference(':5 b', options)).toEqual([
+      { label: 'block', insert: 'block', replaceFrom: 3 },
+    ])
+  })
+
+  it('suggests no addresses while the relative spec is being typed', () => {
+    expect(labels(':')).toEqual([])
+    expect(labels(':1')).toEqual([])
+    expect(labels(':5-')).toEqual([])
+    expect(labels('15:')).toEqual([])
+  })
+})

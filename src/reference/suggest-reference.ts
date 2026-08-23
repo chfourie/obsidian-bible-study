@@ -4,6 +4,7 @@ import {
   registeredBook,
 } from './books'
 import { DISPLAY_MODES, matchBook, type ParseOptions } from './parse-reference'
+import { parseRelativeSpec, takeSpecTokens } from './relative-reference'
 
 export type ReferenceSuggestion = {
   label: string
@@ -76,6 +77,12 @@ const bookSuggestions = (
     replaceFrom: tokens[0]?.start ?? query.length,
   }))
 
+const tokensAfterRelativeSpec = (tokens: Token[]): Token[] | null => {
+  const taken = takeSpecTokens(tokens)
+  if (!taken || !parseRelativeSpec(taken.spec)) return null
+  return taken.optionTokens
+}
+
 export const suggestReference = (
   query: string,
   options: ParseOptions = {},
@@ -86,6 +93,14 @@ export const suggestReference = (
     ? { text: '', start: query.length }
     : tokens[tokens.length - 1]
   const prior = endsInGap ? tokens : tokens.slice(0, -1)
+  const afterRelativeSpec = tokensAfterRelativeSpec(prior)
+  if (afterRelativeSpec) {
+    return optionSuggestions(
+      afterRelativeSpec,
+      current,
+      options.translationIds ?? [],
+    )
+  }
   const book = matchBook(prior.map((token) => token.text))
   if (book) {
     const afterBook = prior.slice(book.wordsUsed)

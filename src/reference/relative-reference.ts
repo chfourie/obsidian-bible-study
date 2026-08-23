@@ -3,7 +3,6 @@ import {
   tokenize,
   type ParsedReference,
   type ParseOptions,
-  type ReferenceToken,
 } from './parse-reference'
 import { decodeVerseId, makeVerseId } from './verse-id'
 import { verseCount } from './versification'
@@ -131,12 +130,12 @@ export const resolveRelativeReference = (
   return { book: anchor.reference.book, ranges: mergeRanges(ranges) }
 }
 
-const continuesList = (spec: string, next: ReferenceToken | undefined) =>
+const continuesList = (spec: string, next: { text: string } | undefined) =>
   next !== undefined && (spec.endsWith(',') || next.text.startsWith(','))
 
-const takeSpecTokens = (
-  tokens: ReferenceToken[],
-): { spec: string; optionTokens: ReferenceToken[] } | null => {
+export const takeSpecTokens = <T extends { text: string }>(
+  tokens: readonly T[],
+): { spec: string; optionTokens: T[] } | null => {
   if (tokens.length === 0) return null
   let used = 1
   let spec = tokens[0].text
