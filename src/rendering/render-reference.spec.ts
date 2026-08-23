@@ -1003,6 +1003,48 @@ describe('renderReference highlights', () => {
     ).toContain('Remain in me.')
   })
 
+  it('paints a hand-typed cue on a relative reference', async () => {
+    const { parent, deps } = setup(remain())
+
+    await renderReference(
+      parent,
+      { ...model('John 15:4 inline h1/4.0-6'), relativeSpec: ':4' },
+      deps,
+    )
+
+    expect(
+      parent.querySelector('.scripture-study-highlight-1')?.textContent,
+    ).toBe('Remain')
+  })
+
+  it('offers no highlight editing on a relative reference', async () => {
+    const { parent, deps } = setup(remain())
+    const editHighlights = vi.fn()
+
+    await renderReference(
+      parent,
+      { ...model('John 15:4 inline h1/4.0-6'), relativeSpec: ':4' },
+      { ...deps, editHighlights },
+    )
+
+    expect(editHighlights).not.toHaveBeenCalled()
+    expect(
+      parent.querySelector('.scripture-study-highlight-1')?.textContent,
+    ).toBe('Remain')
+  })
+
+  it('offers highlight editing on a full reference', async () => {
+    const { parent, deps } = setup(remain())
+    const editHighlights = vi.fn()
+
+    await renderReference(parent, model('John 15:4 inline'), {
+      ...deps,
+      editHighlights,
+    })
+
+    expect(editHighlights).toHaveBeenCalled()
+  })
+
   it('renders no passage text for a chip carrying cues', async () => {
     const { parent, deps } = setup(remain())
 

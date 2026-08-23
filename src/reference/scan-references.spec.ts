@@ -229,6 +229,27 @@ describe('scanReferenceMatches relative references', () => {
     ])
   })
 
+  it('takes the display mode from the spec, defaulting to none', () => {
+    const matches = scanReferenceMatches('{John 15:4-9} {:5 inline} {:6}')
+
+    expect(matches[1].parsed.display).toBe('inline')
+    expect(matches[2].parsed.display).toBeNull()
+  })
+
+  it('keeps a hand-typed highlight cue on the spec', () => {
+    const matches = scanAfterAnchor('{John 15:4-9}', '{:5 h1/5.0-5.6}')
+
+    expect(matches[1].parsed.highlights).toEqual([
+      {
+        slot: 1,
+        startVerseId: john(15, 5),
+        startChar: 0,
+        endVerseId: john(15, 5),
+        endChar: 6,
+      },
+    ])
+  })
+
   it('resolves against a Book anchor', () => {
     installHumilityBook()
     const matches = scanAfterAnchor('{Humility 1:2-8}', '{:5}')
@@ -323,5 +344,17 @@ describe('scanReferenceMatches relative references', () => {
         ...single(makeVerseId(HUMILITY_BOOK, 1, 7)),
       ],
     })
+  })
+
+  it('flags a translation token after a Book anchor as invalid', () => {
+    installHumilityBook()
+    const matches = scanReferenceMatches('{Humility 1:2-8} {:5 web}', {
+      translationIds: ['web'],
+    })
+
+    expect(matches[1].parsed.translation).toBeNull()
+    expect(matches[1].parsed.invalidTokens.map((token) => token.text)).toEqual([
+      'web',
+    ])
   })
 })
