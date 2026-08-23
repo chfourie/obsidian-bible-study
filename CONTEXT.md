@@ -48,7 +48,7 @@ The single user-configured translation (restricted to installed modules) served 
 A symmetric connection between two or more References that belong together in study (e.g. a shared theme or allusion). All members are mutually connected — there is no direction and no primary member. Not a note: cross-references live in a single plugin-managed data file inside the vault, so they sync and back up with the vault without imposing per-item filenames. Distinct from a Reference: a Reference is an address; a Cross-Reference is an edge between addresses.
 
 ### Study Panel
-The single right-sidebar surface that follows the last-focused note or reader tab: for a reader, two sub-tabs — Study, with the chapter's Annotations, Mentions, and Cross-References, and Translations, with the selection's whole text in every installed translation plus tapped-word Strong's details, loaded only while that tab shows; for a note, the same three sections for its referenced scriptures, plus the passages it references. Remembers its state per tab (in memory, for the tab's lifetime). The reader itself shows only scripture text — all companion material lives here.
+The single right-sidebar surface that follows the last-focused note or reader tab: for a reader, two sub-tabs — Study, with the chapter's Annotations, Mentions, Cross-References, and Word Cloud, and Translations, with the selection's whole text in every installed translation plus tapped-word Strong's details, loaded only while that tab shows; for a note, the same three sections for its referenced scriptures, plus the passages it references. Remembers its state per tab (in memory, for the tab's lifetime). The reader itself shows only scripture text — all companion material lives here.
 
 ### Title Bar
 The reader's static header naming what is in view (chapter reference or Book section) and owning previous/next stepping. The single stepping surface besides the end-of-content footer nav; pickers live in the nav surfaces, not here.
@@ -75,7 +75,7 @@ The translation-independent identity of an original-language word, and the join 
 A base Strong's number together with its lettered disambiguations (`H4191`, `H4191a`, `H4191b`). Dictionary entries exist at extended-number granularity; occurrence matching is only honest at family granularity, because tagged translations mostly predate disambiguation.
 
 ### Word Study Panel
-A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, a collapsible full LSJ entry where the number is Greek and that module is installed, and the family's concordance in one tagged translation at a time — switchable where more than one is installed, and filterable by Rendering. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel.
+A main-area tab dedicated to one extended Strong's number: the dictionary entries for that number, its etymology chain and sibling entries as walkable links, a collapsible full LSJ entry where the number is Greek and that module is installed, and the family's concordance in one tagged translation at a time — switchable where more than one is installed, and filterable by Rendering. Plain activation retargets the most-recently-focused Word Study Panel; a modified activation opens a new one. Reached only from a Strong's entry card in the Study Panel — never from the Word Cloud.
 
 ### Concordance Index
 The per-translation mapping from Strong's Family to the verses where the family is tagged, each with how many of that verse's words carry it, built when a Tagged Translation module is installed. Counts are of occurrences, not of verses: a verse tagging the family on two words counts twice, while the occurrence list still shows that verse as one row. A concordance is inherently per-text — counts and renderings are only meaningful within one translation.
@@ -130,3 +130,12 @@ A reference written without a book (`{:5}`, `{:5-:7}`, `{15:2, :3}`) that borrow
 
 ### Anchor
 The nearest full Reference earlier in the same note body that a Relative Reference resolves against. Only full references anchor — a relative reference never anchors another, and an invalid one never breaks the chain. Frontmatter references never anchor.
+
+### Word Cloud
+The ten Strong's Families occurring most often in the chapter on screen, shown in the Study Panel as gloss over transliteration, each sized by its count and laid out in chapter-appearance order. Counted from the viewed translation when it is a Tagged Translation, otherwise from an installed Tagged Translation named beside the cloud; absent for Books and while Strong's is not enabled. Everything counts except the Cloud Exclusions. Tapping a word toggles its Occurrence Emphasis.
+
+### Cloud Exclusions
+The fixed, short list of Strong's Families the Word Cloud never shows because their repetition carries no significance: the articles, "to be", "and", and the Hebrew object marker. Deliberately nothing more — prepositions (*in*), quantifiers (*all*), negations and pronouns all stay, since their repetition can matter.
+
+### Occurrence Emphasis
+The reader emphasizing every word in the chapter tagged with one Strong's Family, entered by tapping that family's Word Cloud word and left by tapping it again, tapping another word, or leaving the chapter. One family at a time.
