@@ -1600,8 +1600,8 @@ describe("Strong's word lookup", () => {
 describe('the word cloud in the study material', () => {
   type TaggedTexts = Record<string, Record<number, string[][]>>
 
-  // Every verse as its tagged words: one segment per word, each carrying the
-  // Strong's numbers given for it.
+  // Every verse as its words: one segment per word, each carrying the
+  // Strong's numbers given for it — none for an untagged translation's.
   const taggedSourceOver = (texts: TaggedTexts): PassageSource => ({
     passage: async (reference, translationId): Promise<Passage> => {
       const content = texts[translationId]
@@ -1614,7 +1614,7 @@ describe('the word cloud in the study material', () => {
           segments: content[verseId].map((strongs) => ({
             text: 'word',
             redLetter: false,
-            strongs,
+            ...(strongs.length > 0 ? { strongs } : {}),
           })),
         }))
       if (verses.length === 0) return { status: 'unavailable' }
@@ -1631,6 +1631,10 @@ describe('the word cloud in the study material', () => {
     },
     kjv: {
       [makeVerseId(43, 15, 1)]: [['G26'], ['G26']],
+    },
+    web: {
+      [makeVerseId(43, 15, 1)]: [[], [], []],
+      [makeVerseId(43, 16, 1)]: [[], []],
     },
   })
 
@@ -1673,8 +1677,7 @@ describe('the word cloud in the study material', () => {
     await model.openPosition({ book: 43, chapter: 15 })
 
     expect(cloudOf(model)).toEqual({
-      translationId: 'bsb',
-      label: 'BSB',
+      source: { translationId: 'bsb', label: 'BSB', fallback: false },
       words: [
         {
           family: 'G1473',
@@ -1749,7 +1752,7 @@ describe('the word cloud in the study material', () => {
 
     await model.setTranslation('kjv')
 
-    expect(cloudOf(model)?.translationId).toBe('kjv')
+    expect(cloudOf(model)?.source?.translationId).toBe('kjv')
     expect(cloudOf(model)?.words).toEqual([
       expect.objectContaining({ family: 'G26', count: 2 }),
     ])
@@ -1805,22 +1808,131 @@ describe('the word cloud in the study material', () => {
     expect(familiesOf(model)).toEqual(['G2980', 'G5023'])
   })
 
-  it('carries no cloud for an untagged translation', async () => {
+  it('counts an untagged translation from the first installed tagged one, named as a fallback', async () => {
     const model = cloudModel({}, 'web')
     model.setWordCloudWanted(true)
 
     await model.openPosition({ book: 43, chapter: 15 })
 
-    expect(cloudOf(model)).toBeNull()
+    expect(cloudOf(model)?.source).toEqual({
+      translationId: 'bsb',
+      label: 'BSB',
+      fallback: true,
+    })
+    expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
   })
 
-  it('carries no cloud while the dictionaries are not installed', async () => {
+  it('carries an empty cloud when the fallback has no text for the chapter', async () => {
+    const model = cloudModel(
+      {
+        passages: taggedSourceOver({
+          ...taggedTexts(),
+          bsb: { [makeVerseId(43, 16, 1)]: [['G2980']] },
+        }),
+        availableTranslations: async () => [
+          translation('web'),
+          translation('bsb', true),
+        ],
+      },
+      'web',
+    )
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(cloudOf(model)).toEqual({
+      source: { translationId: 'bsb', label: 'BSB', fallback: true },
+      words: [],
+    })
+  })
+
+  it('keeps the same fallback across recomputes', async () => {
+    const model = cloudModel(
+      {
+        availableTranslations: async () => [
+          translation('web'),
+          translation('kjv', true),
+          translation('bsb', true),
+        ],
+      },
+      'web',
+    )
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    expect(cloudOf(model)?.source?.translationId).toBe('kjv')
+
+    await model.refreshTranslations()
+    await model.nextChapter()
+    await model.previousChapter()
+
+    expect(cloudOf(model)?.source?.translationId).toBe('kjv')
+  })
+
+  it('shows the hint instead of words while no tagged translation is installed', async () => {
+    const model = cloudModel(
+      { availableTranslations: async () => [translation('web')] },
+      'web',
+    )
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(cloudOf(model)).toEqual({ source: null, words: [] })
+  })
+
+  it('shows the hint instead of words while the dictionaries are not installed', async () => {
     const model = cloudModel({ strongs: strongsDeps(false).strongs })
     model.setWordCloudWanted(true)
 
     await model.openPosition({ book: 43, chapter: 15 })
 
-    expect(cloudOf(model)).toBeNull()
+    expect(cloudOf(model)).toEqual({ source: null, words: [] })
+  })
+
+  it('counts from the viewed translation again once it is switched to a tagged one', async () => {
+    const model = cloudModel({}, 'web')
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    await model.setTranslation('kjv')
+
+    expect(cloudOf(model)?.source).toEqual({
+      translationId: 'kjv',
+      label: 'KJV',
+      fallback: false,
+    })
+  })
+
+  it('falls back once the tagged translation is installed', async () => {
+    let installed = [translation('web')]
+    const model = cloudModel(
+      { availableTranslations: async () => installed },
+      'web',
+    )
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    expect(cloudOf(model)?.source).toBeNull()
+
+    installed = [translation('web'), translation('bsb', true)]
+    await model.refreshTranslations()
+
+    expect(cloudOf(model)?.source?.translationId).toBe('bsb')
+    expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
+  })
+
+  it('returns to the hint once the tagged translation is uninstalled', async () => {
+    let installed = [translation('web'), translation('bsb', true)]
+    const model = cloudModel(
+      { availableTranslations: async () => installed },
+      'web',
+    )
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    installed = [translation('web')]
+    await model.refreshTranslations()
+
+    expect(cloudOf(model)).toEqual({ source: null, words: [] })
   })
 
   it('counts the chapter once the dictionaries arrive', async () => {

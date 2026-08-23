@@ -47,6 +47,7 @@ import type {
   StudyMaterialSource,
   TranslationRowView,
   VerseDetailsView,
+  WordCloudSourceView,
   WordCloudView,
 } from '../contracts'
 import {
@@ -383,11 +384,13 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // re-reading any note. Their scope is always the current chapter.
   #chapterAnnotationItems: LoadedChapterAnnotation[] = []
   #chapterMentions: ChapterMentionView[] = []
-  // The chapter's Word Cloud, counted only while a surface wants it — and
-  // only for a Tagged Translation with the dictionaries installed.
+  // The chapter's Word Cloud, counted only while a surface wants it — from
+  // a Tagged Translation when one is installed beside the dictionaries, else
+  // standing as the hint to enable Strong's.
   #wordCloud: WordCloudView | null = null
   #wordCloudWanted = false
   #wordCloudToken = 0
+  #dictionariesInstalled = false
   #markers = new Map<number, VerseMarkerCounts>()
   #chapterMaterialToken = 0
   #attribution: string | null = null
@@ -1077,35 +1080,70 @@ export class ReaderPaneModel implements StudyMaterialSource {
     void this.#refreshWordCloud()
   }
 
-  // Counts the chapter on screen from the translation it is read in. The
-  // token retires a count the reader has moved on from, whether by a later
-  // chapter, a later translation or a later wanting.
+  // Counts the chapter on screen from the translation it is read in when
+  // that is tagged, otherwise from the first installed Tagged Translation in
+  // the installed order — a stable pick across recomputes. The token retires
+  // a count the reader has moved on from, whether by a later chapter, a later
+  // translation or a later wanting.
   async #refreshWordCloud(): Promise<void> {
     const token = ++this.#wordCloudToken
-    const translation = this.#available.find(
-      (candidate) => candidate.id === this.#translationId,
-    )
     const countable =
       this.#wordCloudWanted &&
-      this.#strongsAvailable &&
       this.#status === 'ok' &&
-      translation !== undefined
+      this.#bookHere() === null
     if (!countable) {
       this.#wordCloud = null
       this.#notify()
       return
     }
-    const families = cloudFamilies(this.#verses, CLOUD_EXCLUSIONS)
+    const source = this.#wordCloudSource()
+    if (source === null) {
+      this.#wordCloud = { source: null, words: [] }
+      this.#notify()
+      return
+    }
+    const verses = await this.#wordCloudVerses(source)
+    if (token !== this.#wordCloudToken) return
+    const families = cloudFamilies(verses, CLOUD_EXCLUSIONS)
     const entries = await this.deps.strongs.entriesFor(
       families.map(({ family }) => family),
     )
     if (token !== this.#wordCloudToken) return
     this.#wordCloud = {
-      translationId: translation.id,
-      label: translation.label,
+      source,
       words: chapterWordCloud(families, entries),
     }
     this.#notify()
+  }
+
+  #wordCloudSource(): WordCloudSourceView | null {
+    if (!this.#dictionariesInstalled) return null
+    const viewed = this.#available.find(
+      (translation) => translation.id === this.#translationId,
+    )
+    const source =
+      viewed?.strongsTagged === true
+        ? viewed
+        : this.#available.find((translation) => translation.strongsTagged)
+    if (source === undefined) return null
+    return {
+      translationId: source.id,
+      label: source.label,
+      fallback: source !== viewed,
+    }
+  }
+
+  // The viewed translation's verses are already on screen; a fallback's are
+  // fetched for the count alone.
+  async #wordCloudVerses(
+    source: WordCloudSourceView,
+  ): Promise<PassageVerse[]> {
+    if (!source.fallback) return this.#verses
+    const passage = await this.deps.passages.passage(
+      chapterReference(this.#position),
+      source.translationId,
+    )
+    return passage.status === 'ok' ? passage.verses : []
   }
 
   // What the current selection's details would cover: the selected span and
@@ -1441,11 +1479,12 @@ export class ReaderPaneModel implements StudyMaterialSource {
       this.#strongsAvailable = false
       return
     }
+    this.#dictionariesInstalled =
+      await this.deps.strongs.dictionariesInstalled()
     const current = this.#available.find(
       (translation) => translation.id === this.#translationId,
     )
     this.#strongsAvailable =
-      current?.strongsTagged === true &&
-      (await this.deps.strongs.dictionariesInstalled())
+      current?.strongsTagged === true && this.#dictionariesInstalled
   }
 }

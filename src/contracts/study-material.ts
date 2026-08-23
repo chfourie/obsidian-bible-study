@@ -58,11 +58,20 @@ export type WordCloudWordView = {
   active: boolean
 }
 
-// The Word Cloud of the chapter on screen, naming the Tagged Translation it
-// was counted from so the panel can say so when that is not the one read.
-export type WordCloudView = {
+// The Tagged Translation a Word Cloud was counted from. `fallback` marks one
+// standing in for an untagged viewed translation — the only case the panel
+// names the source beside the cloud.
+export type WordCloudSourceView = {
   translationId: string
   label: string
+  fallback: boolean
+}
+
+// The Word Cloud of the chapter on screen. A null source means Strong's is
+// not enabled — no Tagged Translation installed, or no dictionaries — and the
+// panel shows the "Enable Strong's" hint in place of words.
+export type WordCloudView = {
+  source: WordCloudSourceView | null
   words: WordCloudWordView[]
 }
 

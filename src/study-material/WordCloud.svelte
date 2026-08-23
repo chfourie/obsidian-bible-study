@@ -2,10 +2,13 @@
 The chapter's Word Cloud: its ten most tagged Strong's Families, gloss over
 transliteration, each sized by how often the chapter tags it and laid out in
 the order they first appear. Hovering a word shows its original-script lemma
-and its count. Hidden while there is no cloud or nothing eligible in it.
+and its count. A fallback source — a tagged translation standing in for the
+untagged one being read — is named beside the heading. Without Strong's the
+section holds the hint to enable it; it is hidden while there is no cloud or
+nothing eligible in it.
 -->
 <script lang="ts">
-  import type { WordCloudView } from '../contracts'
+  import type { WordCloudSourceView, WordCloudView } from '../contracts'
   import { cloudFontEm } from '../word-cloud'
   import SectionHeading from './SectionHeading.svelte'
 
@@ -15,12 +18,18 @@ and its count. Hidden while there is no cloud or nothing eligible in it.
   const smallest = $derived(Math.min(...counts))
   const largest = $derived(Math.max(...counts))
 
+  const heading = (source: WordCloudSourceView): string =>
+    source.fallback ? `Word Cloud · ${source.label}` : 'Word Cloud'
+
   const tooltip = (lemma: string, count: number): string =>
     lemma === '' ? `${count}` : `${lemma} · ${count}`
 </script>
 
-{#if cloud !== null && cloud.words.length > 0}
+{#if cloud?.source === null}
   <SectionHeading label="Word Cloud" />
+  <div class="bsm-cloud-hint">Enable Strong's to see the word cloud.</div>
+{:else if cloud !== null && cloud.words.length > 0}
+  <SectionHeading label={heading(cloud.source)} />
   <div class="bsm-word-cloud">
     {#each cloud.words as word (word.family)}
       <span
@@ -39,6 +48,12 @@ and its count. Hidden while there is no cloud or nothing eligible in it.
 {/if}
 
 <style>
+  .bsm-cloud-hint {
+    color: var(--text-faint);
+    font-size: var(--font-ui-small);
+    margin: 6px 0;
+  }
+
   .bsm-word-cloud {
     display: flex;
     flex-wrap: wrap;
