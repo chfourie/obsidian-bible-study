@@ -183,7 +183,33 @@ describe('cloudFamilies renderings', () => {
       { segments: [{ text: 'in love', strongs: ['G1722', 'G26'] }] },
     ])
 
-    expect(ranked.map((word) => word.rendering)).toEqual(['in love', 'in love'])
+    expect(ranked.map((word) => word.rendering)).toEqual(['love', 'love'])
+  })
+
+  it('strips the function words a tag span drags in around the content word', () => {
+    const ranked = cloudFamilies([
+      rendered('You must carefully:H8104'),
+      rendered('in order to know:H3045'),
+      rendered('the LORD:H3068'),
+      rendered('did not:H3808'),
+      rendered('When you eat:H0398'),
+      rendered('His commandments:H4687'),
+    ])
+
+    expect(ranked.map((word) => word.rendering)).toEqual([
+      'carefully',
+      'know',
+      'LORD',
+      'not',
+      'eat',
+      'commandments',
+    ])
+  })
+
+  it('keeps a rendering made only of function words', () => {
+    expect(cloudFamilies([rendered('so that:H4616')])[0].rendering).toBe(
+      'so that',
+    )
   })
 
   it('leaves the rendering empty when every occurrence is bare punctuation', () => {

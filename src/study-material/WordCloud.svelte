@@ -61,7 +61,8 @@ it.
         use:pressable={(event) => activate(word, event)}
       >
         <span class="bsm-cloud-headline"
-          >{headline(word)}<span class="bsm-cloud-count">{word.count}</span></span
+          >{headline(word)}
+          <span class="bsm-cloud-count">({word.count})</span></span
         >
         {#if word.transliteration !== ''}
           <span class="bsm-cloud-translit">{word.transliteration}</span>
@@ -116,10 +117,8 @@ it.
   }
 
   .bsm-cloud-count {
-    font-size: 0.5em;
+    font-size: 0.6em;
     color: var(--text-muted);
-    margin-left: 0.35em;
-    vertical-align: super;
   }
 
   .bsm-cloud-word-active .bsm-cloud-count {
