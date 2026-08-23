@@ -124,3 +124,9 @@ One atom (verse or Book paragraph) whose text — together with any Heading atta
 
 ### Search Index
 The persistent per-module structure that answers Search Queries without scanning the module's text. Its lifecycle is the module's: built when the module is installed (or lazily on first use), discarded with it, and rebuilt whole whenever the module's content or the index format changes — never updated incrementally.
+
+### Relative Reference
+A reference written without a book (`{:5}`, `{:5-:7}`, `{15:2, :3}`) that borrows its book — and, where a segment names no chapter, its chapter — from its Anchor. Always carries a colon; a bare number is never a relative reference. Valid only when every verse it names lies within the anchor; a chapter-less verse must match exactly one verse in the anchor, and an ambiguous match is invalid. Once a segment names a chapter, later chapter-less segments in the same reference inherit it. Inherits the anchor's translation unless it names its own; accepts the same display options as a full reference. An invalid relative reference is plain text. Indexed as an Occurrence like any reference.
+
+### Anchor
+The nearest full Reference earlier in the same note body that a Relative Reference resolves against. Only full references anchor — a relative reference never anchors another, and an invalid one never breaks the chain. Frontmatter references never anchor.
