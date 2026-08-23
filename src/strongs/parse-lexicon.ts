@@ -1,3 +1,5 @@
+import { strongsFamily } from '../modules'
+
 export type StrongsEntry = {
   // The Strong's Family this entry disambiguates — the number tagged
   // translations carry.
@@ -32,6 +34,8 @@ const COLUMN = {
   definition: 7,
 } as const
 
+// The family column occasionally carries the letter itself ('H0834a'), so
+// the Strong's Family is always taken without it.
 // The dStrong column leads with the extended number and trails the relation
 // that motivated it ('H0001H = a Part of').
 const extendedNumberOf = (cell: string, family: string): string => {
@@ -44,10 +48,11 @@ export const parseLexicon = (text: string): ParsedLexicon => {
   const families = new Map<string, string[]>()
   for (const line of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
     const row = line.split('\t')
-    const family = row[COLUMN.family]?.trim() ?? ''
-    if (!ENTRY_NUMBER.test(family)) continue
+    const familyCell = row[COLUMN.family]?.trim() ?? ''
+    if (!ENTRY_NUMBER.test(familyCell)) continue
     if (row.length <= COLUMN.definition) continue
-    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', family)
+    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', familyCell)
+    const family = strongsFamily(familyCell)
     if (entries.has(extendedNumber)) continue
     entries.set(extendedNumber, {
       family,

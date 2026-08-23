@@ -159,6 +159,15 @@ describe('StrongsDictionaries lookup', () => {
     expect(entry).toMatchObject({ family: 'H0001', extendedNumber: 'H0001G' })
   })
 
+  it('answers by family where the lexicon lettered the family column itself', async () => {
+    const { dictionaries } = setup()
+    await dictionaries.install()
+
+    const [entry] = await dictionaries.entriesFor(['H0834'])
+
+    expect(entry).toMatchObject({ family: 'H0834', extendedNumber: 'H0834A' })
+  })
+
   it('answers an extended number with the sub-entry it names', async () => {
     const { dictionaries } = setup()
     await dictionaries.install()
