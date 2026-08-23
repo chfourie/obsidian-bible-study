@@ -239,7 +239,89 @@ describe('scanReferenceMatches relative references', () => {
     })
   })
 
-  it('leaves lists and ranges for later', () => {
-    expect(scanAfterAnchor('{John 15:4-9}', '{:5, :7} {:5-:7}')).toHaveLength(1)
+  it('resolves a comma list to every listed verse', () => {
+    const matches = scanAfterAnchor('{John 15:4-9}', '{:5, :7}')
+
+    expect(matches[1].relativeSpec).toBe(':5, :7')
+    expect(matches[1].parsed.reference.ranges).toEqual([
+      ...single(john(15, 5)),
+      ...single(john(15, 7)),
+    ])
+  })
+
+  it('keeps option tokens after a spaced comma list', () => {
+    const matches = scanReferenceMatches('{John 15:4-9} {:5, :7 block}')
+
+    expect(matches[1].relativeSpec).toBe(':5, :7')
+    expect(matches[1].parsed.display).toBe('block')
+  })
+
+  it('accepts every range form', () => {
+    const forms = ['{:5-:7}', '{:5-7}', '{15:5-:7}', '{15:5-7}']
+    for (const form of forms) {
+      const matches = scanAfterAnchor('{John 15:4-9}', form)
+      expect(matches, form).toHaveLength(2)
+      expect(matches[1].parsed.reference.ranges).toEqual([
+        { startId: john(15, 5), endId: john(15, 7) },
+      ])
+    }
+  })
+
+  it('resolves a range that crosses into a named chapter', () => {
+    const matches = scanAfterAnchor('{John 15:1-16:4}', '{:5-16:2}')
+
+    expect(matches[1].parsed.reference.ranges).toEqual([
+      { startId: john(15, 5), endId: john(16, 2) },
+    ])
+  })
+
+  it('treats a bare range end as a verse in the current chapter', () => {
+    const matches = scanAfterAnchor('{John 14:31-15:9}', '{15:2-4}')
+
+    expect(matches[1].parsed.reference.ranges).toEqual([
+      { startId: john(15, 2), endId: john(15, 4) },
+    ])
+  })
+
+  it('rejects a range with any verse outside the anchor', () => {
+    expect(scanAfterAnchor('{John 15:4-6,9}', '{:4-:9}')).toHaveLength(1)
+    expect(scanAfterAnchor('{John 15:4-9}', '{:8-:12}')).toHaveLength(1)
+  })
+
+  it('rejects a range that runs backwards', () => {
+    expect(scanAfterAnchor('{John 15:4-9}', '{:7-:5}')).toHaveLength(1)
+  })
+
+  it('lets later chapter-less segments inherit a named chapter', () => {
+    const matches = scanAfterAnchor('{John 14:1-15:9}', '{15:2, :3}')
+
+    expect(matches[1].parsed.reference.ranges).toEqual([
+      { startId: john(15, 2), endId: john(15, 3) },
+    ])
+  })
+
+  it('rejects an ambiguous chapter-less segment before any chapter is named', () => {
+    expect(scanAfterAnchor('{John 14:1-15:9}', '{:3, 15:2}')).toHaveLength(1)
+  })
+
+  it('resolves a range within a single-chapter book anchor', () => {
+    const matches = scanAfterAnchor('{Jude 1-10}', '{:5-7}')
+
+    expect(matches[1].parsed.reference.ranges).toEqual([
+      { startId: jude(5), endId: jude(7) },
+    ])
+  })
+
+  it('resolves a list against a Book anchor', () => {
+    installHumilityBook()
+    const matches = scanAfterAnchor('{Humility 1:2-8}', '{:5, :7}')
+
+    expect(matches[1].parsed.reference).toEqual({
+      book: HUMILITY_BOOK,
+      ranges: [
+        ...single(makeVerseId(HUMILITY_BOOK, 1, 5)),
+        ...single(makeVerseId(HUMILITY_BOOK, 1, 7)),
+      ],
+    })
   })
 })
