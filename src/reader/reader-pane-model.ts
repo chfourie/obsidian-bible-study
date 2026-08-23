@@ -64,6 +64,7 @@ import {
   verseSegments,
 } from '../rendering'
 import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
+import { strongsFamily } from '../modules'
 import type { Epigraph, Figure, HeadingLevel } from '../modules'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
@@ -391,6 +392,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #wordCloudWanted = false
   #wordCloudToken = 0
   #dictionariesInstalled = false
+  // The Strong's Family whose Occurrence Emphasis is on, or null: set by a
+  // cloud word, dropped with the chapter it was computed for.
+  #cloudFamily: string | null = null
   #markers = new Map<number, VerseMarkerCounts>()
   #chapterMaterialToken = 0
   #attribution: string | null = null
@@ -431,6 +435,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #loadToken = 0
   readonly #listeners = new Set<() => void>()
   readonly #selectionListeners = new Set<(kind: SelectionKind) => void>()
+  readonly #revealListeners = new Set<(verseId: number) => void>()
 
   #annotationOrdering: AnnotationOrdering
   #defaultFontScale: number
@@ -467,6 +472,18 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   #announceSelection(kind: SelectionKind): void {
     this.#selectionListeners.forEach((listener) => listener(kind))
+  }
+
+  // Asks the reader to bring a verse row into view — the rendered pane alone
+  // knows whether the row is already on screen, so it decides whether to
+  // move at all.
+  onReveal(listener: (verseId: number) => void): () => void {
+    this.#revealListeners.add(listener)
+    return () => this.#revealListeners.delete(listener)
+  }
+
+  #requestReveal(verseId: number): void {
+    this.#revealListeners.forEach((listener) => listener(verseId))
   }
 
   setToggle<Key extends keyof ReaderToggles>(
@@ -633,8 +650,20 @@ export class ReaderPaneModel implements StudyMaterialSource {
       chapterCrossReferences: this.#chapterCrossReferences(),
       chapterAnnotations: this.#chapterAnnotations,
       chapterMentions: this.#chapterMentions,
-      wordCloud: this.#wordCloud,
+      wordCloud: this.#wordCloudWithActive(),
       collection: this.#collectionView(),
+    }
+  }
+
+  #wordCloudWithActive(): WordCloudView | null {
+    if (this.#wordCloud === null || this.#cloudFamily === null)
+      return this.#wordCloud
+    return {
+      ...this.#wordCloud,
+      words: this.#wordCloud.words.map((word) => ({
+        ...word,
+        active: word.family === this.#cloudFamily,
+      })),
     }
   }
 
@@ -1080,6 +1109,20 @@ export class ReaderPaneModel implements StudyMaterialSource {
     void this.#refreshWordCloud()
   }
 
+  // A cloud family takes over from an entry's emphasis for good: clearing
+  // the family leaves the passage plain rather than bringing the hit back.
+  toggleCloudWord(family: string): void {
+    this.#cloudFamily = this.#cloudFamily === family ? null : family
+    if (this.#cloudFamily !== null) this.#emphasis = []
+    this.#rows = this.#rowsOf(this.#verses)
+    this.#notify()
+    if (this.#cloudFamily === null) return
+    const first = this.#rows.find((row) =>
+      row.segments.some((segment) => segment.emphasized === true),
+    )
+    if (first !== undefined) this.#requestReveal(first.verseId)
+  }
+
   // Counts the chapter on screen from the translation it is read in when
   // that is tagged, otherwise from the first installed Tagged Translation in
   // the installed order — a stable pick across recomputes. The token retires
@@ -1302,6 +1345,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#rows = []
     this.#wordCloud = null
     this.#wordCloudToken++
+    this.#cloudFamily = null
     this.#notify()
     // Annotations and mentions hang off the vault index alone, so they load
     // beside the passage below instead of holding it up — the verse markers
@@ -1398,7 +1442,14 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   #emphasizedSegments(verse: PassageVerse): VerseSegment[] {
-    return this.#emphasized(verse.segments, verse.verseId, undefined)
+    if (this.#cloudFamily === null)
+      return this.#emphasized(verse.segments, verse.verseId, undefined)
+    const family = this.#cloudFamily
+    return verse.segments.map((segment) =>
+      segment.strongs?.some((number) => strongsFamily(number) === family)
+        ? { ...segment, emphasized: true }
+        : segment,
+    )
   }
 
   // A span belongs to the atom's text or to one of its Headings, never to
