@@ -57,6 +57,7 @@ it.
         role="button"
         tabindex="0"
         aria-pressed={word.active}
+        aria-haspopup="menu"
         use:pressable={(event) => activate(word, event)}
       >
         <span class="bsm-cloud-headline">{headline(word)}</span>
