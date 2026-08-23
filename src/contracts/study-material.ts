@@ -55,6 +55,9 @@ export type WordCloudWordView = {
   transliteration: string
   lemma: string
   count: number
+  // Font size in em, linear from 0.9 at the chapter's smallest count to 2 at
+  // its largest.
+  sizeEm: number
   active: boolean
 }
 
@@ -67,13 +70,13 @@ export type WordCloudSourceView = {
   fallback: boolean
 }
 
-// The Word Cloud of the chapter on screen. A null source means Strong's is
-// not enabled — no Tagged Translation installed, or no dictionaries — and the
-// panel shows the "Enable Strong's" hint in place of words.
-export type WordCloudView = {
-  source: WordCloudSourceView | null
-  words: WordCloudWordView[]
-}
+// The Word Cloud of the chapter on screen: counted from a Tagged Translation,
+// or unavailable while Strong's is not enabled — no Tagged Translation
+// installed, or no dictionaries — when the panel shows the "Enable Strong's"
+// hint in place of words.
+export type WordCloudView =
+  | { kind: 'unavailable' }
+  | { kind: 'counted'; source: WordCloudSourceView; words: WordCloudWordView[] }
 
 // A selected span of book paragraphs: the paragraphs themselves are already
 // on screen in the reader, so only their full citation stands where a

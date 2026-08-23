@@ -11,7 +11,6 @@ it.
 <script lang="ts">
   import type { WordCloudSourceView, WordCloudView } from '../contracts'
   import { pressable } from '../ui'
-  import { cloudFontEm } from '../word-cloud'
   import SectionHeading from './SectionHeading.svelte'
 
   let {
@@ -20,10 +19,6 @@ it.
   }: { cloud: WordCloudView | null; toggle: (family: string) => void } =
     $props()
 
-  const counts = $derived(cloud?.words.map((word) => word.count) ?? [])
-  const smallest = $derived(Math.min(...counts))
-  const largest = $derived(Math.max(...counts))
-
   const heading = (source: WordCloudSourceView): string =>
     source.fallback ? `Word Cloud · ${source.label}` : 'Word Cloud'
 
@@ -31,7 +26,7 @@ it.
     lemma === '' ? `${count}` : `${lemma} · ${count}`
 </script>
 
-{#if cloud?.source === null}
+{#if cloud?.kind === 'unavailable'}
   <SectionHeading label="Word Cloud" />
   <div class="bsm-cloud-hint">Enable Strong's to see the word cloud.</div>
 {:else if cloud !== null && cloud.words.length > 0}
@@ -41,7 +36,7 @@ it.
       <span
         class="bsm-cloud-word"
         class:bsm-cloud-word-active={word.active}
-        style:font-size="{cloudFontEm(word.count, smallest, largest)}em"
+        style:font-size="{word.sizeEm}em"
         title={tooltip(word.lemma, word.count)}
         role="button"
         tabindex="0"

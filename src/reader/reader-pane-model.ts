@@ -29,11 +29,7 @@ import {
   type LoadedChapterAnnotation,
 } from '../annotations'
 import { chapterMentionViews } from '../mentions'
-import {
-  CLOUD_EXCLUSIONS,
-  chapterWordCloud,
-  cloudFamilies,
-} from '../word-cloud'
+import { chapterWordCloud, cloudFamilies } from '../word-cloud'
 import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
 import type {
   BookDetailsView,
@@ -394,7 +390,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #dictionariesInstalled = false
   // The Strong's Family whose Occurrence Emphasis is on, or null: set by a
   // cloud word, dropped with the chapter it was computed for.
-  #cloudFamily: string | null = null
+  #emphasizedFamily: string | null = null
   #markers = new Map<number, VerseMarkerCounts>()
   #chapterMaterialToken = 0
   #attribution: string | null = null
@@ -650,19 +646,23 @@ export class ReaderPaneModel implements StudyMaterialSource {
       chapterCrossReferences: this.#chapterCrossReferences(),
       chapterAnnotations: this.#chapterAnnotations,
       chapterMentions: this.#chapterMentions,
-      wordCloud: this.#wordCloudWithActive(),
+      wordCloud: this.#wordCloudMarkingEmphasized(),
       collection: this.#collectionView(),
     }
   }
 
-  #wordCloudWithActive(): WordCloudView | null {
-    if (this.#wordCloud === null || this.#cloudFamily === null)
+  #wordCloudMarkingEmphasized(): WordCloudView | null {
+    if (
+      this.#wordCloud === null ||
+      this.#wordCloud.kind === 'unavailable' ||
+      this.#emphasizedFamily === null
+    )
       return this.#wordCloud
     return {
       ...this.#wordCloud,
       words: this.#wordCloud.words.map((word) => ({
         ...word,
-        active: word.family === this.#cloudFamily,
+        active: word.family === this.#emphasizedFamily,
       })),
     }
   }
@@ -1109,18 +1109,23 @@ export class ReaderPaneModel implements StudyMaterialSource {
     void this.#refreshWordCloud()
   }
 
-  // A cloud family takes over from an entry's emphasis for good: clearing
-  // the family leaves the passage plain rather than bringing the hit back.
   toggleCloudWord(family: string): void {
-    this.#cloudFamily = this.#cloudFamily === family ? null : family
-    if (this.#cloudFamily !== null) this.#emphasis = []
+    this.#emphasizedFamily = this.#emphasizedFamily === family ? null : family
+    if (this.#emphasizedFamily !== null) this.#dropEntryEmphasis()
     this.#rows = this.#rowsOf(this.#verses)
     this.#notify()
-    if (this.#cloudFamily === null) return
+    if (this.#emphasizedFamily === null) return
     const first = this.#rows.find((row) =>
       row.segments.some((segment) => segment.emphasized === true),
     )
     if (first !== undefined) this.#requestReveal(first.verseId)
+  }
+
+  // A cloud family takes over from an entry's emphasis for good: clearing
+  // the family later leaves the passage plain rather than bringing the hit
+  // back.
+  #dropEntryEmphasis(): void {
+    this.#emphasis = []
   }
 
   // Counts the chapter on screen from the translation it is read in when
@@ -1141,18 +1146,19 @@ export class ReaderPaneModel implements StudyMaterialSource {
     }
     const source = this.#wordCloudSource()
     if (source === null) {
-      this.#wordCloud = { source: null, words: [] }
+      this.#wordCloud = { kind: 'unavailable' }
       this.#notify()
       return
     }
     const verses = await this.#wordCloudVerses(source)
     if (token !== this.#wordCloudToken) return
-    const families = cloudFamilies(verses, CLOUD_EXCLUSIONS)
+    const families = cloudFamilies(verses)
     const entries = await this.deps.strongs.entriesFor(
       families.map(({ family }) => family),
     )
     if (token !== this.#wordCloudToken) return
     this.#wordCloud = {
+      kind: 'counted',
       source,
       words: chapterWordCloud(families, entries),
     }
@@ -1345,7 +1351,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#rows = []
     this.#wordCloud = null
     this.#wordCloudToken++
-    this.#cloudFamily = null
+    this.#emphasizedFamily = null
     this.#notify()
     // Annotations and mentions hang off the vault index alone, so they load
     // beside the passage below instead of holding it up — the verse markers
@@ -1442,9 +1448,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   #emphasizedSegments(verse: PassageVerse): VerseSegment[] {
-    if (this.#cloudFamily === null)
+    if (this.#emphasizedFamily === null)
       return this.#emphasized(verse.segments, verse.verseId, undefined)
-    const family = this.#cloudFamily
+    const family = this.#emphasizedFamily
     return verse.segments.map((segment) =>
       segment.strongs?.some((number) => strongsFamily(number) === family)
         ? { ...segment, emphasized: true }

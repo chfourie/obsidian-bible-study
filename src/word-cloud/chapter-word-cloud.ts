@@ -49,16 +49,13 @@ const taggedWords = (verse: CloudVerse): string[][] => {
 // The families the cloud shows, in chapter order: the ten most tagged — ties
 // going to the earlier-appearing — reordered by first appearance so the
 // cloud reads like the chapter rather than a league table.
-export const cloudFamilies = (
-  verses: readonly CloudVerse[],
-  exclusions: ReadonlySet<string>,
-): CloudFamily[] => {
+export const cloudFamilies = (verses: readonly CloudVerse[]): CloudFamily[] => {
   const counts = new Map<string, number>()
   for (const verse of verses) {
     for (const word of taggedWords(verse)) {
       for (const number of word) {
         const family = strongsFamily(number)
-        if (exclusions.has(family)) continue
+        if (CLOUD_EXCLUSIONS.has(family)) continue
         counts.set(family, (counts.get(family) ?? 0) + 1)
       }
     }
@@ -79,8 +76,9 @@ export const cloudFamilies = (
 export const chapterWordCloud = (
   families: readonly CloudFamily[],
   entries: readonly CloudEntry[],
-): WordCloudWordView[] =>
-  families.map(({ family, count }) => {
+): WordCloudWordView[] => {
+  const sizeEm = cloudSizer(families.map(({ count }) => count))
+  return families.map(({ family, count }) => {
     const entry = entries.find((candidate) => candidate.family === family)
     return {
       family,
@@ -88,14 +86,19 @@ export const chapterWordCloud = (
       transliteration: entry?.transliteration ?? '',
       lemma: entry?.lemma ?? '',
       count,
+      sizeEm: sizeEm(count),
       active: false,
     }
   })
+}
 
 // Linear from the smallest count to the largest; a cloud of equal counts
 // sits midway rather than shouting or whispering.
-export const cloudFontEm = (count: number, min: number, max: number): number => {
-  const { min: smallest, max: largest } = CLOUD_FONT_EM
-  const ratio = max === min ? 0.5 : (count - min) / (max - min)
-  return smallest + ratio * (largest - smallest)
+const cloudSizer = (counts: readonly number[]): ((count: number) => number) => {
+  const smallest = Math.min(...counts)
+  const largest = Math.max(...counts)
+  const { min, max } = CLOUD_FONT_EM
+  if (largest === smallest) return () => (min + max) / 2
+  return (count) =>
+    min + ((count - smallest) / (largest - smallest)) * (max - min)
 }

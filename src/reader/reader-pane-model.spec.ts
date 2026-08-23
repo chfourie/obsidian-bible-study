@@ -1659,8 +1659,13 @@ describe('the word cloud in the study material', () => {
 
   const cloudOf = (model: ReaderPaneModel) => model.studyMaterial.wordCloud
 
+  const countedOf = (model: ReaderPaneModel) => {
+    const cloud = cloudOf(model)
+    return cloud?.kind === 'counted' ? cloud : null
+  }
+
   const familiesOf = (model: ReaderPaneModel): string[] | null =>
-    cloudOf(model)?.words.map((word) => word.family) ?? null
+    countedOf(model)?.words.map((word) => word.family) ?? null
 
   it('carries no cloud while no surface wants it', async () => {
     const model = cloudModel()
@@ -1677,6 +1682,7 @@ describe('the word cloud in the study material', () => {
     await model.openPosition({ book: 43, chapter: 15 })
 
     expect(cloudOf(model)).toEqual({
+      kind: 'counted',
       source: { translationId: 'bsb', label: 'BSB', fallback: false },
       words: [
         {
@@ -1685,6 +1691,7 @@ describe('the word cloud in the study material', () => {
           transliteration: 'translit-G1473',
           lemma: 'lemma-G1473',
           count: 2,
+          sizeEm: 2,
           active: false,
         },
         {
@@ -1693,6 +1700,7 @@ describe('the word cloud in the study material', () => {
           transliteration: 'translit-G288',
           lemma: 'lemma-G288',
           count: 2,
+          sizeEm: 2,
           active: false,
         },
         {
@@ -1701,6 +1709,7 @@ describe('the word cloud in the study material', () => {
           transliteration: 'translit-G3306',
           lemma: 'lemma-G3306',
           count: 2,
+          sizeEm: 2,
           active: false,
         },
         {
@@ -1709,6 +1718,7 @@ describe('the word cloud in the study material', () => {
           transliteration: 'translit-G1722',
           lemma: 'lemma-G1722',
           count: 1,
+          sizeEm: 0.9,
           active: false,
         },
       ],
@@ -1752,8 +1762,8 @@ describe('the word cloud in the study material', () => {
 
     await model.setTranslation('kjv')
 
-    expect(cloudOf(model)?.source?.translationId).toBe('kjv')
-    expect(cloudOf(model)?.words).toEqual([
+    expect(countedOf(model)?.source?.translationId).toBe('kjv')
+    expect(countedOf(model)?.words).toEqual([
       expect.objectContaining({ family: 'G26', count: 2 }),
     ])
   })
@@ -1814,7 +1824,7 @@ describe('the word cloud in the study material', () => {
 
     await model.openPosition({ book: 43, chapter: 15 })
 
-    expect(cloudOf(model)?.source).toEqual({
+    expect(countedOf(model)?.source).toEqual({
       translationId: 'bsb',
       label: 'BSB',
       fallback: true,
@@ -1841,6 +1851,7 @@ describe('the word cloud in the study material', () => {
     await model.openPosition({ book: 43, chapter: 15 })
 
     expect(cloudOf(model)).toEqual({
+      kind: 'counted',
       source: { translationId: 'bsb', label: 'BSB', fallback: true },
       words: [],
     })
@@ -1859,13 +1870,13 @@ describe('the word cloud in the study material', () => {
     )
     model.setWordCloudWanted(true)
     await model.openPosition({ book: 43, chapter: 15 })
-    expect(cloudOf(model)?.source?.translationId).toBe('kjv')
+    expect(countedOf(model)?.source?.translationId).toBe('kjv')
 
     await model.refreshTranslations()
     await model.nextChapter()
     await model.previousChapter()
 
-    expect(cloudOf(model)?.source?.translationId).toBe('kjv')
+    expect(countedOf(model)?.source?.translationId).toBe('kjv')
   })
 
   it('shows the hint instead of words while no tagged translation is installed', async () => {
@@ -1877,7 +1888,7 @@ describe('the word cloud in the study material', () => {
 
     await model.openPosition({ book: 43, chapter: 15 })
 
-    expect(cloudOf(model)).toEqual({ source: null, words: [] })
+    expect(cloudOf(model)).toEqual({ kind: 'unavailable' })
   })
 
   it('shows the hint instead of words while the dictionaries are not installed', async () => {
@@ -1886,7 +1897,7 @@ describe('the word cloud in the study material', () => {
 
     await model.openPosition({ book: 43, chapter: 15 })
 
-    expect(cloudOf(model)).toEqual({ source: null, words: [] })
+    expect(cloudOf(model)).toEqual({ kind: 'unavailable' })
   })
 
   it('counts from the viewed translation again once it is switched to a tagged one', async () => {
@@ -1896,7 +1907,7 @@ describe('the word cloud in the study material', () => {
 
     await model.setTranslation('kjv')
 
-    expect(cloudOf(model)?.source).toEqual({
+    expect(countedOf(model)?.source).toEqual({
       translationId: 'kjv',
       label: 'KJV',
       fallback: false,
@@ -1911,12 +1922,12 @@ describe('the word cloud in the study material', () => {
     )
     model.setWordCloudWanted(true)
     await model.openPosition({ book: 43, chapter: 15 })
-    expect(cloudOf(model)?.source).toBeNull()
+    expect(cloudOf(model)).toEqual({ kind: 'unavailable' })
 
     installed = [translation('web'), translation('bsb', true)]
     await model.refreshTranslations()
 
-    expect(cloudOf(model)?.source?.translationId).toBe('bsb')
+    expect(countedOf(model)?.source?.translationId).toBe('bsb')
     expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
   })
 
@@ -1932,7 +1943,7 @@ describe('the word cloud in the study material', () => {
     installed = [translation('web')]
     await model.refreshTranslations()
 
-    expect(cloudOf(model)).toEqual({ source: null, words: [] })
+    expect(cloudOf(model)).toEqual({ kind: 'unavailable' })
   })
 
   it('counts the chapter once the dictionaries arrive', async () => {
@@ -1972,7 +1983,7 @@ describe('the word cloud in the study material', () => {
 
     await model.openPosition({ book: 43, chapter: 15 })
 
-    expect(cloudOf(model)?.words).toEqual([])
+    expect(countedOf(model)?.words).toEqual([])
   })
 })
 
@@ -2043,10 +2054,12 @@ describe('occurrence emphasis from a word cloud word', () => {
         .map((segment) => `${row.label}:${segment.text}`),
     )
 
-  const activeFamilies = (model: ReaderPaneModel): string[] =>
-    (model.studyMaterial.wordCloud?.words ?? [])
+  const activeFamilies = (model: ReaderPaneModel): string[] => {
+    const cloud = model.studyMaterial.wordCloud
+    return (cloud?.kind === 'counted' ? cloud.words : [])
       .filter((word) => word.active)
       .map((word) => word.family)
+  }
 
   it('emphasizes exactly the words tagged with the family', async () => {
     const model = await emphasisModel()

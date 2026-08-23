@@ -3,7 +3,6 @@ import {
   CLOUD_EXCLUSIONS,
   chapterWordCloud,
   cloudFamilies,
-  cloudFontEm,
   type CloudEntry,
 } from './chapter-word-cloud'
 
@@ -25,7 +24,7 @@ const entry = (family: string): CloudEntry => ({
 })
 
 const families = (...verses: ReturnType<typeof verse>[]) =>
-  cloudFamilies(verses, new Set())
+  cloudFamilies(verses)
 
 describe('cloudFamilies', () => {
   it('counts each family across the chapter', () => {
@@ -54,7 +53,7 @@ describe('cloudFamilies', () => {
       segments: [{ strongs: tag }, { strongs: tag }],
     }
 
-    expect(cloudFamilies([split], new Set())).toEqual([
+    expect(cloudFamilies([split])).toEqual([
       { family: 'G3306', count: 1 },
     ])
   })
@@ -66,18 +65,13 @@ describe('cloudFamilies', () => {
   })
 
   it('ignores untagged segments', () => {
-    expect(
-      cloudFamilies([{ segments: [{}] }], new Set()),
-    ).toEqual([])
+    expect(cloudFamilies([{ segments: [{}] }])).toEqual([])
   })
 
-  it('leaves out the excluded families', () => {
-    expect(
-      cloudFamilies(
-        [verse('G3588', 'G26', 'G3588a')],
-        new Set(['G3588']),
-      ),
-    ).toEqual([{ family: 'G26', count: 1 }])
+  it('leaves out the Cloud Exclusions', () => {
+    expect(cloudFamilies([verse('G3588', 'G26', 'G3588a')])).toEqual([
+      { family: 'G26', count: 1 },
+    ])
   })
 
   it('takes the ten most frequent, ties broken by first appearance', () => {
@@ -132,6 +126,7 @@ describe('chapterWordCloud', () => {
         transliteration: 'translit-G3306',
         lemma: 'lemma-G3306',
         count: 2,
+        sizeEm: 1.45,
         active: false,
       },
     ])
@@ -147,9 +142,38 @@ describe('chapterWordCloud', () => {
         transliteration: '',
         lemma: '',
         count: 1,
+        sizeEm: 1.45,
         active: false,
       },
     ])
+  })
+
+  it('sizes words linearly from 0.9em at the smallest count to 2em at the largest', () => {
+    const words = chapterWordCloud(
+      [
+        { family: 'G1', count: 1 },
+        { family: 'G2', count: 6 },
+        { family: 'G3', count: 11 },
+      ],
+      [],
+    )
+
+    const [smallest, middle, largest] = words.map((word) => word.sizeEm)
+    expect(smallest).toBe(0.9)
+    expect(middle).toBeCloseTo(1.45)
+    expect(largest).toBe(2)
+  })
+
+  it('sizes every word midway when the counts are all equal', () => {
+    const words = chapterWordCloud(
+      [
+        { family: 'G1', count: 4 },
+        { family: 'G2', count: 4 },
+      ],
+      [],
+    )
+
+    expect(words.map((word) => word.sizeEm)).toEqual([1.45, 1.45])
   })
 
   it('keeps the families in the given order whatever order the entries come in', () => {
@@ -170,17 +194,5 @@ describe('CLOUD_EXCLUSIONS', () => {
     expect([...CLOUD_EXCLUSIONS].sort()).toEqual(
       ['G3588', 'H9009', 'H1961', 'G1510', 'G1096', 'H9002', 'G2532', 'H853'].sort(),
     )
-  })
-})
-
-describe('cloudFontEm', () => {
-  it('runs linearly from 0.9em at the smallest count to 2em at the largest', () => {
-    expect(cloudFontEm(1, 1, 11)).toBeCloseTo(0.9)
-    expect(cloudFontEm(11, 1, 11)).toBeCloseTo(2)
-    expect(cloudFontEm(6, 1, 11)).toBeCloseTo(1.45)
-  })
-
-  it('sits midway when every count is the same', () => {
-    expect(cloudFontEm(4, 4, 4)).toBeCloseTo(1.45)
   })
 })
