@@ -55,7 +55,8 @@ selected paragraph's details above its section material (spec-books §5).
   />
   <WordCloud
     cloud={material.wordCloud}
-    activate={(word, event) => host.openCloudWordMenu(word, source, event)}
+    toggle={(word) => source.toggleCloudWord(word.family)}
+    menuItems={(word) => host.cloudWordMenuItems(word, source)}
   />
 {/snippet}
 

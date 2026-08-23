@@ -6,6 +6,7 @@ import type {
 } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
+import type { MenuItem } from '../ui'
 
 // The tab a surface shows a reader's study material under: the chapter's
 // study sections, or the selection's details.
@@ -27,13 +28,13 @@ export type StudyMaterialHost = {
   // retargets the most-recently-focused panel; with the new-pane modifier, it
   // opens another beside it.
   openWordStudy: (strongsNumber: string, options?: WordStudyOptions) => void
-  // Opens the menu a Word Cloud word offers — highlight, word study,
-  // exclude — over the tab whose cloud it is, where the word was activated.
-  openCloudWordMenu: (
+  // The menu a Word Cloud word offers on a right-click — highlight, word
+  // study, exclude — acting on the tab whose cloud it is; the cloud renders
+  // the items itself.
+  cloudWordMenuItems: (
     word: WordCloudWordView,
     source: StudyMaterialSource,
-    event: MouseEvent | KeyboardEvent,
-  ) => void
+  ) => MenuItem[]
   renderMarkdown: (
     el: HTMLElement,
     markdown: string,

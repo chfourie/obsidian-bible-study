@@ -27,8 +27,8 @@ import {
   renderContextFromSettings,
 } from '../rendering'
 import { extractOccurrences, type OccurrenceGroup } from '../vault-index'
-import { opensInNewPane } from '../ui'
-import { showCloudWordMenu } from './cloud-word-menu'
+import { opensInNewPane, type MenuItem } from '../ui'
+import { buildCloudWordMenuItems } from './cloud-word-menu-items'
 import { ExcludeCloudWordModal } from './exclude-cloud-word-modal'
 import { StudyPanelModel, type ActiveNote } from './study-panel-model'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelView } from './study-panel-view'
@@ -264,12 +264,11 @@ export class StudyPanelFeature extends PluginFeature {
   // A cloud word's menu acts on the tab the cloud was counted for: its
   // emphasis toggles there, its word study reads the concordance of the
   // translation the cloud came from, and its exclusion asks first.
-  openCloudWordMenu(
+  cloudWordMenuItems(
     word: WordCloudWordView,
     source: StudyMaterialSource,
-    event: MouseEvent | KeyboardEvent,
-  ): void {
-    showCloudWordMenu(word, event, {
+  ): MenuItem[] {
+    return buildCloudWordMenuItems(word, {
       toggleEmphasis: () => source.toggleCloudWord(word.family),
       openWordStudy: (clicked) =>
         void this.openWordStudy(word.family, {

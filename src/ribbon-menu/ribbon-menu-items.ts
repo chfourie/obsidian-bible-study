@@ -1,4 +1,4 @@
-import { opensInNewPane } from '../ui'
+import { opensInNewPane, type MenuSection } from '../ui'
 
 // One installed book as the menu needs it: the number its reader position
 // carries and the title it is listed under.
@@ -20,19 +20,9 @@ export type RibbonMenuActions = {
   ) => void | Promise<void>
 }
 
-export type RibbonMenuItem = {
-  title: string
-  icon: string
-  onClick: (event: MouseEvent | KeyboardEvent) => void
-}
-
-// A heading-less section renders as bare items; a labelled one carries its
-// heading above them.
-export type RibbonMenuSection = { label: string | null; items: RibbonMenuItem[] }
-
 export const buildRibbonMenuSections = async (
   actions: RibbonMenuActions,
-): Promise<RibbonMenuSection[]> => {
+): Promise<MenuSection[]> => {
   const books = await actions.installedBooks()
   return [
     {

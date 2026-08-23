@@ -12,7 +12,6 @@ import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
-import { Menu } from '../../tests/mocks/obsidian'
 import type { WordCloudWordView } from '../contracts'
 import { ExcludeCloudWordModal } from './exclude-cloud-word-modal'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelFeature } from './study-panel-feature'
@@ -573,17 +572,11 @@ describe('StudyPanelFeature entry points', () => {
       return { source, toggled }
     }
 
-    const shownItems = () => {
-      if (Menu.lastShown === null) throw new Error('no menu shown')
-      return Menu.lastShown.items
-    }
-
     it('toggles the emphasis of the word on the tab it came from', () => {
       const { feature } = harness()
       const { source, toggled } = cloudSource()
 
-      feature.openCloudWordMenu(cloudWord(), source, new MouseEvent('click'))
-      shownItems()[0].click()
+      feature.cloudWordMenuItems(cloudWord(), source)[0].onClick(new MouseEvent('click'))
 
       expect(toggled).toEqual(['G0026'])
     })
@@ -598,9 +591,9 @@ describe('StudyPanelFeature entry points', () => {
         },
       })
 
-      feature.openCloudWordMenu(cloudWord(), cloudSource().source, new MouseEvent('click'))
-      shownItems()[1].click(new MouseEvent('click'))
-      shownItems()[1].click(new MouseEvent('click', { metaKey: true }))
+      const [, wordStudy] = feature.cloudWordMenuItems(cloudWord(), cloudSource().source)
+      wordStudy.onClick(new MouseEvent('click'))
+      wordStudy.onClick(new MouseEvent('click', { metaKey: true }))
 
       expect(opened).toEqual([
         ['G0026', false, 'kjv'],
@@ -618,8 +611,7 @@ describe('StudyPanelFeature entry points', () => {
           confirm = (this as unknown as { confirm: () => void }).confirm
         })
 
-      feature.openCloudWordMenu(cloudWord(), cloudSource().source, new MouseEvent('click'))
-      shownItems()[2].click()
+      feature.cloudWordMenuItems(cloudWord(), cloudSource().source)[2].onClick(new MouseEvent('click'))
       expect(open).toHaveBeenCalledOnce()
       expect(excluded).not.toHaveBeenCalled()
 

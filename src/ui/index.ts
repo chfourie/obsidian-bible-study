@@ -1,5 +1,7 @@
 export * from './keyboard-activate'
+export * from './menu-items'
 export * from './new-pane-modifier'
 export * from './menu-panel-position'
 export * from './panel-dismiss'
 export * from './pressable'
+export { default as MenuPanel } from './MenuPanel.svelte'

@@ -2,10 +2,10 @@ import type { Plugin } from 'obsidian'
 import { mount, unmount } from 'svelte'
 import { PluginFeature } from '../data-access'
 import RibbonMenuPanel from './RibbonMenuPanel.svelte'
+import type { MenuSection } from '../ui'
 import {
   buildRibbonMenuSections,
   type RibbonMenuActions,
-  type RibbonMenuSection,
 } from './ribbon-menu-items'
 
 export type { RibbonMenuActions } from './ribbon-menu-items'
@@ -39,7 +39,7 @@ export class RibbonMenuFeature extends PluginFeature {
     this.#component = mount(RibbonMenuPanel, {
       target: host,
       props: {
-        getSections: (): Promise<RibbonMenuSection[]> =>
+        getSections: (): Promise<MenuSection[]> =>
           buildRibbonMenuSections(this.actions),
         registerApi: (api: RibbonMenuApi) => {
           this.#api = api
