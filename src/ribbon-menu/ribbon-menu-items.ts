@@ -51,7 +51,7 @@ export const buildRibbonMenuSections = async (
         },
         {
           title: 'Open search',
-          icon: 'search',
+          icon: 'text-search',
           onClick: () => void actions.openSearch(),
         },
       ],

@@ -22,7 +22,7 @@ describe('buildRibbonMenuSections', () => {
     expect(sections[0].items.map((item) => [item.title, item.icon])).toEqual([
       ['Open scripture reader', 'book-open-text'],
       ['Open study panel', 'book-marked'],
-      ['Open search', 'search'],
+      ['Open search', 'text-search'],
     ])
   })
 

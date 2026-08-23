@@ -27,7 +27,7 @@ export class SearchPaneView extends ItemView {
   }
 
   override getIcon(): string {
-    return 'search'
+    return 'text-search'
   }
 
   override async onOpen(): Promise<void> {
