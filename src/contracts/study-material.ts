@@ -51,6 +51,9 @@ export type ChapterMentionView = {
 // marks the family whose Occurrence Emphasis is on in the reader.
 export type WordCloudWordView = {
   family: string
+  // The Rendering the chapter gives the family most often — its headline —
+  // or empty when none of its occurrences rendered as a word.
+  rendering: string
   gloss: string
   transliteration: string
   lemma: string

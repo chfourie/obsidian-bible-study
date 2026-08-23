@@ -1,15 +1,20 @@
 <!--
-The chapter's Word Cloud: its ten most tagged Strong's Families, gloss over
-transliteration, each sized by how often the chapter tags it and laid out in
-the order they first appear. Hovering a word shows its original-script lemma
-and its count; pressing one toggles its Occurrence Emphasis in the reader. A
+The chapter's Word Cloud: its ten most tagged Strong's Families, each headed
+by the Rendering the chapter gives it most often (its gloss when none) over
+its transliteration, sized by how often the chapter tags it and laid out in
+the order they first appear. Hovering a word shows its gloss, original-script
+lemma and count; pressing one toggles its Occurrence Emphasis in the reader. A
 fallback source — a tagged translation standing in for the untagged one being
 read — is named beside the heading. Without Strong's the section holds the
 hint to enable it; it is hidden while there is no cloud or nothing eligible in
 it.
 -->
 <script lang="ts">
-  import type { WordCloudSourceView, WordCloudView } from '../contracts'
+  import type {
+    WordCloudSourceView,
+    WordCloudView,
+    WordCloudWordView,
+  } from '../contracts'
   import { pressable } from '../ui'
   import SectionHeading from './SectionHeading.svelte'
 
@@ -22,8 +27,13 @@ it.
   const heading = (source: WordCloudSourceView): string =>
     source.fallback ? `Word Cloud · ${source.label}` : 'Word Cloud'
 
-  const tooltip = (lemma: string, count: number): string =>
-    lemma === '' ? `${count}` : `${lemma} · ${count}`
+  const headline = (word: WordCloudWordView): string =>
+    word.rendering === '' ? word.gloss : word.rendering
+
+  const tooltip = (word: WordCloudWordView): string =>
+    [word.gloss, word.lemma, `${word.count}`]
+      .filter((part) => part !== '')
+      .join(' · ')
 </script>
 
 {#if cloud?.kind === 'unavailable'}
@@ -37,13 +47,13 @@ it.
         class="bsm-cloud-word"
         class:bsm-cloud-word-active={word.active}
         style:font-size="{word.sizeEm}em"
-        title={tooltip(word.lemma, word.count)}
+        title={tooltip(word)}
         role="button"
         tabindex="0"
         aria-pressed={word.active}
         use:pressable={() => toggle(word.family)}
       >
-        <span class="bsm-cloud-gloss">{word.gloss}</span>
+        <span class="bsm-cloud-headline">{headline(word)}</span>
         {#if word.transliteration !== ''}
           <span class="bsm-cloud-translit">{word.transliteration}</span>
         {/if}

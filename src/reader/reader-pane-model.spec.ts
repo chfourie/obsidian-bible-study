@@ -1601,7 +1601,8 @@ describe('the word cloud in the study material', () => {
   type TaggedTexts = Record<string, Record<number, string[][]>>
 
   // Every verse as its words: one segment per word, each carrying the
-  // Strong's numbers given for it — none for an untagged translation's.
+  // Strong's numbers given for it — none for an untagged translation's — and
+  // rendered as the translation's own word for its first number.
   const taggedSourceOver = (texts: TaggedTexts): PassageSource => ({
     passage: async (reference, translationId): Promise<Passage> => {
       const content = texts[translationId]
@@ -1612,7 +1613,7 @@ describe('the word cloud in the study material', () => {
         .map((verseId) => ({
           verseId,
           segments: content[verseId].map((strongs) => ({
-            text: 'word',
+            text: `${translationId}-${strongs[0] ?? 'untagged'}`,
             redLetter: false,
             ...(strongs.length > 0 ? { strongs } : {}),
           })),
@@ -1687,6 +1688,7 @@ describe('the word cloud in the study material', () => {
       words: [
         {
           family: 'G1473',
+          rendering: 'bsb-G1473',
           gloss: 'gloss-G1473',
           transliteration: 'translit-G1473',
           lemma: 'lemma-G1473',
@@ -1696,6 +1698,7 @@ describe('the word cloud in the study material', () => {
         },
         {
           family: 'G288',
+          rendering: 'bsb-G288',
           gloss: 'gloss-G288',
           transliteration: 'translit-G288',
           lemma: 'lemma-G288',
@@ -1705,6 +1708,7 @@ describe('the word cloud in the study material', () => {
         },
         {
           family: 'G3306',
+          rendering: 'bsb-G3306',
           gloss: 'gloss-G3306',
           transliteration: 'translit-G3306',
           lemma: 'lemma-G3306',
@@ -1714,6 +1718,7 @@ describe('the word cloud in the study material', () => {
         },
         {
           family: 'G1722',
+          rendering: 'bsb-G1722',
           gloss: 'gloss-G1722',
           transliteration: 'translit-G1722',
           lemma: 'lemma-G1722',
@@ -1830,6 +1835,15 @@ describe('the word cloud in the study material', () => {
       fallback: true,
     })
     expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
+  })
+
+  it("headlines a fallback-counted cloud with the fallback's own renderings", async () => {
+    const model = cloudModel({}, 'web')
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(countedOf(model)?.words[0].rendering).toBe('bsb-G1473')
   })
 
   it('carries an empty cloud when the fallback has no text for the chapter', async () => {
