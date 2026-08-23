@@ -10,7 +10,10 @@
 // installed translation is re-indexed in place rather than re-downloaded.
 // v5: the Concordance Index counts occurrences rather than verses — a verse
 // tagging a family on two words counts twice. Re-derived in place, as v4 was.
-export const MODULE_FORMAT_VERSION = 5
+// v6: the Strong's Dictionaries key families by the bare Strong's Family even
+// where STEPBible's family column carried a letter ('H0834a'), so a tagged
+// translation's 'H0834' resolves. Dictionaries rebuild on the bump.
+export const MODULE_FORMAT_VERSION = 6
 
 // What a book module is published at. Books run ahead of the shared version
 // on the same field so a format gain of theirs alone — v6: paragraphs carry

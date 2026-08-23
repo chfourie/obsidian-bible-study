@@ -28,6 +28,22 @@ describe('parseLexicon', () => {
     expect(entries.get('H0001I')?.gloss).toBe('father of')
   })
 
+  it('files a lettered family column under the Strong Family without the letter', () => {
+    const letteredRows = [
+      'H0834a\tH0834A =\tH0834A\tאֲשֶׁר\tasher\tH:Pr\twho\t1) who, which',
+      'H0834b\tH0834B =\tH0834B\tאֲשֶׁר\tasher\tH:Pr\tthat\t1) that',
+    ].join('\n')
+
+    const { entries, families } = parseLexicon(letteredRows)
+
+    expect(entries.get('H0834A')).toMatchObject({
+      family: 'H0834',
+      extendedNumber: 'H0834A',
+    })
+    expect(families.get('H0834')).toEqual(['H0834A', 'H0834B'])
+    expect(families.has('H0834a')).toBe(false)
+  })
+
   it('groups the sub-entries under the Strong Family they disambiguate', () => {
     const { families } = parseLexicon(hebrewSlice)
 

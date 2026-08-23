@@ -1,3 +1,5 @@
+import { strongsFamily } from '../modules'
+
 // TFLSJ shares the column layout of the brief lexicons — the last column
 // carrying the full Liddell-Scott-Jones entry instead of the brief definition.
 // Only that entry is stored: everything else about the number the Strong's
@@ -19,14 +21,15 @@ export const parseLsjLexicon = (text: string): Map<string, string> => {
   const entries = new Map<string, string>()
   for (const line of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
     const row = line.split('\t')
-    const family = row[COLUMN.family]?.trim() ?? ''
-    if (!ENTRY_NUMBER.test(family)) continue
+    const familyCell = row[COLUMN.family]?.trim() ?? ''
+    if (!ENTRY_NUMBER.test(familyCell)) continue
     if (row.length <= COLUMN.meaning) continue
     const meaning = row[COLUMN.meaning].trim()
     if (meaning === '') continue
-    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', family)
+    const extendedNumber = extendedNumberOf(row[COLUMN.dStrong] ?? '', familyCell)
     if (entries.has(extendedNumber)) continue
     entries.set(extendedNumber, meaning)
+    const family = strongsFamily(familyCell)
     if (!entries.has(family)) entries.set(family, meaning)
   }
   return entries

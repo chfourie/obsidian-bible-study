@@ -20,3 +20,4 @@ H0007	H0007 = in Aramaic of	H0006	אֲבַד	a.vad	A:V	to destroy	1) to perish, 
 H0008	H0008 =	H0008	אֹבֵד	o.ved	H:N-M	destruction	destruction
 H0009	H0009 =	H0009	אֲבֵדָה	a.ve.dah	H:N-F	something lost	a lost thing, something lost
 H0010	H0010 =	H0010	אֲבַדּוֹן	a.vad.don	H:N-F	destruction	a perishing
+H0834a	H0834A =	H0834A	אֲשֶׁר	asher	H:Pr	who	1) who, which, that
