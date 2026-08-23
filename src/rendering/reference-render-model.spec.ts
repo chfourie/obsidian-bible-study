@@ -3,8 +3,10 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
+import { parseReference } from '../reference'
 import {
   buildReferenceRenderModel,
+  modelFromParsed,
   sameRenderModel,
   type ReferenceRenderModel,
 } from './reference-render-model'
@@ -13,6 +15,30 @@ const context = {
   knownTranslationIds: ['web', 'nkjv'],
   defaultTranslationId: 'web',
 }
+
+describe('modelFromParsed', () => {
+  it('marks a full reference as not relative', () => {
+    const parsed = parseReference('John 15:5')
+
+    expect(modelFromParsed(parsed!, context).relativeSpec).toBeNull()
+  })
+
+  it('carries the typed relative spec beside the resolved reference', () => {
+    const parsed = parseReference('John 15:5 nkjv', {
+      translationIds: context.knownTranslationIds,
+    })
+
+    const model = modelFromParsed(parsed!, context, ':5')
+
+    expect(model).toMatchObject({
+      relativeSpec: ':5',
+      referenceText: 'John 15:5',
+      translationId: 'nkjv',
+      chipLabel: 'NKJV',
+      display: 'chip',
+    })
+  })
+})
 
 describe('buildReferenceRenderModel', () => {
   it('returns null for an invalid reference', () => {
@@ -135,6 +161,17 @@ describe('sameRenderModel', () => {
     expect(
       sameRenderModel(build('John 15:4 inline'), build('John 15:4 inline')),
     ).toBe(true)
+  })
+
+  it('differs when the typed relative spec differs', () => {
+    const parsed = parseReference('John 15:5')!
+
+    expect(
+      sameRenderModel(
+        modelFromParsed(parsed, context, ':5'),
+        modelFromParsed(parsed, context, '15:5'),
+      ),
+    ).toBe(false)
   })
 
   it('differs when the resolved translation differs', () => {

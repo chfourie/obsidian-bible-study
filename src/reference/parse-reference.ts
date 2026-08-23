@@ -102,7 +102,7 @@ export type ParseOptions = {
   translationIds?: readonly string[]
 }
 
-const tokenize = (text: string): ReferenceToken[] =>
+export const tokenize = (text: string): ReferenceToken[] =>
   [...text.matchAll(/\S+/g)].map((match) => ({
     text: match[0],
     start: match.index,
@@ -111,7 +111,7 @@ const tokenize = (text: string): ReferenceToken[] =>
 
 export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'block']
 
-const classifyOptionTokens = (
+export const classifyOptionTokens = (
   tokens: ReferenceToken[],
   translationIds: readonly string[],
   reference: Reference,

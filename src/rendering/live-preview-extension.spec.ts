@@ -207,6 +207,24 @@ describe('highlight editing in Live Preview', () => {
     expect(view.state.doc.toString()).toBe('note {John 15:4 web inline}')
   })
 
+  it('offers no highlight popover on a relative reference', async () => {
+    const hosts = await editorOverAll('note {John 15:4-9 web inline} and {:4 inline}')
+    const verseText = hosts[hosts.length - 1]
+    const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
+      .nextNode() as Text
+    const range = document.createRange()
+    range.setStart(text, 0)
+    range.setEnd(text, 6)
+    const selection = document.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+
+    expect(document.querySelector('.scripture-study-highlight-swatch')).toBeNull()
+    expect(view.state.doc.toString()).toBe('note {John 15:4-9 web inline} and {:4 inline}')
+  })
+
   it('rewrites the occurrence the stroke was made in, not its twin', async () => {
     const hosts = await editorOverAll(
       'note {John 15:4 web inline} and {John 15:4 web inline}',

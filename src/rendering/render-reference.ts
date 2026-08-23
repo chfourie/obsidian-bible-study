@@ -72,7 +72,10 @@ const renderChip = (
     attr: { role: 'button', tabindex: 0 },
   })
   const ref = chip.createSpan({ cls: 'scripture-study-chip-ref' })
-  if (model.book === null) {
+  if (model.relativeSpec !== null) {
+    ref.setText(`[${model.relativeSpec}]`)
+    chip.setAttribute('title', model.referenceText)
+  } else if (model.book === null) {
     ref.setText(model.referenceText)
   } else {
     ref.createEl('em', { text: model.book.title })

@@ -38,5 +38,5 @@ export const liveDecorationSpecs = (
     .map((match) => ({
       start: match.start,
       end: match.end,
-      model: modelFromParsed(match.parsed, context),
+      model: modelFromParsed(match.parsed, context, match.relativeSpec),
     }))

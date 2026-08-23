@@ -70,6 +70,38 @@ describe('RenderingFeature in-note intersections', () => {
   })
 })
 
+describe('RenderingFeature reading mode sections', () => {
+  it('resolves a relative reference against an anchor in an earlier section', async () => {
+    type PostProcessor = (
+      element: HTMLElement,
+      context: MarkdownPostProcessorContext,
+    ) => Promise<void>
+    let postProcessor: PostProcessor | undefined
+    const plugin = {
+      registerMarkdownPostProcessor: (processor: PostProcessor) => {
+        postProcessor = processor
+      },
+      registerEditorExtension: () => {},
+      registerEditorSuggest: () => {},
+      app: { workspace: { iterateAllLeaves: () => {} } },
+    } as unknown as Plugin
+    const feature = new RenderingFeature(plugin, {} as ModuleStore)
+    await feature.load()
+
+    const text = '# A\n{John 15:4-9}\n\n## B\n{:5} bears fruit.\n'
+    const element = document.createElement('div')
+    element.innerHTML = '<p>{:5} bears fruit.</p>'
+    await postProcessor!(element, {
+      sourcePath: 'note.md',
+      getSectionInfo: () => ({ text, lineStart: 4, lineEnd: 4 }),
+    } as unknown as MarkdownPostProcessorContext)
+
+    expect(element.querySelector('.scripture-study-chip-ref')?.textContent).toBe(
+      '[:5]',
+    )
+  })
+})
+
 describe('RenderingFeature derived red letter', () => {
   it('renders cue-marked verses red in notes when enabled for a module without native red letter', async () => {
     type PostProcessor = (

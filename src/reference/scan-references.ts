@@ -3,11 +3,39 @@ import {
   type ParsedReference,
   type ParseOptions,
 } from './parse-reference'
+import { parseRelativeReference } from './relative-reference'
 
 export type ReferenceMatch = {
   start: number
   end: number
   parsed: ParsedReference
+  relativeSpec: string | null
+}
+
+class AnchoredMatches {
+  readonly matches: ReferenceMatch[] = []
+  #anchor: ParsedReference | null = null
+
+  constructor(private readonly options: ParseOptions) {}
+
+  tryMatch(text: string, start: number, end: number): boolean {
+    const parsed = parseReference(text, this.options)
+    if (parsed) {
+      this.#anchor = parsed
+      this.matches.push({ start, end, parsed, relativeSpec: null })
+      return true
+    }
+    if (this.#anchor === null) return false
+    const relative = parseRelativeReference(text, this.#anchor, this.options)
+    if (!relative) return false
+    this.matches.push({
+      start,
+      end,
+      parsed: relative.parsed,
+      relativeSpec: relative.spec,
+    })
+    return true
+  }
 }
 
 const backtickRunLength = (line: string, index: number): number => {
@@ -59,8 +87,7 @@ export const maskInlineCodeSpans = (line: string): string => {
 const scanLine = (
   line: string,
   lineStart: number,
-  options: ParseOptions,
-  matches: ReferenceMatch[],
+  matches: AnchoredMatches,
 ): void => {
   let i = 0
   while (i < line.length) {
@@ -77,17 +104,12 @@ const scanLine = (
     }
     const close = line.indexOf('}', i + 1)
     if (close === -1) return
-    const parsed = parseReference(line.slice(i + 1, close), options)
-    if (!parsed) {
-      i++
-      continue
-    }
-    matches.push({
-      start: lineStart + i,
-      end: lineStart + close + 1,
-      parsed,
-    })
-    i = close + 1
+    const matched = matches.tryMatch(
+      line.slice(i + 1, close),
+      lineStart + i,
+      lineStart + close + 1,
+    )
+    i = matched ? close + 1 : i + 1
   }
 }
 
@@ -112,24 +134,45 @@ const FRONTMATTER_PATTERN = /^---\r?\n.*?\r?\n(?:---|\.\.\.)(?:\r?\n|$)/s
 export const frontmatterLength = (content: string): number =>
   FRONTMATTER_PATTERN.exec(content)?.[0].length ?? 0
 
+export type BodyLine = {
+  text: string
+  start: number
+  index: number
+}
+
+const lineCount = (text: string): number => text.split('\n').length - 1
+
+// The note's lines that can hold a reference: after the frontmatter and
+// outside fenced code blocks, each with its document offset and line number.
+export const bodyLines = (content: string): BodyLine[] => {
+  const lines: BodyLine[] = []
+  const frontmatter = content.slice(0, frontmatterLength(content))
+  let start = frontmatter.length
+  let index = lineCount(frontmatter)
+  let openFence: Fence | null = null
+  for (const rawLine of content.slice(start).split('\n')) {
+    const text = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
+    if (openFence) {
+      if (closesFence(text, openFence)) openFence = null
+    } else {
+      const fence = fenceAt(text)
+      if (fence) openFence = fence
+      else lines.push({ text, start, index })
+    }
+    start += rawLine.length + 1
+    index++
+  }
+  return lines
+}
+
 export const scanReferenceMatches = (
   content: string,
   options: ParseOptions = {},
 ): ReferenceMatch[] => {
-  const matches: ReferenceMatch[] = []
-  if (!content.includes('{')) return matches
-  let lineStart = frontmatterLength(content)
-  let openFence: Fence | null = null
-  for (const rawLine of content.slice(lineStart).split('\n')) {
-    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine
-    if (openFence) {
-      if (closesFence(line, openFence)) openFence = null
-    } else {
-      const fence = fenceAt(line)
-      if (fence) openFence = fence
-      else scanLine(line, lineStart, options, matches)
-    }
-    lineStart += rawLine.length + 1
+  const matches = new AnchoredMatches(options)
+  if (!content.includes('{')) return matches.matches
+  for (const line of bodyLines(content)) {
+    scanLine(line.text, line.start, matches)
   }
-  return matches
+  return matches.matches
 }

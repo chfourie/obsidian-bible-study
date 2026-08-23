@@ -116,6 +116,46 @@ describe('renderReference chip', () => {
     expect(parent.querySelector('.scripture-study-chip-icon')).not.toBeNull()
   })
 
+  it('labels a relative reference with its bracketed spec and the resolved tooltip', async () => {
+    const { parent, deps, openReference } = setup()
+
+    await renderReference(
+      parent,
+      { ...model('John 15:5'), relativeSpec: ':5' },
+      deps,
+    )
+
+    const chip = parent.querySelector<HTMLElement>('.scripture-study-chip')
+    expect(chip?.querySelector('.scripture-study-chip-ref')?.textContent).toBe(
+      '[:5]',
+    )
+    expect(chip?.title).toBe('John 15:5')
+    expect(chip?.querySelector('.scripture-study-chip-icon')).not.toBeNull()
+    chip?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(openReference).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceText: 'John 15:5' }),
+      { newPane: false },
+    )
+  })
+
+  it('labels a relative Book reference with its spec over the citation', async () => {
+    installHumilityBook()
+    const { parent, deps } = setup()
+
+    await renderReference(
+      parent,
+      { ...model('Humility 2:5'), relativeSpec: ':5' },
+      deps,
+    )
+
+    const chip = parent.querySelector<HTMLElement>('.scripture-study-chip')
+    expect(chip?.querySelector('.scripture-study-chip-ref')?.textContent).toBe(
+      '[:5]',
+    )
+    expect(chip?.title).toContain('Humility')
+    uninstallHumilityBook()
+  })
+
   it('highlights invalid trailing tokens beside the chip', async () => {
     const { parent, deps } = setup()
 

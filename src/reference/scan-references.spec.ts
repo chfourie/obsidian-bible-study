@@ -1,8 +1,20 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import {
+  HUMILITY_BOOK,
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import { maskInlineCodeSpans, scanReferenceMatches } from './scan-references'
 import { makeVerseId } from './verse-id'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
+const jude = (verse: number) => makeVerseId(65, 1, verse)
+
+const single = (verseId: number) => [{ startId: verseId, endId: verseId }]
+
+afterEach(() => {
+  uninstallHumilityBook()
+})
 
 describe('maskInlineCodeSpans', () => {
   it('blanks code spans while preserving length and surrounding text', () => {
@@ -80,5 +92,154 @@ describe('scanReferenceMatches', () => {
     expect(matches.map((match) => match.start)).toEqual([
       content.indexOf('{John 15:1}'),
     ])
+  })
+
+  it('marks a full reference as not relative', () => {
+    expect(scanReferenceMatches('{John 15:4}')[0].relativeSpec).toBeNull()
+  })
+})
+
+describe('scanReferenceMatches relative references', () => {
+  const scanAfterAnchor = (anchor: string, relative: string) =>
+    scanReferenceMatches(`${anchor} then ${relative}`)
+
+  it('resolves a chapter-less verse against the preceding full reference', () => {
+    const matches = scanAfterAnchor('{John 15:4-9}', '{:5}')
+
+    expect(matches).toHaveLength(2)
+    expect(matches[1]).toEqual({
+      start: '{John 15:4-9} then '.length,
+      end: '{John 15:4-9} then {:5}'.length,
+      relativeSpec: ':5',
+      parsed: {
+        reference: { book: 43, ranges: single(john(15, 5)) },
+        translation: null,
+        display: null,
+        invalidTokens: [],
+        highlights: [],
+      },
+    })
+  })
+
+  it('resolves a chapter-named verse within the anchor book', () => {
+    const matches = scanAfterAnchor('{John 15:4-9}', '{15:7}')
+
+    expect(matches[1].relativeSpec).toBe('15:7')
+    expect(matches[1].parsed.reference.ranges).toEqual(single(john(15, 7)))
+  })
+
+  it('leaves a chapter outside the anchor as plain text', () => {
+    expect(scanAfterAnchor('{John 15:4-9}', '{14:7}')).toHaveLength(1)
+  })
+
+  it('leaves a verse outside the anchor ranges as plain text', () => {
+    expect(scanAfterAnchor('{John 15:4-6,9}', '{:7}')).toHaveLength(1)
+    expect(scanAfterAnchor('{John 15:4-6,9}', '{15:10}')).toHaveLength(1)
+  })
+
+  it('resolves a chapter-less verse to the single anchor chapter holding it', () => {
+    const matches = scanAfterAnchor('{John 14:31-15:3}', '{:1}')
+
+    expect(matches[1].parsed.reference.ranges).toEqual(single(john(15, 1)))
+  })
+
+  it('leaves an ambiguous chapter-less verse as plain text', () => {
+    expect(scanAfterAnchor('{John 14:1-15:3}', '{:1}')).toHaveLength(1)
+  })
+
+  it('resolves within a single-chapter book anchor', () => {
+    const matches = scanAfterAnchor('{Jude 1-10}', '{:5}')
+
+    expect(matches[1].parsed.reference.ranges).toEqual(single(jude(5)))
+  })
+
+  it('anchors to the nearest preceding full reference across lines', () => {
+    const content = '# A\n{John 15:4-9}\n\n## B\n{John 3:16-17}\n\ntext {:17}\n'
+    const matches = scanReferenceMatches(content)
+
+    expect(matches).toHaveLength(3)
+    expect(matches[2].parsed.reference.ranges).toEqual(single(john(3, 17)))
+  })
+
+  it('never lets a relative reference anchor a later one', () => {
+    const matches = scanReferenceMatches('{John 15:4-9} {:5} {:9}')
+
+    expect(matches.map((match) => match.parsed.reference.ranges)).toEqual([
+      [{ startId: john(15, 4), endId: john(15, 9) }],
+      single(john(15, 5)),
+      single(john(15, 9)),
+    ])
+  })
+
+  it('keeps the anchor when a relative reference is invalid', () => {
+    const matches = scanReferenceMatches('{John 15:4-9} {:40} {:5}')
+
+    expect(matches).toHaveLength(2)
+    expect(matches[1].parsed.reference.ranges).toEqual(single(john(15, 5)))
+  })
+
+  it('leaves a relative reference before any full reference as plain text', () => {
+    expect(scanReferenceMatches('{:5} and {John 15:4-9}')).toHaveLength(1)
+  })
+
+  it('never treats a bare number as a reference', () => {
+    expect(scanAfterAnchor('{John 15:4-9}', '{5} {2024}')).toHaveLength(1)
+  })
+
+  it('ignores braces that are not a relative spec', () => {
+    expect(
+      scanAfterAnchor('{John 15:4-9}', '{"json": 5} {a:5} {:5:6} {:}'),
+    ).toHaveLength(1)
+  })
+
+  it('honours escapes, code spans and fences', () => {
+    const content =
+      '{John 15:4-9}\n\\{:5} `{:5}`\n```\n{:5}\n```\n{:6}\n'
+    const matches = scanReferenceMatches(content)
+
+    expect(matches.map((match) => match.start)).toEqual([
+      0,
+      content.indexOf('{:6}'),
+    ])
+  })
+
+  it('never takes an anchor from frontmatter', () => {
+    const content = '---\nref: John 15:4-9\n---\n{:5}\n'
+
+    expect(scanReferenceMatches(content)).toEqual([])
+  })
+
+  it('inherits the anchor translation when the spec names none', () => {
+    const matches = scanReferenceMatches('{John 15:4-9 niv} {:5}', {
+      translationIds: ['niv', 'kjv'],
+    })
+
+    expect(matches[1].parsed.translation).toBe('niv')
+  })
+
+  it('classifies option tokens after the spec as a full reference does', () => {
+    const matches = scanReferenceMatches('{John 15:4-9 niv} {:5 kjv block bogus}', {
+      translationIds: ['niv', 'kjv'],
+    })
+
+    expect(matches[1].parsed.translation).toBe('kjv')
+    expect(matches[1].parsed.display).toBe('block')
+    expect(matches[1].parsed.invalidTokens.map((token) => token.text)).toEqual([
+      'bogus',
+    ])
+  })
+
+  it('resolves against a Book anchor', () => {
+    installHumilityBook()
+    const matches = scanAfterAnchor('{Humility 1:2-8}', '{:5}')
+
+    expect(matches[1].parsed.reference).toEqual({
+      book: HUMILITY_BOOK,
+      ranges: single(makeVerseId(HUMILITY_BOOK, 1, 5)),
+    })
+  })
+
+  it('leaves lists and ranges for later', () => {
+    expect(scanAfterAnchor('{John 15:4-9}', '{:5, :7} {:5-:7}')).toHaveLength(1)
   })
 })

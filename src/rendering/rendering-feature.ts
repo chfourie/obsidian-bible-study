@@ -25,23 +25,28 @@ import { ModulePassageSource } from './module-passage-source'
 import { ReferenceEditorSuggest } from './reference-editor-suggest'
 import type { VaultReferenceIndex } from '../vault-index'
 import { PassageRepository } from './passage-repository'
-import { processRenderedElement } from './process-rendered-element'
+import {
+  EMPTY_SECTION,
+  processRenderedElement,
+  type RenderedSection,
+} from './process-rendered-element'
 import { renderContextFromSettings } from './render-context'
 import type {
   FirstRunInstallDeps,
   ReferenceRenderDeps,
 } from './render-reference'
 
-const sectionSource = (
+const renderedSection = (
   element: HTMLElement,
   context: MarkdownPostProcessorContext,
-): string => {
+): RenderedSection => {
   const info = context.getSectionInfo(element)
-  if (!info) return ''
-  return info.text
-    .split('\n')
-    .slice(info.lineStart, info.lineEnd + 1)
-    .join('\n')
+  if (!info) return EMPTY_SECTION
+  return {
+    noteSource: info.text,
+    lineStart: info.lineStart,
+    lineEnd: info.lineEnd,
+  }
 }
 
 export class RenderingFeature extends PluginFeature {
@@ -82,7 +87,7 @@ export class RenderingFeature extends PluginFeature {
         element,
         renderContextFromSettings(this.settings),
         this.#deps,
-        sectionSource(element, context),
+        renderedSection(element, context),
         context.sourcePath,
       ),
     )

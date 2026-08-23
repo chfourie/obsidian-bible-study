@@ -21,6 +21,25 @@ describe('extractOccurrences', () => {
     ])
   })
 
+  it('indexes a relative reference with its resolved reference', () => {
+    const occurrences = extractOccurrences('{John 15:4-9} and {:5}')
+
+    expect(occurrences[1]).toEqual({
+      position: 18,
+      reference: { book: 43, ranges: [{ startId: john(15, 5), endId: john(15, 5) }] },
+      source: 'body',
+      translation: null,
+    })
+  })
+
+  it('never anchors a relative reference on the frontmatter ref', () => {
+    const occurrences = extractOccurrences('---\nref: John 15:4-9\n---\n{:5}')
+
+    expect(occurrences.map((occurrence) => occurrence.source)).toEqual([
+      'annotation-frontmatter',
+    ])
+  })
+
   it('finds multiple references in reading order', () => {
     const occurrences = extractOccurrences('{John 15:4} and {Jhn 15:9}')
     expect(occurrences.map((o) => o.position)).toEqual([0, 16])

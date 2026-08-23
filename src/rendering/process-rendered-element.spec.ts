@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Passage } from './module-passage-source'
-import { processRenderedElement } from './process-rendered-element'
+import {
+  processRenderedElement,
+  type RenderedSection,
+} from './process-rendered-element'
 import type { ReferenceRenderDeps } from './render-reference'
 import type { RenderContext } from './reference-render-model'
 
@@ -24,12 +27,30 @@ const setup = () => {
   return { root, deps }
 }
 
+const wholeNote = (source: string): RenderedSection => ({
+  noteSource: source,
+  lineStart: 0,
+  lineEnd: source.split('\n').length - 1,
+})
+
 const process = (
   root: HTMLElement,
   deps: ReferenceRenderDeps,
   sectionSource = '',
   sourcePath: string | null = null,
-) => processRenderedElement(root, context, deps, sectionSource, sourcePath)
+) =>
+  processRenderedElement(
+    root,
+    context,
+    deps,
+    wholeNote(sectionSource),
+    sourcePath,
+  )
+
+const chipLabels = (root: HTMLElement): string[] =>
+  [...root.querySelectorAll('.scripture-study-chip-ref')].map(
+    (ref) => ref.textContent ?? '',
+  )
 
 describe('processRenderedElement', () => {
   it('passes the note path so its own occurrences stay off the surface', async () => {
@@ -163,5 +184,63 @@ describe('processRenderedElement', () => {
     expect(root.querySelector('.scripture-study-passage')?.textContent).toBe(
       'Remain.',
     )
+  })
+
+  it('resolves a relative reference against an anchor in the same section', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p>{John 15:4-9} says {:5} here.</p>'
+
+    await process(root, deps, '{John 15:4-9} says {:5} here.')
+
+    expect(chipLabels(root)).toEqual(['John 15:4-9', '[:5]'])
+    expect(
+      root.querySelectorAll<HTMLElement>('.scripture-study-chip')[1].title,
+    ).toBe('John 15:5')
+  })
+
+  it('resolves an anchor from an earlier section of the whole note', async () => {
+    const { root, deps } = setup()
+    const noteSource =
+      '---\nref: John 3:16\n---\n# Abiding\n{John 15:4-9}\n\n## Fruit\n{:5} bears fruit.\n'
+    root.innerHTML = '<p>{:5} bears fruit.</p>'
+
+    await processRenderedElement(
+      root,
+      context,
+      deps,
+      { noteSource, lineStart: 7, lineEnd: 7 },
+      null,
+    )
+
+    expect(chipLabels(root)).toEqual(['[:5]'])
+  })
+
+  it('leaves a relative reference plain without a preceding anchor', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p>{:5} then {John 15:4-9}</p>'
+
+    await process(root, deps, '{:5} then {John 15:4-9}')
+
+    expect(chipLabels(root)).toEqual(['John 15:4-9'])
+    expect(root.textContent).toContain('{:5}')
+  })
+
+  it('leaves a relative reference plain when no source is supplied', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p>{John 15:4-9} says {:5} here.</p>'
+
+    await process(root, deps)
+
+    expect(chipLabels(root)).toEqual(['John 15:4-9'])
+  })
+
+  it('keeps an escaped relative reference literal', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p>{John 15:4-9} {:5} {:5}</p>'
+
+    await process(root, deps, '{John 15:4-9} \\{:5} {:5}')
+
+    expect(chipLabels(root)).toEqual(['John 15:4-9', '[:5]'])
+    expect(root.textContent).toContain('{:5}')
   })
 })

@@ -96,4 +96,22 @@ describe('liveDecorationSpecs', () => {
 
     expect(specsFor(doc, [{ from: 2, to: 21 }])).toEqual([])
   })
+
+  it('labels a relative reference with its typed spec and resolves its tooltip', () => {
+    const doc = '{John 15:4-9 web} and {:5 inline}'
+
+    const specs = specsFor(doc)
+
+    expect(specs).toHaveLength(2)
+    expect(specs[1].model).toMatchObject({
+      relativeSpec: ':5',
+      referenceText: 'John 15:5',
+      translationId: 'web',
+      chipLabel: 'WEB',
+      display: 'inline',
+    })
+    expect(specs[1].model.reference.ranges).toEqual([
+      { startId: 43015005, endId: 43015005 },
+    ])
+  })
 })

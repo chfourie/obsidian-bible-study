@@ -24,6 +24,7 @@ export type ReferenceRenderModel = {
   display: RenderDisplay
   invalidTokens: string[]
   highlights: HighlightCue[]
+  relativeSpec: string | null
   // Present for a non-biblical book: MLA locators and the full citation the
   // chip and block attribution line render from (spec-books §4).
   book: BookCitation | null
@@ -34,6 +35,7 @@ export type ReferenceRenderModel = {
 export const modelFromParsed = (
   parsed: ParsedReference,
   context: RenderContext,
+  relativeSpec: string | null = null,
 ): ReferenceRenderModel => {
   const book = bookCitation(parsed.reference)
   return {
@@ -46,6 +48,7 @@ export const modelFromParsed = (
     display: parsed.display ?? 'chip',
     invalidTokens: parsed.invalidTokens.map((token) => token.text),
     highlights: parsed.highlights,
+    relativeSpec,
     book,
   }
 }
@@ -58,6 +61,7 @@ export const sameRenderModel = (
   a.translationId === b.translationId &&
   a.chipLabel === b.chipLabel &&
   a.display === b.display &&
+  a.relativeSpec === b.relativeSpec &&
   a.invalidTokens.length === b.invalidTokens.length &&
   a.invalidTokens.every((token, index) => token === b.invalidTokens[index]) &&
   a.highlights.length === b.highlights.length &&
