@@ -162,6 +162,7 @@ export class ReaderFeature
     this.#models.forEach((model) => {
       model.setAnnotationOrdering(this.settings.annotationOrdering)
       model.setDefaultFontScale(this.settings.readerFontScalePercent)
+      model.setWordCloudExclusions(this.settings.wordCloudExclusions)
       void model.refreshTranslations()
       model.setRedLetterDefault(this.settings.derivedRedLetter ? 'on' : 'off')
       // Panes with nothing on screen (no translation yet, or the passage was
@@ -222,6 +223,7 @@ export class ReaderFeature
         translationId: this.settings.defaultTranslationId,
         annotationOrdering: this.settings.annotationOrdering,
         fontScalePercent: this.settings.readerFontScalePercent,
+        wordCloudExclusions: this.settings.wordCloudExclusions,
       },
     )
     model.subscribe(() => {

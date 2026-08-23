@@ -29,7 +29,12 @@ import {
   type LoadedChapterAnnotation,
 } from '../annotations'
 import { chapterMentionViews } from '../mentions'
-import { chapterWordCloud, cloudFamilies } from '../word-cloud'
+import {
+  chapterWordCloud,
+  cloudExclusions,
+  cloudFamilies,
+  paddedFamily,
+} from '../word-cloud'
 import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
 import type {
   BookDetailsView,
@@ -174,7 +179,12 @@ export type ReaderPaneConfig = {
   translationId: string | null
   annotationOrdering?: AnnotationOrdering
   fontScalePercent?: number
+  // The user's own Cloud Exclusions, joined to the built-in list.
+  wordCloudExclusions?: readonly string[]
 }
+
+const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>): boolean =>
+  a.size === b.size && [...a].every((member) => b.has(member))
 
 const clampFontScale = (percent: number): number =>
   Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, percent))
@@ -387,6 +397,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #wordCloud: WordCloudView | null = null
   #wordCloudWanted = false
   #wordCloudToken = 0
+  #cloudExclusions: ReadonlySet<string>
   #dictionariesInstalled = false
   // The Strong's Family whose Occurrence Emphasis is on, or null: set by a
   // cloud word, dropped with the chapter it was computed for.
@@ -444,6 +455,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#translationId = config.translationId
     this.#toggles = { ...config.toggles }
     this.#annotationOrdering = config.annotationOrdering ?? 'created-oldest-first'
+    this.#cloudExclusions = cloudExclusions(config.wordCloudExclusions ?? [])
     this.#defaultFontScale = clampFontScale(
       config.fontScalePercent ?? FONT_SCALE_DEFAULT,
     )
@@ -1109,6 +1121,19 @@ export class ReaderPaneModel implements StudyMaterialSource {
     void this.#refreshWordCloud()
   }
 
+  // A family excluded while emphasized loses its emphasis with its word.
+  setWordCloudExclusions(families: readonly string[]): void {
+    const exclusions = cloudExclusions(families)
+    if (sameSet(exclusions, this.#cloudExclusions)) return
+    this.#cloudExclusions = exclusions
+    if (
+      this.#emphasizedFamily !== null &&
+      exclusions.has(paddedFamily(this.#emphasizedFamily))
+    )
+      this.toggleCloudWord(this.#emphasizedFamily)
+    if (this.#wordCloudWanted) void this.#refreshWordCloud()
+  }
+
   toggleCloudWord(family: string): void {
     this.#emphasizedFamily = this.#emphasizedFamily === family ? null : family
     if (this.#emphasizedFamily !== null) this.#dropEntryEmphasis()
@@ -1152,7 +1177,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     }
     const verses = await this.#wordCloudVerses(source)
     if (token !== this.#wordCloudToken) return
-    const families = cloudFamilies(verses)
+    const families = cloudFamilies(verses, this.#cloudExclusions)
     const entries = await this.deps.strongs.entriesFor(
       families.map(({ family }) => family),
     )

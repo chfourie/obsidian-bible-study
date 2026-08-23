@@ -6,6 +6,7 @@ import {
   type SettingDefinitionGroup,
   type SettingDefinitionItem,
   type SettingDefinitionPage,
+  type SettingGroupItem,
   type TFile,
 } from 'obsidian'
 import {
@@ -166,6 +167,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       this.#translationsPage(view),
       this.#booksPage(view),
       this.#strongsGroup(view),
+      this.#wordCloudGroup(view),
       this.#readerGroup(),
       this.#highlightsGroup(view),
       this.#annotationsGroup(),
@@ -581,6 +583,35 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         },
       ],
     }
+  }
+
+  // The user's own Cloud Exclusions: added from a cloud word's menu in the
+  // Study Panel, removed here.
+  #wordCloudGroup(
+    view: SettingsTabView,
+  ): SettingDefinitionGroup<SettingsControlKey> {
+    const items: SettingGroupItem<SettingsControlKey>[] =
+      view.wordCloudExclusions.length === 0
+        ? [
+            {
+              name: 'No words excluded',
+              desc: 'Exclude a word from its menu in the Study Panel word cloud.',
+              render: () => {},
+            },
+          ]
+        : view.wordCloudExclusions.map((exclusion) => ({
+            name: exclusion.label,
+            desc: 'Excluded from the word cloud.',
+            render: (setting: Setting) =>
+              void setting.addButton((button) =>
+                button
+                  .setButtonText('Remove')
+                  .onClick(
+                    () => void this.model.removeWordCloudExclusion(exclusion.family),
+                  ),
+              ),
+          }))
+    return { type: 'group', heading: 'Word cloud', items }
   }
 
   #lsjDesc(view: SettingsTabView): string | DocumentFragment {

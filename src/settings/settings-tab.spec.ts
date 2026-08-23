@@ -89,6 +89,7 @@ const setup = async (
       install: vi.fn(async () => {}),
       remove: vi.fn(async () => {}),
     },
+    strongsGloss: async () => null,
     ...deps,
   })
   const app = new App()
@@ -630,6 +631,33 @@ describe('ScriptureStudySettingTab Strongs section', () => {
     expect(
       settingNamed(withTagged, "Enable Strong's").textContent,
     ).not.toContain("Strong's badge")
+  })
+})
+
+describe('ScriptureStudySettingTab word cloud section', () => {
+  it('says so while the user has excluded nothing', async () => {
+    const { container } = await setup()
+
+    expect(hasSettingNamed(container, 'No words excluded')).toBe(true)
+  })
+
+  it('lists each excluded family, labelled, with a Remove that drops it', async () => {
+    const { container, settingsStore } = await setup({
+      storedSettings: { wordCloudExclusions: ['H0834', 'G9999'] },
+      strongsGloss: async (family) => (family === 'H0834' ? 'which' : null),
+    })
+    const which = settingNamed(container, 'H0834 · which')
+    expect(hasSettingNamed(container, 'G9999')).toBe(true)
+    const remove = which.querySelector('button')
+    expect(remove?.textContent).toBe('Remove')
+
+    remove?.click()
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).wordCloudExclusions).toEqual([
+      'G9999',
+    ])
+    expect(hasSettingNamed(container, 'H0834')).toBe(false)
   })
 })
 

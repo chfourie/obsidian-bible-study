@@ -71,6 +71,9 @@ export type ScriptureStudySettings = {
   annotationTemplatePath: string | null
   annotationOrdering: AnnotationOrdering
   highlightPalette: HighlightPalette
+  // The user's own Cloud Exclusions, as Strong's Families, on top of the
+  // built-in list (CONTEXT.md — Cloud Exclusions).
+  wordCloudExclusions: string[]
 }
 
 export const DEFAULT_SETTINGS: ScriptureStudySettings = {
@@ -94,4 +97,5 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',
   highlightPalette: defaultHighlightPalette(),
+  wordCloudExclusions: [],
 }

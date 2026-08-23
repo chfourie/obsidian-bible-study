@@ -49,6 +49,7 @@ const setup = (overrides: SetupOverrides = {}) => {
       install: vi.fn(async () => {}),
       remove: vi.fn(async () => {}),
     },
+    strongsGloss: async () => null,
     ...deps,
   })
   return { model, settingsStore }
@@ -392,6 +393,57 @@ describe('SettingsTabModel settings mutations', () => {
       desktop: 'breadcrumb',
       mobile: 'tree',
     })
+  })
+})
+
+describe('SettingsTabModel word cloud exclusions', () => {
+  const glossed = async (family: string): Promise<string | null> =>
+    family === 'H0834' ? 'which' : null
+
+  it('lists each excluded family with its gloss, or its number alone', async () => {
+    const { model } = setup({
+      storedSettings: { wordCloudExclusions: ['H0834', 'G9999'] },
+      strongsGloss: glossed,
+    })
+
+    await model.refresh()
+
+    expect(model.view.wordCloudExclusions).toEqual([
+      { family: 'H0834', label: 'H0834 · which' },
+      { family: 'G9999', label: 'G9999' },
+    ])
+  })
+
+  it('removes an exclusion and persists the rest', async () => {
+    const { model, settingsStore } = setup({
+      storedSettings: { wordCloudExclusions: ['H0834', 'G9999'] },
+      strongsGloss: glossed,
+    })
+    await model.refresh()
+
+    await model.removeWordCloudExclusion('H0834')
+
+    expect((await settingsStore.loadSettings()).wordCloudExclusions).toEqual([
+      'G9999',
+    ])
+    expect(model.view.wordCloudExclusions).toEqual([
+      { family: 'G9999', label: 'G9999' },
+    ])
+  })
+
+  it('labels an exclusion added behind its back once reloaded', async () => {
+    const { model, settingsStore } = setup({ strongsGloss: glossed })
+    await model.refresh()
+
+    await settingsStore.updateSettings((settings) => ({
+      ...settings,
+      wordCloudExclusions: ['H0834'],
+    }))
+    await model.refreshLocal()
+
+    expect(model.view.wordCloudExclusions).toEqual([
+      { family: 'H0834', label: 'H0834 · which' },
+    ])
   })
 })
 

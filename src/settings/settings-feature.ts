@@ -34,6 +34,8 @@ export class SettingsFeature extends PluginFeature {
         modules.manager.modulesWithUpdates().catch((): string[] => []),
       strongs,
       lsj,
+      strongsGloss: async (family) =>
+        (await strongs.entriesFor([family]))[0]?.gloss ?? null,
     })
   }
 

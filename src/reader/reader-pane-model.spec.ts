@@ -1945,6 +1945,68 @@ describe('the word cloud in the study material', () => {
     expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
   })
 
+  it('leaves out the user exclusions it was configured with', async () => {
+    const model = new ReaderPaneModel(
+      {
+        passages: taggedSourceOver(taggedTexts()),
+        intersecting: () => [],
+        crossReferences: crossReferencesOf(),
+        annotationDetails: async () => null,
+        ...strongsDeps(),
+        availableTranslations: async () => [translation('bsb', true)],
+      },
+      {
+        toggles: DEFAULT_TOGGLES,
+        translationId: 'bsb',
+        wordCloudExclusions: ['G288'],
+      },
+    )
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(familiesOf(model)).toEqual(['G1473', 'G3306', 'G1722'])
+  })
+
+  it('recounts when the user exclusions change', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    model.setWordCloudExclusions(['G0288', 'G1722'])
+    await flushAsync()
+
+    expect(familiesOf(model)).toEqual(['G1473', 'G3306'])
+  })
+
+  it('drops the emphasis of a family the user excludes', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    model.toggleCloudWord('G288')
+
+    model.setWordCloudExclusions(['G288'])
+    await flushAsync()
+
+    expect(
+      model.view.rows.some((row) =>
+        row.segments.some((segment) => segment.emphasized === true),
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps the cloud as it is when the exclusions are set unchanged', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    const before = cloudOf(model)
+
+    model.setWordCloudExclusions([])
+    await flushAsync()
+
+    expect(cloudOf(model)).toBe(before)
+  })
+
   it('returns to the hint once the tagged translation is uninstalled', async () => {
     let installed = [translation('web'), translation('bsb', true)]
     const model = cloudModel(

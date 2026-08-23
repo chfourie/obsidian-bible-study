@@ -30,6 +30,9 @@ export type SettingsTabDeps = {
   modulesWithUpdates: () => Promise<string[]>
   strongs: OptionalModule
   lsj: OptionalModule
+  // The gloss of a Strong's Family, or null while the dictionaries cannot
+  // say — an excluded family is then listed by number alone.
+  strongsGloss: (family: string) => Promise<string | null>
 }
 
 // A module the settings offer as one switch: on downloads it, off deletes it.
@@ -66,8 +69,13 @@ export type BookRowView = {
   updateAvailable: boolean
 }
 
+// One user-added Cloud Exclusion as the settings list it: the family, and
+// that family with its gloss where the dictionaries know one.
+export type WordCloudExclusionView = { family: string; label: string }
+
 export type SettingsTabView = {
   settings: ScriptureStudySettings
+  wordCloudExclusions: WordCloudExclusionView[]
   defaultTranslationOptions: TranslationOption[]
   fallbackTranslationOptions: TranslationOption[]
   noTranslationsAvailable: boolean
@@ -135,6 +143,7 @@ export class SettingsTabModel {
   #manifests: ModuleManifest[] = []
   #catalog: SettingsCatalogEntry[] = []
   #updates: string[] = []
+  #exclusionGlosses = new Map<string, string>()
   readonly #busy = new Map<string, 'downloading' | 'removing'>()
   readonly #errors = new Map<string, string>()
   readonly #listeners = new Set<() => void>()
@@ -183,6 +192,39 @@ export class SettingsTabModel {
     this.#manifests = await this.deps.installedManifests()
     await this.#strongs.refresh()
     await this.#lsj.refresh()
+    await this.#loadExclusionGlosses()
+  }
+
+  async #loadExclusionGlosses(): Promise<void> {
+    const glosses = await Promise.all(
+      this.#settings.wordCloudExclusions.map(
+        async (family) => [family, await this.deps.strongsGloss(family)] as const,
+      ),
+    )
+    this.#exclusionGlosses = new Map(
+      glosses.flatMap(([family, gloss]) =>
+        gloss === null ? [] : [[family, gloss] as const],
+      ),
+    )
+  }
+
+  async removeWordCloudExclusion(family: string): Promise<void> {
+    await this.updateSettings((settings) => ({
+      ...settings,
+      wordCloudExclusions: settings.wordCloudExclusions.filter(
+        (excluded) => excluded !== family,
+      ),
+    }))
+  }
+
+  #wordCloudExclusionViews(): WordCloudExclusionView[] {
+    return this.#settings.wordCloudExclusions.map((family) => {
+      const gloss = this.#exclusionGlosses.get(family)
+      return {
+        family,
+        label: gloss === undefined ? family : `${family} · ${gloss}`,
+      }
+    })
   }
 
   async #loadCatalog(): Promise<void> {
@@ -247,6 +289,7 @@ export class SettingsTabModel {
     const defaultTranslationOptions = this.#installedTranslationOptions()
     return {
       settings: this.#settings,
+      wordCloudExclusions: this.#wordCloudExclusionViews(),
       defaultTranslationOptions,
       fallbackTranslationOptions: this.#installedTranslationOptions(),
       noTranslationsAvailable: defaultTranslationOptions.length === 0,

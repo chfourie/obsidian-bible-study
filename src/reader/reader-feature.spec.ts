@@ -571,6 +571,24 @@ describe('ReaderFeature entry points', () => {
     ).toEqual(['Annotations/Abide.md', 'Annotations/Zeal.md'])
   })
 
+  it('hands changed word cloud exclusions to every open pane', async () => {
+    const { feature, leaves } = harness()
+    await feature.load()
+    feature.openReference(ref('John 15:1'), 'web')
+    await flushAsync()
+    const view = leaves[0].view as ReaderView
+    const exclusions = vi.spyOn(view.model, 'setWordCloudExclusions')
+
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      wordCloudExclusions: ['H0834'],
+    })
+    feature.onSettingsChanged()
+
+    expect(exclusions).toHaveBeenCalledWith(['H0834'])
+  })
+
   it('reloads a no-translation pane when a module install lands in settings', async () => {
     let installed: ModuleManifest[] = []
     const store = {
