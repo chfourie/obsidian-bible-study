@@ -1169,6 +1169,22 @@ describe('annotations and mentions in the Study Panel', () => {
     ])
   })
 
+  it('lists a note mentioning the scripture through a relative reference', async () => {
+    const vault = fakeVault({
+      'Sermons/Abiding.md': 'On {John 15:4-9}: {:5} above all.',
+    })
+
+    const panel = await panelFor(vault, 'note.md', 'See {John 15:5}.')
+
+    expect(panel.view.mentions).toEqual([
+      {
+        file: 'Sermons/Abiding.md',
+        title: 'Abiding',
+        labels: ['John 15:4-9', 'John 15:5'],
+      },
+    ])
+  })
+
   it('excludes the active note from both sections', async () => {
     const vault = fakeVault({
       'note.md': 'See {John 15:1}.',

@@ -32,6 +32,41 @@ describe('extractOccurrences', () => {
     })
   })
 
+  it('indexes an anchor and its relative reference as two occurrences', () => {
+    const content = 'On {John 15:4-9}: {:5} above all.'
+
+    expect(extractOccurrences(content)).toEqual([
+      {
+        position: content.indexOf('{John 15:4-9}'),
+        reference: { book: 43, ranges: [{ startId: john(15, 4), endId: john(15, 9) }] },
+        source: 'body',
+        translation: null,
+      },
+      {
+        position: content.indexOf('{:5}'),
+        reference: { book: 43, ranges: [{ startId: john(15, 5), endId: john(15, 5) }] },
+        source: 'body',
+        translation: null,
+      },
+    ])
+  })
+
+  it('indexes no occurrence for a relative reference outside its anchor', () => {
+    const occurrences = extractOccurrences('{John 15:4-6} and {:9}')
+
+    expect(occurrences.map((o) => o.position)).toEqual([0])
+  })
+
+  it('indexes no occurrence for a relative reference before any anchor', () => {
+    expect(extractOccurrences('{:5} comes first')).toEqual([])
+  })
+
+  it('never accepts a relative reference as the frontmatter ref', () => {
+    const content = '---\nref: :5\n---\n{John 15:4-9}'
+
+    expect(extractOccurrences(content).map((o) => o.source)).toEqual(['body'])
+  })
+
   it('never anchors a relative reference on the frontmatter ref', () => {
     const occurrences = extractOccurrences('---\nref: John 15:4-9\n---\n{:5}')
 
