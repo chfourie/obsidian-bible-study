@@ -128,6 +128,15 @@ describe('scanReferenceMatches relative references', () => {
     expect(matches[1].parsed.reference.ranges).toEqual(single(john(15, 7)))
   })
 
+  it('carries a chapter only when the spec named it, not when it was inferred', () => {
+    const matches = scanAfterAnchor('{John 14:31-15:3}', '{:1, :31}')
+
+    expect(matches[1].relativeSpec).toBe(':1, :31')
+    expect(matches[1].parsed.reference.ranges).toEqual([
+      { startId: john(14, 31), endId: john(15, 1) },
+    ])
+  })
+
   it('leaves a chapter outside the anchor as plain text', () => {
     expect(scanAfterAnchor('{John 15:4-9}', '{14:7}')).toHaveLength(1)
   })

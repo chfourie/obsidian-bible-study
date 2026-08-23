@@ -62,7 +62,7 @@ export const parseRelativeSpec = (spec: string): RelativeSegment[] | null => {
 const withinAnchor = (anchor: Reference, verseId: number): boolean =>
   anchor.ranges.some((range) => rangeContains(range, verseId))
 
-const onlyChapterHolding = (
+const soleAnchorChapterHolding = (
   anchor: Reference,
   verse: number,
 ): number | null => {
@@ -90,20 +90,24 @@ const chapterFor = (
   anchor: Reference,
   { chapter, verse }: RelativeVerse,
   currentChapter: number | null,
-): number | null => chapter ?? currentChapter ?? onlyChapterHolding(anchor, verse)
+): number | null => chapter ?? currentChapter ?? soleAnchorChapterHolding(anchor, verse)
+
+const namedChapter = (
+  segment: RelativeSegment,
+  currentChapter: number | null,
+): number | null =>
+  segment.end?.chapter ?? segment.start.chapter ?? currentChapter
 
 const resolveSegment = (
   anchor: Reference,
   segment: RelativeSegment,
   currentChapter: number | null,
-): { range: VerseRange; chapter: number } | null => {
+): VerseRange | null => {
   const startChapter = chapterFor(anchor, segment.start, currentChapter)
   if (startChapter === null) return null
   const startId = locateVerse(anchor, startChapter, segment.start.verse)
   if (startId === null) return null
-  if (segment.end === null) {
-    return { range: { startId, endId: startId }, chapter: startChapter }
-  }
+  if (segment.end === null) return { startId, endId: startId }
   const endChapter = segment.end.chapter ?? startChapter
   const endId = locateVerse(anchor, endChapter, segment.end.verse)
   if (endId === null || endId < startId) return null
@@ -111,7 +115,7 @@ const resolveSegment = (
   if (!enumerateVerseIds(range).every((id) => withinAnchor(anchor, id))) {
     return null
   }
-  return { range, chapter: endChapter }
+  return range
 }
 
 export const resolveRelativeReference = (
@@ -121,10 +125,10 @@ export const resolveRelativeReference = (
   const ranges: VerseRange[] = []
   let currentChapter: number | null = null
   for (const segment of segments) {
-    const resolved = resolveSegment(anchor.reference, segment, currentChapter)
-    if (!resolved) return null
-    ranges.push(resolved.range)
-    currentChapter = resolved.chapter
+    const range = resolveSegment(anchor.reference, segment, currentChapter)
+    if (!range) return null
+    ranges.push(range)
+    currentChapter = namedChapter(segment, currentChapter)
   }
   if (ranges.length === 0) return null
   return { book: anchor.reference.book, ranges: mergeRanges(ranges) }
@@ -133,7 +137,7 @@ export const resolveRelativeReference = (
 const continuesList = (spec: string, next: { text: string } | undefined) =>
   next !== undefined && (spec.endsWith(',') || next.text.startsWith(','))
 
-export const takeSpecTokens = <T extends { text: string }>(
+const takeSpecTokens = <T extends { text: string }>(
   tokens: readonly T[],
 ): { spec: string; optionTokens: T[] } | null => {
   if (tokens.length === 0) return null
@@ -146,17 +150,30 @@ export const takeSpecTokens = <T extends { text: string }>(
   return { spec, optionTokens: tokens.slice(used) }
 }
 
+export type TakenRelativeSpec<T> = {
+  spec: string
+  segments: RelativeSegment[]
+  optionTokens: T[]
+}
+
+export const takeRelativeSpec = <T extends { text: string }>(
+  tokens: readonly T[],
+): TakenRelativeSpec<T> | null => {
+  const taken = takeSpecTokens(tokens)
+  if (!taken) return null
+  const segments = parseRelativeSpec(taken.spec)
+  return segments && { ...taken, segments }
+}
+
 export const parseRelativeReference = (
   text: string,
   anchor: ParsedReference,
   options: ParseOptions = {},
 ): ParsedRelativeReference | null => {
   const tokens = tokenize(text)
-  const taken = takeSpecTokens(tokens)
+  const taken = takeRelativeSpec(tokens)
   if (!taken) return null
-  const segments = parseRelativeSpec(taken.spec)
-  if (!segments) return null
-  const reference = resolveRelativeReference(segments, anchor)
+  const reference = resolveRelativeReference(taken.segments, anchor)
   if (!reference) return null
   const classified = classifyOptionTokens(
     taken.optionTokens,
