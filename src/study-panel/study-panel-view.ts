@@ -45,6 +45,8 @@ export class StudyPanelView extends ItemView {
       promptAnnotate: (prefill) => this.feature.promptAnnotation(prefill),
       openWordStudy: (strongsNumber, options) =>
         void this.feature.openWordStudy(strongsNumber, options),
+      openCloudWordMenu: (word, source, event) =>
+        this.feature.openCloudWordMenu(word, source, event),
       renderMarkdown: (el, markdown, sourcePath) =>
         void MarkdownRenderer.render(this.app, markdown, el, sourcePath, this),
     }

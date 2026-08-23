@@ -1,4 +1,9 @@
-import type { NavigationOptions, WordStudyOptions } from '../contracts'
+import type {
+  NavigationOptions,
+  StudyMaterialSource,
+  WordCloudWordView,
+  WordStudyOptions,
+} from '../contracts'
 import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 
@@ -22,6 +27,13 @@ export type StudyMaterialHost = {
   // retargets the most-recently-focused panel; with the new-pane modifier, it
   // opens another beside it.
   openWordStudy: (strongsNumber: string, options?: WordStudyOptions) => void
+  // Opens the menu a Word Cloud word offers — highlight, word study,
+  // exclude — over the tab whose cloud it is, where the word was activated.
+  openCloudWordMenu: (
+    word: WordCloudWordView,
+    source: StudyMaterialSource,
+    event: MouseEvent | KeyboardEvent,
+  ) => void
   renderMarkdown: (
     el: HTMLElement,
     markdown: string,

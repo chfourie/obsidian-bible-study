@@ -23,6 +23,7 @@ import {
   StrongsLexiconClient,
   StrongsDictionaries,
 } from '../strongs'
+import { withWordCloudExclusion } from '../word-cloud'
 import { VaultIndexFeature } from '../vault-index'
 import { moduleConcordance, WordStudyFeature } from '../word-study'
 import { PluginFeatureSet } from './plugin-feature-set'
@@ -119,6 +120,9 @@ export default class ScriptureStudyPlugin extends Plugin {
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
     wordStudy: this.wordStudy,
+    excludeFromWordCloud: async (family) => {
+      await this.settingsStore.updateSettings(withWordCloudExclusion(family))
+    },
   })
   readonly search = new SearchFeature(
     this,

@@ -3,7 +3,8 @@ The chapter's Word Cloud: its ten most tagged Strong's Families, each headed
 by the Rendering the chapter gives it most often (its gloss when none) over
 its transliteration, sized by how often the chapter tags it and laid out in
 the order they first appear. Hovering a word shows its gloss, original-script
-lemma and count; pressing one toggles its Occurrence Emphasis in the reader. A
+lemma and count; pressing one hands the word and the press to the host,
+which opens its menu — highlight, word study, exclude. A
 fallback source — a tagged translation standing in for the untagged one being
 read — is named beside the heading. Without Strong's the section holds the
 hint to enable it; it is hidden while there is no cloud or nothing eligible in
@@ -20,9 +21,14 @@ it.
 
   let {
     cloud,
-    toggle,
-  }: { cloud: WordCloudView | null; toggle: (family: string) => void } =
-    $props()
+    activate,
+  }: {
+    cloud: WordCloudView | null
+    activate: (
+      word: WordCloudWordView,
+      event: MouseEvent | KeyboardEvent,
+    ) => void
+  } = $props()
 
   const heading = (source: WordCloudSourceView): string =>
     source.fallback ? `Word Cloud · ${source.label}` : 'Word Cloud'
@@ -51,7 +57,7 @@ it.
         role="button"
         tabindex="0"
         aria-pressed={word.active}
-        use:pressable={() => toggle(word.family)}
+        use:pressable={(event) => activate(word, event)}
       >
         <span class="bsm-cloud-headline">{headline(word)}</span>
         {#if word.transliteration !== ''}

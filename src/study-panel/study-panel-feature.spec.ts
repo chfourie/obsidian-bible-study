@@ -12,6 +12,9 @@ import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
+import { Menu } from '../../tests/mocks/obsidian'
+import type { WordCloudWordView } from '../contracts'
+import { ExcludeCloudWordModal } from './exclude-cloud-word-modal'
 import { STUDY_PANEL_VIEW_TYPE, StudyPanelFeature } from './study-panel-feature'
 import { StudyPanelView } from './study-panel-view'
 
@@ -123,7 +126,10 @@ const fakeStudyMaterial = () => {
 const harness = (
   notes: Record<string, string> = {},
   settings: Partial<ScriptureStudySettings> = {},
-  options: { wordStudy?: WordStudyOpener } = {},
+  options: {
+    wordStudy?: WordStudyOpener
+    excludeFromWordCloud?: (family: string) => Promise<void>
+  } = {},
 ) => {
   const readGates: Record<string, Promise<void>> = {}
   const leaves: FakeLeaf[] = []
@@ -196,6 +202,7 @@ const harness = (
     studyMaterial,
     index,
     wordStudy: options.wordStudy,
+    excludeFromWordCloud: options.excludeFromWordCloud,
   })
   feature.useSettings({
     ...DEFAULT_SETTINGS,
@@ -536,6 +543,92 @@ describe('StudyPanelFeature entry points', () => {
       ['G0026', undefined],
       ['G0026', true],
     ])
+  })
+
+  describe('a cloud word\'s menu', () => {
+    const cloudWord = (active = false): WordCloudWordView => ({
+      family: 'G0026',
+      rendering: 'love',
+      gloss: 'love',
+      transliteration: 'agapē',
+      lemma: 'ἀγάπη',
+      count: 3,
+      sizeEm: 1,
+      active,
+    })
+
+    // A reader tab whose cloud was counted from the KJV.
+    const cloudSource = () => {
+      const toggled: string[] = []
+      const source = {
+        studyMaterial: {
+          wordCloud: {
+            kind: 'counted',
+            source: { translationId: 'kjv', label: 'KJV', fallback: false },
+            words: [cloudWord()],
+          },
+        },
+        toggleCloudWord: (family: string) => toggled.push(family),
+      } as unknown as StudyMaterialSource
+      return { source, toggled }
+    }
+
+    const shownItems = () => {
+      if (Menu.lastShown === null) throw new Error('no menu shown')
+      return Menu.lastShown.items
+    }
+
+    it('toggles the emphasis of the word on the tab it came from', () => {
+      const { feature } = harness()
+      const { source, toggled } = cloudSource()
+
+      feature.openCloudWordMenu(cloudWord(), source, new MouseEvent('click'))
+      shownItems()[0].click()
+
+      expect(toggled).toEqual(['G0026'])
+    })
+
+    it('opens the word study on the translation the cloud was counted from', () => {
+      const opened: [string, boolean | undefined, string | null | undefined][] = []
+      const { feature } = harness({}, {}, {
+        wordStudy: {
+          openWordStudy: async (strongsNumber, options) => {
+            opened.push([strongsNumber, options?.newPane, options?.translationId])
+          },
+        },
+      })
+
+      feature.openCloudWordMenu(cloudWord(), cloudSource().source, new MouseEvent('click'))
+      shownItems()[1].click(new MouseEvent('click'))
+      shownItems()[1].click(new MouseEvent('click', { metaKey: true }))
+
+      expect(opened).toEqual([
+        ['G0026', false, 'kjv'],
+        ['G0026', true, 'kjv'],
+      ])
+    })
+
+    it('excludes the family only once the modal confirms', async () => {
+      const excluded = vi.fn(async () => {})
+      const { feature } = harness({}, {}, { excludeFromWordCloud: excluded })
+      let confirm: (() => void) | null = null
+      const open = vi
+        .spyOn(ExcludeCloudWordModal.prototype, 'open')
+        .mockImplementation(function (this: ExcludeCloudWordModal) {
+          confirm = (this as unknown as { confirm: () => void }).confirm
+        })
+
+      feature.openCloudWordMenu(cloudWord(), cloudSource().source, new MouseEvent('click'))
+      shownItems()[2].click()
+      expect(open).toHaveBeenCalledOnce()
+      expect(excluded).not.toHaveBeenCalled()
+
+      confirm!()
+      await flushAsync()
+
+      expect(excluded).toHaveBeenCalledWith('G0026')
+      open.mockRestore()
+    })
   })
 
   it('leads nowhere while no word study is wired up', async () => {

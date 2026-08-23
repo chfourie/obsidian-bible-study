@@ -53,7 +53,10 @@ selected paragraph's details above its section material (spec-books §5).
     {host}
     collecting={material.collection !== null}
   />
-  <WordCloud cloud={material.wordCloud} toggle={(family) => source.toggleCloudWord(family)} />
+  <WordCloud
+    cloud={material.wordCloud}
+    activate={(word, event) => host.openCloudWordMenu(word, source, event)}
+  />
 {/snippet}
 
 <div class="bsm-view">
