@@ -44,7 +44,7 @@ hidden while there is no cloud or nothing eligible in it.
   )
 
   const heading = (source: WordCloudSourceView): string =>
-    source.fallback ? `Key Words · ${source.label}` : 'Key Words'
+    source.fallback ? `Top Words · ${source.label}` : 'Top Words'
 
   const headline = (word: WordCloudWordView): string =>
     word.rendering === '' ? word.gloss : word.rendering
@@ -101,8 +101,8 @@ hidden while there is no cloud or nothing eligible in it.
 </script>
 
 {#if cloud?.kind === 'unavailable'}
-  <SectionHeading label="Key Words" />
-  <div class="bsm-cloud-hint">Enable Strong's to see the key words.</div>
+  <SectionHeading label="Top Words" />
+  <div class="bsm-cloud-hint">Enable Strong's to see the top words.</div>
 {:else if cloud !== null && cloud.words.length > 0}
   <SectionHeading label={heading(cloud.source)} />
   <div class="bsm-word-cloud">

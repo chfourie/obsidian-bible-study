@@ -29,7 +29,7 @@ describe('buildCloudWordMenuItems', () => {
     expect(items.map((item) => [item.title, item.icon, item.checked])).toEqual([
       ['Highlight occurrences', 'highlighter', false],
       ['Word study', 'book-open', undefined],
-      ['Exclude from key words…', 'eye-off', undefined],
+      ['Exclude from top words…', 'eye-off', undefined],
     ])
   })
 

@@ -28,7 +28,7 @@ export const buildCloudWordMenuItems = (
     onClick: (event) => actions.openWordStudy(event),
   },
   {
-    title: 'Exclude from key words…',
+    title: 'Exclude from top words…',
     icon: 'eye-off',
     onClick: () => actions.exclude(),
   },
