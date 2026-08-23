@@ -3,7 +3,7 @@ import { liveDecorationSpecs } from './live-decoration-specs'
 import type { RenderContext } from './reference-render-model'
 
 const context: RenderContext = {
-  knownTranslationIds: ['web'],
+  knownTranslationIds: ['web', 'nkjv'],
   defaultTranslationId: 'web',
 }
 
@@ -112,6 +112,40 @@ describe('liveDecorationSpecs', () => {
     })
     expect(specs[1].model.reference.ranges).toEqual([
       { startId: 43015005, endId: 43015005 },
+    ])
+  })
+
+  it('gives a relative reference the display mode its spec names', () => {
+    const specs = specsFor('{John 15:4-9} {:5 block} {:6}')
+
+    expect(specs.map((spec) => spec.model.display)).toEqual([
+      'chip',
+      'block',
+      'chip',
+    ])
+  })
+
+  it('overrides the inherited translation with one named on the spec', () => {
+    const specs = specsFor('{John 15:4-9 web} and {:5 nkjv}')
+
+    expect(specs[1].model).toMatchObject({
+      translationId: 'nkjv',
+      chipLabel: 'NKJV',
+    })
+  })
+
+  it('carries a relative reference\'s cues and invalid tokens', () => {
+    const specs = specsFor('{John 15:4-9} {:5 h2/5.0-5.6 bogus}')
+
+    expect(specs[1].model.invalidTokens).toEqual(['bogus'])
+    expect(specs[1].model.highlights).toEqual([
+      {
+        slot: 2,
+        startVerseId: 43015005,
+        startChar: 0,
+        endVerseId: 43015005,
+        endChar: 6,
+      },
     ])
   })
 })

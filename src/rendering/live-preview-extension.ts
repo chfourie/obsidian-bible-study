@@ -97,7 +97,7 @@ export class ReferenceWidget extends WidgetType {
 
   #renderDeps(view: EditorView, holder: HTMLElement): ReferenceRenderDeps {
     const editing = this.editing
-    if (editing === null || this.model.relativeSpec !== null) return this.deps
+    if (editing === null) return this.deps
     return {
       ...this.deps,
       editHighlights: (host, context) => {
