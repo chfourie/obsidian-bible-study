@@ -45,6 +45,7 @@ describe('RenderingFeature in-note intersections', () => {
       },
       registerEditorExtension: () => {},
       registerEditorSuggest: () => {},
+      app: { vault: { getFileByPath: () => null } },
     } as unknown as Plugin
     const index = new VaultReferenceIndex()
     index.indexNote('Sermons/Abiding.md', 'On {John 15:4} we see')
@@ -100,6 +101,79 @@ describe('RenderingFeature reading mode sections', () => {
       '[:5]',
     )
   })
+
+  it('reads the note from the vault when no section info is given, anchoring each brace at its first unmatched occurrence', async () => {
+    type PostProcessor = (
+      element: HTMLElement,
+      context: MarkdownPostProcessorContext,
+    ) => Promise<void>
+    let postProcessor: PostProcessor | undefined
+    const text = '{John 15:4-9}\n\n{:5} bears fruit.\n'
+    const cachedRead = vi.fn(async () => text)
+    const plugin = {
+      registerMarkdownPostProcessor: (processor: PostProcessor) => {
+        postProcessor = processor
+      },
+      registerEditorExtension: () => {},
+      registerEditorSuggest: () => {},
+      app: {
+        workspace: { iterateAllLeaves: () => {} },
+        vault: {
+          getFileByPath: (path: string) =>
+            path === 'note.md' ? { path } : null,
+          cachedRead,
+        },
+      },
+    } as unknown as Plugin
+    const feature = new RenderingFeature(plugin, {} as ModuleStore)
+    await feature.load()
+
+    const element = document.createElement('div')
+    element.innerHTML = '<p>{:5} bears fruit.</p>'
+    await postProcessor!(element, {
+      sourcePath: 'note.md',
+      getSectionInfo: () => null,
+    } as unknown as MarkdownPostProcessorContext)
+
+    expect(element.querySelector('.scripture-study-chip-ref')?.textContent).toBe(
+      '[:5]',
+    )
+    expect(cachedRead).toHaveBeenCalledWith({ path: 'note.md' })
+  })
+
+  it('renders full references as plain source when the note cannot be read', async () => {
+    type PostProcessor = (
+      element: HTMLElement,
+      context: MarkdownPostProcessorContext,
+    ) => Promise<void>
+    let postProcessor: PostProcessor | undefined
+    const plugin = {
+      registerMarkdownPostProcessor: (processor: PostProcessor) => {
+        postProcessor = processor
+      },
+      registerEditorExtension: () => {},
+      registerEditorSuggest: () => {},
+      app: {
+        workspace: { iterateAllLeaves: () => {} },
+        vault: { getFileByPath: () => null, cachedRead: async () => '' },
+      },
+    } as unknown as Plugin
+    const feature = new RenderingFeature(plugin, {} as ModuleStore)
+    await feature.load()
+
+    const element = document.createElement('div')
+    element.innerHTML = '<p>{John 15:4} and {:5}</p>'
+    await postProcessor!(element, {
+      sourcePath: 'missing.md',
+      getSectionInfo: () => null,
+    } as unknown as MarkdownPostProcessorContext)
+
+    expect(
+      [...element.querySelectorAll('.scripture-study-chip-ref')].map(
+        (chip) => chip.textContent,
+      ),
+    ).toEqual(['John 15:4'])
+  })
 })
 
 describe('RenderingFeature derived red letter', () => {
@@ -115,6 +189,7 @@ describe('RenderingFeature derived red letter', () => {
       },
       registerEditorExtension: () => {},
       registerEditorSuggest: () => {},
+      app: { vault: { getFileByPath: () => null } },
     } as unknown as Plugin
     const store = {
       manifest: async (moduleId: string) =>
@@ -188,6 +263,7 @@ describe('RenderingFeature highlight editing surfaces', () => {
         registrations.editorExtension = extension
       },
       registerEditorSuggest: () => {},
+      app: { vault: { getFileByPath: () => null } },
     } as unknown as Plugin
     const feature = new RenderingFeature(plugin, passageStore)
     feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })

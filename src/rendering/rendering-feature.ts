@@ -5,6 +5,7 @@ import {
   type Editor,
   type MarkdownPostProcessorContext,
   type Plugin,
+  type Vault,
 } from 'obsidian'
 import {
   NOOP_REFERENCE_NAVIGATOR,
@@ -27,7 +28,9 @@ import type { VaultReferenceIndex } from '../vault-index'
 import { PassageRepository } from './passage-repository'
 import {
   EMPTY_SECTION,
+  NoteScanCache,
   processRenderedElement,
+  wholeNoteSection,
   type RenderedSection,
 } from './process-rendered-element'
 import { renderContextFromSettings } from './render-context'
@@ -36,22 +39,33 @@ import type {
   ReferenceRenderDeps,
 } from './render-reference'
 
-const renderedSection = (
+const sectionFromInfo = (
   element: HTMLElement,
   context: MarkdownPostProcessorContext,
-): RenderedSection => {
+): RenderedSection | null => {
   const info = context.getSectionInfo(element)
-  if (!info) return EMPTY_SECTION
-  return {
-    noteSource: info.text,
-    lineStart: info.lineStart,
-    lineEnd: info.lineEnd,
-  }
+  return (
+    info && {
+      noteSource: info.text,
+      lineStart: info.lineStart,
+      lineEnd: info.lineEnd,
+    }
+  )
+}
+
+const sectionFromVault = async (
+  vault: Vault,
+  sourcePath: string,
+): Promise<RenderedSection> => {
+  const file = vault.getFileByPath(sourcePath)
+  if (!file) return EMPTY_SECTION
+  return wholeNoteSection(await vault.cachedRead(file))
 }
 
 export class RenderingFeature extends PluginFeature {
   readonly #repository: PassageRepository
   readonly #deps: ReferenceRenderDeps
+  readonly #scans = new NoteScanCache()
 
   constructor(
     plugin: Plugin,
@@ -82,13 +96,15 @@ export class RenderingFeature extends PluginFeature {
   }
 
   override async load(): Promise<void> {
-    this.plugin.registerMarkdownPostProcessor((element, context) =>
+    this.plugin.registerMarkdownPostProcessor(async (element, context) =>
       processRenderedElement(
         element,
         renderContextFromSettings(this.settings),
         this.#deps,
-        renderedSection(element, context),
+        sectionFromInfo(element, context) ??
+          (await sectionFromVault(this.plugin.app.vault, context.sourcePath)),
         context.sourcePath,
+        this.#scans,
       ),
     )
     this.plugin.registerEditorExtension(

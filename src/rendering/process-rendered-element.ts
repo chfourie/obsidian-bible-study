@@ -15,8 +15,6 @@ import {
   type ReferenceRenderDeps,
 } from './render-reference'
 
-// The whole note's source with the rendered section's line span inside it,
-// so an Anchor in an earlier section still resolves relative references here.
 export type RenderedSection = {
   noteSource: string
   lineStart: number
@@ -28,6 +26,12 @@ export const EMPTY_SECTION: RenderedSection = {
   lineStart: 0,
   lineEnd: -1,
 }
+
+export const wholeNoteSection = (noteSource: string): RenderedSection => ({
+  noteSource,
+  lineStart: 0,
+  lineEnd: Number.POSITIVE_INFINITY,
+})
 
 const CANDIDATE_PATTERN = /\\?\{([^{}\n]*)\}/g
 
@@ -44,30 +48,30 @@ const textNodesUnder = (root: HTMLElement): Text[] => {
   return nodes
 }
 
-// Every section of one note render scans the same source; the sections
-// arrive one after another, so remembering the last scan serves them all.
-let lastScan: {
-  noteSource: string
-  translationKey: string
-  matches: ReferenceMatch[]
-} | null = null
+export class NoteScanCache {
+  #last: {
+    noteSource: string
+    translationKey: string
+    matches: ReferenceMatch[]
+  } | null = null
 
-const noteMatches = (
-  noteSource: string,
-  translationIds: readonly string[],
-): ReferenceMatch[] => {
-  const translationKey = translationIds.join(' ')
-  if (
-    lastScan?.noteSource !== noteSource ||
-    lastScan.translationKey !== translationKey
-  ) {
-    lastScan = {
-      noteSource,
-      translationKey,
-      matches: scanReferenceMatches(noteSource, { translationIds }),
+  matches(
+    noteSource: string,
+    translationIds: readonly string[],
+  ): ReferenceMatch[] {
+    const translationKey = translationIds.join(' ')
+    if (
+      this.#last?.noteSource !== noteSource ||
+      this.#last.translationKey !== translationKey
+    ) {
+      this.#last = {
+        noteSource,
+        translationKey,
+        matches: scanReferenceMatches(noteSource, { translationIds }),
+      }
     }
+    return this.#last.matches
   }
-  return lastScan.matches
 }
 
 type SourceCandidate = {
@@ -83,11 +87,15 @@ type SourceCandidate = {
 class SectionCandidates {
   readonly #byInner = new Map<string, SourceCandidate[]>()
 
-  constructor(section: RenderedSection, context: RenderContext) {
+  constructor(
+    section: RenderedSection,
+    context: RenderContext,
+    scans: NoteScanCache,
+  ) {
     const matchesByStart = new Map(
-      noteMatches(section.noteSource, context.knownTranslationIds).map(
-        (match) => [match.start, match],
-      ),
+      scans
+        .matches(section.noteSource, context.knownTranslationIds)
+        .map((match) => [match.start, match]),
     )
     const sectionLines = bodyLines(section.noteSource).filter(
       (line) => line.index >= section.lineStart && line.index <= section.lineEnd,
@@ -167,8 +175,9 @@ export const processRenderedElement = async (
   deps: ReferenceRenderDeps,
   section: RenderedSection = EMPTY_SECTION,
   sourcePath: string | null = null,
+  scans: NoteScanCache = new NoteScanCache(),
 ): Promise<void> => {
-  const candidates = new SectionCandidates(section, context)
+  const candidates = new SectionCandidates(section, context, scans)
   const renders = textNodesUnder(root).flatMap((node) =>
     processTextNode(node, context, deps, candidates, sourcePath),
   )
