@@ -60,7 +60,9 @@ it.
         aria-haspopup="menu"
         use:pressable={(event) => activate(word, event)}
       >
-        <span class="bsm-cloud-headline">{headline(word)}</span>
+        <span class="bsm-cloud-headline"
+          >{headline(word)}<span class="bsm-cloud-count">{word.count}</span></span
+        >
         {#if word.transliteration !== ''}
           <span class="bsm-cloud-translit">{word.transliteration}</span>
         {/if}
@@ -111,6 +113,17 @@ it.
   .bsm-cloud-word-active:hover {
     background: var(--interactive-accent);
     color: var(--text-on-accent);
+  }
+
+  .bsm-cloud-count {
+    font-size: 0.5em;
+    color: var(--text-muted);
+    margin-left: 0.35em;
+    vertical-align: super;
+  }
+
+  .bsm-cloud-word-active .bsm-cloud-count {
+    color: inherit;
   }
 
   .bsm-cloud-translit {
