@@ -13,7 +13,11 @@ import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
 import type { WordCloudWordView } from '../contracts'
-import { STUDY_PANEL_VIEW_TYPE, StudyPanelFeature } from './study-panel-feature'
+import {
+  STUDY_PANEL_VIEW_TYPE,
+  StudyPanelFeature,
+  type CloudExclusionEditor,
+} from './study-panel-feature'
 import { StudyPanelView } from './study-panel-view'
 
 const manifest = (id: string): ModuleManifest => ({
@@ -126,6 +130,7 @@ const harness = (
   settings: Partial<ScriptureStudySettings> = {},
   options: {
     wordStudy?: WordStudyOpener
+    cloudExclusions?: CloudExclusionEditor
   } = {},
 ) => {
   const readGates: Record<string, Promise<void>> = {}
@@ -199,6 +204,7 @@ const harness = (
     studyMaterial,
     index,
     wordStudy: options.wordStudy,
+    cloudExclusions: options.cloudExclusions,
   })
   feature.useSettings({
     ...DEFAULT_SETTINGS,
@@ -614,16 +620,27 @@ describe('StudyPanelFeature entry points', () => {
       expect(excludedFamilies).toEqual(['G0026'])
     })
 
+    it('hands the word to the cloud exclusion editor to exclude everywhere', () => {
+      const handed: WordCloudWordView[] = []
+      const { feature } = harness({}, {}, {
+        cloudExclusions: { confirmAndExclude: (word) => handed.push(word) },
+      })
+
+      feature.cloudWordMenuItems(cloudWord(), cloudSource().source)[3].onClick(new MouseEvent('click'))
+
+      expect(handed).toEqual([cloudWord()])
+    })
+
     it('offers a reset of the view exclusions only once it has some', () => {
       const { feature } = harness()
       const plain = cloudSource()
       const { source, resets } = cloudSource(true)
 
-      expect(feature.cloudWordMenuItems(cloudWord(), plain.source)).toHaveLength(3)
+      expect(feature.cloudWordMenuItems(cloudWord(), plain.source)).toHaveLength(4)
       const items = feature.cloudWordMenuItems(cloudWord(), source)
-      items[3].onClick(new MouseEvent('click'))
+      items[4].onClick(new MouseEvent('click'))
 
-      expect(items).toHaveLength(4)
+      expect(items).toHaveLength(5)
       expect(resets()).toBe(1)
     })
   })

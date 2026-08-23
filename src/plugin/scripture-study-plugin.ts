@@ -13,7 +13,7 @@ import { StudyPanelFeature } from '../study-panel'
 import { RenderingFeature } from '../rendering'
 import { RibbonMenuFeature } from '../ribbon-menu'
 import { SearchFeature } from '../search'
-import { SettingsFeature } from '../settings'
+import { SettingsFeature, cloudExclusionEditor } from '../settings'
 import {
   formatDefinition,
   LSJ_ATTRIBUTION,
@@ -119,6 +119,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
     wordStudy: this.wordStudy,
+    cloudExclusions: cloudExclusionEditor(this.app, this.settingsStore),
   })
   readonly search = new SearchFeature(
     this,

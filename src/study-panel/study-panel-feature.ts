@@ -55,8 +55,17 @@ export type StudyPanelFeatureOptions = {
   studyMaterial?: StudyMaterialProvider
   index?: StudyPanelVaultIndex
   wordStudy?: WordStudyOpener
-  // Adds a family to the user's Cloud Exclusions in settings; the readers
-  // recount from the settings change.
+  // Adds a family to the user's Cloud Exclusions in settings, once the user
+  // has confirmed; the readers recount from the settings change.
+  cloudExclusions?: CloudExclusionEditor
+}
+
+export type CloudExclusionEditor = {
+  confirmAndExclude: (word: WordCloudWordView) => void
+}
+
+const NO_CLOUD_EXCLUSIONS: CloudExclusionEditor = {
+  confirmAndExclude: () => {},
 }
 
 // The focused leaf's note, when it shows one. Reader tabs are not file views,
@@ -91,6 +100,7 @@ export class StudyPanelFeature extends PluginFeature {
   readonly #tabs = new TabMemory<WorkspaceLeaf>()
   readonly #index: StudyPanelVaultIndex
   readonly #wordStudy: WordStudyOpener
+  readonly #cloudExclusions: CloudExclusionEditor
   #unsubscribeCrossReferences: (() => void) | null = null
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeSelection: (() => void) | null = null
@@ -111,6 +121,7 @@ export class StudyPanelFeature extends PluginFeature {
       options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
     this.#index = options.index ?? INERT_VAULT_INDEX
     this.#wordStudy = options.wordStudy ?? NO_WORD_STUDY
+    this.#cloudExclusions = options.cloudExclusions ?? NO_CLOUD_EXCLUSIONS
   }
 
   override async load(): Promise<void> {
@@ -258,7 +269,8 @@ export class StudyPanelFeature extends PluginFeature {
 
   // A cloud word's menu acts on the tab the cloud was counted for: its
   // emphasis toggles there, its word study reads the concordance of the
-  // translation the cloud came from, and its exclusions are that tab's own.
+  // translation the cloud came from, and its view exclusions are that tab's
+  // own; excluding it everywhere goes to settings, behind a confirmation.
   cloudWordMenuItems(
     word: WordCloudWordView,
     source: StudyMaterialSource,
@@ -273,6 +285,7 @@ export class StudyPanelFeature extends PluginFeature {
           translationId: cloudTranslationOf(source),
         }),
       exclude: () => source.excludeCloudWord(word.family),
+      excludeEverywhere: () => this.#cloudExclusions.confirmAndExclude(word),
       resetExclusions: () => source.resetCloudExclusions(),
     })
   }

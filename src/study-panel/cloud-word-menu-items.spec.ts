@@ -20,17 +20,19 @@ const actions = (): CloudWordMenuActions => ({
   toggleEmphasis: vi.fn(),
   openWordStudy: vi.fn(),
   exclude: vi.fn(),
+  excludeEverywhere: vi.fn(),
   resetExclusions: vi.fn(),
 })
 
 describe('buildCloudWordMenuItems', () => {
-  it('offers highlighting, a word study and exclusion, in that order', () => {
+  it('offers highlighting, a word study and both exclusions, in that order', () => {
     const items = buildCloudWordMenuItems(word(), false, actions())
 
     expect(items.map((item) => [item.title, item.icon, item.checked])).toEqual([
       ['Highlight occurrences', 'highlighter', false],
       ['Word study', 'book-open', undefined],
       ['Exclude from this view', 'eye-off', undefined],
+      ['Exclude everywhere…', 'ban', undefined],
     ])
   })
 
@@ -42,9 +44,10 @@ describe('buildCloudWordMenuItems', () => {
       'Highlight occurrences',
       'Word study',
       'Exclude from this view',
+      'Exclude everywhere…',
       'Reset excluded words',
     ])
-    items[3].onClick(new MouseEvent('click'))
+    items[4].onClick(new MouseEvent('click'))
     expect(given.resetExclusions).toHaveBeenCalledOnce()
   })
 
@@ -63,9 +66,11 @@ describe('buildCloudWordMenuItems', () => {
     items[0].onClick(new MouseEvent('click'))
     items[1].onClick(studyClick)
     items[2].onClick(new MouseEvent('click'))
+    items[3].onClick(new MouseEvent('click'))
 
     expect(given.toggleEmphasis).toHaveBeenCalledOnce()
     expect(given.openWordStudy).toHaveBeenCalledWith(studyClick)
     expect(given.exclude).toHaveBeenCalledOnce()
+    expect(given.excludeEverywhere).toHaveBeenCalledOnce()
   })
 })
