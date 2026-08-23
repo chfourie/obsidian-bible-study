@@ -12,8 +12,8 @@ export type ReferenceMatch = {
   relativeSpec: string | null
 }
 
-class AnchoredMatches {
-  readonly matches: ReferenceMatch[] = []
+class AnchoredScan {
+  readonly found: ReferenceMatch[] = []
   #anchor: ParsedReference | null = null
 
   constructor(private readonly options: ParseOptions) {}
@@ -22,13 +22,13 @@ class AnchoredMatches {
     const parsed = parseReference(text, this.options)
     if (parsed) {
       this.#anchor = parsed
-      this.matches.push({ start, end, parsed, relativeSpec: null })
+      this.found.push({ start, end, parsed, relativeSpec: null })
       return true
     }
     if (this.#anchor === null) return false
     const relative = parseRelativeReference(text, this.#anchor, this.options)
     if (!relative) return false
-    this.matches.push({
+    this.found.push({
       start,
       end,
       parsed: relative.parsed,
@@ -87,7 +87,7 @@ export const maskInlineCodeSpans = (line: string): string => {
 const scanLine = (
   line: string,
   lineStart: number,
-  matches: AnchoredMatches,
+  scan: AnchoredScan,
 ): void => {
   let i = 0
   while (i < line.length) {
@@ -104,7 +104,7 @@ const scanLine = (
     }
     const close = line.indexOf('}', i + 1)
     if (close === -1) return
-    const matched = matches.tryMatch(
+    const matched = scan.tryMatch(
       line.slice(i + 1, close),
       lineStart + i,
       lineStart + close + 1,
@@ -142,8 +142,6 @@ export type BodyLine = {
 
 const lineCount = (text: string): number => text.split('\n').length - 1
 
-// The note's lines that can hold a reference: after the frontmatter and
-// outside fenced code blocks, each with its document offset and line number.
 export const bodyLines = (content: string): BodyLine[] => {
   const lines: BodyLine[] = []
   const frontmatter = content.slice(0, frontmatterLength(content))
@@ -169,10 +167,10 @@ export const scanReferenceMatches = (
   content: string,
   options: ParseOptions = {},
 ): ReferenceMatch[] => {
-  const matches = new AnchoredMatches(options)
-  if (!content.includes('{')) return matches.matches
+  const scan = new AnchoredScan(options)
+  if (!content.includes('{')) return scan.found
   for (const line of bodyLines(content)) {
-    scanLine(line.text, line.start, matches)
+    scanLine(line.text, line.start, scan)
   }
-  return matches.matches
+  return scan.found
 }
