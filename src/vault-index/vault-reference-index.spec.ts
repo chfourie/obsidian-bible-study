@@ -120,6 +120,28 @@ describe('VaultReferenceIndex', () => {
     expect(groups[0].occurrences.map((o) => o.position)).toEqual([0, 17])
   })
 
+  it('points a relative occurrence at the chip a jump should land on', () => {
+    const content = 'On {John 15:4-9}: {:5} above all.'
+    const index = new VaultReferenceIndex()
+    index.indexNote('Sermons/Abiding.md', content)
+
+    const groups = index.intersectingOccurrences(johnRef(15, 5))
+    expect(groups[0].occurrences).toEqual([
+      {
+        file: 'Sermons/Abiding.md',
+        position: content.indexOf('{John 15:4-9}'),
+        reference: johnRef(15, 4, 15, 9),
+        source: 'body',
+      },
+      {
+        file: 'Sermons/Abiding.md',
+        position: content.indexOf('{:5}'),
+        reference: johnRef(15, 5),
+        source: 'body',
+      },
+    ])
+  })
+
   it('returns an indexed occurrence intersecting the queried reference', () => {
     const index = new VaultReferenceIndex()
     index.indexNote('Sermons/Abiding.md', 'On {John 15:1-17} we see')
