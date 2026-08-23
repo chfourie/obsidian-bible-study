@@ -218,26 +218,28 @@ export class StudyPanelModel {
   // panel writes lands in the tab's own memory, so refocusing it restores it.
   useTabState(state: StudyTabState | null): void {
     this.#tabState = state ?? freshTabState()
-    this.#syncDetailsWanted()
+    this.#syncWanted()
     this.#notify()
   }
 
   selectSubTab(subTab: StudySubTab): void {
     if (this.#tabState.subTab === subTab) return
     this.#tabState.subTab = subTab
-    this.#syncDetailsWanted()
+    this.#syncWanted()
     this.#notify()
   }
 
   // The followed reader loads translation texts only while the Selection
   // tab shows them — but a book has no such tab, so its paragraph details are
   // wanted for as long as the panel mirrors it (spec-books §5).
-  #syncDetailsWanted(): void {
+  #syncWanted(): void {
     const source = this.#studySource
     if (source === null) return
-    source.setDetailsWanted(
-      source.studyMaterial.bookMode || this.#tabState.subTab === 'selection',
-    )
+    const { bookMode } = source.studyMaterial
+    source.setDetailsWanted(bookMode || this.#tabState.subTab === 'selection')
+    // A book never has a Word Cloud, so only a scripture tab on the Study
+    // tab wants one.
+    source.setWordCloudWanted(!bookMode && this.#tabState.subTab === 'chapter')
   }
 
   toggleTranslationFold(id: string): void {
@@ -307,6 +309,7 @@ export class StudyPanelModel {
   showStudyMaterial(source: StudyMaterialSource | null): void {
     if (source === this.#studySource) return
     this.#studySource?.setDetailsWanted(false)
+    this.#studySource?.setWordCloudWanted(false)
     this.#unsubscribeStudySource?.()
     this.#studySource = source
     // A tab that walks from scripture into a book changes where its details
@@ -315,7 +318,7 @@ export class StudyPanelModel {
       source === null
         ? null
         : source.subscribe(() => {
-            this.#syncDetailsWanted()
+            this.#syncWanted()
             this.#notify()
           })
     this.#notify()

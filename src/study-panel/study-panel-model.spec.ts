@@ -78,6 +78,7 @@ const fakeCrossReferenceStore = () => {
 const fakeStudyMaterial = () => {
   const listeners = new Set<() => void>()
   let detailsWanted = false
+  let wordCloudWanted = false
   let material: StudyMaterial = {
     title: 'John 15',
     bookMode: false,
@@ -87,6 +88,7 @@ const fakeStudyMaterial = () => {
     chapterCrossReferences: [],
     chapterAnnotations: [],
     chapterMentions: [],
+    wordCloud: null,
     collection: null,
   }
   const source = {
@@ -100,11 +102,15 @@ const fakeStudyMaterial = () => {
     setDetailsWanted: (wanted: boolean) => {
       detailsWanted = wanted
     },
+    setWordCloudWanted: (wanted: boolean) => {
+      wordCloudWanted = wanted
+    },
   } as unknown as StudyMaterialSource
   return {
     source,
     subscriptions: () => listeners.size,
     detailsWanted: () => detailsWanted,
+    wordCloudWanted: () => wordCloudWanted,
     showBook: () => {
       material = { ...material, title: 'Humility — Preface', bookMode: true }
       listeners.forEach((listener) => listener())
@@ -1075,6 +1081,56 @@ describe('cross-references in the Study Panel', () => {
 
       expect(panel.view.subTab).toBe('chapter')
       expect(reader.detailsWanted()).toBe(true)
+    })
+  })
+
+  describe('the word cloud wanted gate', () => {
+    it('wants the word cloud from the followed tab only while the study tab shows', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(freshTabState())
+      expect(reader.wordCloudWanted()).toBe(true)
+
+      panel.selectSubTab('selection')
+      expect(reader.wordCloudWanted()).toBe(false)
+
+      panel.selectSubTab('chapter')
+      expect(reader.wordCloudWanted()).toBe(true)
+    })
+
+    it('wants no word cloud from a tab remembered on the translations tab', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      const state = freshTabState()
+      state.subTab = 'selection'
+
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(state)
+
+      expect(reader.wordCloudWanted()).toBe(false)
+    })
+
+    it('stops wanting the word cloud from a tab it no longer follows', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(freshTabState())
+
+      panel.showStudyMaterial(null)
+
+      expect(reader.wordCloudWanted()).toBe(false)
+    })
+
+    it('wants no word cloud from a book tab', () => {
+      const panel = model(fakeSource().source)
+      const reader = fakeStudyMaterial()
+      reader.showBook()
+
+      panel.showStudyMaterial(reader.source)
+      panel.useTabState(freshTabState())
+
+      expect(reader.wordCloudWanted()).toBe(false)
     })
   })
 

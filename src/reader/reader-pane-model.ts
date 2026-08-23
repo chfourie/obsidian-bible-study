@@ -29,6 +29,11 @@ import {
   type LoadedChapterAnnotation,
 } from '../annotations'
 import { chapterMentionViews } from '../mentions'
+import {
+  CLOUD_EXCLUSIONS,
+  chapterWordCloud,
+  cloudFamilies,
+} from '../word-cloud'
 import { verseMarkers, type VerseMarkerCounts } from './verse-markers'
 import type {
   BookDetailsView,
@@ -42,6 +47,7 @@ import type {
   StudyMaterialSource,
   TranslationRowView,
   VerseDetailsView,
+  WordCloudView,
 } from '../contracts'
 import {
   FONT_SCALE_DEFAULT,
@@ -377,6 +383,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // re-reading any note. Their scope is always the current chapter.
   #chapterAnnotationItems: LoadedChapterAnnotation[] = []
   #chapterMentions: ChapterMentionView[] = []
+  // The chapter's Word Cloud, counted only while a surface wants it — and
+  // only for a Tagged Translation with the dictionaries installed.
+  #wordCloud: WordCloudView | null = null
+  #wordCloudWanted = false
+  #wordCloudToken = 0
   #markers = new Map<number, VerseMarkerCounts>()
   #chapterMaterialToken = 0
   #attribution: string | null = null
@@ -619,6 +630,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       chapterCrossReferences: this.#chapterCrossReferences(),
       chapterAnnotations: this.#chapterAnnotations,
       chapterMentions: this.#chapterMentions,
+      wordCloud: this.#wordCloud,
       collection: this.#collectionView(),
     }
   }
@@ -1059,6 +1071,43 @@ export class ReaderPaneModel implements StudyMaterialSource {
     if (wanted) void this.#refreshDetails()
   }
 
+  setWordCloudWanted(wanted: boolean): void {
+    if (this.#wordCloudWanted === wanted) return
+    this.#wordCloudWanted = wanted
+    void this.#refreshWordCloud()
+  }
+
+  // Counts the chapter on screen from the translation it is read in. The
+  // token retires a count the reader has moved on from, whether by a later
+  // chapter, a later translation or a later wanting.
+  async #refreshWordCloud(): Promise<void> {
+    const token = ++this.#wordCloudToken
+    const translation = this.#available.find(
+      (candidate) => candidate.id === this.#translationId,
+    )
+    const countable =
+      this.#wordCloudWanted &&
+      this.#strongsAvailable &&
+      this.#status === 'ok' &&
+      translation !== undefined
+    if (!countable) {
+      this.#wordCloud = null
+      this.#notify()
+      return
+    }
+    const families = cloudFamilies(this.#verses, CLOUD_EXCLUSIONS)
+    const entries = await this.deps.strongs.entriesFor(
+      families.map(({ family }) => family),
+    )
+    if (token !== this.#wordCloudToken) return
+    this.#wordCloud = {
+      translationId: translation.id,
+      label: translation.label,
+      words: chapterWordCloud(families, entries),
+    }
+    this.#notify()
+  }
+
   // What the current selection's details would cover: the selected span and
   // the tapped word's Strong's numbers. Null while nothing is selected.
   #detailsKey(): string | null {
@@ -1213,6 +1262,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#status = 'loading'
     this.#verses = []
     this.#rows = []
+    this.#wordCloud = null
+    this.#wordCloudToken++
     this.#notify()
     // Annotations and mentions hang off the vault index alone, so they load
     // beside the passage below instead of holding it up — the verse markers
@@ -1265,6 +1316,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#rows = this.#rowsOf(passage.verses)
     this.#status = 'ok'
     this.#notify()
+    if (this.#wordCloudWanted) await this.#refreshWordCloud()
   }
 
   // A book's atoms are paragraphs served by its own edition module, so no
@@ -1381,6 +1433,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#available = await this.deps.availableTranslations()
     await this.#refreshStrongsAvailability()
     this.#notify()
+    if (this.#wordCloudWanted) await this.#refreshWordCloud()
   }
 
   async #refreshStrongsAvailability(): Promise<void> {

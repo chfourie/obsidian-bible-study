@@ -46,6 +46,26 @@ export type ChapterMentionView = {
   labels: string[]
 }
 
+// One word of the chapter's Word Cloud: a Strong's Family named by its
+// dictionary entry and sized by how often the chapter tags it. `active`
+// marks the family whose Occurrence Emphasis is on in the reader.
+export type WordCloudWordView = {
+  family: string
+  gloss: string
+  transliteration: string
+  lemma: string
+  count: number
+  active: boolean
+}
+
+// The Word Cloud of the chapter on screen, naming the Tagged Translation it
+// was counted from so the panel can say so when that is not the one read.
+export type WordCloudView = {
+  translationId: string
+  label: string
+  words: WordCloudWordView[]
+}
+
 // A selected span of book paragraphs: the paragraphs themselves are already
 // on screen in the reader, so only their full citation stands where a
 // scripture selection stacks its translations (spec-books §5).
@@ -110,6 +130,9 @@ export type StudyMaterial = {
   // Every mention intersecting the chapter on screen, in scripture order with
   // a path A-Z tiebreak, independent of any verse selection.
   chapterMentions: ChapterMentionView[]
+  // The chapter's Word Cloud, or null in book mode, while Strong's is not
+  // enabled, while no surface wants it, or while the load is in flight.
+  wordCloud: WordCloudView | null
   collection: CollectionView | null
 }
 
@@ -133,6 +156,10 @@ export interface StudyMaterialSource {
   // only while wanted: selections made while nothing wants them fetch no
   // passage text, and wanting them later loads the current selection.
   setDetailsWanted(wanted: boolean): void
+  // Whether any surface is showing the Word Cloud right now. Like details, it
+  // is counted only while wanted, so chapters merely paged through pay
+  // nothing for it.
+  setWordCloudWanted(wanted: boolean): void
   // Dismisses the selection outright: details and row highlight go with it.
   // Never fires the selection feed — clearing is not a deliberate selection.
   clearSelection(): void

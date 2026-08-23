@@ -1,7 +1,7 @@
 <!--
 One reader tab's study material under two tabs: Chapter carries the
-chapter-scoped material — the annotations, mentions and cross-references of
-the chapter on screen — and Selection carries the selection's verse
+chapter-scoped material — the annotations, mentions, cross-references and
+Word Cloud of the chapter on screen — and Selection carries the selection's verse
 details. Rendered by the Study Panel following that tab.
 
 A book has exactly one layer, so it drops the tab bar outright and shows the
@@ -14,6 +14,7 @@ selected paragraph's details above its section material (spec-books §5).
   import CrossReferenceList from './CrossReferenceList.svelte'
   import type { StudyMaterialHost, StudySubTab } from './study-material-host'
   import VerseDetails from './VerseDetails.svelte'
+  import WordCloud from './WordCloud.svelte'
 
   let {
     material,
@@ -52,6 +53,7 @@ selected paragraph's details above its section material (spec-books §5).
     {host}
     collecting={material.collection !== null}
   />
+  <WordCloud cloud={material.wordCloud} />
 {/snippet}
 
 <div class="bsm-view">

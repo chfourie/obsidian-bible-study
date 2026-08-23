@@ -1597,6 +1597,273 @@ describe("Strong's word lookup", () => {
   })
 })
 
+describe('the word cloud in the study material', () => {
+  type TaggedTexts = Record<string, Record<number, string[][]>>
+
+  // Every verse as its tagged words: one segment per word, each carrying the
+  // Strong's numbers given for it.
+  const taggedSourceOver = (texts: TaggedTexts): PassageSource => ({
+    passage: async (reference, translationId): Promise<Passage> => {
+      const content = texts[translationId]
+      if (!content) return { status: 'unavailable' }
+      const verses = reference.ranges
+        .flatMap(enumerateVerseIds)
+        .filter((verseId) => content[verseId] !== undefined)
+        .map((verseId) => ({
+          verseId,
+          segments: content[verseId].map((strongs) => ({
+            text: 'word',
+            redLetter: false,
+            strongs,
+          })),
+        }))
+      if (verses.length === 0) return { status: 'unavailable' }
+      return { status: 'ok', verses, attribution: null }
+    },
+  })
+
+  const taggedTexts = (): TaggedTexts => ({
+    bsb: {
+      [makeVerseId(43, 15, 1)]: [['G1473'], ['G1510'], ['G3588'], ['G288']],
+      [makeVerseId(43, 15, 4)]: [['G3306'], ['G1722'], ['G1473']],
+      [makeVerseId(43, 15, 5)]: [['G3306'], ['G288']],
+      [makeVerseId(43, 16, 1)]: [['G2980'], ['G5023']],
+    },
+    kjv: {
+      [makeVerseId(43, 15, 1)]: [['G26'], ['G26']],
+    },
+  })
+
+  const cloudModel = (
+    overrides: Partial<ReaderPaneDeps> = {},
+    translationId = 'bsb',
+  ): ReaderPaneModel =>
+    modelWith(
+      {
+        passages: taggedSourceOver(taggedTexts()),
+        ...strongsDeps(),
+        availableTranslations: async () => [
+          translation('bsb', true),
+          translation('kjv', true),
+          translation('web'),
+        ],
+        ...overrides,
+      },
+      DEFAULT_TOGGLES,
+      translationId,
+    )
+
+  const cloudOf = (model: ReaderPaneModel) => model.studyMaterial.wordCloud
+
+  const familiesOf = (model: ReaderPaneModel): string[] | null =>
+    cloudOf(model)?.words.map((word) => word.family) ?? null
+
+  it('carries no cloud while no surface wants it', async () => {
+    const model = cloudModel()
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(cloudOf(model)).toBeNull()
+  })
+
+  it('counts the chapter from the viewed tagged translation once wanted', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(cloudOf(model)).toEqual({
+      translationId: 'bsb',
+      label: 'BSB',
+      words: [
+        {
+          family: 'G1473',
+          gloss: 'gloss-G1473',
+          transliteration: 'translit-G1473',
+          lemma: 'lemma-G1473',
+          count: 2,
+          active: false,
+        },
+        {
+          family: 'G288',
+          gloss: 'gloss-G288',
+          transliteration: 'translit-G288',
+          lemma: 'lemma-G288',
+          count: 2,
+          active: false,
+        },
+        {
+          family: 'G3306',
+          gloss: 'gloss-G3306',
+          transliteration: 'translit-G3306',
+          lemma: 'lemma-G3306',
+          count: 2,
+          active: false,
+        },
+        {
+          family: 'G1722',
+          gloss: 'gloss-G1722',
+          transliteration: 'translit-G1722',
+          lemma: 'lemma-G1722',
+          count: 1,
+          active: false,
+        },
+      ],
+    })
+  })
+
+  it('counts the chapter already on screen when wanted later', async () => {
+    const model = cloudModel()
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    model.setWordCloudWanted(true)
+    await flushAsync()
+
+    expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
+  })
+
+  it('drops the cloud when no surface wants it any more', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    model.setWordCloudWanted(false)
+
+    expect(cloudOf(model)).toBeNull()
+  })
+
+  it('recounts on stepping to the next chapter', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    await model.nextChapter()
+
+    expect(familiesOf(model)).toEqual(['G2980', 'G5023'])
+  })
+
+  it('recounts on switching translation', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    await model.setTranslation('kjv')
+
+    expect(cloudOf(model)?.translationId).toBe('kjv')
+    expect(cloudOf(model)?.words).toEqual([
+      expect.objectContaining({ family: 'G26', count: 2 }),
+    ])
+  })
+
+  it('carries no cloud while the chapter is still loading', async () => {
+    let release = (): void => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const source = taggedSourceOver(taggedTexts())
+    const model = cloudModel({
+      passages: {
+        passage: async (reference, translationId) => {
+          await gate
+          return source.passage(reference, translationId)
+        },
+      },
+    })
+    model.setWordCloudWanted(true)
+
+    const opening = model.openPosition({ book: 43, chapter: 15 })
+    await flushAsync()
+    expect(cloudOf(model)).toBeNull()
+
+    release()
+    await opening
+    expect(familiesOf(model)).not.toBeNull()
+  })
+
+  it('never lets a stale count overwrite the chapter now on screen', async () => {
+    let releaseChapter15 = (): void => {}
+    const gate = new Promise<void>((resolve) => {
+      releaseChapter15 = resolve
+    })
+    const model = cloudModel({
+      strongs: {
+        ...strongsDeps().strongs,
+        entriesFor: async (numbers) => {
+          if (numbers.includes('G3306')) await gate
+          return numbers.map(strongsEntry)
+        },
+      },
+    })
+    model.setWordCloudWanted(true)
+
+    const stale = model.openPosition({ book: 43, chapter: 15 })
+    await flushAsync()
+    await model.goTo(43, 16)
+    releaseChapter15()
+    await stale
+
+    expect(familiesOf(model)).toEqual(['G2980', 'G5023'])
+  })
+
+  it('carries no cloud for an untagged translation', async () => {
+    const model = cloudModel({}, 'web')
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(cloudOf(model)).toBeNull()
+  })
+
+  it('carries no cloud while the dictionaries are not installed', async () => {
+    const model = cloudModel({ strongs: strongsDeps(false).strongs })
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(cloudOf(model)).toBeNull()
+  })
+
+  it('counts the chapter once the dictionaries arrive', async () => {
+    let installed = false
+    const model = cloudModel({
+      strongs: {
+        ...strongsDeps().strongs,
+        dictionariesInstalled: async () => installed,
+      },
+    })
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    installed = true
+    await model.refreshTranslations()
+
+    expect(familiesOf(model)).toEqual(['G1473', 'G288', 'G3306', 'G1722'])
+  })
+
+  it('leaves out the cloud exclusions', async () => {
+    const model = cloudModel()
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(familiesOf(model)).not.toContain('G1510')
+    expect(familiesOf(model)).not.toContain('G3588')
+  })
+
+  it('carries an empty cloud for a chapter with nothing eligible', async () => {
+    const model = cloudModel({
+      passages: taggedSourceOver({
+        bsb: { [makeVerseId(43, 15, 1)]: [['G3588'], ['G2532']] },
+      }),
+    })
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(cloudOf(model)?.words).toEqual([])
+  })
+})
+
 describe('cross-references intersecting the viewed chapter', () => {
   const vineCrossReference: CrossReference = {
     id: 'xr-vine',
@@ -2341,6 +2608,7 @@ describe('the study material contract', () => {
       chapterCrossReferences: [],
       chapterAnnotations: [],
       chapterMentions: [],
+      wordCloud: null,
       collection: null,
     })
   })
@@ -3247,6 +3515,15 @@ describe('ReaderPaneModel book mode', () => {
 
     expect(model.view.book?.edition).toBe('Humility 1895')
     expect(model.view.translations).toEqual([])
+  })
+
+  it('carries no word cloud for a book', async () => {
+    const model = bookModelWith()
+    model.setWordCloudWanted(true)
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.studyMaterial.wordCloud).toBeNull()
   })
 
   it("hides Strong's in book mode however the pane's toggle stands", async () => {

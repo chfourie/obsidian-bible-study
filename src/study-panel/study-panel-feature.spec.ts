@@ -53,6 +53,7 @@ const fakeStudyMaterial = () => {
   const listeners = new Set<() => void>()
   const selectionListeners = new Set<(kind: SelectionKind) => void>()
   let detailsWanted = false
+  let wordCloudWanted = false
   let material: StudyMaterial = {
     title: 'John 15',
     bookMode: false,
@@ -62,6 +63,7 @@ const fakeStudyMaterial = () => {
     chapterCrossReferences: [],
     chapterAnnotations: [],
     chapterMentions: [],
+    wordCloud: null,
     collection: null,
   }
   const source = {
@@ -79,12 +81,16 @@ const fakeStudyMaterial = () => {
     setDetailsWanted: (wanted: boolean) => {
       detailsWanted = wanted
     },
+    setWordCloudWanted: (wanted: boolean) => {
+      wordCloudWanted = wanted
+    },
   } as unknown as StudyMaterialSource
   return {
     source,
     subscriptions: () => listeners.size,
     selectionSubscriptions: () => selectionListeners.size,
     detailsWanted: () => detailsWanted,
+    wordCloudWanted: () => wordCloudWanted,
     select: (verseId: number) => {
       material = { ...material, selectedVerseId: verseId }
       selectionListeners.forEach((listener) => listener('verse'))
