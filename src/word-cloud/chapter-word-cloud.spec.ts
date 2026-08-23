@@ -105,13 +105,13 @@ describe('cloudFamilies', () => {
     const ranked = families(verse(...words), verse(...twice))
 
     expect(ranked.map((word) => word.family)).toEqual([
+      'G3',
+      'G7',
       'G1',
       'G2',
-      'G3',
       'G4',
       'G5',
       'G6',
-      'G7',
       'G8',
       'G9',
       'G10',
@@ -126,13 +126,13 @@ describe('cloudFamilies', () => {
     expect(ranked.map((word) => word.family)).not.toContain('G10')
   })
 
-  it('orders the chosen ten by first appearance, not by count', () => {
+  it('orders the chosen ten by count, most frequent first', () => {
     const ranked = families(verse('G1', 'G2', 'G2', 'G3', 'G3', 'G3'))
 
     expect(ranked).toEqual([
-      { family: 'G1', count: 1 },
-      { family: 'G2', count: 2 },
       { family: 'G3', count: 3 },
+      { family: 'G2', count: 2 },
+      { family: 'G1', count: 1 },
     ])
   })
 })

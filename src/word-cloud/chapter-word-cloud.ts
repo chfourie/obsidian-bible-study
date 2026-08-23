@@ -182,9 +182,8 @@ class RenderingTally {
   }
 }
 
-// The families the cloud shows, in chapter order: the ten most tagged — ties
-// going to the earlier-appearing — reordered by first appearance so the
-// cloud reads like the chapter rather than a league table.
+// The families the cloud shows: the ten most tagged, most frequent first,
+// ties going to the earlier-appearing.
 export const cloudFamilies = (
   verses: readonly CloudVerse[],
   exclusions: ReadonlySet<string> = CLOUD_EXCLUSIONS,
@@ -218,7 +217,6 @@ export const cloudFamilies = (
   return [...byAppearance]
     .sort((a, b) => b.count - a.count || a.appearance - b.appearance)
     .slice(0, WORD_CLOUD_SIZE)
-    .sort((a, b) => a.appearance - b.appearance)
     .map(({ family, count, rendering }) => ({ family, count, rendering }));
 };
 

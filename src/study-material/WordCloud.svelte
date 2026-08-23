@@ -81,9 +81,9 @@ it.
 
   .bsm-word-cloud {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 6px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
     margin: 8px 0 4px;
     font-size: var(--font-ui-small);
   }
@@ -92,9 +92,8 @@ it.
     display: inline-flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.15em 0.45em;
+    padding: 0.1em 0.3em;
     border-radius: var(--radius-s);
-    background: var(--background-secondary);
     color: var(--text-normal);
     line-height: 1.15;
     cursor: pointer;
