@@ -1864,6 +1864,211 @@ describe('the word cloud in the study material', () => {
   })
 })
 
+describe('occurrence emphasis from a word cloud word', () => {
+  type TaggedTexts = Record<string, Record<number, string[][]>>
+
+  const taggedSourceOver = (texts: TaggedTexts): PassageSource => ({
+    passage: async (reference, translationId): Promise<Passage> => {
+      const content = texts[translationId]
+      if (!content) return { status: 'unavailable' }
+      const verses = reference.ranges
+        .flatMap(enumerateVerseIds)
+        .filter((verseId) => content[verseId] !== undefined)
+        .map((verseId) => ({
+          verseId,
+          segments: content[verseId].map((strongs, index) => ({
+            text: `w${index}`,
+            redLetter: false,
+            strongs,
+          })),
+        }))
+      if (verses.length === 0) return { status: 'unavailable' }
+      return { status: 'ok', verses, attribution: null }
+    },
+  })
+
+  const VERSE_1 = makeVerseId(43, 15, 1)
+  const VERSE_4 = makeVerseId(43, 15, 4)
+  const VERSE_5 = makeVerseId(43, 15, 5)
+
+  // G3306 is tagged at a lettered disambiguation in verse 5 so the family
+  // function, not the raw number, decides what lights up.
+  const taggedTexts = (): TaggedTexts => ({
+    bsb: {
+      [VERSE_1]: [['G1473'], ['G288']],
+      [VERSE_4]: [['G3306'], ['G1722'], ['G1473']],
+      [VERSE_5]: [['G3306a'], ['G288']],
+      [makeVerseId(43, 16, 1)]: [['G2980'], ['G3306']],
+    },
+    kjv: {
+      [VERSE_1]: [['G26'], ['G3306']],
+    },
+  })
+
+  const emphasisModel = async (): Promise<ReaderPaneModel> => {
+    const model = modelWith(
+      {
+        passages: taggedSourceOver(taggedTexts()),
+        ...strongsDeps(),
+        availableTranslations: async () => [
+          translation('bsb', true),
+          translation('kjv', true),
+        ],
+      },
+      DEFAULT_TOGGLES,
+      'bsb',
+    )
+    model.setWordCloudWanted(true)
+    await model.openPosition({ book: 43, chapter: 15 })
+    return model
+  }
+
+  // Every emphasized word as `verse:text`, in reading order.
+  const emphasized = (model: ReaderPaneModel): string[] =>
+    model.view.rows.flatMap((row) =>
+      row.segments
+        .filter((segment) => segment.emphasized === true)
+        .map((segment) => `${row.label}:${segment.text}`),
+    )
+
+  const activeFamilies = (model: ReaderPaneModel): string[] =>
+    (model.studyMaterial.wordCloud?.words ?? [])
+      .filter((word) => word.active)
+      .map((word) => word.family)
+
+  it('emphasizes exactly the words tagged with the family', async () => {
+    const model = await emphasisModel()
+
+    model.toggleCloudWord('G3306')
+
+    expect(emphasized(model)).toEqual(['4:w0', '5:w0'])
+  })
+
+  it('leaves the other words as they stand', async () => {
+    const model = await emphasisModel()
+
+    model.toggleCloudWord('G3306')
+
+    expect(model.view.rows[1].segments).toEqual([
+      { text: 'w0', redLetter: false, strongs: ['G3306'], emphasized: true },
+      { text: 'w1', redLetter: false, strongs: ['G1722'] },
+      { text: 'w2', redLetter: false, strongs: ['G1473'] },
+    ])
+  })
+
+  it('marks the toggled word active in the cloud', async () => {
+    const model = await emphasisModel()
+
+    model.toggleCloudWord('G3306')
+
+    expect(activeFamilies(model)).toEqual(['G3306'])
+  })
+
+  it('notifies subscribers of the toggle', async () => {
+    const model = await emphasisModel()
+    let notified = 0
+    model.subscribe(() => notified++)
+
+    model.toggleCloudWord('G3306')
+
+    expect(notified).toBe(1)
+  })
+
+  it('clears the emphasis and the active word when toggled again', async () => {
+    const model = await emphasisModel()
+    model.toggleCloudWord('G3306')
+
+    model.toggleCloudWord('G3306')
+
+    expect(emphasized(model)).toEqual([])
+    expect(activeFamilies(model)).toEqual([])
+  })
+
+  it('moves the emphasis to another family when that word is toggled', async () => {
+    const model = await emphasisModel()
+    model.toggleCloudWord('G3306')
+
+    model.toggleCloudWord('G1473')
+
+    expect(emphasized(model)).toEqual(['1:w0', '4:w2'])
+    expect(activeFamilies(model)).toEqual(['G1473'])
+  })
+
+  it('clears the active family on stepping to another chapter', async () => {
+    const model = await emphasisModel()
+    model.toggleCloudWord('G3306')
+
+    await model.nextChapter()
+
+    expect(emphasized(model)).toEqual([])
+    expect(activeFamilies(model)).toEqual([])
+  })
+
+  it('clears the active family on navigating to a position', async () => {
+    const model = await emphasisModel()
+    model.toggleCloudWord('G3306')
+
+    await model.openPosition({ book: 43, chapter: 15 })
+
+    expect(emphasized(model)).toEqual([])
+    expect(activeFamilies(model)).toEqual([])
+  })
+
+  it('clears the active family on switching translation', async () => {
+    const model = await emphasisModel()
+    model.toggleCloudWord('G3306')
+
+    await model.setTranslation('kjv')
+
+    expect(emphasized(model)).toEqual([])
+    expect(activeFamilies(model)).toEqual([])
+  })
+
+  it('replaces an entry’s emphasis while a family is active', async () => {
+    const model = await emphasisModel()
+    await model.openAt(ref('John 15:1'), 'bsb', [
+      { verseId: VERSE_1, start: 0, end: 2 },
+    ])
+
+    model.toggleCloudWord('G3306')
+
+    expect(emphasized(model)).toEqual(['4:w0', '5:w0'])
+  })
+
+  it('restores no entry emphasis once the family is cleared', async () => {
+    const model = await emphasisModel()
+    await model.openAt(ref('John 15:1'), 'bsb', [
+      { verseId: VERSE_1, start: 0, end: 2 },
+    ])
+    model.toggleCloudWord('G3306')
+
+    model.toggleCloudWord('G3306')
+
+    expect(emphasized(model)).toEqual([])
+  })
+
+  it('asks the reader to reveal the first emphasized verse', async () => {
+    const model = await emphasisModel()
+    const revealed: number[] = []
+    model.onReveal((verseId) => revealed.push(verseId))
+
+    model.toggleCloudWord('G3306')
+
+    expect(revealed).toEqual([VERSE_4])
+  })
+
+  it('asks for no reveal when clearing the family', async () => {
+    const model = await emphasisModel()
+    model.toggleCloudWord('G3306')
+    const revealed: number[] = []
+    model.onReveal((verseId) => revealed.push(verseId))
+
+    model.toggleCloudWord('G3306')
+
+    expect(revealed).toEqual([])
+  })
+})
+
 describe('cross-references intersecting the viewed chapter', () => {
   const vineCrossReference: CrossReference = {
     id: 'xr-vine',

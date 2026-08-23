@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import {
     BOOK_COUNT,
     bookName,
@@ -78,6 +79,26 @@
     observer.observe(pillSlotEl)
     return () => observer.disconnect()
   })
+
+  // A reveal only moves the reader when the row lies outside the scroll
+  // viewport: a word already on screen must not make the passage jump.
+  let scrollEl: HTMLElement | null = $state(null)
+
+  const rowOffScreen = (row: Element, viewport: Element): boolean => {
+    const rowRect = row.getBoundingClientRect()
+    const viewRect = viewport.getBoundingClientRect()
+    return rowRect.top < viewRect.top || rowRect.bottom > viewRect.bottom
+  }
+
+  const revealVerse = async (verseId: number): Promise<void> => {
+    await tick()
+    if (scrollEl === null) return
+    const row = scrollEl.querySelector(`[data-verse-id="${verseId}"]`)
+    if (row !== null && rowOffScreen(row, scrollEl))
+      row.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }
+
+  $effect(() => model.onReveal((verseId) => void revealVerse(verseId)))
 
   const onVerseClick = (event: MouseEvent, verseId: number): void => {
     if (event.shiftKey) model.extendSelectionTo(verseId)
@@ -376,7 +397,7 @@
           onclick={() => void model.nextChapter()}
         >›</button>
       </div>
-      <div class="bsr-scroll" style:font-size={contentFontSize}>
+      <div class="bsr-scroll" style:font-size={contentFontSize} bind:this={scrollEl}>
         <div class="bsr-inner" class:bsr-book={view.book !== null}>
           {#if view.book !== null}
             <div class="bsr-book-head">
@@ -432,6 +453,7 @@
               <div
                 class="bsr-para"
                 class:bsr-para-numbered={view.toggles.paraNumbers === 'on'}
+                data-verse-id={row.verseId}
                 class:bsr-hl={row.highlighted}
                 class:bsr-sel={verseSelected(row.verseId)}
                 role="button"
@@ -459,6 +481,7 @@
             {#each view.rows as row (row.verseId)}
               <div
                 class="bsr-verse-line"
+                data-verse-id={row.verseId}
                 class:bsr-hl={row.highlighted}
                 class:bsr-sel={verseSelected(row.verseId)}
                 role="button"
@@ -481,6 +504,7 @@
                 {#each paragraph as row (row.verseId)}
                   <span
                     class="bsr-verse-span"
+                    data-verse-id={row.verseId}
                     class:bsr-hl={row.highlighted}
                     class:bsr-sel={verseSelected(row.verseId)}
                     role="button"

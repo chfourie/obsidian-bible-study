@@ -160,6 +160,10 @@ export interface StudyMaterialSource {
   // is counted only while wanted, so chapters merely paged through pay
   // nothing for it.
   setWordCloudWanted(wanted: boolean): void
+  // Turns Occurrence Emphasis on for a cloud word's Strong's Family, off when
+  // that family is already the active one, and over to it from any other —
+  // one family at a time (CONTEXT.md — Occurrence Emphasis).
+  toggleCloudWord(family: string): void
   // Dismisses the selection outright: details and row highlight go with it.
   // Never fires the selection feed — clearing is not a deliberate selection.
   clearSelection(): void

@@ -53,7 +53,7 @@ selected paragraph's details above its section material (spec-books §5).
     {host}
     collecting={material.collection !== null}
   />
-  <WordCloud cloud={material.wordCloud} />
+  <WordCloud cloud={material.wordCloud} toggle={(family) => source.toggleCloudWord(family)} />
 {/snippet}
 
 <div class="bsm-view">
