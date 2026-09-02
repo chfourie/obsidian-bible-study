@@ -86,6 +86,24 @@ body {
   margin-left: 0.35em;
 }
 
+/* Live Preview renders a reference as an inline widget inside the editor
+   line, so a passage's block box would drop below the list bullet that
+   precedes it. Laying such a line out as a flex row keeps the passage on
+   the bullet's line, matching Reading view. */
+/* Flex ignores the negative text-indent of Obsidian's hanging indent, so the
+   matching padding is dropped too: the line's own indent characters position
+   the bullet, and the flex item wraps within itself. */
+.markdown-source-view.mod-cm6 .cm-line:has(.scripture-study-block) {
+  display: flex;
+  align-items: baseline;
+  padding-inline-start: 0 !important;
+}
+
+.markdown-source-view.mod-cm6 .cm-line > :has(.scripture-study-block) {
+  flex: 1;
+  min-width: 0;
+}
+
 .scripture-study-verse-number {
   margin-right: 0.15em;
   color: var(--text-faint);
