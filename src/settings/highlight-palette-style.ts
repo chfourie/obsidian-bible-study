@@ -6,9 +6,10 @@ import { highlightPaletteVariables } from './highlight-palette'
 export const applyHighlightPaletteVariables = (
   body: HTMLElement,
   palette: unknown,
+  wash: unknown,
 ): void =>
-  Object.entries(highlightPaletteVariables(palette)).forEach(([name, value]) =>
-    body.style.setProperty(name, value),
+  Object.entries(highlightPaletteVariables(palette, wash)).forEach(
+    ([name, value]) => body.style.setProperty(name, value),
   )
 
 export const removeHighlightPaletteVariables = (body: HTMLElement): void =>

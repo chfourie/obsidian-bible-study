@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { defaultHighlightPalette } from '../data-access'
+import { defaultHighlightPalette, defaultHighlightWash } from '../data-access'
 import {
   highlightPaletteVariables,
   resolveHighlightPalette,
+  resolveHighlightWash,
 } from './highlight-palette'
 
 describe('resolveHighlightPalette', () => {
@@ -59,5 +60,70 @@ describe('highlightPaletteVariables', () => {
       highlightPaletteVariables(defaultHighlightPalette())['--ss-hl-light-2'],
     )
     expect(Object.keys(variables)).toHaveLength(10)
+  })
+})
+
+describe('resolveHighlightWash', () => {
+  it('keeps a valid integer percentage per theme', () => {
+    expect(resolveHighlightWash({ light: 70, dark: 5 })).toEqual({
+      light: 70,
+      dark: 5,
+    })
+  })
+
+  it('resolves undefined to the shipped defaults', () => {
+    expect(resolveHighlightWash(undefined)).toEqual(defaultHighlightWash())
+  })
+
+  it('falls back to the mode default for a missing value', () => {
+    expect(resolveHighlightWash({ light: 70 })).toEqual({
+      light: 70,
+      dark: defaultHighlightWash().dark,
+    })
+  })
+
+  it('falls back to the mode default for a non-numeric value', () => {
+    expect(resolveHighlightWash({ light: '70', dark: null })).toEqual(
+      defaultHighlightWash(),
+    )
+  })
+
+  it('falls back to the mode default for a fractional value', () => {
+    expect(resolveHighlightWash({ light: 70.5, dark: NaN })).toEqual(
+      defaultHighlightWash(),
+    )
+  })
+
+  it('falls back to the mode default for an out-of-range value', () => {
+    expect(resolveHighlightWash({ light: 4, dark: 101 })).toEqual(
+      defaultHighlightWash(),
+    )
+  })
+
+  it('accepts the ends of the range', () => {
+    expect(resolveHighlightWash({ light: 5, dark: 100 })).toEqual({
+      light: 5,
+      dark: 100,
+    })
+  })
+})
+
+describe('highlightPaletteVariables with a stored wash', () => {
+  it('emits the resolved wash as the rgba alpha', () => {
+    const variables = highlightPaletteVariables(
+      { light: ['#ff0000'], dark: ['#102030'] },
+      { light: 70, dark: 8 },
+    )
+
+    expect(variables['--ss-hl-light-1']).toBe('rgba(255, 0, 0, 0.7)')
+    expect(variables['--ss-hl-dark-1']).toBe('rgba(16, 32, 48, 0.08)')
+  })
+
+  it('falls back to the shipped wash for a malformed stored value', () => {
+    const variables = highlightPaletteVariables({ light: ['#ff0000'] }, {
+      light: 'bright',
+    })
+
+    expect(variables['--ss-hl-light-1']).toBe('rgba(255, 0, 0, 0.45)')
   })
 })

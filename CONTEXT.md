@@ -96,7 +96,10 @@ A colored span over part of one occurrence's rendered passage, anchored as chara
 The serialized form of a highlight: an option token `h<slot>/<verse>.<start>-<verse>.<end>` inside the reference's curly braces. Machine-canonical (sorted, merged, non-overlapping, split at reference gaps); hand-typed shorthand is accepted but rewritten on the next machine edit.
 
 ### Highlight Slot
-One of five global, positional color roles (`h1`–`h5`), each with a light-mode and dark-mode color configured in settings. A cue stores only the slot index, so recoloring a slot re-tints every highlight in the vault that uses it. Slots have no names or semantics — they are colors, not tags.
+One of five global, positional color roles (`h1`–`h5`), each with a light-mode and dark-mode color configured in settings and rendered through the Highlight Wash. A cue stores only the slot index, so recoloring a slot re-tints every highlight in the vault that uses it. Slots have no names or semantics — they are colors, not tags.
+
+### Highlight Wash
+The single per-mode translucency — one value for light mode, one for dark — applied to every Highlight Slot's color, so a slot color always tints the text without hiding it. Configured in settings alongside the slots, never per slot; resetting the highlights restores the slots' colors and the wash together.
 
 ### Heading
 A title printed inside a Book section, at one of three levels: *part* (the title a run of chapters sits under), *section*, or *sub-section* (e.g. *7.1 They knew that they were naked*). A heading is attached to the paragraph it precedes. Like an epigraph it lives beside the grid, not on it: a heading consumes no id and is never part of an atom's text, yet it is searched with its paragraph — a Hit may be earned by words that appear only in the heading, and those words are emphasized there. Headings, epigraphs and Figures are the kinds of section furniture.

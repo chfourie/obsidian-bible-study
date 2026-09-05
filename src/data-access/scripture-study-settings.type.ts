@@ -18,12 +18,18 @@ export const FONT_SCALE_DEFAULT = 100
 export type HighlightThemeMode = 'light' | 'dark'
 export type HighlightPalette = Record<HighlightThemeMode, string[]>
 
-// Slots are picked as solid hues; the highlighter wash is the plugin's, so a
-// picked color always tints without hiding the text under it.
-export const HIGHLIGHT_TINT_ALPHA: Record<HighlightThemeMode, number> = {
-  light: 0.45,
-  dark: 0.26,
-}
+// Slots are picked as solid hues; the Highlight Wash is what makes them
+// translucent, so a picked color always tints without hiding the text under it.
+export type HighlightWash = Record<HighlightThemeMode, number>
+
+export const HIGHLIGHT_WASH_MIN = 5
+export const HIGHLIGHT_WASH_MAX = 100
+export const HIGHLIGHT_WASH_STEP = 1
+
+export const defaultHighlightWash = (): HighlightWash => ({
+  light: 45,
+  dark: 26,
+})
 
 const SHIPPED_HIGHLIGHT_HUES = [
   '#ffd652',
@@ -71,6 +77,7 @@ export type ScriptureStudySettings = {
   annotationTemplatePath: string | null
   annotationOrdering: AnnotationOrdering
   highlightPalette: HighlightPalette
+  highlightWash: HighlightWash
   // The user's own Cloud Exclusions, as Strong's Families, on top of the
   // built-in list (CONTEXT.md — Cloud Exclusions).
   wordCloudExclusions: string[]
@@ -97,5 +104,6 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',
   highlightPalette: defaultHighlightPalette(),
+  highlightWash: defaultHighlightWash(),
   wordCloudExclusions: [],
 }

@@ -2,6 +2,7 @@ import type { Plugin } from 'obsidian'
 import {
   DEFAULT_SETTINGS,
   defaultHighlightPalette,
+  defaultHighlightWash,
   type ScriptureStudySettings,
 } from './scripture-study-settings.type'
 import { applyTranslationBootstrap } from './bootstrap-translations'
@@ -36,6 +37,7 @@ export class SettingsStore {
     const settings = {
       ...DEFAULT_SETTINGS,
       highlightPalette: defaultHighlightPalette(),
+      highlightWash: defaultHighlightWash(),
       ...stored,
     } as ScriptureStudySettings &
       Partial<Record<(typeof REMOVED_SETTINGS_KEYS)[number], unknown>>

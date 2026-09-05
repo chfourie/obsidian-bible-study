@@ -53,6 +53,9 @@ const settingsWithPalette = (light: string[]): ScriptureStudySettings => ({
   highlightPalette: { ...DEFAULT_SETTINGS.highlightPalette, light },
 })
 
+const settingsWithWash = (wash: unknown): ScriptureStudySettings =>
+  ({ ...DEFAULT_SETTINGS, highlightWash: wash }) as ScriptureStudySettings
+
 describe('SettingsFeature', () => {
   beforeEach(() => document.body.removeAttribute('style'))
 
@@ -86,6 +89,37 @@ describe('SettingsFeature', () => {
     feature.onSettingsChanged()
 
     expect(paletteVariable('--ss-hl-light-1')).toBe('rgba(18, 52, 86, 0.45)')
+  })
+
+  it('emits the stored highlight wash as the variable alpha on load', async () => {
+    const { feature } = setup()
+    feature.useSettings(settingsWithWash({ light: 70, dark: 8 }))
+
+    await feature.load()
+
+    expect(paletteVariable('--ss-hl-light-1')).toContain('0.7)')
+    expect(paletteVariable('--ss-hl-dark-1')).toContain('0.08)')
+  })
+
+  it('re-emits the variables when the wash changes', async () => {
+    const { feature } = setup()
+    await feature.load()
+
+    feature.useSettings(settingsWithWash({ light: 12, dark: 90 }))
+    feature.onSettingsChanged()
+
+    expect(paletteVariable('--ss-hl-light-1')).toContain('0.12)')
+    expect(paletteVariable('--ss-hl-dark-1')).toContain('0.9)')
+  })
+
+  it('falls back to the shipped wash when nothing is stored', async () => {
+    const { feature } = setup()
+    feature.useSettings(settingsWithWash(undefined))
+
+    await feature.load()
+
+    expect(paletteVariable('--ss-hl-light-1')).toContain('0.45)')
+    expect(paletteVariable('--ss-hl-dark-1')).toContain('0.26)')
   })
 
   it('removes the emitted variables on unload', async () => {

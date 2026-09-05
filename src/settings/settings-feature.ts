@@ -53,6 +53,10 @@ export class SettingsFeature extends PluginFeature {
   }
 
   #emitHighlightPalette(): void {
-    applyHighlightPaletteVariables(document.body, this.settings.highlightPalette)
+    applyHighlightPaletteVariables(
+      document.body,
+      this.settings.highlightPalette,
+      this.settings.highlightWash,
+    )
   }
 }
