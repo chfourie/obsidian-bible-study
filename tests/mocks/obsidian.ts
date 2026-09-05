@@ -395,6 +395,67 @@ class SettingToggleComponent {
   }
 }
 
+// Just enough of SliderComponent for the highlight wash rows: a range input
+// honouring its limits and value, showing the formatted value beside it, and
+// firing onChange on `change` — and, in instant mode, on every `input`.
+class SettingSliderComponent {
+  sliderEl: HTMLInputElement
+  #valueEl: HTMLElement
+  #format: (value: number) => string = (value) => String(value)
+  #instant = false
+
+  constructor(parent: HTMLElement) {
+    this.sliderEl = parent.createEl('input')
+    this.sliderEl.type = 'range'
+    this.#valueEl = parent.createSpan({ cls: 'setting-item-slider-value' })
+    this.#showValue()
+  }
+
+  setLimits(min: number, max: number, step: number): this {
+    this.sliderEl.min = String(min)
+    this.sliderEl.max = String(max)
+    this.sliderEl.step = String(step)
+    return this
+  }
+
+  setValue(value: number): this {
+    this.sliderEl.value = String(value)
+    this.#showValue()
+    return this
+  }
+
+  getValue(): number {
+    return Number(this.sliderEl.value)
+  }
+
+  setInstant(instant: boolean): this {
+    this.#instant = instant
+    return this
+  }
+
+  setDisplayFormat(format: (value: number) => string): this {
+    this.#format = format
+    this.#showValue()
+    return this
+  }
+
+  onChange(handler: (value: number) => unknown): this {
+    const notify = () => {
+      this.#showValue()
+      void handler(this.getValue())
+    }
+    this.sliderEl.addEventListener('change', notify)
+    this.sliderEl.addEventListener('input', () => {
+      if (this.#instant) notify()
+    })
+    return this
+  }
+
+  #showValue(): void {
+    this.#valueEl.setText(this.#format(this.getValue()))
+  }
+}
+
 class SettingButtonComponent {
   buttonEl: HTMLButtonElement
 
@@ -498,6 +559,11 @@ export class Setting {
 
   addColorPicker(configure: (picker: SettingColorComponent) => unknown): this {
     configure(new SettingColorComponent(this.controlEl))
+    return this
+  }
+
+  addSlider(configure: (slider: SettingSliderComponent) => unknown): this {
+    configure(new SettingSliderComponent(this.controlEl))
     return this
   }
 

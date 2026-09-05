@@ -9,6 +9,7 @@ import {
 } from '../../tests/mocks/obsidian'
 import {
   defaultHighlightPalette,
+  defaultHighlightWash,
   SettingsStore,
   type ScriptureStudySettings,
 } from '../data-access'
@@ -206,7 +207,9 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Template file',
         'Display ordering',
         'Slot 1',
-        'Reset colors',
+        'Opacity (light mode)',
+        'Opacity (dark mode)',
+        'Reset highlights',
       ]),
     )
   })
@@ -933,7 +936,9 @@ describe('ScriptureStudySettingTab highlights palette', () => {
     })
     expect(colorPickersOf(slotRow(container, 1))[0]?.value).toBe('#111111')
 
-    const reset = settingNamed(container, 'Reset colors').querySelector('button')
+    const reset = settingNamed(container, 'Reset highlights').querySelector(
+      'button',
+    )
     if (!(reset instanceof HTMLButtonElement)) throw new Error('no reset button')
     reset.click()
     await flushAsync()
@@ -953,6 +958,135 @@ describe('ScriptureStudySettingTab highlights palette', () => {
 
     expect(colorPickersOf(slotRow(container, 1))[0]?.value).toBe(
       defaultHighlightPalette().light[0],
+    )
+  })
+})
+
+describe('ScriptureStudySettingTab highlight wash', () => {
+  const sliderOf = (setting: HTMLElement): HTMLInputElement => {
+    const slider = setting.querySelector('input[type="range"]')
+    if (!(slider instanceof HTMLInputElement)) throw new Error('no slider')
+    return slider
+  }
+
+  const opacityRow = (
+    container: HTMLElement,
+    mode: 'light' | 'dark',
+  ): HTMLElement => settingNamed(container, `Opacity (${mode} mode)`)
+
+  const dragTo = (slider: HTMLInputElement, value: number): void => {
+    slider.value = String(value)
+    slider.dispatchEvent(new Event('input'))
+  }
+
+  it('renders an opacity slider per mode between Slot 5 and the reset row', async () => {
+    const { container } = await setup()
+
+    const names = settingItems(container).map(settingName)
+    expect(names.indexOf('Slot 5')).toBeLessThan(
+      names.indexOf('Opacity (light mode)'),
+    )
+    expect(names.indexOf('Opacity (light mode)')).toBeLessThan(
+      names.indexOf('Opacity (dark mode)'),
+    )
+    expect(names.indexOf('Opacity (dark mode)')).toBeLessThan(
+      names.indexOf('Reset highlights'),
+    )
+
+    const light = sliderOf(opacityRow(container, 'light'))
+    expect([light.min, light.max, light.step]).toEqual(['5', '100', '1'])
+    expect(light.value).toBe(String(defaultHighlightWash().light))
+    expect(opacityRow(container, 'light').textContent).toContain(
+      `${defaultHighlightWash().light}%`,
+    )
+    expect(opacityRow(container, 'dark').textContent).toContain(
+      `${defaultHighlightWash().dark}%`,
+    )
+  })
+
+  it('persists only the light wash when the light slider settles', async () => {
+    const { container, settingsStore } = await setup()
+
+    const slider = sliderOf(opacityRow(container, 'light'))
+    slider.value = '70'
+    slider.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.highlightWash).toEqual({
+      light: 70,
+      dark: defaultHighlightWash().dark,
+    })
+    expect(settings.highlightPalette).toEqual(defaultHighlightPalette())
+  })
+
+  it('persists only the dark wash when the dark slider settles', async () => {
+    const { container, settingsStore } = await setup()
+
+    const slider = sliderOf(opacityRow(container, 'dark'))
+    slider.value = '12'
+    slider.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).highlightWash).toEqual({
+      light: defaultHighlightWash().light,
+      dark: 12,
+    })
+  })
+
+  it('persists and relabels each movement while the slider is dragged', async () => {
+    const { container, settingsStore } = await setup()
+
+    const row = opacityRow(container, 'light')
+    dragTo(sliderOf(row), 61)
+    await flushAsync()
+    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(61)
+
+    dragTo(sliderOf(row), 62)
+    await flushAsync()
+    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(62)
+    expect(opacityRow(container, 'light').textContent).toContain('62%')
+  })
+
+  it('keeps the dragged slider in place while its own writes land', async () => {
+    const { container, settingsStore } = await setup()
+
+    const slider = sliderOf(opacityRow(container, 'light'))
+    slider.focus()
+    dragTo(slider, 61)
+    await flushAsync()
+    dragTo(slider, 62)
+    await flushAsync()
+
+    expect(container.contains(slider)).toBe(true)
+    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(62)
+
+    slider.blur()
+    await flushAsync()
+    expect(sliderOf(opacityRow(container, 'light')).value).toBe('62')
+  })
+
+  it('restores the shipped wash alongside the palette on reset', async () => {
+    const { container, settingsStore } = await setup({
+      storedSettings: { highlightWash: { light: 90, dark: 80 } },
+    })
+    expect(sliderOf(opacityRow(container, 'light')).value).toBe('90')
+
+    const reset = settingNamed(container, 'Reset highlights').querySelector(
+      'button',
+    )
+    if (!(reset instanceof HTMLButtonElement)) throw new Error('no reset button')
+    reset.click()
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.highlightWash).toEqual(defaultHighlightWash())
+    expect(settings.highlightPalette).toEqual(defaultHighlightPalette())
+    expect(sliderOf(opacityRow(container, 'light')).value).toBe(
+      String(defaultHighlightWash().light),
+    )
+    expect(opacityRow(container, 'dark').textContent).toContain(
+      `${defaultHighlightWash().dark}%`,
     )
   })
 })
