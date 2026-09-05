@@ -16,6 +16,7 @@ import {
   FONT_SCALE_MIN,
   FONT_SCALE_STEP,
   HIGHLIGHT_SLOTS,
+  HIGHLIGHT_THEME_MODES,
   HIGHLIGHT_WASH_MAX,
   HIGHLIGHT_WASH_MIN,
   HIGHLIGHT_WASH_STEP,
@@ -731,7 +732,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
   ): SettingDefinitionGroup<SettingsControlKey> {
     const palette = resolveHighlightPalette(view.settings.highlightPalette)
     const wash = resolveHighlightWash(view.settings.highlightWash)
-    const modes: HighlightThemeMode[] = ['light', 'dark']
     return {
       type: 'group',
       heading: 'Highlights',
@@ -742,7 +742,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           render: (setting: Setting) =>
             this.#renderHighlightSlot(setting, palette, slot),
         })),
-        ...modes.map((mode) => ({
+        ...HIGHLIGHT_THEME_MODES.map((mode) => ({
           name: `Opacity (${mode} mode)`,
           desc: 'How strongly a highlight tints the text behind it.',
           render: (setting: Setting) =>
@@ -771,8 +771,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     palette: HighlightPalette,
     slot: HighlightSlot,
   ): void {
-    const modes: HighlightThemeMode[] = ['light', 'dark']
-    for (const mode of modes) {
+    for (const mode of HIGHLIGHT_THEME_MODES) {
       setting.addColorPicker((picker) => {
         picker.setValue(palette[mode][slot - 1] ?? '')
         picker.onChange((color) => {
@@ -802,7 +801,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         .onChange((percent) =>
           this.#update((settings) => ({
             ...settings,
-            highlightWash: { ...wash, [mode]: percent },
+            highlightWash: { ...settings.highlightWash, [mode]: percent },
           })),
         ),
     )

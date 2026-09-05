@@ -15,7 +15,8 @@ export const FONT_SCALE_MAX = 200
 export const FONT_SCALE_STEP = 10
 export const FONT_SCALE_DEFAULT = 100
 
-export type HighlightThemeMode = 'light' | 'dark'
+export const HIGHLIGHT_THEME_MODES = ['light', 'dark'] as const
+export type HighlightThemeMode = (typeof HIGHLIGHT_THEME_MODES)[number]
 export type HighlightPalette = Record<HighlightThemeMode, string[]>
 
 // Slots are picked as solid hues; the Highlight Wash is what makes them

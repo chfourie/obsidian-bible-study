@@ -2,6 +2,7 @@ import {
   defaultHighlightPalette,
   defaultHighlightWash,
   HIGHLIGHT_SLOTS,
+  HIGHLIGHT_THEME_MODES,
   HIGHLIGHT_WASH_MAX,
   HIGHLIGHT_WASH_MIN,
   type HighlightPalette,
@@ -75,9 +76,8 @@ export const highlightPaletteVariables = (
 ): Record<string, string> => {
   const palette = resolveHighlightPalette(storedPalette)
   const wash = resolveHighlightWash(storedWash)
-  const modes: HighlightThemeMode[] = ['light', 'dark']
   return Object.fromEntries(
-    modes.flatMap((mode) =>
+    HIGHLIGHT_THEME_MODES.flatMap((mode) =>
       HIGHLIGHT_SLOTS.map((slot): [string, string] => [
         highlightSlotVariable(mode, slot),
         tint(palette[mode][slot - 1] ?? '#000000', wash[mode]),
