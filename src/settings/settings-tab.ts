@@ -327,16 +327,15 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
   }
 
   // Rebuilding the tab while the user is typing would wipe their unsaved
-  // text (values persist only on change/blur), and rebuilding while a slider
-  // is being dragged would tear it out from under the pointer, so an update
-  // arriving while either has focus waits for the blur.
+  // text (values persist only on change/blur), so an update arriving while a
+  // text input has focus waits for the blur.
   //
   // A rebuild is also skipped when the tab's structure is unchanged — the
   // model notifies on every persisted value, but the control the user touched
   // already shows the new value, and emptying the container would clamp the
   // settings scroller back to the top.
   override update(): void {
-    const focusedInput = this.#focusedEditingInput()
+    const focusedInput = this.#focusedTextInput()
     if (focusedInput !== null) {
       this.#queueUpdateAfterBlur(focusedInput)
       return
@@ -377,14 +376,12 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     return null
   }
 
-  #focusedEditingInput(): HTMLInputElement | null {
+  #focusedTextInput(): HTMLInputElement | null {
     const active = this.containerEl.ownerDocument.activeElement
-    const isEditingInput =
+    const isTextInput =
       active instanceof HTMLInputElement &&
-      (active.type === 'text' ||
-        active.type === 'password' ||
-        active.type === 'range')
-    return isEditingInput && this.containerEl.contains(active) ? active : null
+      (active.type === 'text' || active.type === 'password')
+    return isTextInput && this.containerEl.contains(active) ? active : null
   }
 
   #queueUpdateAfterBlur(input: HTMLInputElement): void {
@@ -781,12 +778,9 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     }
   }
 
-  // Instant mode so every movement of the slider persists at once and the
-  // highlights on screen re-tint under the reader's hand; the rebuild each of
-  // those writes would otherwise trigger waits for the drag to end (see
-  // #focusedEditingInput). Obsidian 1.13 always shows the live value beside
-  // the slider — setDynamicTooltip() is deprecated — so the percentage comes
-  // from the display format.
+  // The wash persists when the slider is released, not on every movement;
+  // Obsidian 1.13 shows the live value beside the slider (setDynamicTooltip()
+  // is deprecated), so the percentage comes from the display format.
   #renderHighlightWash(
     setting: Setting,
     wash: HighlightWash,
@@ -796,7 +790,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       slider
         .setLimits(HIGHLIGHT_WASH_MIN, HIGHLIGHT_WASH_MAX, HIGHLIGHT_WASH_STEP)
         .setValue(wash[mode])
-        .setInstant(true)
         .setDisplayFormat((percent) => `${percent}%`)
         .onChange((percent) =>
           this.#update((settings) => ({

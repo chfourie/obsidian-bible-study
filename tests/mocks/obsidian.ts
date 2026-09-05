@@ -396,13 +396,12 @@ class SettingToggleComponent {
 }
 
 // Just enough of SliderComponent for the highlight wash rows: a range input
-// honouring its limits and value, showing the formatted value beside it, and
-// firing onChange on `change` — and, in instant mode, on every `input`.
+// honouring its limits and value, showing the formatted value beside it as it
+// moves, and firing onChange on `change`.
 class SettingSliderComponent {
   sliderEl: HTMLInputElement
   #valueEl: HTMLElement
   #format: (value: number) => string = (value) => String(value)
-  #instant = false
 
   constructor(parent: HTMLElement) {
     this.sliderEl = parent.createEl('input')
@@ -428,11 +427,6 @@ class SettingSliderComponent {
     return Number(this.sliderEl.value)
   }
 
-  setInstant(instant: boolean): this {
-    this.#instant = instant
-    return this
-  }
-
   setDisplayFormat(format: (value: number) => string): this {
     this.#format = format
     this.#showValue()
@@ -445,9 +439,7 @@ class SettingSliderComponent {
       void handler(this.getValue())
     }
     this.sliderEl.addEventListener('change', notify)
-    this.sliderEl.addEventListener('input', () => {
-      if (this.#instant) notify()
-    })
+    this.sliderEl.addEventListener('input', () => this.#showValue())
     return this
   }
 

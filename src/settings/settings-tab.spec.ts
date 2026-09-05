@@ -1034,36 +1034,21 @@ describe('ScriptureStudySettingTab highlight wash', () => {
     })
   })
 
-  it('persists and relabels each movement while the slider is dragged', async () => {
-    const { container, settingsStore } = await setup()
-
-    const row = opacityRow(container, 'light')
-    dragTo(sliderOf(row), 61)
-    await flushAsync()
-    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(61)
-
-    dragTo(sliderOf(row), 62)
-    await flushAsync()
-    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(62)
-    expect(opacityRow(container, 'light').textContent).toContain('62%')
-  })
-
-  it('keeps the dragged slider in place while its own writes land', async () => {
+  it('relabels while dragged but persists only on release', async () => {
     const { container, settingsStore } = await setup()
 
     const slider = sliderOf(opacityRow(container, 'light'))
-    slider.focus()
-    dragTo(slider, 61)
-    await flushAsync()
     dragTo(slider, 62)
     await flushAsync()
 
-    expect(container.contains(slider)).toBe(true)
-    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(62)
+    expect(opacityRow(container, 'light').textContent).toContain('62%')
+    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(
+      defaultHighlightWash().light,
+    )
 
-    slider.blur()
+    slider.dispatchEvent(new Event('change'))
     await flushAsync()
-    expect(sliderOf(opacityRow(container, 'light')).value).toBe('62')
+    expect((await settingsStore.loadSettings()).highlightWash.light).toBe(62)
   })
 
   it('restores the shipped wash alongside the palette on reset', async () => {
