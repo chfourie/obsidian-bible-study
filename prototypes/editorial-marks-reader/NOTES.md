@@ -26,3 +26,4 @@ Density of ⌈⌉ in **1:9**. Default opacities. Whether accent glyphs + italic 
 - **Opacities:** supplied **0.5**, marks **0.3**. Emended stays full-weight, unfaded, un-accented.
 - **Combo:** accent glyphs + italic supplied + bold emendation readable together (1:4, 2:2). 1:9 density acceptable at marks 0.3.
 - Supplied 0.5 is the existing **global** supplied setting (scripture + Books). Marks 0.3 is the second, marks-only setting.
+- **Verse numbers:** default hidden (hover/selection), **On/Hover configurable** — same option books already have for paragraph numbers; a verse-atom Book (1 Enoch) governs verse numbers with it.
