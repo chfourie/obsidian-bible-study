@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE — throwaway. Wayfinder ticket #116: how should editorial marks feel
+     in the reader?
+     Three variants, switchable via ?variant= (floating bottom bar, ←/→ keys):
+       A — Quiet book: serif book-reader, marks recede, low opacity
+       B — Margin key: same paints, denser; per-verse rail of mark kinds
+       C — Scripture column: verse-per-line scripture shell, same paints
+     No apparatus hide. Opacity sliders in Options. Delete when the ticket resolves. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editorial marks reader — prototype</title>
+<style>
+  :root, [data-theme="dark"] {
+    --bg: #1e1e1e; --bg2: #262626; --bg3: #2f2f2f; --border: #3a3a3a;
+    --text: #dcddde; --muted: #9a9a9a; --faint: #6e6e6e;
+    --accent: #a78bfa; --accent-dim: rgba(167,139,250,.14);
+    --rail: #1a1a1a;
+  }
+  [data-theme="light"] {
+    --bg: #f7f4ee; --bg2: #efebe3; --bg3: #e7e1d6; --border: #d4cdb8;
+    --text: #2a261f; --muted: #6a6458; --faint: #938c7e;
+    --accent: #6d4fd6; --accent-dim: rgba(109,79,214,.12);
+    --rail: #fbf9f4;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  input[type="range"] { width: 110px; accent-color: var(--accent); }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb { background: #555; border-radius: 5px; }
+
+  #app { height: 100vh; display: flex; flex-direction: column; }
+
+  .qbar {
+    flex-shrink: 0; padding: 8px 14px 10px; border-bottom: 1px solid var(--border);
+    background: var(--bg2); font-size: .78rem; line-height: 1.45; color: var(--muted);
+  }
+  .qbar strong { color: var(--text); font-weight: 600; }
+  .state {
+    margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--faint); font-size: .72rem;
+  }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .opt-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px;
+    color: var(--muted); font-size: .82rem; background: var(--bg2); position: relative;
+  }
+  .opt-btn:hover { color: var(--text); }
+  .opt-menu {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; min-width: 280px; box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    display: none; text-align: left; cursor: default;
+  }
+  .opt-menu.open { display: block; }
+  .opt-row { display: flex; align-items: center; gap: 8px; margin: 7px 0; font-size: .8rem; }
+  .opt-row .lbl { width: 108px; color: var(--faint); flex-shrink: 0; }
+  .opt-val { color: var(--accent); width: 2.4em; font-variant-numeric: tabular-nums; }
+  .opt-note { color: var(--faint); font-size: .7rem; font-style: italic; margin-top: 8px; }
+  .spacer { flex: 1; }
+  .pill {
+    border: 1px solid var(--accent); border-radius: 999px; padding: 2px 12px;
+    font-size: .78rem; background: var(--accent-dim); color: var(--accent);
+  }
+  .pill .ed { color: var(--faint); font-style: italic; margin-left: 4px; }
+  .theme-btn { color: var(--muted); font-size: .78rem; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px; }
+  .theme-btn:hover { color: var(--text); }
+
+  .main { flex: 1; display: flex; min-height: 0; }
+  .content { flex: 1; overflow-y: auto; min-width: 0; }
+
+  .supplied { font-style: italic; opacity: var(--supplied-opacity); }
+  .mark { color: var(--accent); opacity: var(--marks-opacity); }
+  .emended { font-weight: 700; }
+
+  .toc {
+    width: 220px; flex-shrink: 0; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 14px 0 40px; font-size: .82rem;
+  }
+  .toc-title { padding: 0 16px 4px; font-size: .95rem; font-weight: 600; }
+  .toc-author { padding: 0 16px 12px; color: var(--faint); font-size: .74rem; font-style: italic; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .toc-part { padding: 10px 16px 2px; color: var(--faint); font-size: .68rem; letter-spacing: .04em; }
+  .toc-item { display: flex; gap: 8px; width: 100%; text-align: left; padding: 4px 16px; color: var(--muted); border-left: 2px solid transparent; }
+  .toc-item.on { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+  .toc-num { width: 1.6em; flex-shrink: 0; color: var(--faint); text-align: right; }
+
+  .b-inner { max-width: 40rem; margin: 0 auto; padding: 36px 32px 96px; font-family: Georgia, "Iowan Old Style", "Times New Roman", serif; }
+  .b-chap-num { text-align: center; color: var(--faint); font-size: .85rem; letter-spacing: .25em; margin: 0 0 6px; }
+  .b-chap-title { text-align: center; font-size: 1.35rem; font-weight: 400; margin: 0 0 28px; font-variant: small-caps; letter-spacing: .04em; }
+  .verse-wrap { position: relative; margin: 0 0 1.05em; }
+  .b-prose { line-height: 1.9; font-size: 1.05rem; text-align: justify; hyphens: auto; margin: 0; }
+  .b-poem { line-height: 1.75; font-size: 1.05rem; margin: 0; text-align: left; }
+  .b-poem .ln { display: block; }
+  .gutter-num {
+    position: absolute; left: -2.5em; top: .2em; width: 2em; text-align: right;
+    color: var(--accent); font-size: .72rem; font-weight: 600;
+    font-family: -apple-system, sans-serif; opacity: 0;
+  }
+  .verse-wrap:hover .gutter-num, .verse-wrap.sel .gutter-num { opacity: 1; }
+  .verse-wrap.sel .b-prose, .verse-wrap.sel .b-poem { background: var(--accent-dim); border-radius: 4px; }
+  .sample-label {
+    margin: 28px 0 10px; color: var(--faint); font-size: .72rem;
+    font-family: -apple-system, sans-serif; letter-spacing: .04em;
+  }
+  .attribution { margin-top: 28px; color: var(--faint); font-size: .72rem; font-style: italic; font-family: -apple-system, sans-serif; }
+
+  /* B: margin key */
+  .b-inner.keyed { max-width: 48rem; padding-right: 8px; }
+  .keyed-row { display: grid; grid-template-columns: 1fr 9.5rem; gap: 12px; align-items: start; }
+  .rail {
+    font-family: -apple-system, sans-serif; font-size: .68rem; line-height: 1.35;
+    color: var(--muted); padding: 4px 8px; border-left: 1px solid var(--border);
+  }
+  .rail-empty { color: var(--faint); font-style: italic; }
+  .rail b { color: var(--accent); font-weight: 600; opacity: var(--marks-opacity); }
+
+  /* C: scripture column */
+  .tree {
+    width: 200px; flex-shrink: 0; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 8px 0 40px; font-size: .82rem;
+  }
+  .tree-group { padding: 8px 12px 4px; color: var(--faint); font-size: .68rem; letter-spacing: .06em; }
+  .tree-book { display: block; width: 100%; text-align: left; padding: 2px 12px; color: var(--muted); }
+  .tree-book.on { color: var(--accent); }
+  .c-inner { max-width: 42rem; margin: 0 auto; padding: 18px 28px 96px; }
+  .c-title { font-size: 1.25rem; font-weight: 600; margin: 0 0 16px; }
+  .c-verse { display: flex; gap: 8px; line-height: 1.7; margin: 0 0 .55em; font-size: 1.02rem; }
+  .c-verse.sel { background: var(--accent-dim); border-radius: 4px; }
+  .c-num { color: var(--accent); font-size: .72em; font-weight: 600; min-width: 1.6em; padding-top: .15em; }
+  .c-body { flex: 1; }
+  .c-body .ln { display: block; }
+
+  .study {
+    width: 280px; flex-shrink: 0; border-left: 1px solid var(--border);
+    overflow-y: auto; padding: 12px 14px 40px; font-size: .8rem; background: var(--bg2);
+  }
+  .study-loc { font-weight: 600; }
+  .study-loc em { font-style: italic; }
+  .study-cite { color: var(--faint); font-size: .72rem; margin: 4px 0 12px; }
+  .study-key { color: var(--muted); font-size: .75rem; line-height: 1.55; }
+  .study-key code { font-size: .78em; color: var(--accent); }
+
+  .switcher {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 100;
+    display: flex; align-items: center; gap: 10px;
+    background: #0d0d0d; color: #ddd; border: 1px solid #555; border-radius: 999px;
+    padding: 8px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size: .82rem;
+  }
+  .switcher b { color: #fff; }
+  .switcher .desc { color: #aaa; max-width: 28rem; }
+  .sw-arrow { color: #ccc; font-size: 1rem; padding: 0 4px; }
+  .sw-arrow:hover { color: #fff; }
+
+  @media (max-width: 900px) {
+    .toc, .tree, .study { display: none; }
+    .keyed-row { grid-template-columns: 1fr; }
+    .rail { border-left: none; border-top: 1px solid var(--border); margin-top: 4px; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const VARIANTS = {
+  A: 'Quiet book — serif page, marks recede',
+  B: 'Margin key — same paints, kinds named beside the verse',
+  C: 'Scripture column — verse-per-line, inline numbers',
+};
+const KEYS = Object.keys(VARIANTS);
+const DEFAULTS = {
+  A: { supplied: 0.5, marks: 0.3 },
+  B: { supplied: 0.74, marks: 0.68 },
+  C: { supplied: 0.62, marks: 0.55 },
+};
+
+const MARK_MEANING = {
+  '⌈⌈': 'in E, not in Gᵍ/Gˢ',
+  '⌉⌉': 'in E, not in Gᵍ/Gˢ',
+  '⌈': 'in Gᵍ, not in E',
+  '⌉': 'in Gᵍ, not in E',
+  '[': 'interpolation',
+  ']': 'interpolation',
+};
+
+function fromParts(parts) {
+  let text = '';
+  const supplied = [], marks = [], emended = [];
+  for (const p of parts) {
+    if (typeof p === 'string') { text += p; continue; }
+    const start = text.length;
+    text += p.t;
+    const end = text.length;
+    if (p.k === 's') supplied.push({ start, end });
+    if (p.k === 'e') emended.push({ start, end });
+    if (p.k === 'm') marks.push({ start, end });
+  }
+  return { text, supplied, emended, marks };
+}
+
+function kindsOf(v) {
+  const k = [];
+  if ((v.supplied || []).length) k.push('supplied');
+  if ((v.emended || []).length) k.push('emended');
+  const glyphs = (v.marks || []).map(s => v.text.slice(s.start, s.end));
+  if (glyphs.some(g => g === '⌈⌈' || g === '⌉⌉')) k.push('E not G');
+  if (glyphs.some(g => g === '⌈' || g === '⌉')) k.push('Gᵍ not E');
+  if (glyphs.some(g => g === '[' || g === ']')) k.push('interpolation');
+  return k;
+}
+
+const CHAPTER = {
+  num: 1, printed: 'I', name: 'The Future Lot of the Wicked and the Righteous',
+  verses: [
+    { n: 1, shape: 'prose', ...fromParts([
+      'The words of the blessing of Enoch, wherewith he blessed the elect ',
+      { k: 'm', t: '⌈⌈' }, 'and', { k: 'm', t: '⌉⌉' },
+      ' righteous, who will be living in the day of tribulation, when all the wicked ',
+      { k: 'm', t: '⌈⌈' }, 'and godless', { k: 'm', t: '⌉⌉' },
+      ' are to be removed.',
+    ])},
+    { n: 2, shape: 'prose', ...fromParts([
+      'And he took up his parable and said—Enoch a righteous man, whose eyes were opened by God, saw the vision of the Holy One in the heavens, ',
+      { k: 'm', t: '⌈⌈' }, 'which', { k: 'm', t: '⌉⌉' },
+      ' the angels showed me, and from them I heard everything, and from them I understood as I saw, but not for this generation, but for a remote one which is for to come.',
+    ])},
+    { n: 3, shape: 'poem', ...fromParts([
+      'Concerning the elect I said, and took up my parable concerning them:\n',
+      'The Holy Great One will come forth from His dwelling,',
+    ])},
+    { n: 4, shape: 'poem', ...fromParts([
+      'And the eternal God will tread upon the earth, ',
+      { k: 's', t: 'even' },
+      ' on Mount Sinai,\n',
+      { k: 'm', t: '[' }, 'And appear from His camp', { k: 'm', t: ']' }, '\n',
+      'And appear in the strength of His might from the heaven ',
+      { k: 'm', t: '⌈' }, 'of heavens', { k: 'm', t: '⌉' }, '.',
+    ])},
+    { n: 5, shape: 'poem', ...fromParts([
+      'And all shall be smitten with fear,\nAnd the Watchers shall quake,\nAnd great fear and trembling shall seize them unto the ends of the earth.',
+    ])},
+    { n: 6, shape: 'poem', ...fromParts([
+      'And the high mountains shall be shaken,\nAnd the high hills shall be made low,\nAnd shall melt like wax before the flame',
+    ])},
+    { n: 7, shape: 'poem', ...fromParts([
+      'And the earth shall be ',
+      { k: 'm', t: '⌈' }, 'wholly', { k: 'm', t: '⌉' },
+      ' rent in sunder,\nAnd all that is upon the earth shall perish,\nAnd there shall be a judgement upon all ',
+      { k: 's', t: 'men' }, '.',
+    ])},
+    { n: 8, shape: 'poem', ...fromParts([
+      'But with the righteous He will make peace,\nAnd will protect the elect,\nAnd mercy shall be upon them.\n\nAnd they shall all belong to God,\nAnd they shall be prospered,\nAnd they shall ',
+      { k: 'm', t: '⌈' }, 'all', { k: 'm', t: '⌉' },
+      ' be blessed.\n\n',
+      { k: 'm', t: '⌈' }, 'And He will help them all', { k: 'm', t: '⌉' },
+      ',\nAnd light shall appear unto them,\n',
+      { k: 'm', t: '⌈' }, 'And He will make peace with them', { k: 'm', t: '⌉' }, '.',
+    ])},
+    { n: 9, shape: 'poem', ...fromParts([
+      'And behold! He cometh with ten thousands of ',
+      { k: 'm', t: '⌈' }, 'His', { k: 'm', t: '⌉' },
+      ' holy ones\nTo execute judgement upon all,\nAnd to destroy ',
+      { k: 'm', t: '⌈' }, 'all', { k: 'm', t: '⌉' },
+      ' the ungodly:\n\nAnd to convict all flesh\nOf all the works ',
+      { k: 'm', t: '⌈' }, 'of their ungodliness', { k: 'm', t: '⌉' },
+      ' which they have ungodly committed,\n',
+      { k: 'm', t: '⌈' }, 'And of all the hard things which', { k: 'm', t: '⌉' },
+      ' ungodly sinners ',
+      { k: 'm', t: '⌈' }, 'have spoken', { k: 'm', t: '⌉' },
+      ' against Him.',
+    ])},
+  ],
+};
+
+const SAMPLE = {
+  n: 2, chapter: 2, shape: 'prose', ...fromParts([
+    'Behold ye the earth, and give heed to the things which take place upon it from first to last, ',
+    { k: 'm', t: '⌈' }, 'how ', { k: 'e', t: 'steadfast' }, ' they are', { k: 'm', t: '⌉' },
+    ', how ',
+    { k: 'm', t: '⌈' }, 'none of the things upon earth', { k: 'm', t: '⌉' },
+    ' change, ',
+    { k: 'm', t: '⌈' }, 'but', { k: 'm', t: '⌉' },
+    ' all the works of God appear ',
+    { k: 'm', t: '⌈' }, 'to you', { k: 'm', t: '⌉' }, '.',
+  ]),
+};
+
+function cover(spans, a, b) {
+  return (spans || []).some(s => s.start <= a && s.end >= b);
+}
+
+function segments(v) {
+  const cuts = new Set([0, v.text.length]);
+  for (const ch of ['supplied', 'marks', 'emended']) {
+    for (const s of v[ch] || []) { cuts.add(s.start); cuts.add(s.end); }
+  }
+  const points = [...cuts].sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const start = points[i], end = points[i + 1];
+    if (start === end) continue;
+    out.push({
+      text: v.text.slice(start, end),
+      supplied: cover(v.supplied, start, end),
+      marks: cover(v.marks, start, end),
+      emended: cover(v.emended, start, end),
+    });
+  }
+  return out;
+}
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function paintSeg(seg) {
+  const bits = [];
+  const lines = seg.text.split('\n');
+  return lines.map((line, i) => {
+    let html = esc(line);
+    const cls = [
+      seg.supplied ? 'supplied' : '',
+      seg.marks ? 'mark' : '',
+      seg.emended ? 'emended' : '',
+    ].filter(Boolean).join(' ');
+    if (cls) {
+      const title = seg.marks ? (MARK_MEANING[seg.text] || 'editorial mark') : '';
+      html = `<span class="${cls}"${title ? ` title="${title}"` : ''}>${html}</span>`;
+    }
+    return html + (i < lines.length - 1 ? '<br>' : '');
+  }).join('');
+}
+
+function paintVerse(v) {
+  return segments(v).map(paintSeg).join('');
+}
+
+const state = {
+  variant: new URLSearchParams(location.search).get('variant') || 'A',
+  theme: 'dark',
+  supplied: DEFAULTS.A.supplied,
+  marks: DEFAULTS.A.marks,
+  selected: 9,
+};
+
+if (!VARIANTS[state.variant]) state.variant = 'A';
+Object.assign(state, DEFAULTS[state.variant]);
+
+function applyPaintVars() {
+  document.documentElement.style.setProperty('--supplied-opacity', String(state.supplied));
+  document.documentElement.style.setProperty('--marks-opacity', String(state.marks));
+  document.documentElement.dataset.theme = state.theme;
+}
+
+function setVariant(next) {
+  state.variant = next;
+  Object.assign(state, DEFAULTS[next]);
+  const url = new URL(location.href);
+  url.searchParams.set('variant', next);
+  history.replaceState(null, '', url);
+  render();
+}
+
+function toggleMenu(event) {
+  event.stopPropagation();
+  document.getElementById('opt-menu').classList.toggle('open');
+}
+
+function setOpacity(which, value) {
+  state[which] = Number(value);
+  applyPaintVars();
+  document.getElementById('state-line').textContent = stateLine();
+  document.getElementById(which + '-val').textContent = Number(value).toFixed(2);
+}
+
+function stateLine() {
+  return `variant ${state.variant} · theme ${state.theme} · supplied ${state.supplied.toFixed(2)} · marks ${state.marks.toFixed(2)} · emended = bold (no opacity) · no hide`;
+}
+
+function optionsMenu() {
+  return `
+    <span class="opt-btn" id="opt-btn">Aa Options ▾
+      <span class="opt-menu" id="opt-menu" onclick="event.stopPropagation()">
+        <div class="opt-row"><span class="lbl">Supplied opacity</span>
+          <input type="range" min="0.2" max="1" step="0.02" value="${state.supplied}"
+            oninput="setOpacity('supplied', this.value)">
+          <span class="opt-val" id="supplied-val">${state.supplied.toFixed(2)}</span>
+        </div>
+        <div class="opt-row"><span class="lbl">Marks opacity</span>
+          <input type="range" min="0.2" max="1" step="0.02" value="${state.marks}"
+            oninput="setOpacity('marks', this.value)">
+          <span class="opt-val" id="marks-val">${state.marks.toFixed(2)}</span>
+        </div>
+        <div class="opt-note">No hide. Emended is thick/bold, not faded. Layout / Red letter / Strong's hidden for books.</div>
+      </span>
+    </span>`;
+}
+
+function toolbar() {
+  return `
+    <div class="toolbar">
+      ${optionsMenu()}
+      <button class="theme-btn" id="theme-btn">${state.theme === 'dark' ? 'Light' : 'Dark'} page</button>
+      <span class="spacer"></span>
+      <span class="pill">1 Enoch<span class="ed">1912</span></span>
+    </div>`;
+}
+
+function toc() {
+  return `
+    <div class="toc">
+      <div class="toc-title">1 Enoch</div>
+      <div class="toc-author">R. H. Charles, 1912</div>
+      <div class="toc-part">The Watchers</div>
+      <button class="toc-item on"><span class="toc-num">1</span> Future lot of the wicked and the righteous</button>
+      <button class="toc-item"><span class="toc-num">2</span> Nature as witness</button>
+      <button class="toc-item"><span class="toc-num">6</span> Fall of the angels</button>
+    </div>`;
+}
+
+function study() {
+  const v = CHAPTER.verses.find(x => x.n === state.selected);
+  return `
+    <div class="study">
+      <div class="study-loc"><em>1 Enoch</em> 1:${state.selected}</div>
+      <div class="study-cite">R. H. Charles, <i>The Book of Enoch</i> (1912), ch. 1, v. ${state.selected}</div>
+      <div class="study-key">
+        <code>⌈ ⌉</code> Gᵍ not E · <code>⌈⌈ ⌉⌉</code> E not G<br>
+        <code>[ ]</code> interpolation · italic = supplied · bold = emended<br>
+        Glyphs stay; supplied <code>( )</code> already stripped.
+      </div>
+    </div>`;
+}
+
+function verseBlock(v, variant) {
+  const sel = v.n === state.selected && !v.chapter ? ' sel' : '';
+  const bodyClass = v.shape === 'poem' ? 'b-poem' : 'b-prose';
+  const body = `<div class="${bodyClass}">${paintVerse(v)}</div>`;
+  const gutter = `<span class="gutter-num">${v.n}</span>`;
+  if (variant === 'B') {
+    const ks = kindsOf(v);
+    const rail = ks.length
+      ? ks.map(k => `<div><b>·</b> ${k}</div>`).join('')
+      : `<div class="rail-empty">unmarked</div>`;
+    return `
+      <div class="verse-wrap${sel} keyed-row">
+        <div style="position:relative; padding-left:0">${gutter}${body}</div>
+        <div class="rail">${rail}</div>
+      </div>`;
+  }
+  return `<div class="verse-wrap${sel}">${gutter}${body}</div>`;
+}
+
+function sampleBlock(variant) {
+  return `
+    <div class="sample-label">Emendation sample — 1 Enoch 2:2 (thick type = steadfast). I.1–9 has none.</div>
+    ${verseBlock({ ...SAMPLE, n: 2 }, variant)}`;
+}
+
+function renderBook(variant) {
+  const innerCls = variant === 'B' ? 'b-inner keyed' : 'b-inner';
+  return `
+    ${toolbar()}
+    <div class="main">
+      ${toc()}
+      <div class="content">
+        <div class="${innerCls}">
+          <div class="b-chap-num">CHAPTER I</div>
+          <h1 class="b-chap-title">${CHAPTER.name}</h1>
+          ${CHAPTER.verses.map(v => verseBlock(v, variant)).join('')}
+          ${sampleBlock(variant)}
+          <div class="attribution">R. H. Charles, The Book of Enoch (Clarendon, 1912). Public domain. PG #77935.</div>
+        </div>
+      </div>
+      ${study()}
+    </div>`;
+}
+
+function renderC() {
+  const row = v => `
+    <div class="c-verse${v.n === state.selected && !v.chapter ? ' sel' : ''}">
+      <span class="c-num">${v.n}</span>
+      <div class="c-body">${paintVerse(v)}</div>
+    </div>`;
+  return `
+    ${toolbar()}
+    <div class="main">
+      <div class="tree">
+        <div class="tree-group">Books</div>
+        <button class="tree-book on">▾ 1 Enoch</button>
+        <button class="tree-book" style="padding-left:24px;color:var(--accent)">1</button>
+        <button class="tree-book" style="padding-left:24px">2</button>
+      </div>
+      <div class="content">
+        <div class="c-inner">
+          <h1 class="c-title">1 Enoch 1</h1>
+          ${CHAPTER.verses.map(row).join('')}
+          <div class="sample-label">Emendation sample — 1 Enoch 2:2</div>
+          ${row(SAMPLE)}
+          <div class="attribution">R. H. Charles, The Book of Enoch (Clarendon, 1912). Public domain.</div>
+        </div>
+      </div>
+      ${study()}
+    </div>`;
+}
+
+function render() {
+  applyPaintVars();
+  const v = state.variant;
+  const body = v === 'C' ? renderC() : renderBook(v);
+  document.getElementById('app').innerHTML = `
+    <div class="qbar">
+      <strong>How should editorial marks feel?</strong>
+      Glyphs in accent at marks-opacity · supplied italic at supplied-opacity · emended bold · no hide.
+      Flip A/B/C, drag the opacities, try light page. Density test is <strong>1:9</strong>; combo test is <strong>1:4</strong> and <strong>2:2</strong>.
+      <div class="state" id="state-line">${stateLine()}</div>
+    </div>
+    ${body}
+    <div class="switcher">
+      <button class="sw-arrow" onclick="cycle(-1)">←</button>
+      <b>${v}</b>
+      <span class="desc">${VARIANTS[v]}</span>
+      <button class="sw-arrow" onclick="cycle(1)">→</button>
+    </div>`;
+  document.getElementById('opt-btn').addEventListener('click', toggleMenu);
+  document.getElementById('theme-btn').addEventListener('click', (event) => {
+    event.stopPropagation();
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    render();
+  });
+}
+
+function cycle(dir) {
+  const i = KEYS.indexOf(state.variant);
+  setVariant(KEYS[(i + dir + KEYS.length) % KEYS.length]);
+}
+
+document.addEventListener('click', () => {
+  const m = document.getElementById('opt-menu');
+  if (m) m.classList.remove('open');
+});
+document.addEventListener('keydown', (e) => {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+  if (e.key === 'ArrowLeft') cycle(-1);
+  if (e.key === 'ArrowRight') cycle(1);
+});
+
+render();
+</script>
+</body>
+</html>
