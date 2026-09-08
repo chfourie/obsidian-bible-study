@@ -60,3 +60,9 @@ export const enumerateVerseIds = (range: VerseRange): number[] => {
   }
   return verseIds
 }
+
+export const countReferenceVerses = (reference: Reference): number =>
+  reference.ranges.reduce(
+    (total, range) => total + enumerateVerseIds(range).length,
+    0,
+  )

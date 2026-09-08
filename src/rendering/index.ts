@@ -1,3 +1,4 @@
+export * from './display-limit'
 export * from './fallback-passage-source'
 export * from './highlight-editing'
 export * from './highlight-popover'

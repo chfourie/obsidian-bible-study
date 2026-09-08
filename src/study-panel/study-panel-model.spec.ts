@@ -430,6 +430,45 @@ describe('StudyPanelModel', () => {
     expect(panel.view.entries[0].verses).toEqual([])
   })
 
+  it('still loads a passage at the 180-verse display limit', async () => {
+    const fake = fakeSource()
+    const panel = model(fake.source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{John 1:1-5:14}',
+    })
+
+    expect(panel.view.entries[0].status).toBe('ok')
+    expect(panel.view.entries[0].verses).not.toEqual([])
+    expect(fake.requests).toHaveLength(1)
+  })
+
+  it('does not load a passage that exceeds the display verse limit', async () => {
+    const fake = fakeSource()
+    const panel = model(fake.source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John}' })
+
+    expect(panel.view.entries[0].status).toBe('too-long')
+    expect(panel.view.entries[0].verses).toEqual([])
+    expect(fake.requests).toEqual([])
+  })
+
+  it('caps a combined union that exceeds the display verse limit', async () => {
+    const fake = fakeSource()
+    const panel = model(fake.source)
+
+    await panel.setActiveNote({
+      file: 'note.md',
+      content: '{John 1:1-5:10} {John 5:10-20}',
+    })
+
+    expect(panel.view.entries).toHaveLength(1)
+    expect(panel.view.entries[0].status).toBe('too-long')
+    expect(fake.requests).toEqual([])
+  })
+
   it('clears back to no-note', async () => {
     const panel = model(fakeSource().source)
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })

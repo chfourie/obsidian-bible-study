@@ -29,7 +29,11 @@ import {
   type Reference,
   type VerseRange,
 } from '../reference'
-import type { PassageSource, PassageVerse } from '../rendering'
+import {
+  exceedsDisplayVerseLimit,
+  type PassageSource,
+  type PassageVerse,
+} from '../rendering'
 import type { StudySubTab } from '../study-material'
 import {
   isAnnotation,
@@ -42,7 +46,11 @@ import { freshTabState, type StudyTabState } from './tab-memory'
 
 export type ReferenceEntryVerse = { label: string | null; text: string }
 
-export type ReferenceEntryStatus = 'loading' | 'ok' | 'unavailable'
+export type ReferenceEntryStatus =
+  | 'loading'
+  | 'ok'
+  | 'unavailable'
+  | 'too-long'
 
 export type ReferenceEntryView = {
   key: string
@@ -521,7 +529,7 @@ export class StudyPanelModel {
         translation,
         translationLabel:
           book === null ? this.#translationLabel(translation) : null,
-        status: 'loading',
+        status: exceedsDisplayVerseLimit(reference) ? 'too-long' : 'loading',
         verses: [],
         attribution: null,
         book,
@@ -542,6 +550,7 @@ export class StudyPanelModel {
   async #loadEntries(token: number): Promise<void> {
     await Promise.all(
       this.#entries.map(async (entry) => {
+        if (entry.status === 'too-long') return
         const translationId = this.#slotFor(entry)
         const passage =
           translationId === null

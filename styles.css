@@ -276,7 +276,8 @@ body {
   }
 }
 
-.scripture-study-unavailable {
+.scripture-study-unavailable,
+.scripture-study-too-long {
   color: var(--text-faint);
   font-style: italic;
 }

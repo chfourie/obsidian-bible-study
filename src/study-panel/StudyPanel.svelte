@@ -206,6 +206,8 @@ opens the reference in the reader with the entry's translation.
                 {#if view.status !== 'no-translation'}
                   <p class="bsp-entry-state">Unavailable offline</p>
                 {/if}
+              {:else if entry.status === 'too-long'}
+                <p class="bsp-entry-state">Reference too long to display</p>
               {:else}
                 <div class="bsp-verses">
                   {#each entry.verses as verse, index (index)}

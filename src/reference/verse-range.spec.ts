@@ -4,6 +4,7 @@ import {
   registerBookVersification,
 } from './versification'
 import {
+  countReferenceVerses,
   enumerateVerseIds,
   firstIntersectingStart,
   mergeRanges,
@@ -180,6 +181,54 @@ describe('enumerateVerseIds', () => {
     expect(enumerateVerseIds(range(john(15, 4), john(15, 4)))).toEqual([
       john(15, 4),
     ])
+  })
+})
+
+describe('countReferenceVerses', () => {
+  it('counts an intra-chapter range', () => {
+    expect(
+      countReferenceVerses({
+        book: 43,
+        ranges: [range(john(15, 4), john(15, 6))],
+      }),
+    ).toBe(3)
+  })
+
+  it('counts across a chapter boundary, skipping missing ids', () => {
+    expect(
+      countReferenceVerses({
+        book: 43,
+        ranges: [range(john(15, 26), john(16, 2))],
+      }),
+    ).toBe(4)
+  })
+
+  it('sums disjoint ranges', () => {
+    expect(
+      countReferenceVerses({
+        book: 43,
+        ranges: [range(john(15, 4), john(15, 6)), range(john(15, 9), john(15, 9))],
+      }),
+    ).toBe(4)
+  })
+
+  // John 1–4 = 166 verses; 5:1-14 brings the span to exactly 180.
+  it('counts John 1:1-5:14 as 180 verses', () => {
+    expect(
+      countReferenceVerses({
+        book: 43,
+        ranges: [range(john(1, 1), john(5, 14))],
+      }),
+    ).toBe(180)
+  })
+
+  it('counts John 1:1-5:15 as 181 verses', () => {
+    expect(
+      countReferenceVerses({
+        book: 43,
+        ranges: [range(john(1, 1), john(5, 15))],
+      }),
+    ).toBe(181)
   })
 })
 

@@ -31,7 +31,7 @@ Addendum: non-biblical books (readable, referencable, cross-referencable works o
 Curly braces with bare space-separated tokens: `{John 15:1-17}`, `{John 15:4 nkjv}`, `{John 15:4 nkjv block}`.
 
 - **Canon & book names:** 66-book Protestant canon, English-only v1. Case-insensitive matching against English full names + OSIS abbreviations + three-letter abbreviations; optional trailing period; `1Jn` / `1 Jn` both accepted. Lookup table is many-names → book-id, so localized tables can slot in later. Deuterocanon out of v1.
-- **Verse forms:** single verse (`John 15:4`), intra-chapter range (`John 15:1-17`), whole chapter (`John 15`), cross-chapter range (`John 15:26-16:4`), comma lists (`John 15:4,7`, `John 15:4-6,9`). Whole-book references rejected.
+- **Verse forms:** single verse (`John 15:4`), intra-chapter range (`John 15:1-17`), whole chapter (`John 15`), chapter range (`John 2-3`), whole book (`John`), cross-chapter range (`John 15:26-16:4`), comma lists (`John 15:4,7`, `John 15:4-6,9`, `John 2, 3`, `John 2, 4:5-8`). Spaces after commas are allowed.
 - **Option tokens:** translation id and display keyword (`inline` | `block`) in any order after the reference — disjoint closed vocabularies. Bare (no keyword) = chip only.
 - **Errors:** invalid reference part (unknown book, bad structure, out-of-range chapter/verse per versification data) → the whole `{...}` renders as plain text, unstyled (interop safety valve for Templater/JSON braces). Valid reference with unknown/duplicate/conflicting trailing tokens → invalid tokens highlighted and ignored (first valid token wins), reference renders normally.
 - **Escaping:** inline code spans and fenced code blocks never parsed; `\{John 15:4}` escapes to literal text. No per-note disable flag in v1.
@@ -46,11 +46,11 @@ Clickable pill/chip: normalized reference text, plus translation label only when
 
 ### 3.2 `inline` mode
 
-A subtly tinted block holding the chip and the verse text together: the passage starts on the chip's line and runs as continuous text. No verse numbers for a single verse; superscript verse numbers for multi-verse references. No length cap — a whole-chapter inline reference renders in full (never a scroll box). No attribution line; the chip's translation label is the citation.
+A subtly tinted block holding the chip and the verse text together: the passage starts on the chip's line and runs as continuous text. No verse numbers for a single verse; superscript verse numbers for multi-verse references. Never a scroll box. No attribution line; the chip's translation label is the citation. A reference of more than 180 verses does not render the passage — the chip stays, and a muted one-liner ("Reference too long to display") stands in for the text (same cap as block and the Study Panel; whole chapters still fit, Psalm 119 being 176).
 
 ### 3.3 `block` mode
 
-The same tinted block, with the chip on its own line above the passage. Body = one verse per line, superscript verse numbers always. Muted attribution line at the bottom (see §3.6).
+The same tinted block, with the chip on its own line above the passage. Body = one verse per line, superscript verse numbers always. Muted attribution line at the bottom (see §3.6). Same 180-verse cap as inline: over the cap, chip plus the too-long one-liner, no passage fetch.
 
 ### 3.4 Red-letter
 
@@ -178,7 +178,7 @@ Steps 1–5 need no API key and deliver a usable offline reader; 6–9 layer on 
 - User-supplied module import (translations & dictionaries) — motivating case requires DRM circumvention.
 - Tagged KJV (needs STEPBible TAGNT/TAHOT alignment work; only ready-made source is license-shaky).
 - Deuterocanon / non-English book names / localized grammar.
-- Persistent index cache; per-translation versification mapping; page-footer attribution aggregation; multiple chip styles; inline length threshold + expander; general non-bible reference block type (superseded — [spec-books.md](spec-books.md) §4: normal display modes cover books, no separate callout); community-store release (own effort, post-spec).
+- Persistent index cache; per-translation versification mapping; page-footer attribution aggregation; multiple chip styles; inline length expander (capped instead: §3.2); general non-bible reference block type (superseded — [spec-books.md](spec-books.md) §4: normal display modes cover books, no separate callout); community-store release (own effort, post-spec).
 
 ## 11. Open items (non-blocking)
 

@@ -3,6 +3,10 @@ import type { NavigationOptions } from '../contracts'
 import type { Reference } from '../reference'
 import { opensInNewPane } from '../ui'
 import { isAnnotation, noteTitle, type OccurrenceGroup } from '../vault-index'
+import {
+  exceedsDisplayVerseLimit,
+  TOO_LONG_TO_DISPLAY,
+} from './display-limit'
 import type { HighlightEditContext } from './highlight-editing'
 import type {
   Passage,
@@ -330,12 +334,36 @@ const highlightsEditable = (
   passage: Extract<Passage, { status: 'ok' }>,
 ): boolean => model.relativeSpec === null && passage.fallback === undefined
 
+const renderTooLong = (host: HTMLElement): void => {
+  host.createSpan({
+    cls: 'scripture-study-too-long',
+    text: TOO_LONG_TO_DISPLAY,
+  })
+}
+
 const mountPassage = async (
   host: HTMLElement,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
   renderPassage: (host: HTMLElement, view: PassageView) => void,
 ): Promise<void> => {
+  if (exceedsDisplayVerseLimit(model.reference)) {
+    host.empty()
+    renderTooLong(host)
+    if (model.display === 'block' && model.book !== null) {
+      renderNavigableAttribution(
+        host,
+        {
+          verses: [],
+          attribution: model.book.attribution,
+          fallbackNotice: null,
+        },
+        model,
+        deps,
+      )
+    }
+    return
+  }
   host.empty()
   host.addClass('scripture-study-loading')
   host.setText(loadingText(model))

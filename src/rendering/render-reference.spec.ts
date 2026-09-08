@@ -40,13 +40,13 @@ const passageOf = (...texts: string[]): Passage => ({
 
 const setup = (passage: Passage | (() => Passage) = passageOf('Remain.')) => {
   const openReference = vi.fn()
-  const passages: PassageSource = {
-    passage: async () =>
-      typeof passage === 'function' ? passage() : passage,
-  }
+  const fetchPassage = vi.fn(async () =>
+    typeof passage === 'function' ? passage() : passage,
+  )
+  const passages: PassageSource = { passage: fetchPassage }
   const deps: ReferenceRenderDeps = { passages, openReference }
   const parent = document.createElement('p')
-  return { parent, deps, openReference }
+  return { parent, deps, openReference, fetchPassage }
 }
 
 beforeEach(() => {
@@ -173,6 +173,19 @@ describe('renderReference chip', () => {
 
     await renderReference(parent, model('John 15:4'), deps)
 
+    expect(parent.querySelector('.scripture-study-passage')).toBeNull()
+  })
+
+  it('keeps a whole-book chip as a chip, with no too-long message', async () => {
+    const { parent, deps, fetchPassage } = setup()
+
+    await renderReference(parent, model('John'), deps)
+
+    expect(fetchPassage).not.toHaveBeenCalled()
+    expect(parent.querySelector('.scripture-study-chip')?.textContent).toContain(
+      'John',
+    )
+    expect(parent.querySelector('.scripture-study-too-long')).toBeNull()
     expect(parent.querySelector('.scripture-study-passage')).toBeNull()
   })
 })
@@ -522,6 +535,35 @@ describe('renderReference inline', () => {
     await renderReference(parent, model('John 15:4 inline'), deps)
 
     expect(parent.querySelector('.scripture-study-unavailable')).not.toBeNull()
+  })
+
+  it('still renders a passage at the 180-verse display limit', async () => {
+    const { parent, deps, fetchPassage } = setup(passageOf('In the beginning.'))
+
+    await renderReference(parent, model('John 1:1-5:14 inline'), deps)
+
+    expect(fetchPassage).toHaveBeenCalled()
+    expect(parent.querySelector('.scripture-study-too-long')).toBeNull()
+    expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
+      'In the beginning.',
+    )
+  })
+
+  it('replaces a longer inline passage with a too-long message and skips the fetch', async () => {
+    const { parent, deps, fetchPassage } = setup(passageOf('should not appear'))
+
+    await renderReference(parent, model('John 1:1-5:15 inline'), deps)
+
+    expect(fetchPassage).not.toHaveBeenCalled()
+    expect(parent.querySelector('.scripture-study-chip')?.textContent).toContain(
+      'John 1:1-5:15',
+    )
+    expect(parent.querySelector('.scripture-study-too-long')?.textContent).toBe(
+      'Reference too long to display',
+    )
+    expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
+      'Reference too long to display',
+    )
   })
 })
 
@@ -932,6 +974,21 @@ describe('renderReference block', () => {
     expect(
       parent.querySelector('.scripture-study-block .scripture-study-unavailable'),
     ).not.toBeNull()
+  })
+
+  it('replaces a longer block passage with a too-long message and skips the fetch', async () => {
+    const { parent, deps, fetchPassage } = setup(passageOf('should not appear'))
+
+    await renderReference(parent, model('John 1:1-5:15 block'), deps)
+
+    expect(fetchPassage).not.toHaveBeenCalled()
+    expect(parent.querySelector('.scripture-study-chip')?.textContent).toContain(
+      'John 1:1-5:15',
+    )
+    expect(
+      parent.querySelector('.scripture-study-block .scripture-study-too-long')
+        ?.textContent,
+    ).toBe('Reference too long to display')
   })
 })
 
