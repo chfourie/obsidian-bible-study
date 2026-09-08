@@ -5,7 +5,12 @@ import {
   type HighlightCue,
 } from './highlight-cue'
 import { makeVerseId } from './verse-id'
-import { chapterCount, verseCount } from './versification'
+import {
+  chapterCount,
+  firstChapter,
+  lastChapter,
+  verseCount,
+} from './versification'
 import { mergeRanges, type Reference, type VerseRange } from './verse-range'
 
 export type DisplayMode = 'inline' | 'block'
@@ -44,20 +49,46 @@ const verseIdAt = (
     ? makeVerseId(bookId, chapter, verse)
     : null
 
-const parseWholeChapter = (bookId: number, spec: string): Reference | null => {
-  if (!/^\d+$/.test(spec)) return null
-  const chapter = Number(spec)
+const wholeChapterRange = (
+  bookId: number,
+  chapter: number,
+): VerseRange | null => {
   const lastVerse = verseCount(bookId, chapter)
   if (lastVerse === 0) return null
   return {
-    book: bookId,
-    ranges: [
-      {
-        startId: makeVerseId(bookId, chapter, 1),
-        endId: makeVerseId(bookId, chapter, lastVerse),
-      },
-    ],
+    startId: makeVerseId(bookId, chapter, 1),
+    endId: makeVerseId(bookId, chapter, lastVerse),
   }
+}
+
+const wholeChapterSpan = (
+  bookId: number,
+  from: number,
+  to: number,
+): VerseRange | null => {
+  if (to < from) return null
+  const start = wholeChapterRange(bookId, from)
+  const end = wholeChapterRange(bookId, to)
+  if (!start || !end) return null
+  for (let chapter = from; chapter <= to; chapter++) {
+    if (verseCount(bookId, chapter) === 0) return null
+  }
+  return { startId: start.startId, endId: end.endId }
+}
+
+const parseWholeChapter = (bookId: number, spec: string): Reference | null => {
+  if (!/^\d+$/.test(spec)) return null
+  const range = wholeChapterRange(bookId, Number(spec))
+  return range ? { book: bookId, ranges: [range] } : null
+}
+
+const wholeBookReference = (bookId: number): Reference | null => {
+  const range = wholeChapterSpan(
+    bookId,
+    firstChapter(bookId),
+    lastChapter(bookId),
+  )
+  return range ? { book: bookId, ranges: [range] } : null
 }
 
 const SEGMENT_PATTERN = /^(?:(\d+):)?(\d+)(?:-(?:(\d+):)?(\d+))?$/
@@ -71,15 +102,26 @@ const parseVerseSpec = (bookId: number, spec: string): Reference | null => {
 
   const ranges: VerseRange[] = []
   let currentChapter: number | null = singleChapterBook ? 1 : null
+  let chapterMode = !singleChapterBook
   for (const segment of spec.split(',')) {
     const match = SEGMENT_PATTERN.exec(segment)
     if (!match) return null
     const [, startChapter, startVerse, endChapter, endVerse] = match
+    const from = Number(startVerse)
+    if (!startChapter && chapterMode && !endChapter) {
+      const span = endVerse
+        ? wholeChapterSpan(bookId, from, Number(endVerse))
+        : wholeChapterRange(bookId, from)
+      if (!span) return null
+      ranges.push(span)
+      currentChapter = endVerse ? Number(endVerse) : from
+      continue
+    }
     const chapter: number | null = startChapter
       ? Number(startChapter)
       : currentChapter
     if (chapter === null) return null
-    const startId = verseIdAt(bookId, chapter, Number(startVerse))
+    const startId = verseIdAt(bookId, chapter, from)
     if (startId === null) return null
     currentChapter = chapter
     let endId = startId
@@ -93,6 +135,7 @@ const parseVerseSpec = (bookId: number, spec: string): Reference | null => {
       currentChapter = rangeEndChapter
     }
     ranges.push({ startId, endId })
+    chapterMode = false
   }
   if (ranges.length === 0) return null
   return { book: bookId, ranges: mergeRanges(ranges) }
@@ -108,6 +151,29 @@ export const tokenize = (text: string): ReferenceToken[] =>
     start: match.index,
     end: match.index + match[0].length,
   }))
+
+export const isVerseSpecLike = (text: string): boolean => /^\d[\d:,-]*$/.test(text)
+
+const continuesVerseSpec = (
+  spec: string,
+  next: { text: string } | undefined,
+) =>
+  next !== undefined &&
+  isVerseSpecLike(next.text) &&
+  (spec.endsWith(',') || next.text.startsWith(','))
+
+export const takeVerseSpecTokens = <T extends { text: string }>(
+  tokens: readonly T[],
+): { spec: string; optionTokens: T[] } | null => {
+  if (tokens.length === 0 || !isVerseSpecLike(tokens[0].text)) return null
+  let used = 1
+  let spec = tokens[0].text
+  while (continuesVerseSpec(spec, tokens[used])) {
+    spec += tokens[used].text
+    used += 1
+  }
+  return { spec, optionTokens: tokens.slice(used) }
+}
 
 export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'block']
 
@@ -153,14 +219,18 @@ export const parseReference = (
   const tokens = tokenize(text)
   const bookMatch = matchBook(tokens.map((token) => token.text))
   if (!bookMatch) return null
-  const specToken = tokens[bookMatch.wordsUsed]
-  if (!specToken) return null
-  const reference = parseVerseSpec(bookMatch.bookId, specToken.text)
+  const rest = tokens.slice(bookMatch.wordsUsed)
+  const taken = takeVerseSpecTokens(rest)
+  const reference = taken
+    ? parseVerseSpec(bookMatch.bookId, taken.spec)
+    : rest.length === 0
+      ? wholeBookReference(bookMatch.bookId)
+      : null
   if (!reference) return null
   return {
     reference,
     ...classifyOptionTokens(
-      tokens.slice(bookMatch.wordsUsed + 1),
+      taken?.optionTokens ?? [],
       options.translationIds ?? [],
       reference,
     ),

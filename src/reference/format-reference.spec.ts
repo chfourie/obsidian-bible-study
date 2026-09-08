@@ -33,6 +33,19 @@ describe('formatReference', () => {
     expect(formatted('John 15:1-27')).toBe('John 15')
   })
 
+  it('formats a whole book as the book name', () => {
+    expect(formatted('John')).toBe('John')
+  })
+
+  it('formats a chapter range without verse numbers', () => {
+    expect(formatted('John 2-3')).toBe('John 2-3')
+    expect(formatted('John 2, 3')).toBe('John 2-3')
+  })
+
+  it('formats a mixed chapter and verse list', () => {
+    expect(formatted('John 2, 4:5-8')).toBe('John 2,4:5-8')
+  })
+
   it('formats a cross-chapter range', () => {
     expect(formatted('John 15:26-16:4')).toBe('John 15:26-16:4')
   })
@@ -52,6 +65,9 @@ describe('formatReference', () => {
       'John 15:4',
       'John 15:1-17',
       'John 15',
+      'John',
+      'John 2-3',
+      'John 2,4:5-8',
       'John 15:26-16:4',
       'John 15:4-6,9',
       'Song of Solomon 2:1',

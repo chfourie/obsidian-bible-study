@@ -3,7 +3,13 @@ import {
   isNonBiblicalBook,
   registeredBook,
 } from './books'
-import { DISPLAY_MODES, matchBook, type ParseOptions } from './parse-reference'
+import {
+  DISPLAY_MODES,
+  isVerseSpecLike,
+  matchBook,
+  takeVerseSpecTokens,
+  type ParseOptions,
+} from './parse-reference'
 import { takeRelativeSpec } from './relative-reference'
 
 export type ReferenceSuggestion = {
@@ -19,8 +25,6 @@ const tokenize = (text: string): Token[] =>
     text: match[0],
     start: match.index,
   }))
-
-const isSpecLike = (text: string): boolean => /^\d[\d:,-]*$/.test(text)
 
 const optionSuggestions = (
   optionTokens: Token[],
@@ -99,15 +103,18 @@ export const suggestReference = (
   if (book) {
     const afterBook = prior.slice(book.wordsUsed)
     if (afterBook.length === 0) {
-      if (current.text === '' || isSpecLike(current.text)) {
+      if (current.text === '' || isVerseSpecLike(current.text)) {
         return sectionSuggestions(book.bookId, current)
       }
-    } else if (isSpecLike(afterBook[0].text)) {
-      return optionSuggestions(
-        afterBook.slice(1),
-        current,
-        isNonBiblicalBook(book.bookId) ? [] : (options.translationIds ?? []),
-      )
+    } else {
+      const taken = takeVerseSpecTokens(afterBook)
+      if (taken) {
+        return optionSuggestions(
+          taken.optionTokens,
+          current,
+          isNonBiblicalBook(book.bookId) ? [] : (options.translationIds ?? []),
+        )
+      }
     }
   }
   return bookSuggestions(query, tokens)

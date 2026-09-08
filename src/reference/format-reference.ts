@@ -1,15 +1,26 @@
 import { bookName } from './books'
 import { decodeVerseId } from './verse-id'
-import { verseCount } from './versification'
+import { firstChapter, lastChapter, verseCount } from './versification'
 import type { Reference, VerseRange } from './verse-range'
 
-const isWholeChapter = (book: number, range: VerseRange): boolean => {
+const wholeChapterSpan = (
+  book: number,
+  range: VerseRange,
+): { from: number; to: number } | null => {
   const start = decodeVerseId(range.startId)
   const end = decodeVerseId(range.endId)
+  if (start.verse !== 1) return null
+  if (end.verse !== verseCount(book, end.chapter)) return null
+  return { from: start.chapter, to: end.chapter }
+}
+
+const isWholeBook = (book: number, ranges: readonly VerseRange[]): boolean => {
+  if (ranges.length !== 1) return false
+  const span = wholeChapterSpan(book, ranges[0])
   return (
-    start.chapter === end.chapter &&
-    start.verse === 1 &&
-    end.verse === verseCount(book, start.chapter)
+    span !== null &&
+    span.from === firstChapter(book) &&
+    span.to === lastChapter(book)
   )
 }
 
@@ -35,15 +46,22 @@ const formatRange = (
 
 export const formatReference = (reference: Reference): string => {
   const { book, ranges } = reference
-  if (ranges.length === 1 && isWholeChapter(book, ranges[0])) {
-    return `${bookName(book)} ${decodeVerseId(ranges[0].startId).chapter}`
-  }
+  const name = bookName(book)
+  if (isWholeBook(book, ranges)) return name
   let currentChapter: number | null = null
   const segments: string[] = []
   for (const range of ranges) {
+    const span = wholeChapterSpan(book, range)
+    if (span) {
+      segments.push(
+        span.from === span.to ? `${span.from}` : `${span.from}-${span.to}`,
+      )
+      currentChapter = span.to
+      continue
+    }
     const { text, chapterAfter } = formatRange(range, currentChapter)
     segments.push(text)
     currentChapter = chapterAfter
   }
-  return `${bookName(book)} ${segments.join(',')}`
+  return `${name} ${segments.join(',')}`
 }

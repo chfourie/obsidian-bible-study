@@ -70,6 +70,15 @@ export const deregisterBookVersification = (book: number): void => {
   registeredBooks.delete(book)
 }
 
+export const firstChapter = (book: number): number =>
+  tableFor(book)?.firstChapter ?? 1
+
+export const lastChapter = (book: number): number => {
+  const table = tableFor(book)
+  if (!table) return 0
+  return table.firstChapter + table.atomsPerChapter.length - 1
+}
+
 export const chapterCount = (book: number): number =>
   tableFor(book)?.atomsPerChapter.length ?? 0
 
@@ -137,8 +146,7 @@ export const nextVerse = (verseId: number): number | null => {
   }
   const table = tableFor(book)
   if (!table) return null
-  const lastChapter = table.firstChapter + table.atomsPerChapter.length - 1
-  if (chapter < lastChapter) return makeVerseId(book, chapter + 1, 1)
+  if (chapter < lastChapter(book)) return makeVerseId(book, chapter + 1, 1)
   if (isCanonBook(book) && book < BOOK_COUNT) return makeVerseId(book + 1, 1, 1)
   return null
 }

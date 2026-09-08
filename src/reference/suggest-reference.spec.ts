@@ -57,12 +57,20 @@ describe('suggestReference — verse spec', () => {
     expect(labels('John ')).toEqual([])
     expect(labels('John 15')).toEqual([])
     expect(labels('John 15:4,7-9')).toEqual([])
+    expect(labels('John 2, 3')).toEqual([])
   })
 })
 
 describe('suggestReference — option tokens', () => {
   it('suggests display keywords and translations after the spec', () => {
     expect(labels('John 15:4 ')).toEqual([
+      'inline',
+      'block',
+      'nkjv',
+      'web',
+      'kjv',
+    ])
+    expect(labels('John 2, 4:5-8 ')).toEqual([
       'inline',
       'block',
       'nkjv',

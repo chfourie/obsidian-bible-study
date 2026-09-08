@@ -35,8 +35,11 @@ describe('parseReference — single verse', () => {
     expect(parseReference('John 15:28')).toBeNull()
   })
 
-  it('rejects a whole-book reference', () => {
-    expect(parseReference('John')).toBeNull()
+  it('parses a whole-book reference', () => {
+    expect(parseReference('John')?.reference).toEqual({
+      book: 43,
+      ranges: [{ startId: john(1, 1), endId: john(21, 25) }],
+    })
   })
 
   it('rejects empty and malformed input', () => {
@@ -115,8 +118,37 @@ describe('parseReference — verse forms', () => {
     expect(parseReference('John 16:4-15:26')).toBeNull()
   })
 
-  it('rejects multi-chapter dash ranges without verse numbers', () => {
-    expect(parseReference('John 15-16')).toBeNull()
+  it('parses a chapter range', () => {
+    expect(parseReference('John 2-3')?.reference).toEqual({
+      book: 43,
+      ranges: [{ startId: john(2, 1), endId: john(3, 36) }],
+    })
+  })
+
+  it('parses a comma list of chapters', () => {
+    expect(parseReference('John 2,3')?.reference).toEqual({
+      book: 43,
+      ranges: [{ startId: john(2, 1), endId: john(3, 36) }],
+    })
+    expect(parseReference('John 2, 3')?.reference).toEqual({
+      book: 43,
+      ranges: [{ startId: john(2, 1), endId: john(3, 36) }],
+    })
+  })
+
+  it('parses a mixed chapter and verse list', () => {
+    expect(parseReference('John 2, 4:5-8')?.reference).toEqual({
+      book: 43,
+      ranges: [
+        { startId: john(2, 1), endId: john(2, 25) },
+        { startId: john(4, 5), endId: john(4, 8) },
+      ],
+    })
+  })
+
+  it('rejects an out-of-range or reversed chapter range', () => {
+    expect(parseReference('John 2-99')).toBeNull()
+    expect(parseReference('John 3-2')).toBeNull()
   })
 
   it('rejects comma lists with invalid members', () => {
@@ -394,11 +426,13 @@ describe('parseReference — installed books', () => {
     ])
   })
 
-  it('parses a whole section and rejects the whole book', () => {
+  it('parses a whole section and the whole book', () => {
     expect(parseReference('Humility 2')?.reference.ranges).toEqual([
       { startId: paragraph(2, 1), endId: paragraph(2, 6) },
     ])
-    expect(parseReference('Humility')).toBeNull()
+    expect(parseReference('Humility')?.reference.ranges).toEqual([
+      { startId: paragraph(0, 1), endId: paragraph(3, 3) },
+    ])
   })
 
   it('addresses a special section by its chapter number', () => {
