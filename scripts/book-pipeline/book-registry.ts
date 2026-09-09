@@ -5,7 +5,7 @@
 
 import {
   type BookAtomKind,
-  DEFAULT_BOOK_ATOM_KIND,
+  bookAtomKind,
 } from '../../src/modules/module-manifest'
 
 export type BookRegistryEntry = {
@@ -37,9 +37,6 @@ export type BookPublication = Required<Omit<BookRegistryEntry, 'atom'>> &
   Pick<BookRegistryEntry, 'atom'>
 
 const ATOM_KINDS: readonly BookAtomKind[] = ['verse', 'paragraph']
-
-export const atomKindOf = (entry: { atom?: BookAtomKind }): BookAtomKind =>
-  entry.atom ?? DEFAULT_BOOK_ATOM_KIND
 
 // Scripture holds 1–66 and 67–100 is reserved for canon extensions.
 export const FIRST_BOOK_NUMBER = 101
@@ -114,10 +111,10 @@ export const assertRegisteredBook = (
         `Manifest ${field} "${registration[field]}" disagrees with ` +
           `registry "${entry[field]}"`,
       )
-  if (atomKindOf(entry) !== atomKindOf(registration))
+  if (bookAtomKind(entry) !== bookAtomKind(registration))
     throw new Error(
-      `Manifest atom kind "${atomKindOf(registration)}" disagrees with ` +
-        `registry "${atomKindOf(entry)}"`,
+      `Manifest atom kind "${bookAtomKind(registration)}" disagrees with ` +
+        `registry "${bookAtomKind(entry)}"`,
     )
 }
 

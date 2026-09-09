@@ -1,5 +1,5 @@
 import {
-  DEFAULT_BOOK_ATOM_KIND,
+  bookAtomKind,
   registeredBook,
   type BookAtomKind,
   type RegisteredBook,
@@ -78,16 +78,13 @@ const paragraphLocator = (
   return `${label}, ${paragraphWord(atoms)} ${spec}`
 }
 
-const atomKind = (book: RegisteredBook): BookAtomKind =>
-  book.atom ?? DEFAULT_BOOK_ATOM_KIND
-
 // One locator string per reference, shared by the chip and the full citation
 // (spec-books §4). A verse-atom Book reads in scripture's numeric family; a
 // whole-book reference of either kind invents no verse span.
 const locatorFor = (book: RegisteredBook, reference: Reference): string => {
   const locator = referenceLocator(reference)
   if (locator === '') return ''
-  return atomKind(book) === 'verse'
+  return bookAtomKind(book) === 'verse'
     ? locator
     : paragraphLocator(book, reference)
 }
@@ -99,7 +96,7 @@ export const bookCitation = (reference: Reference): BookCitation | null => {
   const cited = `${book.name} (${book.year})`
   return {
     title: book.name,
-    atom: atomKind(book),
+    atom: bookAtomKind(book),
     locator,
     reference: locator === '' ? book.name : `${book.name} ${locator}`,
     attribution:

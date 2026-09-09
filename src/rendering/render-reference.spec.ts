@@ -1369,6 +1369,34 @@ describe('renderReference verse-atom book references', () => {
     )
   })
 
+  // Every row of the §4 locator table, seen through the two surfaces that
+  // share the one locator string: the chip and the block attribution line.
+  it.each([
+    ['1 Enoch 1:9', '1:9'],
+    ['1 Enoch 1:9-11', '1:9-11'],
+    ['1 Enoch 1:9,11', '1:9,11'],
+    ['1 Enoch 1', '1'],
+    ['1 Enoch 1-2', '1-2'],
+    ['1 Enoch 1:9-2:3', '1:9-2:3'],
+  ])('reads %s as one locator on the chip and the citation line', async (
+    text,
+    locator,
+  ) => {
+    const chipped = setup(verses(1, 9, 'Nine.'))
+    await renderReference(chipped.parent, model(text), chipped.deps)
+
+    expect(
+      chipped.parent.querySelector('.scripture-study-chip-ref')?.textContent,
+    ).toBe(`1 Enoch ${locator}`)
+
+    const blocked = setup(verses(1, 9, 'Nine.'))
+    await renderReference(blocked.parent, model(`${text} block`), blocked.deps)
+
+    expect(
+      blocked.parent.querySelector('.scripture-study-attribution')?.textContent,
+    ).toBe(`Enoch, 1 Enoch (1912), ${locator}`)
+  })
+
   it('leaves a whole-book chip the title alone', async () => {
     const { parent, deps } = setup(verses(1, 9, 'And behold!'))
 

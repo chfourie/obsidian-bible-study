@@ -23,6 +23,9 @@ export type BookAtomKind = 'verse' | 'paragraph'
 
 export const DEFAULT_BOOK_ATOM_KIND: BookAtomKind = 'paragraph'
 
+export const bookAtomKind = (book: { atom?: BookAtomKind }): BookAtomKind =>
+  book.atom ?? DEFAULT_BOOK_ATOM_KIND
+
 // A non-biblical book, known only while its module is installed. Scripture's
 // 66 stay compiled in; books arrive and leave with their manifests.
 export type RegisteredBook = {
