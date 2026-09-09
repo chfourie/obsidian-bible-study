@@ -4972,7 +4972,7 @@ describe('ReaderPaneModel verse-atom Book options and section names', () => {
     await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
 
     expect(model.view.title).toBe('1 Enoch 3')
-    expect(model.view.book?.sectionName).toBe('3')
+    expect(model.view.book?.sectionName).toBe('1 Enoch 3')
   })
 
   it('titles a verse-atom section the print named by number and name', async () => {
@@ -4981,7 +4981,7 @@ describe('ReaderPaneModel verse-atom Book options and section names', () => {
     await model.openPosition({ book: ENOCH_BOOK, chapter: 2 })
 
     expect(model.view.title).toBe('1 Enoch 2 · The Parable of Enoch')
-    expect(model.view.book?.sectionName).toBe('2 · The Parable of Enoch')
+    expect(model.view.book?.sectionName).toBe('1 Enoch 2 · The Parable of Enoch')
   })
 
   it('leaves a paragraph Book’s title on its section name', async () => {
@@ -5085,15 +5085,16 @@ describe('ReaderPaneModel verse-atom Book options and section names', () => {
     expect(model.view.book?.parts).toBeNull()
   })
 
-  it('names the Book in a verse-atom section’s heading', async () => {
+  it('names the Book in a verse-atom section’s heading, stepping included', async () => {
     const model = twoBookModel()
 
     await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
-    expect(model.view.book?.sectionHeading).toBe('1 Enoch 3')
-    expect(model.view.book?.headBook).toBeNull()
+    expect(model.view.book?.sectionName).toBe('1 Enoch 3')
+    expect(model.view.book?.headBookName).toBeNull()
 
-    await model.openPosition({ book: ENOCH_BOOK, chapter: 2 })
-    expect(model.view.book?.sectionHeading).toBe('1 Enoch 2 · The Parable of Enoch')
+    await model.previousChapter()
+    expect(model.view.position.chapter).toBe(2)
+    expect(model.view.book?.sectionName).toBe('1 Enoch 2 · The Parable of Enoch')
   })
 
   it('leaves a paragraph Book’s heading its section name under the Book’s name', async () => {
@@ -5101,8 +5102,30 @@ describe('ReaderPaneModel verse-atom Book options and section names', () => {
 
     await model.openPosition({ book: HUMILITY, chapter: 1 })
 
-    expect(model.view.book?.sectionHeading).toBe('The Glory of the Creature')
-    expect(model.view.book?.headBook).toBe('Humility')
+    expect(model.view.book?.sectionName).toBe('The Glory of the Creature')
+    expect(model.view.book?.headBookName).toBe('Humility')
+  })
+
+  it('stands one heading per Part, its tiles in numeric order', async () => {
+    const scrambled = [
+      { chapter: 92, name: '92', part: 'Epistle 91–105' },
+      { chapter: 91, name: '91', part: 'Epistle 91–105' },
+      { chapter: 1, name: '1', part: 'Watchers 1–36' },
+    ]
+    const model = bookModelWith({
+      passages: passageSourceOver(enochTexts()),
+      books: {
+        installed: async () => [{ ...enoch(), sections: scrambled }],
+        epigraphs: async () => [],
+      },
+    })
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    expect(partView(model)).toEqual([
+      ['Epistle 91–105', false, false, [91, 92]],
+      ['Watchers 1–36', true, true, [1]],
+    ])
   })
 })
 

@@ -382,14 +382,13 @@ export type BookModeView = {
   atom: BookAtomKind
   author: string
   edition: string
-  sectionName: string
   // How the stepping bar and the chapter head name the section: a verse-atom
   // Book names itself there (1 Enoch 12), a paragraph Book keeps its section
-  // name under its own name (ticket #147, spec-books §1).
-  sectionHeading: string
-  // The Book-name line above the chapter head, null where the heading
-  // already carries the Book's name.
-  headBook: string | null
+  // name alone under its own name (ticket #147, spec-books §1).
+  sectionName: string
+  // The Book-name line printed above the chapter head, null where the
+  // section's own name already carries the Book.
+  headBookName: string | null
   sections: BookSectionOption[]
   sectionGroups: BookSectionGroup[]
   // The scripture-style Part headings of a verse-atom Book; null for a
@@ -754,17 +753,18 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   #bookHere(): ReaderBook | null {
-    return (
-      this.#books.find((book) => book.number === this.#position.book) ?? null
-    )
+    return this.#bookAt(this.#position)
   }
 
-  #sectionOf(book: ReaderBook): ReaderBookSection | null {
-    return (
-      book.sections.find(
-        (section) => section.chapter === this.#position.chapter,
-      ) ?? null
-    )
+  #bookAt(position: ReaderPosition): ReaderBook | null {
+    return this.#books.find((book) => book.number === position.book) ?? null
+  }
+
+  #sectionOf(
+    book: ReaderBook,
+    chapter: number = this.#position.chapter,
+  ): ReaderBookSection | null {
+    return book.sections.find((section) => section.chapter === chapter) ?? null
   }
 
   #bookView(book: ReaderBook): BookModeView {
@@ -781,14 +781,13 @@ export class ReaderPaneModel implements StudyMaterialSource {
       atom: bookAtomKind(book),
       author: book.author,
       edition: `${book.title} ${book.year}`,
-      sectionName: section === null ? '' : sectionLabel(book, section),
-      sectionHeading:
+      sectionName:
         section === null
           ? ''
           : verseAtom
             ? sectionTitle(book, section)
             : sectionLabel(book, section),
-      headBook: verseAtom ? null : book.title,
+      headBookName: verseAtom ? null : book.title,
       sections,
       sectionGroups: sectionGroups(sections),
       parts: verseAtom ? this.#partsOf(book, sections) : null,
@@ -798,26 +797,31 @@ export class ReaderPaneModel implements StudyMaterialSource {
 
   // The Part headings the tree stands up, one expanded: the browsed Part
   // while the reader is looking around, else the Part it is reading in.
+  // One heading per Part, whatever order the section table names them in, and
+  // its tiles in numeric order (ADR 0014, spec-books §5).
   #partsOf(book: ReaderBook, sections: BookSectionOption[]): BookPartView[] {
-    const groups = sectionGroups(sections).map((group) => ({
-      label: group.label ?? book.title,
-      current: group.sections.some((section) => section.current),
-      sections: group.sections,
+    const byLabel = new Map<string, BookSectionOption[]>()
+    for (const section of sections) {
+      const label = section.part ?? book.title
+      byLabel.set(label, [...(byLabel.get(label) ?? []), section])
+    }
+    const parts = [...byLabel].map(([label, held]) => ({
+      label,
+      current: held.some((section) => section.current),
+      sections: [...held].sort((one, other) => one.chapter - other.chapter),
     }))
-    const browsed = groups.find((group) => group.label === this.#browsedPart)
-    const open = browsed ?? groups.find((group) => group.current) ?? groups[0]
-    return groups.map((group) => ({
-      ...group,
-      expanded: group.label === open?.label,
+    const browsed = parts.find((part) => part.label === this.#browsedPart)
+    const open = browsed ?? parts.find((part) => part.current) ?? parts[0]
+    return parts.map((part) => ({
+      ...part,
+      expanded: part.label === open?.label,
     }))
   }
 
   #partAt(position: ReaderPosition): string | null {
-    const book = this.#books.find((entry) => entry.number === position.book)
-    const section = book?.sections.find(
-      (entry) => entry.chapter === position.chapter,
-    )
-    return section?.part ?? null
+    const book = this.#bookAt(position)
+    if (book === null) return null
+    return this.#sectionOf(book, position.chapter)?.part ?? null
   }
 
   // What this tab offers for study beside its text — the one source the
@@ -935,9 +939,10 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   // A Part is a heading, never a destination: expanding one shows its
-  // chapters and moves the reader nowhere (spec-books §5).
+  // chapters and moves the reader nowhere. One Part stands open at a time,
+  // so expanding one closes the last (spec-books §5).
   browsePart(label: string): void {
-    this.#browsedPart = this.#browsedPart === label ? null : label
+    this.#browsedPart = label
     this.#notify()
   }
 
