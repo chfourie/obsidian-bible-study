@@ -229,21 +229,21 @@ the righteous,
 1. Before these things Enoch was hidden, and no one of the children of men knew where he was hidden, and where he abode, and what had become of him.
 2. And his activities had to do with the Watchers, and his days were with the holy ones.
 
-3. And I, Enoch, was blessing the Lord of <emended>majesty</emended> and the King of the ages, and lo! the Watchers called me—Enoch the scribe—and said to me:
-4. ‘Enoch, thou scribe of righteousness, go, <marks>†</marks>declare<marks>†</marks> to the Watchers of the heaven who have left the high heaven, the holy eternal place, and have defiled themselves with women, and have done as the children of earth do, and have taken unto themselves wives: “Ye have wrought great destruction on the earth:
-5. And ye shall have no peace nor forgiveness of sin: and inasmuch as <marks>†</marks>they<marks>†</marks> delight themselves in <marks>†</marks>their<marks>†</marks> children,
-6. The murder of <marks>†</marks>their<marks>†</marks> beloved ones shall <marks>†</marks>they<marks>†</marks> see, and over the destruction of <marks>†</marks>their<marks>†</marks> children shall <marks>†</marks>they<marks>†</marks> lament, and shall make supplication unto eternity, but mercy and peace shall ye not attain.”’
+3. And I, Enoch, was blessing the Lord of <emended>majesty</emended> [Footnote: Of majesty (Gᵍ). So E (i. e. q β) by changing the vocalization of one letter. Otherwise E = ‘great’, ‘majestic’.] and the King of the ages, and lo! the Watchers called me—Enoch the scribe—and said to me:
+4. ‘Enoch, thou scribe of righteousness, go, <marks>†</marks>declare<marks>†</marks> [Footnote: Declare (E). Read with Gᵍ ‘and say’. Cf. 16⁴, where ‘say’ is preserved in the duplicate account.] to the Watchers of the heaven who have left the high heaven, the holy eternal place, and have defiled themselves with women, and have done as the children of earth do, and have taken unto themselves wives: “Ye have wrought great destruction on the earth:
+5. And ye shall have no peace nor forgiveness of sin: and inasmuch as <marks>†</marks>they<marks>†</marks> delight themselves in <marks>†</marks>their<marks>†</marks> children [Footnote: They delight. For ‘they’ and ‘their’, obelized in this clause and the following verse, read ‘ye’ and ‘your’.],
+6. The murder of <marks>†</marks>their<marks>†</marks> beloved ones shall <marks>†</marks>they<marks>†</marks> see, and over the destruction of <marks>†</marks>their<marks>†</marks> children shall <marks>†</marks>they<marks>†</marks> lament [Footnote: For ‘they’ and ‘their’, obelized in this clause and the preceding verse, read ‘ye’ and ‘your’.], and shall make supplication unto eternity, but mercy and peace shall ye not attain.”’
 
 ## 13.
 
 1. And Enoch went and said: ‘Azâzêl, thou shalt have no peace: a severe sentence has gone forth against thee to put thee in bonds:
-2. And thou shalt not have toleration nor <marks>†</marks>request<marks>†</marks> granted to thee, because of the unrighteousness which thou hast taught, and because of all the works of godlessness and unrighteousness and sin which thou hast shown to men.’
+2. And thou shalt not have toleration nor <marks>†</marks>request<marks>†</marks> [Footnote: Request (Gᵍ E). Here ἐρώτησις seems corrupt. We should expect at least ‘thy request’. Perhaps שאלא (= ἐρώτησις) was corrupt for שליא = ‘rest’.] granted to thee, because of the unrighteousness which thou hast taught, and because of all the works of godlessness and unrighteousness and sin which thou hast shown to men.’
 3. Then I went and spoke to them all together, and they were all afraid, and fear and trembling seized them.
 4. And they besought me to draw up a petition for them that they might find forgiveness, and to read their petition in the presence of the Lord of heaven.
 5. For from thenceforward they could not speak <supplied>with Him</supplied> nor lift up their eyes to heaven for shame of their sins for which they had been condemned.
-6. Then I wrote out their petition, and the prayer <marks>†</marks>in regard to their spirits and their deeds individually and in regard to their requests that they should have forgiveness and length <marks>〈</marks>of days<marks>〉</marks><marks>†</marks>.
+6. Then I wrote out their petition, and the prayer <marks>†</marks>in regard to their spirits and their deeds individually and in regard to their requests that they should have forgiveness and length <marks>〈</marks>of days<marks>〉</marks><marks>†</marks> [Footnote: ［And.］ Though in Gᵍ E, it should be bracketed. The passage †in regard to their spirits … length† is clearly corrupt. First of all ‘length’ is corrupt. μακρότης stands in Gᵍ and nûḫat in E is an exact rendering of it, and cannot in any case mean ‘patientia’—the meaning assigned in this solitary case to it in Dillmann’s Lexicon. The Ethiopic can only = μακρότης. From the conjunction of the words ἄφεσις καὶ μακρότης (Gᵍ E) it is clear that μακρότης here represents אוריכותא, and that after it there stood originally either דיומיא or דרוחא: in the former case we should have the familiar phrase ‘length of days’ (Heb. ארך ימים): in the latter ‘forbearance’ (Heb. ארך אפים). Which of these two restorations is right we cannot decide before a study of the context. … The Watchers prayed that their sons might have ‘length of days’. If we turn to 10⁹ we shall actually find this phrase where God declares regarding the sons of the Watchers: μακρότης γὰρ ἡμερῶν οὐκ ἔστιν αὐτῶν. The concluding clause therefore should run: ‘in regard to whom they besought forgiveness and length of days.’ … Hence the passage is probably to be read as follows: ‘in regard to themselves and the beloved ones of each and in regard to their requests that they should have forgiveness and length 〈of days〉.’].
 7. And I went off and sat down at the waters of Dan, in the land of Dan, to the south of the west of Hermon: I read their petition till I fell asleep.
-8. And behold a dream came to me, and visions fell down upon me, and I saw visions of chastisement, <marks>⌈</marks>and a voice came bidding <supplied>me</supplied><marks>⌉</marks> to tell it to the sons of heaven, and reprimand them.
+8. And behold a dream came to me, and visions fell down upon me, and I saw visions of chastisement, <marks>⌈</marks>and a voice came bidding <supplied>me</supplied><marks>⌉</marks> [Footnote: To tell … and reprimand (E). Gᵍ = ‘Tell … to reprimand’.] to tell it to the sons of heaven, and reprimand them.
 9. And when I awaked, I came unto them, and they were all sitting gathered together, weeping in ’Abelsjâîl, which is between Lebanon and Sênêsêr, with their faces covered.
 10. And I recounted before them all the visions which I had seen in sleep, and I began to speak the words of righteousness, and to reprimand the heavenly Watchers.
 
@@ -251,12 +251,12 @@ the righteous,
 
 1. The book of the words of righteousness, and of the reprimand of the eternal Watchers in accordance with the command of the Holy Great One in that vision.
 2. I saw in my sleep what I will now say with a tongue of flesh and with the breath of my mouth: which the Great One has given to men to converse therewith and understand with the heart.
-3. As He hath created and given <marks>⌈⌈</marks>to man the power of understanding the word of wisdom, so hath He created me also and given<marks>⌉⌉</marks> me the power of reprimanding the Watchers, the children of heaven.
-4. I wrote out your petition, and in my vision it appeared thus, that your petition will not be granted unto you <marks>⌈⌈</marks>throughout all the days of eternity, and that judgement has been finally passed upon you: yea <supplied>your petition</supplied> will not be granted unto you<marks>⌉⌉</marks>.
-5. And from henceforth you shall not ascend into heaven unto all eternity, and <marks>⌈</marks>in bonds<marks>⌉</marks> of the earth the decree has gone forth to bind you for all the days of the world.
+3. As He hath created and given <marks>⌈⌈</marks>to man the power of understanding the word of wisdom, so hath He created me also and given<marks>⌉⌉</marks> [Footnote: To man the power of understanding the word of wisdom, so hath He created me also and given (E). > Gᵍ through hmt.] me the power of reprimanding the Watchers, the children of heaven.
+4. I wrote out your petition, and in my vision it appeared thus, that your petition will not be granted unto you <marks>⌈⌈</marks>throughout all the days of eternity, and that judgement has been finally passed upon you: yea <supplied>your petition</supplied> will not be granted unto you<marks>⌉⌉</marks> [Footnote: Thus, that … unto you. Gᵍ is defective: ‘this and neither was your petition accepted’.].
+5. And from henceforth you shall not ascend into heaven unto all eternity, and <marks>⌈</marks>in bonds<marks>⌉</marks> [Footnote: In bonds of the earth (so Gᵍ ἐν τοῖς δεσμοῖς τῆς γῆς). This is a peculiar expression. E has simply ‘on the earth’. Perhaps we should read δεσμοῖς ἐν τῇ γῇ. Cf. Origen (c. Celsum v. 52) κολάζεσθαι δεσμοῖς ὑποβληθέντας ἐν γῇ, and Jude 6 εἰς κρίσιν μεγάλης ἡμέρας δεσμοῖς ἀϊδίοις ὑπὸ ζόφον τετήρηκεν. On the other hand, if τῆς γῆς is original, then possibly the error arose in the Aramaic. ἐν τ. δεσμοῖς τ. γῆς = באיסורי ארעה corrupt for באסירי ארעה = ‘as prisoners of (i.e. ‘on’) the earth’. Cf. Lam. 3³⁴ where the phrase occurs.] of the earth the decree has gone forth to bind you for all the days of the world.
 6. And <supplied>that</supplied> previously you shall have seen the destruction of your beloved sons and you shall have no pleasure in them, but they shall fall before you by the sword.
-7. And your petition on their behalf shall not be granted, nor yet on your own: even though you weep and pray and <emended>speak all the words</emended> contained in the writing which I have written.
-8. And the vision was shown to me thus: Behold, in the vision clouds invited me and a mist summoned me, and the course of the stars and the lightnings sped and <emended>hastened</emended> me, and the winds in the vision caused me to fly and lifted me upward, and bore me into heaven.
+7. And your petition on their behalf shall not be granted, nor yet on your own: even though you weep and pray and <emended>speak all the words</emended> [Footnote: And speak all the words. So Gᵍ καὶ μὴν λαλοῦντες πᾶν ῥῆμα, where I have emended μή into μήν. The converse change of μή into μήν is found in Gᵍ 10⁷. If, however, the negative is original, καὶ μὴ λαλοῦντες may be corrupt for καὶ μὴ λαχόντες or λαβόντες = ולא מקבלין, which should be taken as the apodosis ‘ye are not to be granted a single request in the writing’, &c.] contained in the writing which I have written.
+8. And the vision was shown to me thus: Behold, in the vision clouds invited me and a mist summoned me, and the course of the stars and the lightnings sped and <emended>hastened</emended> [Footnote: Hastened. Gᵍ E have here ἐθορύβαζον = יבהלון. In this context the translator should have rendered it by ἐτάχυνον. בהל has these two meanings both in Hebrew and Aramaic. In Daniel, conversely, בהל is several times rendered by κατασπεύδω in the LXX when it ought to have been rendered by θορυβάζω or συνταράσσω. Cf. 4⁵ 5⁶, &c. Here Dillmann’s Lexicon and all previous translations should be corrected accordingly.] me, and the winds in the vision caused me to fly and lifted me upward, and bore me into heaven.
 9. And I went in till I drew nigh to a wall which is built of crystals and surrounded by tongues of fire: and it began to affright me.
 10. And I went into the tongues of fire and drew nigh to a large house which was built of crystals: and the walls of the house were like a tesselated floor <supplied>made</supplied> of crystals, and its groundwork was of crystal.
 11. Its ceiling was like the path of the stars and the lightnings, and between them were fiery cherubim, and their heaven was <supplied>clear as</supplied> water.
@@ -266,7 +266,7 @@ the righteous,
 15. And lo! there was a second house, greater than the former, and the entire portal stood open before me, and it was built of flames of fire.
 16. And in every respect it so excelled in splendour and magnificence and extent that I cannot describe to you its splendour and its extent.
 17. And its floor was of fire, and above it were lightnings and the path of the stars, and its ceiling also was flaming fire.
-18. And I looked and saw <marks>⌈⌈</marks>therein<marks>⌉⌉</marks> a lofty throne: its appearance was as crystal, and the wheels thereof as the shining sun, and there was the <emended>vision</emended> of cherubim.
+18. And I looked and saw <marks>⌈⌈</marks>therein<marks>⌉⌉</marks> [Footnote: Therein. > Gᵍ.] a lofty throne: its appearance was as crystal, and the wheels thereof as the shining sun, and there was the <emended>vision</emended> [Footnote: Vision of cherubim. Gᵍ reads ορος, corrupt possibly for ὅρασις. E = ὀπός (from ὄψ) ‘the voice’.] of cherubim.
 19. And from underneath the throne came streams of flaming fire so that I could not look thereon.
 20. And the Great Glory sat thereon, and His raiment shone more brightly than the sun and was whiter than any snow.
 21. None of the angels could enter and could behold His face by reason of the magnificence and glory, and no flesh could behold Him.
@@ -274,27 +274,30 @@ the righteous,
 23. And the most holy ones who were nigh to Him did not leave by night nor depart from Him.
 24. And until then I had been prostrate on my face, trembling: and the Lord called me with His own mouth, and said to me: ‘Come hither, Enoch, and hear my word.’
 25. <marks>⌈</marks>And one of the holy ones came to me and waked me<marks>⌉</marks>, and He made me rise up and approach the door: and I bowed my face downwards.
+%% waived 14:25 — no note on the bracket (leaf 150): Charles’s note on 25 speaks only to ‘Bowed’
 
 ## 15.
 
 1. And He answered and said to me, and I heard His voice: ‘Fear not, Enoch, thou righteous man and scribe of righteousness: approach hither and hear my voice.
-2. And go, say to <marks>⌈⌈</marks>the Watchers of heaven<marks>⌉⌉</marks>, who have sent thee to intercede <marks>⌈⌈</marks>for them: “You should intercede<marks>⌉⌉</marks> for men, and not men for you:
+2. And go, say to <marks>⌈⌈</marks>the Watchers of heaven<marks>⌉⌉</marks>, who have sent thee to intercede <marks>⌈⌈</marks>for them: “You should intercede<marks>⌉⌉</marks> [Footnote: Watchers of heaven. > Gᵍ. For them: You should intercede. > Gᵍ through hmt. Cf. 9¹⁰ note.] for men, and not men for you:
 3. Wherefore have ye left the high, holy, and eternal heaven, and lain with women, and defiled yourselves with the daughters of men and taken to yourselves wives, and done like the children of earth, and begotten giants <supplied>as your</supplied> sons.
-4. And though ye were holy, spiritual, living the eternal life, you have defiled yourselves with the blood of women, and have begotten <supplied>children</supplied> with the blood of flesh, and, <emended>as the children</emended> of men, have lusted after flesh and blood as those <marks>⌈</marks>also<marks>⌉</marks> do who die and perish.
+4. And though ye were holy, spiritual, living the eternal life, you have defiled yourselves with the blood of women, and have begotten <supplied>children</supplied> with the blood of flesh, and, <emended>as the children</emended> [Footnote: As the children of men. Gᵍ E read ἐν αἵματι ἀνθρώπων = בדם נשא corrupt for כבני נשא = ὥσπερ υἱοὶ τῶν ἀνθρώπων. Cf. ὥσπερ υἱοὶ τῆς γῆς in the preceding verse. ἐπεθυμήσατε cannot be constructed with ἐν τῷ αἵματι unless it represents some Semitic idiom as צבא ב. If it could, it would mean bloodthirstiness, an idea quite foreign to the context.] of men, have lusted after flesh and blood as those <marks>⌈</marks>also<marks>⌉</marks> do who die and perish.
 5. Therefore have I given them wives also that they might impregnate them, and beget children by them, that thus nothing might be wanting to them on earth.
 6. But you were <marks>⌈</marks>formerly<marks>⌉</marks> spiritual, living the eternal life, and immortal for all generations of the world.
+%% waived 15:6 — no note on ⌈formerly⌉ (leaf 151): the notes on 6 speak only to ‘Spiritual, living the eternal life’ and ‘And immortal’
 7. And therefore I have not appointed wives for you; for as for the spiritual ones of the heaven, in heaven is their dwelling.
 8. And now, the giants, who are produced from the spirits and flesh, shall be called evil spirits upon the earth, and on the earth shall be their dwelling.
-9. Evil spirits have proceeded from their bodies; because they are born from <emended>men</emended>, <marks>⌈⌈</marks>and<marks>⌉⌉</marks> from the holy Watchers is their beginning and primal origin; <marks>⌈</marks>they shall be evil spirits on earth, and<marks>⌉</marks> evil spirits shall they be called.
-10. <marks>[</marks>As for the spirits of heaven, in heaven shall be their dwelling, but as for the spirits of the earth which were born upon the earth, on the earth shall be their dwelling.<marks>]</marks>
-11. And the spirits of the giants <emended>afflict</emended>, oppress, destroy, attack, do battle, and work destruction on the earth, and cause trouble: they take no food, <marks>⌈</marks>but nevertheless hunger<marks>⌉</marks> and thirst, and cause offences.
+9. Evil spirits have proceeded from their bodies; because they are born from <emended>men</emended> [Footnote: From men (Gˢ). Gᵍ E ‘from those above’. Beginning (E). Gᵍˢ read ἡ ἀρχὴ τῆς κτίσεως αὐτῶν.], <marks>⌈⌈</marks>and<marks>⌉⌉</marks> from the holy Watchers is their beginning and primal origin; <marks>⌈</marks>they shall be evil spirits on earth, and<marks>⌉</marks> [Footnote: They shall be … earth (E Gˢ). > Gᵍ.] evil spirits shall they be called.
+10. <marks>[</marks>As for the spirits of heaven, in heaven shall be their dwelling, but as for the spirits of the earth which were born upon the earth, on the earth shall be their dwelling.<marks>]</marks> [Footnote: Of the earth (E). Gᵍ ‘on the earth’. Gˢ omits v. 10. This verse is merely a repetition of phrases found in verses 7, 8.]
+11. And the spirits of the giants <emended>afflict</emended> [Footnote: Afflict. Gᵍ E read νεφέλας = עננין, a corruption probably of מענין = ‘afflict’. Gˢ reads νεμόμενα = ‘laying waste’. Beer takes νεμόμενα in the sense of ‘pasturing’ = רעין, a corruption of רעעין, ‘laying waste,’ which itself was corrupted into עננין = νεφέλας.], oppress, destroy, attack, do battle, and work destruction on the earth, and cause trouble: they take no food, <marks>⌈</marks>but nevertheless hunger<marks>⌉</marks> [Footnote: ⌈But nevertheless hunger⌉ (Gᵍˢ). Beer quotes Wellhausen, Reste Arab. Heidenthums², 149 sq., to the effect that the Jinns suffer from a devouring hunger and yet cannot eat. Instead of ἀσιτοῦντα, λιμώττοντα would be better. Gˢ adds καὶ φάσματα ποιοῦντα—possibly rightly.] and thirst, and cause offences.
 12. And these spirits shall rise up against the children of men and against the women, because they have proceeded <marks>⌈</marks>from them<marks>⌉</marks>.
+%% waived 15:12 — no note on ⌈from them⌉ (leaf 152): the note on 12 speaks only to ‘Against the women’
 
 ## 16.
 
-1. From the days of the slaughter and destruction and death <marks>⌈</marks>of the giants<marks>⌉</marks>, from the souls of whose flesh the spirits, having gone forth, shall destroy without incurring judgement—thus shall they destroy until the day of the consummation, the great <marks>⌈</marks>judgement<marks>⌉</marks> in which the age shall be consummated over the Watchers and the godless, yea, shall be wholly consummated.”
-2. And now as to the Watchers who have sent thee to intercede for them, who had been <marks>⌈⌈</marks>aforetime<marks>⌉⌉</marks> in heaven, <supplied>say to them</supplied>:
-3. “You have been in heaven, but <marks>⌈</marks>all<marks>⌉</marks> the mysteries had not yet been revealed to you, and you knew worthless ones, and these in the hardness of your hearts you have made known to the women, and through these mysteries women and men work much evil on earth.”
+1. From the days of the slaughter and destruction and death <marks>⌈</marks>of the giants<marks>⌉</marks> [Footnote: Of the giants (E Gˢ). > Gᵍ. + Ναφηλείμ, οἱ ἰσχυροὶ τῆς γῆς, οἱ μεγάλοι ὀνομαστοί Gˢ. These are derived from Gen. 6⁴. Ναφηλείμ is a transliteration of נפלים, and is thus a doublet of τῶν γιγάντων preceding, οἱ ἰσχ. τῆς γῆς is an expansion of הגברים, and οἱ μεγ. ὀνομαστοί of אנשי השם.], from the souls of whose flesh the spirits, having gone forth, shall destroy without incurring judgement—thus shall they destroy until the day of the consummation, the great <marks>⌈</marks>judgement<marks>⌉</marks> in which the age shall be consummated over the Watchers and the godless, yea, shall be wholly consummated.”
+2. And now as to the Watchers who have sent thee to intercede for them, who had been <marks>⌈⌈</marks>aforetime<marks>⌉⌉</marks> [Footnote: Aforetime (E). > Gᵍˢ.] in heaven, <supplied>say to them</supplied>:
+3. “You have been in heaven, but <marks>⌈</marks>all<marks>⌉</marks> the mysteries [Footnote: ⌈All⌉ (Gᵍ). > E.] had not yet been revealed to you, and you knew worthless ones, and these in the hardness of your hearts you have made known to the women, and through these mysteries women and men work much evil on earth.”
 4. Say to them therefore: “You have no peace.”’
 
 ## 17.
@@ -303,37 +306,37 @@ the righteous,
 
 ### XVII-XIX. The First Journey.
 
-1. And they took <marks>⌈</marks>and<marks>⌉</marks> brought me to a place in which those who were there were like flaming fire, and when they wished, they appeared as men.
+1. And they took <marks>⌈</marks>and brought<marks>⌉</marks> [Footnote: ⌈And brought⌉. Supplied from Gᵍ. On the power of assuming different forms cf. 19¹ 2 Cor. 11¹⁴.] me to a place in which those who were there were like flaming fire, and when they wished, they appeared as men.
 2. And they brought me to the place of darkness, and to a mountain the point of whose summit reached to heaven.
-3. And I saw the places of the luminaries <marks>⌈</marks>and the treasuries of the stars<marks>⌉</marks> and of the thunder, <marks>⌈</marks>and<marks>⌉</marks> in the <emended>uttermost depths</emended>, where were a fiery bow and arrows and their quiver, <marks>⌈⌈</marks>and a fiery sword<marks>⌉⌉</marks> and all the lightnings.
+3. And I saw the places of the luminaries <marks>⌈</marks>and the treasuries of the stars<marks>⌉</marks> [Footnote: ⌈And the treasuries of the stars⌉. Supplied from Gᵍ.] and of the thunder, <marks>⌈</marks>and<marks>⌉</marks> in the <emended>uttermost depths</emended> [Footnote: In the uttermost depths = εἰς τὰ ἄκρα βάθη. So I emend E which = εἰς τὰ ἄκρα ἐν τῷ βάθει αὐτοῦ (?). Gᵍ reads εἰς τὰ ἀεροβαθῆ, ‘in the depths of air.’], where were a fiery bow and arrows and their quiver, <marks>⌈⌈</marks>and a fiery sword<marks>⌉⌉</marks> [Footnote: And a fiery sword (E). > Gᵍ. Cf. Ps. 7¹² Deut. 32⁴¹.] and all the lightnings.
 4. And they took me to the living waters, and to the fire of the west, which receives every setting of the sun.
 5. And I came to a river of fire in which the fire flows like water and discharges itself into the great sea towards the west.
-6. I saw the great rivers and came to the great <marks>⌈</marks>river and to the great<marks>⌉</marks> darkness, and went to the place where no flesh walks.
+6. I saw the great rivers and came to the great <marks>⌈</marks>river and to the great<marks>⌉</marks> [Footnote: River and to the great. Supplied from Gᵍ.] darkness, and went to the place where no flesh walks.
 7. I saw the mountains of the darkness of winter and the place whence all the waters of the deep flow.
 8. I saw the mouths of all the rivers of the earth and the mouth of the deep.
 
 ## 18.
 
 1. I saw the treasuries of all the winds; I saw how He had furnished with them the whole creation and the firm foundations of the earth.
-2. And I saw the corner-stone of the earth: I saw the four winds which bear <marks>[</marks>the earth and<marks>]</marks> the firmament of the heaven.
-3. <marks>⌈⌈</marks>And I saw how the winds stretch out the vaults of heaven<marks>⌉⌉</marks>, and have their station between heaven and earth: <marks>⌈⌈</marks>these are the pillars of the heaven<marks>⌉⌉</marks>.
+2. And I saw the corner-stone of the earth: I saw the four winds which bear <marks>[</marks>the earth and<marks>]</marks> [Footnote: The four winds which bear ［the earth and］ the firmament. Gᵍ E have τοὺς τέσσαρας ἀνέμους τὴν γῆν βαστάζοντας καὶ τὸ στερέωμα. Gunkel, Zum religionsgesch. Verständnis, p. 46 (n. 6) proposes to read τῆς γῆς instead of τὴν γῆν, and to omit καί. Hence ‘the four winds of the earth bearing the firmament’. But the τῆς γῆς or τὴν γῆν seems wholly wrong here. It could have arisen in the Aramaic through a dittograph. Thus ἴδον τοὺς τέσσαρας ἀνέμους τὴν γῆν βαστάζοντας = חזית רוחיא ארבע ארעא מסובלן where ארעא is a dittograph of ארבע. Hence ‘the four winds which bear the firmament’.] the firmament of the heaven.
+3. <marks>⌈⌈</marks>And I saw how the winds stretch out the vaults of heaven<marks>⌉⌉</marks> [Footnote: And I saw … heaven (E). > Gᵍ through hmt.], and have their station between heaven and earth: <marks>⌈⌈</marks>these are the pillars of the heaven<marks>⌉⌉</marks> [Footnote: These are … heaven (E). > Gᵍ through hmt. Pillars of the heaven. The expression is from Job 26¹¹, but the idea in the text is not biblical nor Babylonian.].
 4. I saw the winds of heaven which turn and bring the circumference of the sun and all the stars to their setting.
-5. I saw the winds on the earth carrying the clouds: I saw <marks>⌈⌈</marks>the paths of the angels: I saw<marks>⌉⌉</marks> at the end of the earth the firmament of the heaven above.
+5. I saw the winds on the earth carrying the clouds: I saw <marks>⌈⌈</marks>the paths of the angels: I saw<marks>⌉⌉</marks> [Footnote: The paths of the angels: I saw (E). > Gᵍ through hmt.] at the end of the earth the firmament of the heaven above.
 6. And I proceeded and saw a place which burns day and night, where there are seven mountains of magnificent stones, three towards the east, and three towards the south.
-7. And as for those towards the east <marks>〈</marks>one<marks>〉</marks> was of coloured stone, and one of pearl, and one of <emended>jacinth</emended>, and those towards the south of red stone.
+7. And as for those towards the east <marks>〈</marks>one<marks>〉</marks> was of coloured stone, and one of pearl, and one of <emended>jacinth</emended> [Footnote: Jacinth (?) E = ἰάσεως. This may be corrupt for ἰάσπιδος (= ישפה) ‘jasper’. But since ταθεν is the reading of Gᵍ, the Ethiopic translator probably found merely a corrupt form which suggested some derivative of ἰᾶσθαι as ἰατικοῦ. This word taken in conjunction with ταθεν might point to ὑακίνθου or ἰανθίνου as Diels suggests. Beer takes it to be a transliteration of פטדה ‘topaz’. Where the ideas of the various stones are drawn from cannot be said with certainty. Cf. Ezek. 28¹³; K.A.T.³ 619, 624.], and those towards the south of red stone.
 8. But the middle one reached to heaven like the throne of God, of alabaster, and the summit of the throne was of sapphire.
 9. And I saw a flaming fire. And beyond these mountains
 10. is a region, the end of the great earth: there the heavens were completed.
-11. And I saw a deep abyss, with columns <marks>⌈⌈</marks>of heavenly fire, and among them I saw columns<marks>⌉⌉</marks> of fire fall, which were beyond measure alike towards the height and towards the depth.
+11. And I saw a deep abyss, with columns <marks>⌈⌈</marks>of heavenly fire, and among them I saw columns<marks>⌉⌉</marks> [Footnote: Of heavenly fire; cf. Gen. 19²⁴ Ps. 11⁶ Ezek. 38²². > τοῦ πυρὸς τοῦ οὐρανοῦ καὶ ἴδον ἐν αὐτοῖς στύλους through hmt. Gᵍ.] of fire fall, which were beyond measure alike towards the height and towards the depth.
 12. And beyond that abyss I saw a place which had no firmament of the heaven above, and no firmly founded earth beneath it: there was no water upon it, and no birds, but it was a waste and horrible place.
 13. I saw there seven stars like great burning mountains, and to me, when I inquired regarding them,
 14. The angel said: ‘This place is the end of heaven and earth: this has become a prison for the stars and the host of heaven.
 15. And the stars which roll over the fire are they which have transgressed the commandment of the Lord in the beginning of their rising, because they did not come forth at their appointed times.
-16. And He was wroth with them, and bound them till the time when their guilt should be consummated <supplied>even</supplied> <marks>⌈</marks>for ten thousand years<marks>⌉</marks>.’
+16. And He was wroth with them, and bound them till the time when their guilt should be consummated <supplied>even</supplied> <marks>⌈</marks>for ten thousand years<marks>⌉</marks> [Footnote: Ten thousand years (Gᵍ ἐνιαυτῶν μυρίων). E corrupt = ἐνιαυτῷ μυστηρίου. Cf. 21⁶.].’
 
 ## 19.
 
-1. And Uriel said to me: ‘Here shall stand the angels who have connected themselves with women, and their spirits, assuming many different forms, are defiling mankind, and shall lead them astray into sacrificing to demons <marks>⌈⌈</marks>as gods<marks>⌉⌉</marks>, <supplied>here shall they stand</supplied>, till <marks>⌈⌈</marks>the day of<marks>⌉⌉</marks> the great judgement in which they shall be judged till they are made an end of.
+1. And Uriel said to me: ‘Here shall stand the angels who have connected themselves with women, and their spirits, assuming many different forms, are defiling mankind, and shall lead them astray into sacrificing to demons <marks>⌈⌈</marks>as gods<marks>⌉⌉</marks> [Footnote: As gods (E). > Gᵍ.], <supplied>here shall they stand</supplied>, till <marks>⌈⌈</marks>the day of<marks>⌉⌉</marks> [Footnote: The day of (E). > Gᵍ.] the great judgement in which they shall be judged till they are made an end of.
 2. And the women also of the angels who went astray shall become sirens.’
 3. And I, Enoch, alone saw the vision, the ends of all things: and no man shall see as I have seen.
 
@@ -344,8 +347,8 @@ the righteous,
 1. And these are the names of the holy angels who watch.
 2. Uriel, one of the holy angels, who is over the world and over Tartarus.
 3. Raphael, one of the holy angels, who is over the spirits of men.
-4. Raguel, one of the holy angels who <marks>†</marks>takes vengeance on<marks>†</marks> the world of the luminaries.
-5. Michael, one of the holy angels, to wit, he that is set over the best part of mankind <marks>⌈⌈</marks>and<marks>⌉⌉</marks> over chaos.
+4. Raguel, one of the holy angels who <marks>†</marks>takes vengeance on<marks>†</marks> [Footnote: †Takes vengeance on†. See note on 23⁴.] the world of the luminaries.
+5. Michael, one of the holy angels, to wit, he that is set over the best part of mankind <marks>⌈⌈</marks>and<marks>⌉⌉</marks> over chaos [Footnote: And over chaos (Gᵍ¹, ²). E ἐπὶ τῷ λαῷ.].
 6. Saraqâêl, one of the holy angels, who is set over the spirits, who sin in the spirit.
 7. Gabriel, one of the holy angels, who is over Paradise and the serpents and the Cherubim.
 8. Remiel, one of the holy angels, whom God set over those who rise.
@@ -361,26 +364,26 @@ the righteous,
 3. And there I saw seven stars of the heaven bound together in it, like great mountains and burning with fire.
 4. Then I said: ‘For what sin are they bound, and on what account have they been cast in hither?’
 5. Then said Uriel, one of the holy angels, who was with me, and was chief over them, and said: ‘Enoch, why dost thou ask, and why art thou eager for the truth?
-6. These are of the number of the stars <marks>⌈</marks>of heaven<marks>⌉</marks> which have transgressed the commandment of the Lord, and are bound here till ten thousand years, the time entailed by their sins, are consummated.’
+6. These are of the number of the stars <marks>⌈</marks>of heaven<marks>⌉</marks> [Footnote: Of heaven (Gᵍ¹, ²). > E.] which have transgressed the commandment of the Lord, and are bound here till ten thousand years, the time entailed by their sins, are consummated.’
 7. And from thence I went to another place, which was still more horrible than the former, and I saw a horrible thing: a great fire there which burnt and blazed, and the place was cleft as far as the abyss, being full of great descending columns of fire: neither its extent or magnitude could I see, nor could I conjecture.
 8. Then I said: ‘How fearful is the place and how terrible to look upon!’
 9. Then Uriel answered me, one of the holy angels who was with me, and said unto me: ‘Enoch, why hast thou such fear and affright?’ And I answered: ‘Because of this fearful place, and because of the spectacle of the pain.’
-10. And he said <marks>⌈⌈</marks>unto me<marks>⌉⌉</marks>: ‘This place is the prison of the angels, and here they will be imprisoned for ever.’
+10. And he said <marks>⌈⌈</marks>unto me<marks>⌉⌉</marks> [Footnote: Unto me (E). > Gᵍ.]: ‘This place is the prison of the angels, and here they will be imprisoned for ever.’
 
 ## 22.
 
 ### XXII. Sheol, or the Underworld.
 
-1. And thence I went to another place, and he showed me in the west <marks>⌈</marks>another<marks>⌉</marks> great and high mountain <marks>[</marks>and<marks>]</marks> of hard rock.
+1. And thence I went to another place, and he showed me in the west <marks>⌈</marks>another<marks>⌉</marks> great and high mountain <marks>[</marks>and<marks>]</marks> [Footnote: ［And.］ Bracketed as an intrusion in E. Not in Gᵍ.] of hard rock.
 
 2. E
-2. And there was in it <marks>†</marks>four<marks>†</marks> <emended>hollow</emended> places, deep and wide and very smooth. <marks>†</marks>How<marks>†</marks> smooth are <emended>the hollow places</emended> and deep and dark to look at.
+2. And there was in it <marks>†</marks>four<marks>†</marks> <emended>hollow</emended> places, deep and wide [Footnote: †Four†. There are four divisions, according to the text of this verse, in Hades: two for the righteous, vv. 5–9, and two for the wicked, vv. 10–13. But I cannot help regarding the text as here corrupt. In 22⁸⁻⁹ in Gᵍ Enoch asks the angel about all the hollow places, and the angel replies: ‘These three,’ &c. In E, however, owing to the mention of four places in 22², the scribe was conscious of a contradiction in the text, and accordingly added ‘regarding it and’ before the words ‘regarding all the hollow places’. This addition referred presumably to the fourth place of which there is no description in the text. … Hence we conclude that there were originally only three places in Sheol mentioned in this chapter. †Four† … †three†. Read ‘Three … two’. See preceding note. Hollow. Twice in E the text = καλοί corrupt for κοῖλοι.] and very smooth. <marks>†</marks>How<marks>†</marks> smooth are <emended>the hollow places</emended> [Footnote: †How†. Since the angel, in reply, gives the object of Sheol, ‘how’ cannot be right: we expect ‘why’, ‘wherefore’, or ‘for what purpose’. Hence, I suggest that מא (= πῶς) was corrupt for למא. Hence read ‘for what purpose are these hollow places smooth and deep and dark to view?’ Hollow places (Gᵍ = κοιλώματα). E = κυκλώματα, a corruption.] and deep and dark to look at.
 
 2. Gᵍ
 2. And there were <marks>†</marks>four<marks>†</marks> hollow places in it, deep and very smooth: <marks>†</marks>three<marks>†</marks> of them were dark and one bright; and there was a fountain of water in its midst. And I said: ‘<marks>†</marks>How<marks>†</marks> smooth are these hollow places, and deep and dark to view.’
 
 3. Then Raphael answered, one of the holy angels who was with me, and said unto me: ‘These hollow places have been created for this very purpose, that the spirits of the souls of the dead should assemble therein, yea that all the souls of the children of men should assemble here.
-4. And these places <emended>have been made</emended> to receive them till the day of their judgement and till their appointed period <marks>[</marks>till the period appointed<marks>]</marks>, till the great judgement <supplied>comes</supplied> upon them.’
+4. And these places <emended>have been made</emended> [Footnote: Have been made. Gᵍ E = ἐποίησαν corrupt for ἐποιήθησαν.] to receive them till the day of their judgement and till their appointed period <marks>[</marks>till the period appointed<marks>]</marks> [Footnote: ［Till the period appointed.］ A dittograph.], till the great judgement <supplied>comes</supplied> upon them.’
 
 5. E
 5. I saw the spirits of the children of men who were dead, and their voice went forth to heaven and made suit.
@@ -388,24 +391,24 @@ the righteous,
 6. Then I asked Raphael the angel who was with me, and I said unto him: ‘This spirit—whose is it whose voice goeth forth and maketh suit?’
 
 5. Gᵍ
-5. I saw <marks>〈</marks>the spirit of<marks>〉</marks> <emended>a dead man</emended> making suit, and his voice went forth to heaven and made suit.
+5. I saw <marks>〈</marks>the spirit of<marks>〉</marks> <emended>a dead man</emended> [Footnote: Spirits of the children of men who were dead (E). Gᵍ is defective and corrupt ἀνθρώπους νεκροὺς ἐντυγχάνοντος. Possibly vv. 5–6 refer only to a single spirit. To this ἐντυγχάνοντος points, and also ἡ φωνὴ αὐτοῦ in the next clause in Gᵍ. If this is right, as I have concluded above, there were only three places in all.] making suit, and his voice went forth to heaven and made suit.
 6. Gᵍ
 6. And I asked Raphael the angel who was with me, and I said unto him: ‘This spirit which maketh suit, whose is it, whose voice goeth forth and maketh suit to heaven?’
 
 7. And he answered me saying: ‘This is the spirit which went forth from Abel, whom his brother Cain slew, and he makes his suit against him till his seed is destroyed from the face of the earth, and his seed is annihilated from amongst the seed of men.’
 
 8. E
-8. Then I asked regarding it, and regarding all the <emended>hollow places</emended>: ‘Why is one separated from the other?’
+8. Then I asked regarding it, and regarding all the <emended>hollow places</emended> [Footnote: Hollow places. E = κριμάτων, and Gᵍ κυκλωμάτων, both corrupt for κοιλωμάτων.]: ‘Why is one separated from the other?’
 
 8. Gᵍ
 8. Then I asked regarding all the <emended>hollow places</emended>: ‘Why is one separated from the other?’
 
 9. E
-9. And he answered me and said unto me: ‘These three have been made that the spirits of the dead might be separated. And such a division has been made <marks>〈</marks>for<marks>〉</marks> the spirits of the righteous, in which there is the <emended>bright</emended> spring of water.
+9. And he answered me and said unto me: ‘These three have been made that the spirits of the dead might be separated. And such a division has been made <marks>〈</marks>for<marks>〉</marks> [Footnote: The bright spring of water. In E for ‘bright’ the text gives ‘brightness’ or ‘light’.] the spirits of the righteous, in which there is the <emended>bright</emended> spring of water.
 10. E
-10. <emended>And</emended> such has been made for sinners when they die and are buried in the earth and judgement has not been executed on them in their lifetime.
+10. <emended>And</emended> such [Footnote: And this. In E bakama kamâhû is corrupt for wakamâhû = καὶ οὕτως. Here οὕτως is corrupt for οὗτος the demonstrative.] has been made for sinners when they die and are buried in the earth and judgement has not been executed on them in their lifetime.
 11. E
-11. Here their spirits shall be set apart in this great pain till the great day of judgement and punishment and torment of those who <marks>†</marks>curse<marks>†</marks> for ever, and retribution for their spirits. There He shall bind them for ever.
+11. Here their spirits shall be set apart in this great pain till the great day of judgement and punishment and torment of those who <marks>†</marks>curse<marks>†</marks> [Footnote: The accursed. Here τῶν κατηραμένων, which E takes actively, is to be taken passively as in Wisd. 12¹¹ 2 Kings 9³⁴ Matt. 25⁴¹.] for ever, and retribution for their spirits. There He shall bind them for ever.
 12. E
 12. And such a division has been made for the spirits of those who make their suit, who make disclosures concerning their destruction, when they were slain in the days of the sinners.
 13. E
@@ -414,15 +417,15 @@ the righteous,
 14. Then I blessed the Lord of glory and said: ‘Blessed be my Lord, the Lord of righteousness who ruleth for ever.’
 
 9. Gᵍ
-9. And he answered me saying: ‘These three have been made that the spirits of the dead might be separated. And <emended>this</emended> division has been made for the spirits of the righteous, in which there is the bright spring of water.
+9. And he answered me saying: ‘These three have been made that the spirits of the dead might be separated. And <emended>this</emended> division [Footnote: And this. In E bakama kamâhû is corrupt for wakamâhû = καὶ οὕτως. Here οὕτως is corrupt for οὗτος the demonstrative. The angel points to each division as he describes it. I have introduced this emendation into my translation of Gᵍ in verses 9, 10, 12, 13.] has been made for the spirits of the righteous, in which there is the bright spring of water.
 10. Gᵍ
 10. And <emended>this</emended> has been made for sinners when they die and are buried in the earth and judgement has not been executed upon them in their lifetime.
 11. Gᵍ
-11. Here their spirits shall be set apart in this great pain, till the great day of judgement, scourgings, and torments of the accursed for ever, <emended>so that</emended> <supplied>there may be</supplied> retribution for their spirits. There He shall bind them for ever.
+11. Here their spirits shall be set apart in this great pain, till the great day of judgement, scourgings, and torments of the accursed for ever, <emended>so that</emended> [Footnote: So that (there may be) retribution = ἵν’ ἀνταπόδοσις. Emended by Radermacher.] <supplied>there may be</supplied> retribution for their spirits. There He shall bind them for ever.
 12. Gᵍ
-12. And <emended>this</emended> division has been made for the spirits of those who make their suit, who make disclosures concerning their destruction, when they were slain in the days of the sinners.
+12. And <emended>this</emended> [Footnote: And this. See the note on verse 9: οὕτως is corrupt for οὗτος the demonstrative, and the emendation is introduced into the translation of Gᵍ in verses 9, 10, 12, 13.] division has been made for the spirits of those who make their suit, who make disclosures concerning their destruction, when they were slain in the days of the sinners.
 13. Gᵍ
-13. And <emended>this</emended> has been made for the spirits of men who shall not be righteous but sinners, who are godless, and of the lawless they shall be companions: but their spirits shall not be punished in the day of judgement nor shall they be raised from thence.’
+13. And <emended>this</emended> [Footnote: And this. See the note on verse 9: οὕτως is corrupt for οὗτος the demonstrative, and the emendation is introduced into the translation of Gᵍ in verses 9, 10, 12, 13.] has been made for the spirits of men who shall not be righteous but sinners, who are godless, and of the lawless they shall be companions: but their spirits shall not be punished in the day of judgement nor shall they be raised from thence.’
 14. Gᵍ
 14. Then I blessed the Lord of Glory and said: ‘Blessed art Thou, Lord of righteousness, who rulest over the world.’
 
@@ -431,35 +434,35 @@ the righteous,
 ### XXIII. The Fire that deals with the Luminaries of Heaven.
 
 1. From thence I went to another place to the west of the ends of the earth.
-2. And I saw a <marks>⌈⌈</marks>burning<marks>⌉⌉</marks> fire which ran without resting, and paused not from its course day or night but <supplied>ran</supplied> regularly.
+2. And I saw a <marks>⌈⌈</marks>burning<marks>⌉⌉</marks> [Footnote: Burning (E). > Gᵍ.] fire which ran without resting, and paused not from its course day or night but <supplied>ran</supplied> regularly.
 3. And I asked saying: ‘What is this which rests not?’
-4. Then Raguel, one of the holy angels who was with me, answered me <marks>⌈⌈</marks>and said unto me<marks>⌉⌉</marks>: ‘This course <marks>⌈</marks>of fire<marks>⌉</marks> <marks>⌈⌈</marks>which thou hast seen<marks>⌉⌉</marks> is the fire in the west which <marks>†</marks>persecutes<marks>†</marks> all the luminaries of heaven.’
+4. Then Raguel, one of the holy angels who was with me, answered me <marks>⌈⌈</marks>and said unto me<marks>⌉⌉</marks>: ‘This course <marks>⌈</marks>of fire<marks>⌉</marks> [Footnote: And said unto me (E). > Gᵍ. Of fire (Gᵍ). > E. Unless we take coazni (= ‘and this is’) as a corruption of coâ ’ĕj = ‘of fire’ (Flemming). But it may = τό before πρὸς δυσμάς. Which thou hast seen (E). > Gᵍ. Persecutes (Gᵍ ἐκδιῶκον). The text is highly doubtful. E certainly supports ἐκδιῶκον though it is corrupt: that is, it reads jĕnadĕd (= ‘burns’) corrupt for jĕsadĕd = ‘persecutes’. But in 20⁴, where the functions of Raguel are described, it is said that he ‘takes vengeance on the world of the luminaries’, i. e. ἐκδικῶν. These verbs are confused elsewhere; cf. Sir. 39³⁰. Both passages clearly embody the same idea. Raguel ‘takes vengeance on the world of the luminaries’ in 20⁴ and ‘persecutes all the luminaries of heaven’ in 23⁴. The idea of ‘taking vengeance on’ or ‘persecuting’ all the luminaries is inconceivable, and since the object in both passages is the same, the corruption lies in the verb. ἐκδιῶκον is probably secondary to ἐκδικῶν. The latter = פריע, which means either ‘to requite in a good or bad sense’ or ‘to take vengeance on’. Hence I suggest that the meaning ‘requite’ should be restored here, and in 20⁴.] <marks>⌈⌈</marks>which thou hast seen<marks>⌉⌉</marks> is the fire in the west which <marks>†</marks>persecutes<marks>†</marks> all the luminaries of heaven.’
 
 ## 24.
 
 ### XXIV. XXV. The Seven Mountains in the North-West and the Tree of Life.
 
-1. <marks>⌈⌈</marks>And from thence I went to another place of the earth<marks>⌉⌉</marks>, and he showed me a mountain range of fire which burnt <marks>⌈⌈</marks>day and<marks>⌉⌉</marks> night.
-2. And I went beyond it and saw seven magnificent mountains all differing each from the other, and the stones <supplied>thereof</supplied> were magnificent and beautiful, magnificent as a whole, of glorious appearance and fair exterior: <marks>⌈⌈</marks>three towards<marks>⌉⌉</marks> the east, <marks>⌈⌈</marks>one<marks>⌉⌉</marks> founded on the other, and three towards the south, <marks>⌈⌈</marks>one<marks>⌉⌉</marks> upon the other, and deep rough ravines, no one of which joined with any other.
+1. <marks>⌈⌈</marks>And from thence I went to another place of the earth<marks>⌉⌉</marks> [Footnote: And from thence … of the earth (E). > Gᵍ. Day and (E). > Gᵍ.], and he showed me a mountain range of fire which burnt <marks>⌈⌈</marks>day and<marks>⌉⌉</marks> night.
+2. And I went beyond it and saw seven magnificent mountains all differing each from the other, and the stones <supplied>thereof</supplied> were magnificent and beautiful, magnificent as a whole, of glorious appearance and fair exterior: <marks>⌈⌈</marks>three towards<marks>⌉⌉</marks> [Footnote: Three towards (E). > Gᵍ. One (E). > Gᵍ, twice.] the east, <marks>⌈⌈</marks>one<marks>⌉⌉</marks> founded on the other, and three towards the south, <marks>⌈⌈</marks>one<marks>⌉⌉</marks> upon the other, and deep rough ravines, no one of which joined with any other.
 3. And the seventh mountain was in the midst of these, and it excelled them in height, resembling the seat of a throne: and fragrant trees encircled the throne.
-4. And amongst them was a tree such as I had never yet smelt, neither was any amongst them nor were others like it: it had a fragrance beyond all fragrance, and its leaves and blooms and wood wither not for ever: and its fruit <marks>⌈⌈</marks>is beautiful, and its fruit<marks>⌉⌉</marks> resembles the dates of a palm.
-5. Then I said: ‘<marks>⌈</marks>How<marks>⌉</marks> beautiful is this tree, and fragrant, and its leaves are fair, and its blooms <marks>⌈⌈</marks>very<marks>⌉⌉</marks> delightful in appearance.’
-6. Then answered Michael, one of the holy <marks>⌈⌈</marks>and honoured<marks>⌉⌉</marks> angels who was with me, and was their leader,
+4. And amongst them was a tree such as I had never yet smelt, neither was any amongst them nor were others like it: it had a fragrance beyond all fragrance, and its leaves and blooms and wood wither not for ever: and its fruit <marks>⌈⌈</marks>is beautiful, and its fruit<marks>⌉⌉</marks> [Footnote: Is beautiful, and its fruit (E). > Gᵍ through hmt.] resembles the dates of a palm.
+5. Then I said: ‘<marks>⌈</marks>How<marks>⌉</marks> [Footnote: How (Gᵍ. > E). Very (E. > Gᵍ).] beautiful is this tree, and fragrant, and its leaves are fair, and its blooms <marks>⌈⌈</marks>very<marks>⌉⌉</marks> delightful in appearance.’
+6. Then answered Michael, one of the holy <marks>⌈⌈</marks>and honoured<marks>⌉⌉</marks> [Footnote: And honoured (E. > Gᵍ).] angels who was with me, and was their leader,
 
 ## 25.
 
-1. And he said unto me: ‘Enoch, why dost thou ask me regarding the fragrance of the tree, and <marks>⌈</marks>why<marks>⌉</marks> dost thou wish to learn the truth?’
-2. Then I answered him, <marks>⌈⌈</marks>saying<marks>⌉⌉</marks>: ‘I wish to know about everything, but especially about this tree.’
-3. And he answered, saying: ‘This high mountain <marks>⌈⌈</marks>which thou hast seen<marks>⌉⌉</marks>, whose summit is like the throne of God, is His throne, where the Holy Great One, the Lord of Glory, the Eternal King will sit, when He shall come down to visit the earth with goodness.
+1. And he said unto me: ‘Enoch, why dost thou ask me regarding the fragrance of the tree, and <marks>⌈</marks>why<marks>⌉</marks> [Footnote: Why (Gᵍ). > E.] dost thou wish to learn the truth?’
+2. Then I answered him, <marks>⌈⌈</marks>saying<marks>⌉⌉</marks> [Footnote: Saying (E). > Gᵍ.]: ‘I wish to know about everything, but especially about this tree.’
+3. And he answered, saying: ‘This high mountain <marks>⌈⌈</marks>which thou hast seen<marks>⌉⌉</marks> [Footnote: Which thou hast seen (E). > Gᵍ.], whose summit is like the throne of God, is His throne, where the Holy Great One, the Lord of Glory, the Eternal King will sit, when He shall come down to visit the earth with goodness.
 4. And as for this fragrant tree no mortal is permitted to touch it till the great judgement, when He shall take vengeance on all and bring <supplied>everything</supplied> to its consummation for ever. It shall then be given to the righteous and holy.
-5. Its fruit <emended>shall be</emended> for food to the elect: it shall be transplanted to the holy place, to the temple of the Lord, the Eternal King.
+5. Its fruit <emended>shall be</emended> [Footnote: Its fruit … to the elect. Gᵍ reads ὁ καρπὸς αὐτοῦ τοῖς ἐκλεκτοῖς †εἰς ζωὴν† εἰς βορᾶν. The writer had before him Ezek. 47¹² ויהיו פריו למאכל. εἰς ζωήν = לחייא, which I take to be corrupt for להוא = ἔσται. Thus the original possibly ran ואנבה לבחיריא להוא למיכל. E is here very corrupt = ἐκ τοῦ καρποῦ αὐτοῦ δοθήσεται τοῖς ἐκλεκτοῖς ζωή, καὶ εἰς βορρᾶν.] for food to the elect: it shall be transplanted to the holy place, to the temple of the Lord, the Eternal King.
 
 6. Then shall they rejoice with joy and be glad.
 6. And into the holy place shall they enter;
 6. And its fragrance shall be in their bones,
 6. And they shall live a long life on earth,
 6. Such as thy fathers lived:
-6. And in their days shall no <marks>⌈⌈</marks>sorrow or<marks>⌉⌉</marks> plague
+6. And in their days shall no <marks>⌈⌈</marks>sorrow or<marks>⌉⌉</marks> [Footnote: In this verse I have followed Gᵍ. E differs only in the second and third lines, where it reads ‘Into the holy place shall they enter (mtu, β-o₁b), Its fragrance shall be in their bones.’ No sorrow or plague. Cf. Is. 65¹⁹, ²⁰.] plague
 6. Or torment or calamity touch them.’
 
 7. Then blessed I the God of Glory, the Eternal King, who hath prepared such things for the righteous, and hath created them and promised to give to them.
@@ -468,7 +471,7 @@ the righteous,
 
 ### Jerusalem and the Mountains, Ravines, and Streams.
 
-1. And I went from thence to the middle of the earth, and I saw a blessed place <marks>⌈</marks>in which there were trees<marks>⌉</marks> with branches abiding and blooming <marks>[</marks>of a dismembered tree<marks>]</marks>.
+1. And I went from thence to the middle of the earth, and I saw a blessed place <marks>⌈</marks>in which there were trees<marks>⌉</marks> [Footnote: In which there were trees. So Gᵍ, but lost in E owing to hmt., i. e. esaw zabôtû fell out after zabôtû. Or it may have been omitted by the translator owing to the final phrase.] with branches abiding and blooming <marks>[</marks>of a dismembered tree<marks>]</marks> [Footnote: Of a dismembered tree. This phrase can only be interpreted of Israel. If it is original, then ‘in which there were trees’ cannot be original, and the text may refer to the participation of the righteous descendants of Israel in the Messianic Kingdom in Palestine.].
 2. And there I saw a holy mountain, <marks>⌈⌈</marks>and<marks>⌉⌉</marks> underneath the mountain to the east there was a stream and it flowed towards the south.
 3. And I saw towards the east another mountain higher than this, and between them a deep and narrow ravine: in it also ran a stream <marks>⌈</marks>underneath<marks>⌉</marks> the mountain.
 4. And to the west thereof there was another mountain, lower than the former and of small elevation, and a ravine <marks>⌈</marks>deep and dry<marks>⌉</marks> between them: and another deep and dry ravine was at the extremities of the three <marks>⌈</marks>mountains<marks>⌉</marks>.
