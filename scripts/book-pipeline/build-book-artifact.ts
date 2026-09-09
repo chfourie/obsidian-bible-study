@@ -17,6 +17,7 @@ import {
 } from './book-registry'
 import {
   type BookParagraph,
+  type CurationWaiver,
   type Epigraph,
   type FigureSource,
   type ParsedBookSection,
@@ -220,40 +221,47 @@ export const buildBookArtifact = (
 // The curation to-do a build prints at the end (spec-books §2): an atom the
 // curator marked but left without a Footnote. A warning, never a failure —
 // the notes are curated over releases, and the grid ships either way.
+const awaitsFootnote = (atom: BookArtifactParagraph): boolean =>
+  (atom.marks !== undefined || atom.emended !== undefined) &&
+  atom.footnotes === undefined
+
+// A waiver is checked as strictly as a note: one on an atom the to-do never
+// listed is a slip — a renumbering, or a note written since.
+const assertWaiverNamesTheToDo = (
+  waiver: CurationWaiver,
+  atom: BookArtifactParagraph | undefined,
+): void => {
+  const why =
+    atom === undefined
+      ? 'which is no atom of the Book'
+      : atom.footnotes !== undefined
+        ? 'which carries a Footnote'
+        : awaitsFootnote(atom)
+          ? null
+          : 'which carries no Editorial mark'
+  if (why !== null)
+    throw new Error(
+      `line ${waiver.line}: the waiver of ${waiver.locator} names an atom ${why}`,
+    )
+}
+
 export const notesToCurate = (
   artifact: BookArtifact,
-  waived: readonly string[] = [],
+  waived: readonly CurationWaiver[] = [],
 ): string[] => {
   const book = artifact.manifest.book
   const separator = book.atom === 'verse' ? ':' : '.'
-  const marked = new Map(
+  const atoms = new Map(
     Object.entries(artifact.books[book.number]).map(([verseId, atom]) => {
       const { chapter, verse } = decodeVerseId(Number(verseId))
       return [`${chapter}${separator}${verse}`, atom]
     }),
   )
-  // A waiver is checked as strictly as a note: one on an atom the to-do never
-  // listed is a slip — a renumbering, or a note written since.
-  for (const locator of waived) {
-    const atom = marked.get(locator)
-    const why =
-      atom === undefined
-        ? 'which is no atom of the Book'
-        : atom.footnotes !== undefined
-          ? 'which carries a Footnote'
-          : atom.marks === undefined && atom.emended === undefined
-            ? 'which carries no Editorial mark'
-            : null
-    if (why !== null)
-      throw new Error(`the waiver of ${locator} names an atom ${why}`)
-  }
-  return [...marked]
-    .filter(
-      ([locator, atom]) =>
-        (atom.marks !== undefined || atom.emended !== undefined) &&
-        atom.footnotes === undefined &&
-        !waived.includes(locator),
-    )
+  for (const waiver of waived)
+    assertWaiverNamesTheToDo(waiver, atoms.get(waiver.locator))
+  const waivedLocators = new Set(waived.map((waiver) => waiver.locator))
+  return [...atoms]
+    .filter(([locator, atom]) => awaitsFootnote(atom) && !waivedLocators.has(locator))
     .map(([locator]) => `${locator} carries an Editorial mark and no Footnote`)
 }
 
@@ -280,5 +288,5 @@ export const sha256Hex = (data: string | Uint8Array): string =>
     : createHash('sha256').update(data).digest('hex')
 
 export { parseBookRegistry } from './book-registry'
-export { curationWaivers } from './parse-book-markdown'
+export { type CurationWaiver, curationWaivers } from './parse-book-markdown'
 export { parseRefOverrides } from './ref-overrides'

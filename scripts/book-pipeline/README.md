@@ -300,10 +300,10 @@ in a comment line that names it and says why:
 %% waived 1:4 — the interpolation bracket is the key's; Charles prints no note on it.
 ```
 
-A waived atom leaves the to-do. The build fails on a waiver with no reason,
-and on one naming an atom that is not on the to-do — no such atom, no mark on
-it, or a Footnote written since — so a waiver is as deliberate as a note and
-never survives a renumbering unnoticed.
+A waived atom leaves the to-do. The build fails, citing the waiver's line,
+on one with no reason and on one naming an atom that is not on the to-do —
+no such atom, no mark on it, or a Footnote written since — so a waiver is as
+deliberate as a note and never survives a renumbering unnoticed.
 
 ## Ref Spans
 

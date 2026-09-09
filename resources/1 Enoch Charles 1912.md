@@ -10,7 +10,7 @@ language: English
 ### I-V. Parable of Enoch on the Future Lot of the Wicked and the Righteous.
 
 1. The words of the blessing of Enoch, wherewith he blessed the elect
-<marks>⌈⌈</marks>and<marks>⌉⌉</marks> righteous [Footnote: The elect and righteous. This designation is found also in 38², ³, ⁴ 39⁶, ⁷ 48¹ 58¹, ² 61¹³ 62¹², ¹³, ¹⁵ 70³.], who will be living in the day of tribulation, when all
+<marks>⌈⌈</marks>and<marks>⌉⌉</marks> righteous, who will be living in the day of tribulation, when all
 the wicked <marks>⌈⌈</marks>and godless<marks>⌉⌉</marks> [Footnote: All the wicked. Here Gᵍ reads πάντας τοὺς ἐχθρούς = כל־הצרים corrupt for כל־הרעים. Hence E is right here. The same corruption is attested by the LXX in Prov. 20²².] are to be removed.
 2. And he took up his parable and said—Enoch a righteous man, whose eyes
 were opened by God, saw the vision of the Holy One in the heavens,
@@ -75,7 +75,7 @@ water, and clouds and dew and rain lie upon it<marks>⌉⌉</marks>.
 
 ## 3.
 
-1. Observe and see how <supplied>in the winter</supplied> all the trees <marks>⌈⌈</marks>seem<marks>⌉⌉</marks> [Footnote: 1. In Gᵍ 3¹ᵇ–5¹ᵃ has been lost through homoeoteleuton.] as though
+1. Observe and see how <supplied>in the winter</supplied> all the trees <marks>⌈⌈</marks>seem<marks>⌉⌉</marks> [Footnote: In Gᵍ 3¹ᵇ–5¹ᵃ has been lost through homoeoteleuton.] as though
 they had withered and shed all their leaves, except fourteen trees, which
 do not lose their foliage but retain the old foliage from two to three
 years till the new comes.
@@ -90,7 +90,7 @@ tread on the earth, or on a rock by reason of its heat.
 ## 5.
 
 1. Observe <marks>⌈⌈</marks>ye<marks>⌉⌉</marks> [Footnote: In Gᵍ 3¹ᵇ–5¹ᵃ has been lost through homoeoteleuton.] how the trees cover themselves with green leaves and bear
-fruit: wherefore give ye heed <marks>⌈</marks>and know<marks>⌉</marks> with regard to all <marks>⌈</marks>His works<marks>⌉</marks> [Footnote: The trees … bear fruit. Gᵍ reads ‘the green leaves on them cover the trees and all their fruit is for honour and glory’. He that liveth (cf. Sir. 18¹) … them so. Here I have emended gabarkemmû la’ĕlûntû kuĕllômû into gabrômû la’ĕlôntû kamâhû in accordance with Gᵍ. Gᵍ = ‘the living God hath made them so and He liveth for ever’. Here there is a manifest dittograph.],
+fruit: wherefore give ye heed <marks>⌈</marks>and know<marks>⌉</marks> with regard to all <marks>⌈</marks>His works<marks>⌉</marks>,
 and recognize how He that liveth for ever hath made them so.
 
 2. And <marks>⌈</marks>all<marks>⌉</marks> His works [Footnote: ⌈All⌉ His works. E adds qedmêhû = ‘before Him’. This seems corrupt for kamâhû = ‘thus’ (οὕτως in Gᵍ) or for kuĕllômû = ‘all’.] go on <marks>⌈</marks>thus<marks>⌉</marks> from year to year <marks>⌈</marks>for ever<marks>⌉</marks>, and all
@@ -404,7 +404,7 @@ the righteous,
 8. Then I asked regarding all the <emended>hollow places</emended>: ‘Why is one separated from the other?’
 
 9. E
-9. And he answered me and said unto me: ‘These three have been made that the spirits of the dead might be separated. And such a division has been made <marks>〈</marks>for<marks>〉</marks> [Footnote: The bright spring of water. In E for ‘bright’ the text gives ‘brightness’ or ‘light’.] the spirits of the righteous, in which there is the <emended>bright</emended> spring of water.
+9. And he answered me and said unto me: ‘These three have been made that the spirits of the dead might be separated. And such a division has been made <marks>〈</marks>for<marks>〉</marks> the spirits of the righteous, in which there is the <emended>bright</emended> [Footnote: The bright spring of water. In E for ‘bright’ the text gives ‘brightness’ or ‘light’.] spring of water.
 10. E
 10. <emended>And</emended> such [Footnote: And this. In E bakama kamâhû is corrupt for wakamâhû = καὶ οὕτως. Here οὕτως is corrupt for οὗτος the demonstrative.] has been made for sinners when they die and are buried in the earth and judgement has not been executed on them in their lifetime.
 11. E
@@ -423,9 +423,9 @@ the righteous,
 11. Gᵍ
 11. Here their spirits shall be set apart in this great pain, till the great day of judgement, scourgings, and torments of the accursed for ever, <emended>so that</emended> [Footnote: So that (there may be) retribution = ἵν’ ἀνταπόδοσις. Emended by Radermacher.] <supplied>there may be</supplied> retribution for their spirits. There He shall bind them for ever.
 12. Gᵍ
-12. And <emended>this</emended> [Footnote: And this. See the note on verse 9: οὕτως is corrupt for οὗτος the demonstrative, and the emendation is introduced into the translation of Gᵍ in verses 9, 10, 12, 13.] division has been made for the spirits of those who make their suit, who make disclosures concerning their destruction, when they were slain in the days of the sinners.
+12. And <emended>this</emended> [Footnote: And this. In E bakama kamâhû is corrupt for wakamâhû = καὶ οὕτως. Here οὕτως is corrupt for οὗτος the demonstrative. The angel points to each division as he describes it. I have introduced this emendation into my translation of Gᵍ in verses 9, 10, 12, 13.] division has been made for the spirits of those who make their suit, who make disclosures concerning their destruction, when they were slain in the days of the sinners.
 13. Gᵍ
-13. And <emended>this</emended> [Footnote: And this. See the note on verse 9: οὕτως is corrupt for οὗτος the demonstrative, and the emendation is introduced into the translation of Gᵍ in verses 9, 10, 12, 13.] has been made for the spirits of men who shall not be righteous but sinners, who are godless, and of the lawless they shall be companions: but their spirits shall not be punished in the day of judgement nor shall they be raised from thence.’
+13. And <emended>this</emended> [Footnote: And this. In E bakama kamâhû is corrupt for wakamâhû = καὶ οὕτως. Here οὕτως is corrupt for οὗτος the demonstrative. The angel points to each division as he describes it. I have introduced this emendation into my translation of Gᵍ in verses 9, 10, 12, 13.] has been made for the spirits of men who shall not be righteous but sinners, who are godless, and of the lawless they shall be companions: but their spirits shall not be punished in the day of judgement nor shall they be raised from thence.’
 14. Gᵍ
 14. Then I blessed the Lord of Glory and said: ‘Blessed art Thou, Lord of righteousness, who rulest over the world.’
 
@@ -1425,7 +1425,7 @@ the righteous,
 3. And these are the chiefs of their angels and their names, and their chief ones over hundreds and over fifties and over tens.<marks>]</marks> [Footnote: I have bracketed the bulk of ver. 2 and all ver. 3 as an intrusion here. These angels are the angels who fell in the time of Jared: whereas those mentioned in 69⁴ ˢᵠᵠ· are Satans.]
 
 4. The name of the first Jeqôn: that is, the one who led astray <marks>[</marks>all<marks>]</marks> the sons of <emended>God</emended> [Footnote: Sons of God. Cf. Job 38⁷. The text reads ‘sons of the (+ ‘holy’ t, bcdelopyx₁a₁b) angels’, or (+ ‘holy’ t, bcdelopyx₁a₁b) ‘sons of the angels’. Schmidt thinks that this is a mistranslation of בני אלהיא; but, though בן אלהים means ‘angel’, in the LXX it is never so rendered. בני אלהים is rendered by ἄγγελοι θεοῦ, not by ἄγγελοι alone. Hence, I suppose a corruption of אלהיא into מלאכיא.], and brought them down to the earth, and led them astray through the daughters of men.
-5. And the second was named Asbeêl: he imparted to the holy sons of <emended>God</emended> [Footnote: Sons of God. See the note on ver. 4: the text reads ‘sons of the angels’, a corruption of אלהיא into מלאכיא.] evil counsel, and led them astray so that they defiled their bodies with the daughters of men.
+5. And the second was named Asbeêl: he imparted to the holy sons of <emended>God</emended> [Footnote: Sons of God. Cf. Job 38⁷. The text reads ‘sons of the (+ ‘holy’ t, bcdelopyx₁a₁b) angels’, or (+ ‘holy’ t, bcdelopyx₁a₁b) ‘sons of the angels’. Schmidt thinks that this is a mistranslation of בני אלהיא; but, though בן אלהים means ‘angel’, in the LXX it is never so rendered. בני אלהים is rendered by ἄγγελοι θεοῦ, not by ἄγγελοι alone. Hence, I suppose a corruption of אלהיא into מלאכיא.] evil counsel, and led them astray so that they defiled their bodies with the daughters of men.
 6. And the third was named Gâdreêl: he it is who showed the children of men all the blows of death, and he led astray Eve, and showed <marks>[</marks>the weapons of death to the sons of men<marks>]</marks> [Footnote: ［The weapons of death to the sons of men.］ A dittograph from the close of the verse.] the shield and the coat of mail, and the sword for battle, and all the weapons of death to the children of men.
 7. And from his hand they have proceeded against those who dwell on the earth from that day and for evermore.
 8. And the fourth was named Pênêmûe: he taught the children of men the bitter and the sweet, and he taught them all the secrets of their wisdom.
@@ -2013,7 +2013,7 @@ the righteous,
 42. And the dogs and the foxes and the wild boars began to devour those sheep till the Lord of the sheep raised up <marks>[</marks>another sheep<marks>]</marks> [Footnote: Lord of the sheep raised up. So g, n. This reading is confirmed by the Greek μέχρι οὗ ἤγειρεν ὁ κύριος τῶν προβάτων κριὸν ἕνα. Other MSS. give ‘till another sheep, the Lord of the sheep, arose’. The words ‘another sheep’ are a gloss, and we should render ‘raised up a ram from their midst’.] a ram from their midst, which led them.
 43. And that ram began to butt on either side those dogs, foxes, and wild boars till he had destroyed them <marks>†</marks>all<marks>†</marks> [Footnote: Destroyed them †all†. The Greek text (ἀπώλεσεν πολλούς) is here decidedly better. Saul by no means destroyed them all.].
 44. And that sheep whose eyes were opened saw that ram, which was amongst the sheep, <emended>till</emended> [Footnote: Till. The MSS. = ὡς corrupt for ἕως.] it <marks>†</marks>forsook its glory<marks>†</marks> [Footnote: †Forsook its glory† = ἀφῆκεν τὴν δόξαν αὐτοῦ. For δόξαν the Greek reads ὁδόν. If the suffix αὐτοῦ refers to the subject of the verb, i. e. Saul, then ‘forsook his way’ can hardly be right. Perhaps דרכו (= ὁδὸν αὐτοῦ) is corrupt for דרך יי in the earlier script, i. e. ‘the way of the Lord’. In 89⁵⁴ we have the expression ‘the house of the Lord’ = בית יי. Hence here and in ver. 45 we should probably read ‘the way of the Lord’ instead of ‘its glory’.] and began to butt those sheep, and trampled upon them, and behaved itself unseemly.
-45. And the Lord of the sheep sent the <emended>lamb</emended> to another <emended>lamb</emended> [Footnote: 45, 46. David anointed king. Observe that in ver. 45 the Greek used ἄρνα and not πρόβατον for Samuel and for David so long as the latter is not yet king, where the Ethiopic employs the more general term ‘sheep’. Observe further that Solomon previous to his coronation, ver. 48ᵇ, is called ‘a little sheep’, i. e. a lamb. I have followed the Greek, reading ‘the lamb’ twice where the Ethiopic has ‘the sheep’. That ram. All MSS. except d read ‘that sheep’. d ‘that ram, sheep’ (sic). Greek alone right. Forsaken its glory: see the note on ver. 44 — read ‘the way of the Lord’ instead of ‘its glory’.] and raised it to being a ram and leader of the sheep instead of that ram which had <marks>†</marks>forsaken its glory<marks>†</marks>.
+45. And the Lord of the sheep sent the <emended>lamb</emended> to another <emended>lamb</emended> [Footnote: 45, 46. David anointed king. Observe that in ver. 45 the Greek used ἄρνα and not πρόβατον for Samuel and for David so long as the latter is not yet king, where the Ethiopic employs the more general term ‘sheep’. Observe further that Solomon previous to his coronation, ver. 48ᵇ, is called ‘a little sheep’, i. e. a lamb. I have followed the Greek, reading ‘the lamb’ twice where the Ethiopic has ‘the sheep’. That ram. All MSS. except d read ‘that sheep’. d ‘that ram, sheep’ (sic). Greek alone right.] and raised it to being a ram and leader of the sheep instead of that ram which had <marks>†</marks>forsaken its glory<marks>†</marks>.
 46. And it went to it and spake to it alone, and raised it to being a ram, and made it the prince and leader of the sheep; but during all these things those dogs oppressed the sheep.
 47. And the first ram pursued that second ram, and that second ram arose and fled before it; and I saw till those dogs pulled down the firsts ram.
 48. And that second ram arose and led the <marks>[</marks>little<marks>]</marks> [Footnote: Led the sheep. So Greek. Ethiopic MSS. give ‘led the little sheep’. But the word ‘little’ should be omitted, as it is wanting in the Greek, and the expression ‘little sheep’ is pointless here, and found but once before in ver. 37. It crept into the text from the next line. The rest of the verse, 48ᵇ, I have transposed after ver. 49. Ver. 49 recounts the victories of David; ver. 48ᵇ his death and the accession of Solomon.] sheep.
@@ -2220,8 +2220,7 @@ the righteous,
 19. And now, hearken unto me, my sons,
 19. And walk in the paths of righteousness,
 19. And walk not in the paths of violence;
-19. For all who walk in the paths of unrighteousness shall perish for <emended>ever</emended>.’
-%% waived 91:19 — the 1912 page (leaf 343) prints ‘for ever’ in plain type and gives no note on it; the thick type is the reprint’s
+19. For all who walk in the paths of unrighteousness shall perish for ever.’
 
 ## 92.
 

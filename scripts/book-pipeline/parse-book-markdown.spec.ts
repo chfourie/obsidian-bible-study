@@ -493,7 +493,10 @@ describe('parseBookMarkdown curator comments', () => {
       curationWaivers(
         '---\nmodule: x\n---\n\n## 1.\n\n%% waived 1:2 — the key alone explains the bracket\n1. One.\n%%waived 1.3 — a routine version bracket\n%% a remark that waives nothing\n',
       ),
-    ).toEqual(['1:2', '1.3'])
+    ).toEqual([
+      { locator: '1:2', line: 7 },
+      { locator: '1.3', line: 9 },
+    ])
   })
 
   it('refuses a waiver that gives no reason — a waiver is a conscious one', () => {

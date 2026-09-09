@@ -111,6 +111,10 @@ A picture printed inside a Book section — a diagram, a photograph, a plate. Li
 A note an edition prints on an atom, attached by character offset into the atom's stored text. Consumes no id and is never a Reference. Lifted out of the stored string — Highlights and Ref Spans bind the atom only. Surfaces only in the Study Panel for the selected atom: no marker on the page, and chip / inline / block never show a marker or a body. Footnote words never earn a Hit.
 _Avoid_: endnote, apparatus (Editorial marks are not footnotes)
 
+### Curator comment
+A `%%` line in a curated source, the curator's own and never stored: the parser drops it before reading anything else. A **waiver** is one that names a marked atom the edition gives no note for (`%% waived C:V — reason`), taking it off the build's Footnote to-do; the build fails on a waiver whose atom is not on that to-do.
+_Avoid_: HTML comment (a `<` can never stand in atom text)
+
 ### Ref Span
 A live reference inside a Book's stored content, parsed at module build time: a character span over one atom's text plus pre-normalized verse ranges (scripture or same-book), stored as a span channel beside the text like Strong's tag spans. Renders as a quiet link (the author's original citation text); tapping navigates the reader to the target. Only explicit citations become ref spans — unreferenced allusions stay plain prose. Ref spans are not Occurrences and never enter the vault index.
 

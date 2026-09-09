@@ -61,11 +61,11 @@ parentheses dropped · `=thick=` → `<emended>` · `_i. e._` → plain ·
 
 Every atom that carries a `marks` or `emended` span was read against the
 1912 page image and Charles's note on that mark transcribed into a
-`[Footnote: …]` marker at the mark (297 notes on 257 atoms), or waived in a
+`[Footnote: …]` marker at the mark (295 notes on 257 atoms), or waived in a
 `%% waived C:V — reason` line beside the atom where the page gives the mark
-no note of its own (20 waivers: 2:1, 2:3, 5:3, 5:5, 10:13, 14:25, 15:6, 15:12,
-60:24, 69:12, 69:16, 69:25, 71:3, 72:6, 73:7, 76:12, 89:25, 91:19, 99:3,
-103:10). Leaves read per chapter (leaf = page + 115):
+no note of its own (19 waivers: 2:1, 2:3, 5:3, 5:5, 10:13, 14:25, 15:6, 15:12,
+60:24, 69:12, 69:16, 69:25, 71:3, 72:6, 73:7, 76:12, 89:25, 99:3, 103:10).
+Leaves read per chapter (leaf = page + 115):
 
 | Chapter | Leaves |
 | --- | --- |
@@ -167,17 +167,18 @@ Conventions the transcriptions follow:
   65:10, 90:14, 51:4). A note that explains a run of marked verses (39:1–2,
   59:1–3, 69:2–3, 69:22–24, 93:11–14, 91:12–17) stands on each verse of the
   run; a note Charles gives once for a repeated emendation (22:9–13 "And
-  this", 77:1–3 "quarter", 101:4/9 "sailors") is repeated in his words on
-  each atom, the repeat citing his verse.
+  this", 69:4–5 "Sons of God", 77:1–3 "quarter") is repeated verbatim on
+  each atom, and where he himself writes "see note on ver. 4" (101:9) that
+  is the note.
 - Notes on the E / Gᵍ columns (22, 27, 32) anchor on the column whose text
   the note names.
 
 Page-driven text fixes made while transcribing: **17:1** the reprint's
-`⌈and⌉ brought` closes on `brought` in 1912 (`⌈and brought⌉`, leaf 153) and
-was corrected. Two waivers flag reprint/1912 differences for the spec
-owner rather than fix them: **91:19** prints `for ever` in plain type in
-1912 (leaf 343; the `<emended>` is the reprint's thick type) and **99:3**
-prints a thick `a` (leaf 359) that no note explains.
+`⌈and⌉ brought` closes on `brought` in 1912 (`⌈and brought⌉`, leaf 153);
+**91:19** prints `for ever` in plain type in 1912 (leaf 343), so the
+reprint's thick type — an `<emended>` the PG text alone had — was dropped
+(103 emended atoms, not 104). **99:3** prints a thick `a` (leaf 359) that
+no note explains and stays waived.
 
 ## Decisions the next curator should know
 

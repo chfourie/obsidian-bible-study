@@ -192,7 +192,7 @@ describe('1 Enoch, Charles 1912', () => {
     expect(atom.text.slice(emended.start, emended.end)).toBe('steadfast')
     expect(atom.text.slice(emended.start - 5, emended.end + 10)).toBe('⌈how steadfast they are⌉')
     const emendedAtoms = Object.values(artifact.books[103]).filter((other) => other.emended !== undefined)
-    expect(emendedAtoms).toHaveLength(104)
+    expect(emendedAtoms).toHaveLength(103)
     const hollow = verse(22, 8)
     expect(hollow.emended?.map((span) => hollow.text.slice(span.start, span.end))).toEqual([
       'hollow places', 'hollow places',
@@ -211,17 +211,17 @@ describe('1 Enoch, Charles 1912', () => {
     }
   })
 
-  it('freezes the curated Footnote subset: 297 notes on 257 atoms, 20 conscious waivers, nothing left to curate', () => {
+  it('freezes the curated Footnote subset: 295 notes on 257 atoms, 19 conscious waivers, nothing left to curate', () => {
     const noted = Object.values(artifact.books[103]).filter((atom) => atom.footnotes !== undefined)
     expect(noted).toHaveLength(257)
-    expect(noted.reduce((count, atom) => count + (atom.footnotes?.length ?? 0), 0)).toBe(297)
+    expect(noted.reduce((count, atom) => count + (atom.footnotes?.length ?? 0), 0)).toBe(295)
     const waived = curationWaivers(source)
-    expect(waived).toEqual([
+    expect(waived.map((waiver) => waiver.locator)).toEqual([
       '2:1', '2:3', '5:3', '5:5', '10:13', '14:25', '15:6', '15:12', '60:24', '69:12',
-      '69:16', '69:25', '71:3', '72:6', '73:7', '76:12', '89:25', '91:19', '99:3', '103:10',
+      '69:16', '69:25', '71:3', '72:6', '73:7', '76:12', '89:25', '99:3', '103:10',
     ])
     expect(notesToCurate(artifact, waived)).toEqual([])
-    expect(notesToCurate(artifact)).toHaveLength(20)
+    expect(notesToCurate(artifact)).toHaveLength(19)
   })
 
   it('grows no channel on an unmarked verse', () => {

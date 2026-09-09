@@ -139,25 +139,27 @@ const readFrontMatter = (
   return { fields, body: markdown.slice(match[0].length) }
 }
 
-// A curator's comment is a line opening with `%%` — Obsidian's own comment
-// syntax, so the source reads the same in the vault. It is dropped before
-// anything else reads the line: neither a wrap nor a block delimiter, and
-// never stored.
+// Obsidian's own comment syntax, so the source reads the same in the vault
+// (README §Curator comments).
 const CURATOR_COMMENT = /^\s*%%/
-// A waiver names the marked atom whose note the curator has decided the
-// print does not give (spec-books §2: the to-do is driven to zero or each
-// entry consciously waived), and says why.
+// The curator's conscious waiver of a marked atom the print gives no note
+// for (spec-books §2, README §Footnotes): the locator, then the reason.
 const WAIVER = /^\s*%%\s*waived\s+(\S+)\s*(.*)$/
 
-export const curationWaivers = (markdown: string): string[] => {
-  const waivers: string[] = []
+// A waiver keeps the source line it stands on, so the build can cite it as
+// it cites every other failure.
+export type CurationWaiver = { locator: string; line: number }
+
+export const curationWaivers = (markdown: string): CurationWaiver[] => {
+  const waivers: CurationWaiver[] = []
   markdown.split('\n').forEach((raw, index) => {
     const waiver = WAIVER.exec(raw)
     if (waiver === null) return
     const [, locator, reason] = waiver
+    const line = index + 1
     if (reason.trim() === '')
-      throw new Error(`line ${index + 1}: the waiver of ${locator} gives no reason`)
-    waivers.push(locator)
+      throw new Error(`line ${line}: the waiver of ${locator} gives no reason`)
+    waivers.push({ locator, line })
   })
   return waivers
 }
