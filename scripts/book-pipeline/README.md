@@ -196,6 +196,12 @@ the righteous,
 7c. And for you, the godless, there shall be a curse.
 ```
 
+*1 Enoch*'s source was drafted from the PG #77935 text by
+`scripts/enoch-pipeline/convert-pg77935.mjs` — a curation aid, not a build
+step — and hand-fixed against the 1912 page images; `resources/1 Enoch
+Charles 1912 CURATION.md` records the glyph map, the page checks and the
+readings chosen where the print and the parser's rules meet.
+
 ## Editorial marks
 
 A critical edition's marks — Charles's version brackets, interpolations,

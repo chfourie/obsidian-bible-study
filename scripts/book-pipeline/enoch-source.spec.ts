@@ -21,8 +21,8 @@ import { parseRefOverrides } from './ref-overrides'
 
 // The golden test over the real curated source: the first release freezes
 // this grid forever (ADR 0002), so every section and verse count is spelled
-// out here and a change to any of them is a deliberate one. Chapters 1–5 are
-// the tracer (ticket 139); the rest of Charles's 1–108 follow the same path.
+// out here and a change to any of them is a deliberate one. Chapters 1–5 were
+// the tracer (ticket 139); 1–108 landed with ticket 145.
 const source = readFileSync('resources/1 Enoch Charles 1912.md', 'utf8')
 const registry = parseBookRegistry(
   readFileSync('scripts/book-registry.json', 'utf8'),
@@ -36,6 +36,29 @@ const artifact = buildBookArtifact(
 )
 const verse = (chapter: number, atom: number) =>
   artifact.books[103][makeVerseId(103, chapter, atom)]
+const section = (chapter: number) =>
+  artifact.manifest.book.sections.find((candidate) => candidate.chapter === chapter)
+
+// Charles's verse count per printed chapter, I–CVIII.
+const ATOMS_PER_CHAPTER = [
+  9, 3, 1, 1, 9, 8, 6, 4, 11, 22, 2, 6, 10, 25, 12, 4, 8, 16, 3, 8,
+  10, 14, 4, 6, 7, 6, 5, 3, 2, 3, 3, 6, 4, 3, 1, 4, 5, 6, 14, 10,
+  9, 3, 4, 1, 6, 8, 4, 10, 4, 5, 5, 9, 7, 10, 4, 8, 3, 6, 3, 25,
+  13, 16, 12, 2, 12, 3, 13, 5, 29, 4, 17, 37, 8, 17, 9, 14, 8, 17, 6, 8,
+  10, 20, 11, 6, 10, 6, 4, 3, 77, 42, 19, 5, 14, 11, 7, 8, 10, 16, 16, 13,
+  9, 11, 15, 13, 2, 19, 3, 15,
+]
+const PARTS: [string, number, number][] = [
+  ['The Book of the Watchers (I–XXXVI)', 1, 36],
+  ['The Parables (XXXVII–LXXI)', 37, 71],
+  ['The Book of the Courses of the Heavenly Luminaries (LXXII–LXXXII)', 72, 82],
+  ['The Dream-Visions (LXXXIII–XC)', 83, 90],
+  ['The Epistle of Enoch (XCI–CV)', 91, 105],
+  ['Fragment of the Book of Noah (CVI–CVII)', 106, 107],
+  ['An Appendix to the Book of Enoch (CVIII)', 108, 108],
+]
+const partOf = (chapter: number) =>
+  PARTS.find(([, from, to]) => chapter >= from && chapter <= to)?.[0]
 
 describe('1 Enoch, Charles 1912', () => {
   it('publishes the verse-atom module the catalogue offers as 1en-c1912', () => {
@@ -58,26 +81,33 @@ describe('1 Enoch, Charles 1912', () => {
     })
   })
 
-  it('lays chapters 1–5 out as untitled sections named by number, under the Watchers', () => {
+  it('lays chapters 1–108 out in numeric order as untitled sections named by number, under the seven Parts', () => {
     const grid = artifact.manifest.book.sections.map(
       ({ reading: _reading, ...section }) => section,
     )
-    const part = 'The Book of the Watchers (I–XXXVI)'
-    expect(grid).toEqual([
-      { chapter: 1, name: '1', paragraphs: 9, part },
-      { chapter: 2, name: '2', paragraphs: 3, part },
-      { chapter: 3, name: '3', paragraphs: 1, part },
-      { chapter: 4, name: '4', paragraphs: 1, part },
-      { chapter: 5, name: '5', paragraphs: 9, part },
-    ])
+    expect(grid).toEqual(
+      ATOMS_PER_CHAPTER.map((paragraphs, index) => ({
+        chapter: index + 1,
+        name: String(index + 1),
+        paragraphs,
+        part: partOf(index + 1),
+      })),
+    )
+    expect(grid).toHaveLength(108)
     expect(artifact.manifest.book.sections.some((section) => section.named)).toBe(false)
+  })
+
+  it('has no chapter 109 — Charles’s book ends at the Appendix chapter CVIII', () => {
+    expect(section(108)?.paragraphs).toBe(15)
+    expect(section(109)).toBeUndefined()
+    expect(artifact.books[103][makeVerseId(103, 109, 1)]).toBeUndefined()
   })
 
   it('carries every verse the sections promise', () => {
     for (const section of artifact.manifest.book.sections)
       for (let atom = 1; atom <= section.paragraphs; atom += 1)
         expect(verse(section.chapter, atom)?.text).toBeTruthy()
-    expect(Object.keys(artifact.books[103])).toHaveLength(23)
+    expect(Object.keys(artifact.books[103])).toHaveLength(1063)
   })
 
   it('stores the 1912 print’s bracket glyphs as plain characters, never the digitizer’s', () => {
@@ -94,6 +124,14 @@ describe('1 Enoch, Charles 1912', () => {
       expect(text).not.toMatch(/\.\.\./)
     }
     expect(verse(2, 2).text).toContain('⌈how steadfast they are⌉')
+    expect(verse(8, 1).text).toContain('〈of the earth〉')
+    expect(verse(71, 11).text).toContain('… with the spirit of power')
+  })
+
+  it('keeps 108:4’s daggers, which the sacred-texts digitization lost', () => {
+    const atom = verse(108, 4)
+    expect(atom.text).toContain('I could not †look over†,')
+    expect(atom.marks?.map((span) => atom.text.slice(span.start, span.end))).toEqual(['†', '†'])
   })
 
   it('drops Charles’s supplied parentheses and identifies the words — 1:4’s even among them', () => {
@@ -128,12 +166,17 @@ describe('1 Enoch, Charles 1912', () => {
     expect(glyphs(1, 2)).toEqual(['⌈⌈', '⌉⌉'])
     expect(glyphs(1, 9)).toEqual(['⌈', '⌉', '⌈', '⌉', '⌈', '⌉', '⌈', '⌉', '⌈', '⌉'])
     expect(glyphs(5, 6)).toEqual(['⌈', '⌉', '⌈', '⌉', '⌈', '⌉', '⌈', '…', '⌉'])
-    const spans = Object.values(artifact.books[103]).flatMap((atom) => atom.marks ?? [])
-    expect(spans).toHaveLength(75)
+    const glyphCounts = new Map<string, number>()
     for (const atom of Object.values(artifact.books[103])) {
-      for (const span of atom.marks ?? [])
-        expect(atom.text.slice(span.start, span.end)).toMatch(/^(⌈⌈|⌉⌉|⌈|⌉|\[|\]|…)$/)
+      for (const span of atom.marks ?? []) {
+        const glyph = atom.text.slice(span.start, span.end)
+        expect(glyph).toMatch(/^(⌈⌈|⌉⌉|⌈|⌉|〈|〉|\[|\]|†|…)$/)
+        glyphCounts.set(glyph, (glyphCounts.get(glyph) ?? 0) + 1)
+      }
     }
+    expect(Object.fromEntries(glyphCounts)).toEqual({
+      '⌈⌈': 50, '⌉⌉': 50, '⌈': 67, '⌉': 67, '〈': 13, '〉': 13, '[': 68, ']': 68, '†': 137, '…': 7,
+    })
   })
 
   it('identifies 2:2’s thick-type steadfast as emended, inside its version bracket', () => {
@@ -142,10 +185,17 @@ describe('1 Enoch, Charles 1912', () => {
     const [emended] = atom.emended ?? []
     expect(atom.text.slice(emended.start, emended.end)).toBe('steadfast')
     expect(atom.text.slice(emended.start - 5, emended.end + 10)).toBe('⌈how steadfast they are⌉')
-    const others = Object.entries(artifact.books[103]).filter(
-      ([id, other]) => other.emended !== undefined && Number(id) !== makeVerseId(103, 2, 2),
-    )
-    expect(others).toEqual([])
+    const emendedAtoms = Object.values(artifact.books[103]).filter((other) => other.emended !== undefined)
+    expect(emendedAtoms).toHaveLength(104)
+    const hollow = verse(22, 8)
+    expect(hollow.emended?.map((span) => hollow.text.slice(span.start, span.end))).toEqual([
+      'hollow places', 'hollow places',
+    ])
+  })
+
+  it('ships no Footnote yet — every note is #146’s to transcribe', () => {
+    for (const atom of Object.values(artifact.books[103]))
+      expect(atom).not.toHaveProperty('footnotes')
   })
 
   it('grows no channel on an unmarked verse', () => {
@@ -176,6 +226,41 @@ describe('1 Enoch, Charles 1912', () => {
       },
     ])
     expect(verse(1, 2).headings).toBeUndefined()
+  })
+
+  it('keeps Charles’s Epistle heads verbatim on 92:1, 91:1, 93:1 and 91:12 while the sections stand 91 → 92 → 93', () => {
+    const head = (chapter: number, atom: number) =>
+      verse(chapter, atom).headings?.filter((heading) => heading.level === 'section').map((heading) => heading.text)
+    expect(head(92, 1)).toEqual(['XCII. XCI. 1-10, 18-19. Enoch’s Book of Admonition for his Children.'])
+    expect(head(91, 1)).toEqual(['XCI. 1-11, 18-19. Enoch’s Admonition to his Children.'])
+    expect(head(93, 1)).toEqual(['XCIII, XCI. 12-17. The Apocalypse of Weeks.'])
+    expect(head(91, 12)).toEqual(['XCI. 12-17. The Last Three Weeks.'])
+    expect(head(94, 1)).toEqual(['XCIV. 1-5. Admonitions to the Righteous.'])
+    expect(artifact.manifest.book.sections.map((section) => section.chapter).slice(90, 94)).toEqual([91, 92, 93, 94])
+  })
+
+  it('opens each Part on its first chapter and Charles’s chapter heads on the verse they precede', () => {
+    for (const [part, from] of PARTS)
+      expect(verse(from, 1).headings?.[0]).toEqual({ text: part, level: 'part' })
+    expect(verse(38, 1).headings?.map((heading) => heading.text)).toEqual([
+      'XXXVIII-XLIV. The First Parable.',
+      'XXXVIII. The Coming Judgement of the Wicked.',
+    ])
+    expect(verse(89, 10).headings).toEqual([
+      { text: 'LXXXIX. 10-27. From the Death of Noah to the Exodus.', level: 'section' },
+    ])
+    expect(verse(89, 11).headings).toBeUndefined()
+  })
+
+  it('prints Charles’s parallel E and Gᵍ columns as labelled lines of the one verse (22:2)', () => {
+    const atom = verse(22, 2)
+    expect(atom.lines?.map((line) => atom.text.slice(line.start).split(' ')[0])).toEqual([
+      'E', 'And', 'Gᵍ', 'And',
+    ])
+    expect(section(22)?.reading?.slice(0, 6)).toEqual([
+      { atom: 1 }, { atom: 2, line: 0 }, { atom: 2, line: 1 }, { atom: 2, line: 2 },
+      { atom: 2, line: 3 }, { atom: 3 },
+    ])
   })
 
   it('keeps the prose verses as one string with no lines', () => {
@@ -221,7 +306,7 @@ describe('1 Enoch, Charles 1912', () => {
       'a', 'b', 'c', 'd', 'e', 'f', 'g', 'i', 'j',
     ])
     expect(verse(5, 6).lines?.map((line) => line.paragraph === true)).toEqual([
-      true, false, false, true, false, false, false, false, false,
+      true, false, false, true, false, false, false, true, false,
     ])
     expect(verse(5, 7).lines?.map((line) => line.letter)).toEqual(['a', 'b', 'c'])
     expect(verse(5, 7).text).toBe(
@@ -231,11 +316,24 @@ describe('1 Enoch, Charles 1912', () => {
     )
   })
 
-  it('emits chapter 5’s page walk — 6a 6b 6c 7c 6d … 6j 7a 7b — as its reading, and none for 1–4', () => {
+  it('emits a reading walk only where Charles’s page is not the numeric walk', () => {
+    const walked = artifact.manifest.book.sections
+      .filter((section) => section.reading !== undefined)
+      .map((section) => section.chapter)
+    expect(walked).toEqual([5, 22, 39, 51, 60, 89, 90, 91, 97, 106])
+    expect(section(60)?.reading?.slice(9, 12)).toEqual([{ atom: 6 }, { atom: 25 }, { atom: 7 }])
+    expect(section(89)?.reading?.slice(47, 50)).toEqual([
+      { atom: 48, line: 0 }, { atom: 49 }, { atom: 48, line: 1 },
+    ])
+    expect(section(90)?.reading?.slice(12, 19).map((step) => step.atom)).toEqual([13, 16, 19, 14, 15, 17, 18])
+    expect(section(106)?.reading?.slice(13, 17).map((step) => step.atom)).toEqual([14, 17, 15, 16])
+    expect(verse(97, 9).lines?.map((line) => line.letter)).toEqual([undefined, undefined, 'c', 'd'])
+  })
+
+  it('emits chapter 5’s page walk — 6a 6b 6c 7c 6d … 6j 7a 7b — as its reading', () => {
     const readings = new Map(
       artifact.manifest.book.sections.map((section) => [section.chapter, section.reading]),
     )
-    for (const chapter of [1, 2, 3, 4]) expect(readings.get(chapter)).toBeUndefined()
     expect(readings.get(5)).toEqual([
       { atom: 1 },
       { atom: 2 },
