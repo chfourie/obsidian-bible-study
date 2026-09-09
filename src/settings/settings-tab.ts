@@ -541,7 +541,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           desc: row.editionCode,
           render: (setting: Setting) => this.#renderBookRow(setting, row),
         },
-        ...this.#atomNumbersPair(row),
+        ...(row.installed ? this.#atomNumbersPair(row) : []),
       ]),
     }
   }
@@ -549,6 +549,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
   // The one place a Book's atom-numbers option is written — the pane never
   // writes it back — worded and defaulted by the Book's atom kind, with a
   // slot per device exactly like the reader defaults (spec-books §5, §7).
+  // The value is a property of an installed Book, so an uninstalled row
+  // carries none.
   #atomNumbersPair(
     row: BookRowView,
   ): SettingDefinitionControl<SettingsControlKey>[] {

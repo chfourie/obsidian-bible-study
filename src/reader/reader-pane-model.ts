@@ -297,6 +297,13 @@ export type BookSectionGroup = {
 // breadcrumb option, Title Bar: the printed chapter number alone where the
 // print titled none, the number and the title where it did (spec-books §1).
 // A paragraph Book's section is its name, as it always was.
+// A verse-atom Book's title runs on from its number (1 Enoch 5); a
+// paragraph Book's names its section after a dash (Humility — Preface).
+const TITLE_JOIN: Record<BookAtomKind, string> = {
+  verse: ' ',
+  paragraph: ' — ',
+}
+
 export const sectionLabel = (
   book: Pick<ReaderBook, 'atom'>,
   section: Pick<ReaderBookSection, 'chapter' | 'name'>,
@@ -560,21 +567,26 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#notify()
   }
 
-  // The pane's first visit to a Book reads the Book's own stored value; from
-  // there the pane holds whatever it was flipped to, per Book.
+  // The pane's first visit to a Book takes the Book's own stored value once;
+  // from there the pane holds what it was left on, per Book, whatever the
+  // stored value does next.
+  #seedAtomNumbers(): void {
+    const book = this.#bookHere()
+    if (book === null || this.#atomNumbersByBook.has(book.number)) return
+    this.#atomNumbersByBook.set(
+      book.number,
+      this.deps.books?.atomNumbers?.(book) ??
+        ATOM_NUMBERS_FACTORY[bookAtomKind(book)],
+    )
+  }
+
   #atomNumbersHere(): AtomNumbers {
     const book = this.#bookHere()
     // Scripture's verse numbers are always on and have no option of their
     // own, so the value only ever reaches a Book's gutter.
     if (book === null) return ATOM_NUMBERS_FACTORY[DEFAULT_BOOK_ATOM_KIND]
     return (
-      this.#atomNumbersByBook.get(book.number) ?? this.#storedAtomNumbers(book)
-    )
-  }
-
-  #storedAtomNumbers(book: ReaderBook): AtomNumbers {
-    return (
-      this.deps.books?.atomNumbers?.(book) ??
+      this.#atomNumbersByBook.get(book.number) ??
       ATOM_NUMBERS_FACTORY[bookAtomKind(book)]
     )
   }
@@ -764,9 +776,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       return `${bookName(this.#position.book)} ${this.#position.chapter}`
     const section = this.#sectionOf(book)
     if (section === null) return book.title
-    return bookAtomKind(book) === 'verse'
-      ? `${book.title} ${sectionLabel(book, section)}`
-      : `${book.title} — ${section.name}`
+    return `${book.title}${TITLE_JOIN[bookAtomKind(book)]}${sectionLabel(book, section)}`
   }
 
   useNavigation(navigate: ReaderNavigation): void {
@@ -1501,6 +1511,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       : []
     if (token !== this.#loadToken) return
     if (isBookPosition) {
+      this.#seedAtomNumbers()
       await this.#loadBookPassage(token, this.#bookHere())
       return
     }

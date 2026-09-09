@@ -201,8 +201,6 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Layout (mobile)',
         "Strong's mode (desktop)",
         "Strong's mode (mobile)",
-        'Verse numbers (desktop)',
-        'Verse numbers (mobile)',
         'Folder',
         'Template file',
         'Display ordering',
@@ -707,7 +705,7 @@ describe('ScriptureStudySettingTab reader defaults', () => {
   })
 
   // The atom-numbers option is a Book's own, on its settings row (§5).
-  it('carries no paragraph-numbers row — a Book\u2019s atom numbers live on its own row', async () => {
+  it('carries no paragraph-numbers row — a Book’s atom numbers live on its own row', async () => {
     const { container } = await setup()
 
     expect(hasSettingNamed(container, 'Paragraph numbers')).toBe(false)
@@ -1176,6 +1174,35 @@ const atomNumbersRow = (
   device: 'desktop' | 'mobile',
 ): HTMLSelectElement => dropdownOf(atomNumbersSetting(container, book, device))
 
+const bookManifestOf = (
+  id: string,
+  name: string,
+  number: number,
+  author: string,
+  atom?: 'verse',
+): ModuleManifest => ({
+  ...moduleManifest(id, name),
+  kind: 'book',
+  book: {
+    number,
+    editionCode: id.toUpperCase(),
+    author,
+    year: 1900,
+    abbreviation: name,
+    ...(atom === undefined ? {} : { atom }),
+    sections: [{ chapter: 1, name: '1', paragraphs: 1 }],
+  },
+})
+
+const allBooksInstalled = () => ({
+  storedSettings: { installedModuleIds: ['hum-m1895', 'in-at-e1', '1en-c1912'] },
+  installedManifests: async () => [
+    bookManifestOf('hum-m1895', 'Humility', 101, 'Andrew Murray'),
+    bookManifestOf('in-at-e1', 'IN', 102, 'A Team'),
+    bookManifestOf('1en-c1912', '1 Enoch', 103, 'Enoch', 'verse'),
+  ],
+})
+
 describe('ScriptureStudySettingTab books section', () => {
   it('lists the book beside its author with the edition code', async () => {
     const { container } = await setup({}, { page: 'Books' })
@@ -1263,8 +1290,8 @@ describe('ScriptureStudySettingTab books section', () => {
     ).toBe('release not published')
   })
 
-  it('words and defaults each Book\u2019s atom-numbers rows after its atom kind', async () => {
-    const { container } = await setup({}, { page: 'Books' })
+  it('words and defaults each Book’s atom-numbers rows after its atom kind', async () => {
+    const { container } = await setup(allBooksInstalled(), { page: 'Books' })
 
     const names = settingItems(container).map(settingName)
     expect(names).toEqual([
@@ -1286,8 +1313,10 @@ describe('ScriptureStudySettingTab books section', () => {
     ).toBe('hover')
   })
 
-  it('persists one Book\u2019s atom numbers on one device, touching no other', async () => {
-    const { container, settingsStore } = await setup({}, { page: 'Books' })
+  it('persists one Book’s atom numbers on one device, touching no other', async () => {
+    const { container, settingsStore } = await setup(allBooksInstalled(), {
+      page: 'Books',
+    })
 
     changeDropdown(
       atomNumbersSetting(container, '1 Enoch — Enoch', 'desktop'),
@@ -1299,6 +1328,18 @@ describe('ScriptureStudySettingTab books section', () => {
     expect(settings.bookAtomNumbers).toEqual({
       '1en-c1912': { desktop: 'hover', mobile: 'on' },
     })
+  })
+
+  // The value belongs to an installed Book (§5), so an uninstalled row is
+  // the Download row alone.
+  it('offers no atom-numbers rows for a Book that is not installed', async () => {
+    const { container } = await setup({}, { page: 'Books' })
+
+    expect(settingItems(container).map(settingName)).toEqual([
+      'Humility — Andrew Murray',
+      'IN — A Team',
+      '1 Enoch — Enoch',
+    ])
   })
 
   it('keeps the installed book out of the Translations list and both pickers', async () => {

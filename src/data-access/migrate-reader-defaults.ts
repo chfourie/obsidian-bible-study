@@ -50,18 +50,17 @@ export const applyReaderDefaultMigration = (
 const applyAtomNumbersMigration = (
   settings: LegacySettings,
 ): ScriptureStudySettings => {
-  const stored = settings[PARA_NUMBERS_KEY]
-  delete settings[PARA_NUMBERS_KEY]
-  if (stored === undefined) return settings
+  const { [PARA_NUMBERS_KEY]: stored, ...retired } = settings
+  if (stored === undefined) return retired
   const seed = typeof stored === 'string' ? perDeviceDefault(stored) : stored
   const seeded = PARAGRAPH_BOOK_MODULE_IDS.filter((moduleId) =>
-    settings.installedModuleIds.includes(moduleId),
+    retired.installedModuleIds.includes(moduleId),
   ).map((moduleId) => [moduleId, { ...seed }] as const)
   return {
-    ...settings,
+    ...retired,
     bookAtomNumbers: {
       ...Object.fromEntries(seeded),
-      ...settings.bookAtomNumbers,
+      ...retired.bookAtomNumbers,
     },
   }
 }

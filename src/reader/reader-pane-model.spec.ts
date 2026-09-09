@@ -4915,6 +4915,17 @@ describe('ReaderPaneModel verse-atom Book options and section names', () => {
     expect(new Set(asked)).toEqual(new Set(['1en-c1912', 'hum-m1895']))
   })
 
+  it('seeds once — a stored value changed later leaves the pane where it was', async () => {
+    let stored: 'on' | 'hover' = 'on'
+    const model = twoBookModel({ atomNumbers: () => stored })
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    stored = 'hover'
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 2 })
+
+    expect(model.view.toggles.atomNumbers).toBe('on')
+  })
+
   it('keeps an in-pane flip to the Book it was made in', async () => {
     const model = twoBookModel()
     await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
