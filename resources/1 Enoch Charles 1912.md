@@ -577,7 +577,7 @@ the righteous,
 1. The second vision which he saw, the vision of wisdom—which Enoch, the son of Jared, the son of Mahalalel, the son of Cainan, the son of Enos, the son of Seth, the son of Adam, saw.
 2. And this is the beginning of the words of wisdom which I lifted up my voice to speak and say to those which dwell on earth: Hear, ye men of old time, and see, ye that come after, the words of the Holy One which I will speak before the Lord of Spirits.
 3. It were better to declare <supplied>them only</supplied> to the men of old time, but even from those that come after we will not withhold the beginning of wisdom.
-4. Till the present day such wisdom has never been given <emended>by</emended> the Lord of Spirits as I have received according to my insight, according to the good pleasure of the Lord of Spirits by whom the lot of eternal life has been given to me.
+4. Till the present day such wisdom has never been given <emended>by</emended> [Footnote: By, i. e. ’ĕmqĕdma = מלפני.] the Lord of Spirits as I have received according to my insight, according to the good pleasure of the Lord of Spirits by whom the lot of eternal life has been given to me.
 5. Now three parables were imparted to me, and I lifted up my voice and recounted them to those that dwell on the earth.
 
 ## 38.
@@ -604,7 +604,7 @@ the righteous,
 4. From that time those that possess the earth shall no longer be powerful and exalted:
 
 4. And they shall not be able to behold the face of the holy,
-4. For the Lord of Spirits <emended>has caused His light to appear</emended>
+4. For the Lord of Spirits <emended>has caused His light to appear</emended> [Footnote: Has caused His light to appear. I have emended tar’ĕja = ‘is seen’ into ’ar’aja = ‘has caused to appear’. This emendation is required by the fact that ‘the Lord of Spirits’ is in the nom. in a, d, and ‘His light’ in the acc. in q. β-d reads ‘the light of the Lord of Spirits is seen’.]
 4. On the face of the holy, righteous, and elect.
 
 5. Then shall the kings and the mighty perish
@@ -617,8 +617,8 @@ the righteous,
 
 ### XXXIX. The Abode of the Righteous and of the Elect One: the Praises of the Blessed.
 
-1. <marks>[</marks>And it <marks>†</marks>shall come to pass in those days that elect and holy children <marks>†</marks>will descend from the high heaven, and their seed <marks>†</marks>will become one with the children of men.
-2. And in those days Enoch received books of zeal and wrath, and books of disquiet and expulsion.<marks>]</marks>
+1. <marks>[</marks>And it <marks>†</marks>shall come to pass in those days that elect and holy children <marks>†</marks> [Footnote: 1–2ᵃ. This passage is obviously an interpolation. It has nothing to do with its present context and appears to be a fragment of the older book of Enoch, such as we find in chapters 6–36. Here manifestly 39²ᵇ ‘And mercy shall not be accorded to them, saith the Lord of Spirits’ should follow immediately on 38⁶. This interpolation refers to the descent of the Watchers to unite themselves with the daughters of men. And it shall come to pass. Here and in the rest of this verse we should have past and not future tenses. This may be due to the interpolator who made these changes in order to adapt it to the time of the adjoining context.]will descend from the high heaven, and their seed <marks>†</marks>will become one with the children of men.
+2. And in those days Enoch received books of zeal and wrath, and books of disquiet and expulsion.<marks>]</marks> [Footnote: 1–2ᵃ. This passage is obviously an interpolation. It has nothing to do with its present context and appears to be a fragment of the older book of Enoch, such as we find in chapters 6–36. Here manifestly 39²ᵇ ‘And mercy shall not be accorded to them, saith the Lord of Spirits’ should follow immediately on 38⁶.]
 
 2. And mercy shall not be accorded to them, saith the Lord of Spirits.
 
@@ -643,7 +643,7 @@ the righteous,
 
 6b. And righteousness shall prevail in his days, And the righteous and elect shall be without number before Him for ever and ever.
 
-7b. And all the righteous and elect before Him shall be <marks>†</marks>strong<marks>†</marks> as fiery lights, And their mouth shall be full of blessing, And their lips shall extol the name of the Lord of Spirits, And righteousness before Him shall never fail, <marks>[</marks>And uprightness shall never fail before Him<marks>]</marks>.
+7b. And all the righteous and elect before Him shall be <marks>†</marks>strong<marks>†</marks> [Footnote: Be †strong† (jĕtḫêjalû a-m). mt²β-a jetlaḥajû = ‘be beautiful’, not ‘shine’ as it has hitherto been taken. The latter is probably a correction of the former. a-m = יחזקו, which may be corrupt for יזהירו = ‘shine’. Thus ‘the righteous … shall shine as fiery lights’, i. e. the stars; cf. Dan. 12³. This restoration is not possible in Aramaic.] as fiery lights, And their mouth shall be full of blessing, And their lips shall extol the name of the Lord of Spirits, And righteousness before Him shall never fail, <marks>[</marks>And uprightness shall never fail before Him<marks>]</marks>.
 
 8. There I wished to dwell,
 8. And my spirit longed for that dwelling-place:
@@ -668,7 +668,7 @@ the righteous,
 3. And I heard the voices of those four presences as they uttered praises before the Lord of glory.
 4. The first voice blesses the Lord of Spirits for ever and ever.
 5. And the second voice I heard blessing the Elect One and the elect ones who hang upon the Lord of Spirits.
-6. And the third voice I heard <emended>pray and intercede</emended> for those who dwell on the earth and <emended>supplicate</emended> in the name of the Lord of Spirits.
+6. And the third voice I heard <emended>pray and intercede</emended> for those who dwell on the earth and <emended>supplicate</emended> [Footnote: Pray and intercede … supplicate. These verbs are in the plural in all MSS. but d.] in the name of the Lord of Spirits.
 7. And I heard the fourth voice fending off the Satans and forbidding them to come before the Lord of Spirits to accuse them who dwell on the earth.
 8. After that I asked the angel of peace who went with me, who showed me everything that is hidden: ‘Who are these four presences which I have seen and whose words I have heard and written down?’
 9. And he said to me: ‘This first is Michael, the merciful and long-suffering: and the second, who is set over all the diseases and all the wounds of the children of men, is Raphael: and the third, who is set over all the powers, is Gabriel: and the fourth, who is set over the repentance unto hope of those who inherit eternal life, is named Phanuel.’
@@ -749,7 +749,7 @@ the righteous,
 2. Who are thus preserved for the day of suffering and tribulation.
 
 3. On that day Mine Elect, One shall sit on the throne of glory
-3. And shall <emended>try</emended> their works,
+3. And shall <emended>try</emended> [Footnote: Try. Text reads jaḥari (= choose) = יבחר corrupt for יבחן. If the original were Aramaic we should only have to suppose that the translator followed the wrong meaning of יבחר.] their works,
 3. And their places of rest shall be innumerable.
 
 3. And their souls shall grow strong within them when they see Mine elect ones,
@@ -777,7 +777,7 @@ the righteous,
 1. And with Him was another being whose countenance had the appearance of a man,
 1. And his face was full of graciousness, like one of the holy angels.
 
-2. And I asked the <emended>angel</emended> who went with me and showed me all the hidden things, concerning that Son of Man, who he was, and whence he was, <supplied>and</supplied> why he went with the Head of Days?
+2. And I asked the <emended>angel</emended> [Footnote: The angel. MSS. wrongly read ‘one of the angels’. See note on 40².] who went with me and showed me all the hidden things, concerning that Son of Man, who he was, and whence he was, <supplied>and</supplied> why he went with the Head of Days?
 3. And he answered and said unto me:
 
 3. This is the Son of Man who hath righteousness,
@@ -788,13 +788,13 @@ the righteous,
 3. And whose lot hath the pre-eminence before the Lord of Spirits in uprightness for ever.
 
 4. And this Son of Man whom thou hast seen
-4. Shall <marks>†</marks>raise up<marks>†</marks> the kings and the mighty from their seats,
+4. Shall <marks>†</marks>raise up<marks>†</marks> [Footnote: Shall †raise up†. The verb is here obviously corrupt. The clause ‘shall raise up the kings … from their thrones’ and 46⁵ᵃ ‘shall put down the kings from their thrones’ are dittographs. One or other is corrupt and one or other is an intrusion. The parallelism seems to be in favour of 46⁴ᵇ being retained, though the verb gives the wrong sense, whereas the right sense ‘shall put down’ is obviously preserved in 46⁵ᵃ. It is hard to explain with any confidence the origin of this error. Possibly ירים stood in the original, which could mean either ‘shall raise up’ or ‘shall remove, destroy’. The present context could admit only of the latter meaning. Or we might take the former verb as = יטול—a corruption of יפיל—‘shall cast down,’ seeing that in 46⁶ᵃ the same verb in the Ethiopic for ‘shall put down’ is given. ‘Shall put down the countenance’ = יפיל פנים. Cf. 48⁸. In any case we should read ‘shall put down the kings’, &c. It is possible that Is. 14⁹ ‘it hath raised up from their thrones all the kings of the nations’ may have led to the above misrendering or corruption. With the restored text we might compare such expressions as Sir. 10¹⁴ θρόνους ἀρχόντων καθεῖλεν ὁ κύριος, Wisd. 5²³ περιτρέψει θρόνους δυναστῶν. The clause in Luke 1⁵² καθεῖλε δυνάστας ἀπὸ θρόνων seems to be an echo of our text.] the kings and the mighty from their seats,
 4. <marks>[</marks>And the strong from their thrones<marks>]</marks>
 
 4. And shall loosen the reins of the strong,
 4. And break the teeth of the sinners;
 
-5. <marks>[</marks>And he shall put down the kings from their thrones and kingdoms<marks>]</marks>
+5. <marks>[</marks>And he shall put down the kings from their thrones and kingdoms<marks>]</marks> [Footnote: The clause ‘shall raise up the kings … from their thrones’ and 46⁵ᵃ ‘shall put down the kings from their thrones’ are dittographs. One or other is corrupt and one or other is an intrusion. The parallelism seems to be in favour of 46⁴ᵇ being retained, though the verb gives the wrong sense, whereas the right sense ‘shall put down’ is obviously preserved in 46⁵ᵃ.]
 5. Because they do not extol and praise Him,
 5. Nor humbly acknowledge whence the kingdom was bestowed upon them.
 6. And he shall put down the countenance of the strong,
@@ -806,14 +806,14 @@ the righteous,
 6. And they shall have no hope of rising from their beds,
 6. Because they do not extol the name of the Lord of Spirits.
 
-7. And these are they who <marks>†</marks>judge<marks>†</marks> the stars of heaven,
+7. And these are they who <marks>†</marks>judge<marks>†</marks> [Footnote: This verse seems very corrupt. It is clearly an echo of Dan. 8¹⁰, where it is said of Antiochus Epiphanes: ‘And (the little horn) waxed great, even to the host of heaven; and some of the host and of the stars it cast down to the ground and trod upon them.’ Here also the stars stand for the righteous, and the verb ‘tread’ recalls ‘trod’ in Daniel, and the parallel suggests that ‘tread’ had the same meaning in Enoch that it had in Daniel. In other words we should find it stated that the oppressors ‘tread down the righteous’ and not that they ‘tread the earth’. Thus 46⁷ᶜ connects immediately with 46⁷ᵃ. In other words 47⁷ᵇ is either displaced or interpolated. That it is the latter I conclude, since we require here, not a tristich, but a distich like the immediate stanzas before and after, and since the divine designation ‘Most High’ does not occur elsewhere in the Parables. I have obelized ‘judge’. It = ידינו, which may be corrupt for יורידו (or יפילו as in Dan. 8¹⁰) = ‘cast down’. This brings our text into line with Dan. 8¹⁰ᵇ. Finally, ‘and dwell upon the earth’ may be a wrong gloss on the preceding words; for this clause, which has always good ethical associations in the Parables (37² note), has here a bad ethical sense. But probably a corruption inheres in ‘and dwell upon it’: i. e. וישבו בה corrupt for יושביה = ‘those who dwell upon it.’ As for what remains, ‘and they tread upon the earth,’ a glance at Dan. 8¹⁰ shows that an accusative referring to the righteous has here been lost: ‘and tread to the earth those who dwell upon it.’ Thus this stanza should run:— ‘And these are they who cast down the stars of heaven, And tread to the earth those who dwell upon it.’] the stars of heaven,
 7. <marks>[</marks>And raise their hands against the Most High<marks>]</marks>,
 7. <marks>†</marks>And tread upon the earth and dwell upon it<marks>†</marks>.
 
 7. And all their deeds manifest unrighteousness,
 7. And their power rests upon their riches,
 
-7. And their faith is in the <marks>†</marks>gods<marks>†</marks> which they have made with their hands,
+7. And their faith is in the <marks>†</marks>gods<marks>†</marks> [Footnote: Their faith is in the gods, &c. This is a strange expression for the idolatrous tendencies of the Sadducean court. But אלילים (= ‘gods’) may be corrupt for מעללים = ‘deeds’. Hence ‘deeds which they have wrought’, &c. For a discussion of the verse see 38⁵ note.] which they have made with their hands,
 7. And they deny the name of the Lord of Spirits,
 
 8. And they persecute the houses of His congregations,
@@ -828,7 +828,7 @@ the righteous,
 2. In those days the holy ones who dwell above in the heavens
 2. Shall unite with one voice
 2. And supplicate and pray <marks>[</marks>and praise,
-2. And give thanks and bless the name of the Lord of Spirits<marks>]</marks>
+2. And give thanks and bless the name of the Lord of Spirits<marks>]</marks> [Footnote: The text is uncertain. I have bracketed ‘and praise … Lord of Spirits’, since the context points not to thanksgiving but to prayer on behalf of the martyrs. Moreover, the words that follow ‘And that the prayer of the righteous’, &c. depend directly on ‘supplicate and pray’ as their object.]
 2. On behalf of the blood of the righteous which has been shed,
 2. And that the prayer of the righteous may not be in vain before the Lord of Spirits,
 2. That judgement may be done unto them,
@@ -839,7 +839,7 @@ the righteous,
 3. His counsellors stood before Him,
 4. And the hearts of the holy were filled with joy;
 
-4. Because the number of the righteous <emended>had been offered</emended>,
+4. Because the number of the righteous <emended>had been offered</emended> [Footnote: Been offered. a reads qarĕba = ἤγγικε = קרב, which in Mishnaic and late Hebrew = ‘had been offered’ as well as ‘had drawn nigh’. The latter meaning is inappropriate; for the judgement is already begun. The text means that the number of the righteous, i. e. the martyrs, is complete. The martyrs were regarded as offerings to God. Cf. Rev. 6¹⁰, ¹¹, and my note in loc. For qarĕba β reads baṣeḥa = ‘has come’.],
 4. And the prayer of the righteous had been heard,
 4. And the blood of the righteous been required before the Lord of Spirits.
 
@@ -962,7 +962,7 @@ the righteous,
 
 4. And in those days shall the mountains leap like rams,
 4. And the hills also shall skip like lambs satisfied with milk,
-4. And the faces of <marks>[</marks>all<marks>]</marks> the angels in heaven shall be lighted up with joy.
+4. And the faces of <marks>[</marks>all<marks>]</marks> [Footnote: And the faces of ［all］ the angels … shall be lighted up with joy. There are two ways of taking the original text which is preserved in gqtu, the oldest MSS. malâ’ĕkt = ‘angels’ can either be taken as the subject of the verb according to gtu and gaṣômû as an accusative of limitation: ‘［all］ the angels shall be lighted up as to their faces with joy,’ or better ‘angels’ can be taken as a nominativus pendens resumed in the suffix in gaṣômû. Hence ‘the faces of ［all］ the angels shall’, &c. The text of m also would admit of this rendering. The text of q is different but gives the same sense.] the angels in heaven shall be lighted up with joy.
 
 5b. And the earth shall rejoice,
 5c. And the righteous shall dwell upon it,
@@ -984,7 +984,7 @@ the righteous,
 6. And the mountain of gold, and the mountain of soft metal, and the mountain of lead,
 6. All these shall be in the presence of the Elect One,
 6. As wax before the fire,
-6. And like the water which streams down from above <marks>[</marks>upon those mountains<marks>]</marks>,
+6. And like the water which streams down from above <marks>[</marks>upon those mountains<marks>]</marks> [Footnote: Like the water which streams down, Mic. 1⁴. MSS. add here ‘upon those mountains’. The thought of this verse recurs in 53⁷.],
 6. And they shall become powerless before his feet.
 7. And it shall come to pass in those days that none shall be saved,
 7. Either by gold or by silver,
@@ -992,9 +992,9 @@ the righteous,
 8. And there shall be no iron for war,
 8. Nor shall one clothe oneself with a breastplate.
 8. Bronze shall be of no service,
-8. And tin <marks>[</marks>shall be of no service and<marks>]</marks> shall not be esteemed,
+8. And tin <marks>[</marks>shall be of no service and<marks>]</marks> [Footnote: Shall be of no service and. Bracketed as a dittograph from the preceding line. q omits ‘and shall not be esteemed’.] shall not be esteemed,
 8. And lead shall not be desired.
-9. And all these things shall be <marks>[</marks>denied and<marks>]</marks> destroyed from the surface of the earth,
+9. And all these things shall be <marks>[</marks>denied and<marks>]</marks> [Footnote: Be ［denied and］ destroyed. We have here two alternative renderings of יכחדו such as ἀπαρνηθήσονται and ἀφανισθήσονται. One was originally in the text and the other in the margin, but subsequently both were incorporated into the text. Schmidt, who advocates an Aramaic original, proposes רמא; but this verb means ‘to cast down’ and ‘to deceive’—senses which do not explain our text.] destroyed from the surface of the earth,
 9. When the Elect One shall appear before the face of the Lord of Spirits.’
 
 ## 53.
@@ -1004,7 +1004,7 @@ the righteous,
 1. There mine eyes saw a deep valley with open mouths, and all who dwell on the earth and sea and islands shall bring to him gifts and presents and tokens of homage, but that deep valley shall not become full.
 
 2. And their hands commit lawless deeds,
-2. And the sinners devour all whom they lawlessly <emended>oppress</emended>:
+2. And the sinners devour all whom they lawlessly <emended>oppress</emended> [Footnote: Sinners devour all whom they lawlessly oppress. So I render this line, emending jĕṣâmĕwû into jĕṣâmawû. That this is the meaning of the text appears to follow from the last words of this chapter, 53⁷, ‘the oppression of sinners.’ The verb ‘oppress’, ṣâmawa, is formed from the noun ṣâma, used in 53⁷. If we do not emend, the sense is poor and needs supplementing: ‘sinners lawlessly devour all that they (? who) produce.’]:
 2. Yet the sinners shall be destroyed before the face of the Lord of Spirits,
 2. And they shall be banished from off the face of His earth,
 2. And they shall perish for ever and ever.
@@ -1034,7 +1034,7 @@ the righteous,
 7. ‘And in those days shall punishment come from the Lord of Spirits, and He will open all the chambers of waters which are above the heavens, and of the fountains which are beneath the earth.
 8. And all the waters shall be joined with the waters: that which is above the heavens is the masculine, and the water which is beneath the earth is the feminine.
 9. And they shall destroy all who dwell on the earth and those who dwell under the ends of the heaven.
-10. And <emended>when</emended> they have recognized their unrighteousness which they have wrought on the earth, then by these shall they perish.’
+10. And <emended>when</emended> [Footnote: When. tu, ew read ba’ĕntaza = ‘inasmuch as’ = διότι, gmq, t²β-ew ba’ĕntaz = ‘on this account’, διὰ τοῦτο. Here διότι = כי or כאשר. Thus the sentence = διότι ἔγνωσαν … καί (= the vaw of the apodosis in Hebrew) ἐν τούτοις (or τούτῳ) = כי ידעו … ובאלה. Here the Greek translator should have rendered כי by ἐπεί and not by διότι. The same confusion could arise in the case of Aramaic; for ארי = either διότι or ἐπεί. As regards the sense of the passage, we find that the kings and the mighty in 63⁴ ˢᵠᵠ· come to acknowledge their guilt before their destruction. But it is possible that the reading of gmq, t²β-ew is right and that we should render: ‘And owing to this they will recognize … and by this (i. e. the deluge) shall they perish.’] they have recognized their unrighteousness which they have wrought on the earth, then by these shall they perish.’
 
 ## 55.
 
@@ -1043,8 +1043,8 @@ the righteous,
 
 ### LV. 3-LVI. 4. Final Judgement of Azâzêl, the Watchers and their children.
 
-3. ‘When I have desired to take hold of them by the hand of the angels on the day of tribulation and pain <emended>because of</emended> this, I will cause My chastisement and My wrath to abide upon them, saith God, the Lord of Spirits.
-4. Ye <marks>†</marks>mighty kings<marks>†</marks> who dwell on the earth, ye shall have to behold Mine Elect One, how he sits on the throne of glory and judges Azâzêl, and all his associates, and all his hosts in the name of the Lord of Spirits.’
+3. ‘When I have desired to take hold of them by the hand of the angels on the day of tribulation and pain <emended>because of</emended> [Footnote: Because of this. Text = ἔμπροσθεν τούτου, a mistranslation of מפני זאת.] this, I will cause My chastisement and My wrath to abide upon them, saith God, the Lord of Spirits.
+4. Ye <marks>†</marks>mighty kings<marks>†</marks> [Footnote: The kings have to witness the judgement passed on the angels: if Azazel and his hosts are judged and condemned by the Messiah, how much more likely will they! The text should almost certainly be ‘Ye kings and mighty’: see 38⁵ (note), 62⁶.] who dwell on the earth, ye shall have to behold Mine Elect One, how he sits on the throne of glory and judges Azâzêl, and all his associates, and all his hosts in the name of the Lord of Spirits.’
 
 ## 56.
 
@@ -1065,7 +1065,7 @@ the righteous,
 5. That they may break forth as lions from their lairs,
 5. And as hungry wolves among their flocks.
 6. And they shall go up and tread under foot the land of His elect ones,
-6. <marks>[</marks>And the land of His elect ones shall be before them a threshing-floor and a highway<marks>]</marks>:
+6. <marks>[</marks>And the land of His elect ones shall be before them a threshing-floor and a highway<marks>]</marks> [Footnote: And the land … a highway. Bracketed as a dittograph of the preceding line. It makes the stanza too long. Cf. 58⁶ᵈ.]:
 7. But the city of my righteous shall be a hindrance to their horses.
 7. And they shall begin to fight among themselves,
 7. And their right hand shall be strong against themselves,
@@ -1114,19 +1114,19 @@ the righteous,
 5. For it has become bright as the sun upon earth,
 5. And the darkness is past.
 
-6. And there shall be a light that never <emended>endeth</emended>,
+6. And there shall be a light that never <emended>endeth</emended> [Footnote: That never endeth. The MSS. read za’î jĕtḫualaquĕ (gmqu) or za’î jĕtḫuêlaquĕ = ‘that cannot be numbered’. I have emended this into za’ijĕtḫalaq = ‘that never endeth’.],
 6. And to a limit <supplied>lit. ‘number’</supplied> of days they shall not come,
 6. For the darkness shall first have been destroyed,
-6. <marks>[</marks>And the light established before the Lord of Spirits<marks>]</marks>
+6. <marks>[</marks>And the light established before the Lord of Spirits<marks>]</marks> [Footnote: And the light established … Spirits. Bracketed as a dittograph of the following line.]
 6. And the light of uprightness established for ever before the Lord of Spirits.
 
 ## 59.
 
 ### LIX. The Lights and the Thunder.
 
-1. <marks>[</marks>In those days mine eyes saw the secrets of the lightnings, and of the lights, and the judgements they execute <supplied>lit. ‘their judgement’</supplied>: and they lighten for a blessing or a curse as the Lord of Spirits willeth.
-2. And there I saw the secrets of the thunder, and how when it resounds above in the heaven, the sound thereof is heard, and he caused me to see the <emended>judgements</emended> executed on the earth, whether they be for well-being and blessing, or for a curse, according to the word of the Lord of Spirits.
-3. And after that all the secrets of the lights and lightnings were shown to me, and they lighten for blessing and for satisfying.<marks>]</marks>
+1. <marks>[</marks>In those days [Footnote: This chapter is an intrusion, and belongs to the same class as 41³⁻⁸ 43 44. It is probably drawn from a Noah-Apocalypse.] mine eyes saw the secrets of the lightnings, and of the lights, and the judgements they execute <supplied>lit. ‘their judgement’</supplied>: and they lighten for a blessing or a curse as the Lord of Spirits willeth.
+2. And there I saw the secrets of the thunder, and how when it resounds above in the heaven, the sound thereof is heard, and he caused me to see the <emended>judgements</emended> [Footnote: Judgements. Text = οἰκήματα ‘dwellings’ corrupt for κρίματα (or οἰκητήρια corrupt for κριτήρια).] executed on the earth, whether they be for well-being and blessing, or for a curse, according to the word of the Lord of Spirits.
+3. And after that all the secrets of the lights and lightnings were shown to me, and they lighten for blessing and for satisfying.<marks>]</marks> [Footnote: This chapter is an intrusion, and belongs to the same class as 41³⁻⁸ 43 44. It is probably drawn from a Noah-Apocalypse.]
 
 ## 60.
 
@@ -1134,7 +1134,7 @@ the righteous,
 
 ### Quaking of the Heaven: Behemoth and Leviathan: the Elements.
 
-1. In the year five hundred, in the seventh month, on the fourteenth day of the month in the life of <marks>†</marks>Enoch<marks>†</marks>. In that Parable I saw how a mighty quaking made the heaven of heavens to quake, and the host of the Most High, and the angels, a thousand thousands and ten thousand times ten thousand, were disquieted with a great disquiet.
+1. In the year five hundred, in the seventh month, on the fourteenth day of the month in the life of <marks>†</marks>Enoch<marks>†</marks> [Footnote: The year five hundred. This date is drawn from Gen. 5³², and is a date in the life of Noah and not of Enoch as it stands in our text. For Enoch we should read Noah.]. In that Parable I saw how a mighty quaking made the heaven of heavens to quake, and the host of the Most High, and the angels, a thousand thousands and ten thousand times ten thousand, were disquieted with a great disquiet.
 2. And the Head of Days sat on the throne of His glory, and the angels and the righteous stood around Him.
 
 3. And a great trembling seized me,
@@ -1145,29 +1145,30 @@ the righteous,
 
 4. And Michael sent another angel from among the holy ones and he raised me up, and when he had raised me up my spirit returned; for I had not been able to endure the look of this host, and the commotion and the quaking of the heaven.
 5. And Michael said unto me: ‘Why art thou disquieted with such a vision? Until this day lasted the day of His mercy; and He hath been merciful and long-suffering towards those who dwell on the earth.
-6. And when the day, and the power, and the punishment, and the judgement come, which the Lord of Spirits hath prepared for those who worship not the righteous <emended>law</emended>, and for those who deny the righteous judgement, and for those who take His name in vain—that day is prepared; for the elect a covenant, but for sinners an inquisition.
+6. And when the day, and the power, and the punishment, and the judgement come, which the Lord of Spirits hath prepared for those who worship not the righteous <emended>law</emended> [Footnote: The righteous law. The text = ‘the righteous judgement’ = משפט צדק, which, as Halévy (Journ. Asiat. 367–369, 1867) has shown, can mean either ‘the righteous law’ or ‘the righteous judgement’. This phrase occurs twice in this verse, and I have translated it in the first instance as ‘the righteous law’, and in the second as ‘the righteous judgement’.], and for those who deny the righteous judgement, and for those who take His name in vain—that day is prepared; for the elect a covenant, but for sinners an inquisition.
 
 25. When the punishment of the Lord of Spirits shall rest upon them, it shall rest in order that the punishment of the Lord of Spirits may not come in vain, and it shall slay the children with their mothers and the children with their fathers. Afterwards the judgement shall take place according to His mercy and His patience.’
 
 7. And on that day were two monsters parted, a female monster named Leviathan, to dwell in the abysses of the ocean over the fountains of the waters.
-8. But the male is named Behemoth, who occupied with his breast a waste wilderness named <marks>†</marks>Dûidâin<marks>†</marks>, on the east of the garden where the elect and righteous dwell, where my grandfather was taken up, the seventh from Adam, the first man whom the Lord of Spirits created.
+8. But the male is named Behemoth, who occupied with his breast a waste wilderness named <marks>†</marks>Dûidâin<marks>†</marks> [Footnote: †Dûidâin† (u). g Dûnadâin, t Dûndâin, m, β-eh Dêndâin, h Dêin (?). Probably in the longer forms of the name we have a duplication of the initial letters, and Dain or Dein was the older form of the word. From the statement that the place lies to the east of Eden, it seems clear, as Kohut (Jewish Encyc. viii. 39) has pointed out, that the word is corrupt for Ναιδ or Nud; cf. tu. This is ‘the land of Nod to the east of Eden’ (Gen. 4¹⁶).], on the east of the garden where the elect and righteous dwell, where my grandfather was taken up, the seventh from Adam, the first man whom the Lord of Spirits created.
 9. And I besought the other angel that he should show me the might of those monsters, how they were parted on one day and cast, the one into the abysses of the sea, and the other unto the dry land of the wilderness.
 10. And he said to me: ‘Thou son of man, herein thou dost seek to know what is hidden.’
 
 11. And the other angel who went with me and showed me what was hidden told me, what is first and last in the heaven in the height, and beneath the earth in the depth, and at the ends of the heaven, and on the foundation of the heaven.
-12. And the chambers of the winds, and how the winds are divided, and how they are weighed, and <supplied>how</supplied> the <emended>portals</emended> of the winds are reckoned, each according to the power of the wind, and the power of the lights of the moon, and according to the power that is fitting: and the divisions of the stars according to their names, and how all the divisions are divided.
+12. And the chambers of the winds, and how the winds are divided, and how they are weighed, and <supplied>how</supplied> the <emended>portals</emended> [Footnote: Portals. So Flemming emends anq‘eta (a) into ’anâqḍa.] of the winds are reckoned, each according to the power of the wind, and the power of the lights of the moon, and according to the power that is fitting: and the divisions of the stars according to their names, and how all the divisions are divided.
 13. And the thunders according to the places where they fall, and all the divisions that are made among the lightnings that it may lighten, and their host that they may at once obey.
-14. For the thunder has <marks>†</marks>places of rest<marks>†</marks> <supplied>which</supplied> are assigned <supplied>to it</supplied> while it is waiting for its peal; and the thunder and lightning are inseparable, and although not one and undivided, they both go together through the spirit and separate not.
+14. For the thunder has <marks>†</marks>places of rest<marks>†</marks> [Footnote: This verse is very unintelligible. Halévy’s discussion of this passage (Journ. Asiat. 369–372, 1867) is worth consulting. He arrives at the following translation: ‘For the thunder has fixed laws in reference to the duration of its peal which is assigned to it: the thunder and the lightning are not separated in a single instance: they both proceed with one accord and separate not. For when the lightning lightens, the thunder utters its voice, and the spirit during its peal makes its arrangements, and divides the time equally between them.’] <supplied>which</supplied> are assigned <supplied>to it</supplied> while it is waiting for its peal; and the thunder and lightning are inseparable, and although not one and undivided, they both go together through the spirit and separate not.
 15. For when the lightning lightens, the thunder utters its voice, and the spirit enforces a pause during the peal, and divides equally between them; for the treasury of their peals is like the sand, and each one of them as it peals is held in with a bridle, and turned back by the power of the spirit, and pushed forward according to the many quarters of the earth.
 16. And the spirit of the sea is masculine and strong, and according to the might of his strength he draws it back with a rein, and in like manner it is driven forward and disperses amid all the mountains of the earth.
 17. And the spirit of the hoar-frost is his own angel, and the spirit of the hail is a good angel.
 18. And the spirit of the snow has forsaken <supplied>his chamber</supplied> on account of his strength—there is a special spirit therein, and that which ascends from it is like smoke, and its name is frost.
-19. And the spirit of the mist is not united with them in their chambers, but it has a special chamber; for its course is <marks>†</marks>glorious<marks>†</marks> both in light and in darkness, and in winter and in summer, and in its chamber is an angel.
+19. And the spirit of the mist is not united with them in their chambers, but it has a special chamber; for its course is <marks>†</marks>glorious<marks>†</marks> [Footnote: Is glorious. Text may = כבד. If so it should have been rendered ‘is oppressive’.] both in light and in darkness, and in winter and in summer, and in its chamber is an angel.
 20. And the spirit of the dew has its dwelling at the ends of the heaven, and is connected with the chambers of the rain, and its course is in winter and summer: and its clouds and the clouds of the mist are connected, and the one gives to the other.
-21. And when the spirit of the rain goes forth from its chamber, the angels come and open the chamber and lead it out, and when it is diffused over the whole earth it unites with the water on the earth. And whensoever it unites with the water on the earth<marks>…</marks>.
+21. And when the spirit of the rain goes forth from its chamber, the angels come and open the chamber and lead it out, and when it is diffused over the whole earth it unites with the water on the earth. And whensoever it unites with the water on the earth<marks>…</marks> [Footnote: And whensoever … on the earth (a-q (save that u omits ‘with the water on the earth’), bfhiklnx₁a). > qacdeoy₁b. The apodosis of this sentence is lost.].
 22. For the waters are for those who dwell on the earth; for they are nourishment for the earth from the Most High who is in heaven: therefore there is a measure for the rain, and the angels take it in charge.
 23. And these things I saw towards the Garden of the Righteous.
 24. And the angel of peace who was with me said to me: ‘These two monsters, prepared, conformably to the greatness of God, shall feed<marks>…</marks>.’
+%% waived 60:24 — the print ends the verse in the lacuna dots and gives no note on them (leaves 233–234); the note on 24 speaks only to the angel of peace
 
 ## 61.
 
