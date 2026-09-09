@@ -107,14 +107,26 @@ A title printed inside a Book section, at one of three levels: *part* (the title
 ### Figure
 A picture printed inside a Book section — a diagram, a photograph, a plate. Like a Heading it lives beside the grid: it consumes no id, is never part of an atom's text, and is attached to the paragraph it stands with, printing above it or below it as the printed work has it. It carries alt text and an optional caption, and travels inside the module as a data URI, so an installed Book carries its own pictures and reads no file of its own. Unlike a Heading it is never searched — no Hit is ever earned by a figure — and it is not addressable: a reference points at paragraphs only.
 
+### Footnote
+A note an edition prints on an atom, attached by character offset into the atom's stored text. Consumes no id and is never a Reference. Lifted out of the stored string — Highlights and Ref Spans bind the atom only. Surfaces only in the Study Panel for the selected atom: no marker on the page, and chip / inline / block never show a marker or a body. Footnote words never earn a Hit.
+_Avoid_: endnote, apparatus (Editorial marks are not footnotes)
+
 ### Ref Span
 A live reference inside a Book's stored content, parsed at module build time: a character span over one atom's text plus pre-normalized verse ranges (scripture or same-book), stored as a span channel beside the text like Strong's tag spans. Renders as a quiet link (the author's original citation text); tapping navigates the reader to the target. Only explicit citations become ref spans — unreferenced allusions stay plain prose. Ref spans are not Occurrences and never enter the vault index.
 
 ### Supplied
 Words an editor or translator inserted into the reading that are not in the source — Charles's parentheses, a Tagged Translation's brackets. The delimiters are dropped from stored text; the words remain in the atom and are painted italic at a reduced opacity, the same treatment in scripture and Books. The opacity is a single global setting.
 
+### Emended
+Words an editor has altered in the reading (Charles's thick type). Not a character in the stored string; identified beside it like Supplied. Paints as bold, unfaded.
+_Avoid_: thick type (print description, not the channel)
+
 ### Editorial marks
 The printed critical marks of a Book edition (version and interpolation brackets, restorations, daggers, lacuna points, emendation). Not a second layer and not Heading/Figure furniture: they sit on the atom's characters. Mark glyphs except supplied delimiters live in the stored text; supplied words and emendations are identified beside it. A Book with none is unmarked. Highlights, Hits, and Ref Spans bind to that stored string. Mark glyphs paint in the accent color at a reduced opacity, a second global setting from supplied.
+
+### Line letter
+A print locator on a metrical line of a verse-atom Book (Charles `6a`, `7c`). Not an atom, not an Editorial mark, and not in the stored string — Highlights, Hits, and Ref Spans never see it. Paints in the verse-number slot as `6a` when verse numbers show.
+_Avoid_: sub-verse, stich label, lettered verse (implies a new atom)
 
 ### Pinned Translation
 The explicit translation token the plugin writes into a reference the moment its first highlight is created, binding the cues' offsets to that translation's text. Changing the translation through plugin UI deletes the cues; hand-editing it leaves them to render best-effort.
@@ -129,7 +141,7 @@ What one query searches over: exactly one Translation, an OT/NT/all testament fi
 One or more words that must all appear in a single atom's text (case- and diacritic-folded, each word matching as a prefix), with quoted phrases required to appear contiguously.
 
 ### Hit
-One atom (verse or Book paragraph) whose text — together with any Heading attached to it — satisfies the Search Query in the searched module. Hits present in Canonical Grid order, grouped by book, matched words emphasized. Activating a hit opens the reader at that atom through the entry mechanism — banner shown, matched words emphasized until the banner is dismissed.
+One atom (verse or Book paragraph) whose text — together with any Heading attached to it — satisfies the Search Query in the searched module. Footnotes do not participate. Hits present in Canonical Grid order, grouped by book, matched words emphasized. Activating a hit opens the reader at that atom through the entry mechanism — banner shown, matched words emphasized until the banner is dismissed.
 
 ### Search Index
 The persistent per-module structure that answers Search Queries without scanning the module's text. Its lifecycle is the module's: built when the module is installed (or lazily on first use), discarded with it, and rebuilt whole whenever the module's content or the index format changes — never updated incrementally.
