@@ -154,3 +154,29 @@ describe('passageSelectionRange', () => {
     ).toBeNull()
   })
 })
+
+describe('passageSelectionRange over a page walk', () => {
+  const step = (verseId: number, offset: number, ...parts: Part[]): HTMLElement => {
+    const holder = verse(verseId, ...parts)
+    holder.setAttribute('data-text-offset', String(offset))
+    return holder
+  }
+
+  it('maps a drag over one step of an atom to the atom’s own offsets', () => {
+    const sevenC = step(103005007, 96, 'And for you, the godless')
+    const passage = host(verse(103005006, 'the sinners'), sevenC)
+    const text = textOf(sevenC)
+
+    expect(
+      passageSelectionRange(
+        passage,
+        rangeOver({ node: text, offset: 4 }, { node: text, offset: 7 }),
+      ),
+    ).toEqual({
+      startVerseId: 103005007,
+      startChar: 100,
+      endVerseId: 103005007,
+      endChar: 103,
+    })
+  })
+})

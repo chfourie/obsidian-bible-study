@@ -1,12 +1,15 @@
 import type {
   BookContent,
+  BookSection,
   Figure,
   FormatSpan,
   Heading,
   ModuleManifest,
   VerseContent,
+  VerseLine,
 } from '../modules'
 import {
+  bookAtomKind,
   verseEmendedOf,
   verseFiguresOf,
   verseHeadingsOf,
@@ -19,12 +22,15 @@ import {
   verseTextOf,
 } from '../modules'
 import {
+  decodeVerseId,
   enumerateVerseIds,
+  makeVerseId,
   redLetterCueOf,
   type Reference,
   type VerseRange,
 } from '../reference'
 import { derivedRedSpan } from './derived-red-span'
+import type { TextSpan } from './segment-spans'
 
 export type VerseSegment = {
   text: string
@@ -69,6 +75,21 @@ export type PassageVerse = {
   figures?: Figure[]
 }
 
+// One step of a verse-atom Book's page walk (spec-books §11, ADR 0013): a
+// metrical line of an atom that carries `lines`, or the whole of a prose
+// atom. `span` is the stretch of the atom's stored text the step prints, so a
+// renderer cuts the atom's segments — highlights and marks already on them —
+// down to the step and never re-reads the text. The Line letter rides here
+// for the number slot; it is never in the text (CONTEXT.md — Line letter).
+export type PassageStep = {
+  verseId: number
+  line?: number
+  span: TextSpan
+  letter?: string
+  // The line opens a stanza or paragraph: `paragraph` on that line.
+  startsParagraph?: boolean
+}
+
 export type FallbackSubstitution = {
   requested: string
   served: string
@@ -80,6 +101,11 @@ export type Passage =
       verses: PassageVerse[]
       attribution: string | null
       fallback?: FallbackSubstitution
+      // A verse-atom Book's walk over `verses` in the edition's page order —
+      // a section's `reading` where it has one, else atoms 1..N with their
+      // stored lines; sections concatenate in numeric order (ADR 0014). Absent
+      // for scripture and paragraph Books, which render atom by atom as ever.
+      steps?: PassageStep[]
     }
   | { status: 'unavailable' }
 
@@ -160,6 +186,69 @@ export const verseSegments = (
   return segments.length > 0 ? segments : [{ text: '', redLetter: false }]
 }
 
+const storedLines = (verse: VerseContent): VerseLine[] =>
+  [...verseLinesOf(verse)].sort((a, b) => a.start - b.start)
+
+const stepOf = (
+  verseId: number,
+  verse: VerseContent,
+  line?: number,
+): PassageStep => {
+  const text = verseTextOf(verse)
+  const lines = storedLines(verse)
+  const stored = line === undefined ? undefined : lines[line]
+  if (line === undefined || stored === undefined)
+    return { verseId, span: { start: 0, end: text.length } }
+  const step: PassageStep = {
+    verseId,
+    line,
+    span: { start: stored.start, end: lines[line + 1]?.start ?? text.length },
+  }
+  if (stored.letter !== undefined) step.letter = stored.letter
+  if (stored.paragraph === true) step.startsParagraph = true
+  return step
+}
+
+const atomSteps = (verseId: number, verse: VerseContent): PassageStep[] => {
+  const lines = storedLines(verse)
+  return lines.length === 0
+    ? [stepOf(verseId, verse)]
+    : lines.map((_, line) => stepOf(verseId, verse, line))
+}
+
+// The walk over the verses served, section by section in the order they were
+// asked for: a section's `reading` filtered to those verses, or the identity
+// walk where the page is the atom order (spec-books §11).
+const passageSteps = (
+  verses: readonly PassageVerse[],
+  content: BookContent,
+  sections: readonly BookSection[],
+): PassageStep[] => {
+  const chapters = new Map<number, Set<number>>()
+  for (const { verseId } of verses) {
+    const { chapter } = decodeVerseId(verseId)
+    const served = chapters.get(chapter) ?? new Set<number>()
+    served.add(verseId)
+    chapters.set(chapter, served)
+  }
+  const steps: PassageStep[] = []
+  for (const [chapter, served] of chapters) {
+    const reading = sections.find((section) => section.chapter === chapter)
+      ?.reading
+    if (reading === undefined) {
+      for (const verseId of served)
+        steps.push(...atomSteps(verseId, content[verseId]))
+      continue
+    }
+    const book = decodeVerseId([...served][0]).book
+    for (const { atom, line } of reading) {
+      const verseId = makeVerseId(book, chapter, atom)
+      if (served.has(verseId)) steps.push(stepOf(verseId, content[verseId], line))
+    }
+  }
+  return steps
+}
+
 const attributionFor = (manifest: ModuleManifest): string | null => {
   const license = manifest.license.trim()
   if (license === '' || /^public domain$/i.test(license)) return null
@@ -221,6 +310,14 @@ export class ModulePassageSource implements PassageSource {
       }
     }
     if (verses.length === 0) return { status: 'unavailable' }
-    return { status: 'ok', verses, attribution: attributionFor(manifest) }
+    const passage: Passage = {
+      status: 'ok',
+      verses,
+      attribution: attributionFor(manifest),
+    }
+    const book = manifest.book
+    if (book !== undefined && bookAtomKind(book) === 'verse')
+      passage.steps = passageSteps(verses, content, book.sections)
+    return passage
   }
 }

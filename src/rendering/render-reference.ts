@@ -13,7 +13,7 @@ import type {
   PassageSource,
   VerseSegment,
 } from './module-passage-source'
-import { VERSE_TEXT_CLASS } from './passage-selection'
+import { TEXT_OFFSET_ATTRIBUTE, VERSE_TEXT_CLASS } from './passage-selection'
 import { spanSegments } from './segment-spans'
 import {
   buildPassageView,
@@ -244,6 +244,12 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
       text: block.label,
     })
   }
+  if (block.letter !== null) {
+    parent.createSpan({
+      cls: 'scripture-study-line-letter',
+      text: block.letter,
+    })
+  }
   // The verse text lives in its own holder so a drag can be mapped back to
   // character offsets in this verse, with the number and chrome left out. A
   // table's cells are runs of their own — the separators between them print
@@ -253,7 +259,14 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
   const holder = parent.createSpan({
     cls: VERSE_TEXT_CLASS,
     ...(block.table === null
-      ? { attr: { 'data-verse-id': block.verseId } }
+      ? {
+          attr: {
+            'data-verse-id': block.verseId,
+            ...(block.textOffset > 0
+              ? { [TEXT_OFFSET_ATTRIBUTE]: block.textOffset }
+              : {}),
+          },
+        }
       : {}),
   })
   if (block.table !== null) {
@@ -444,28 +457,45 @@ const renderBookParagraphs =
     renderNavigableAttribution(host, view, model, deps)
   }
 
+// Blocks run together on a line unless one of them is a line of its own —
+// a metrical line of a walk, an atom that keeps its breaks, a Psalm verse.
+const joinBlocks = (
+  host: HTMLElement,
+  block: PassageView['verses'][number],
+  previous: PassageView['verses'][number],
+): void => {
+  if (block.startsNewLine || previous.startsNewLine) host.createEl('br')
+  else host.appendText(' ')
+}
+
 // A verse-atom Book's block runs as book prose (spec-books §4): its atoms
 // flow together rather than one to a line, each keeping whatever breaks its
-// own `lines` channel asks for.
+// own `lines` channel asks for; a stanza blank inside an atom opens a new run.
 const renderBookProse =
   (model: ReferenceRenderModel, deps: ReferenceRenderDeps) =>
   (host: HTMLElement, view: PassageView): void => {
     renderFallbackNotice(host, view)
-    const prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
+    let prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
     view.verses.forEach((block, index) => {
-      if (index > 0) prose.appendText(' ')
+      if (index > 0) {
+        if (block.startsParagraph)
+          prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
+        else joinBlocks(prose, block, view.verses[index - 1])
+      }
       renderSegments(prose, block)
     })
     renderNavigableAttribution(host, view, model, deps)
   }
 
+// Inline has no runs to open: a stanza blank is a blank line in the quote.
 const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
   view.verses.forEach((block, index) => {
     if (index > 0) {
-      const previous = view.verses[index - 1]
-      if (block.startsNewLine || previous.startsNewLine) host.createEl('br')
-      else host.appendText(' ')
+      if (block.startsParagraph) {
+        host.createEl('br')
+        host.createEl('br')
+      } else joinBlocks(host, block, view.verses[index - 1])
     }
     renderSegments(host, block)
   })

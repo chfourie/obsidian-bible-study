@@ -444,7 +444,7 @@
           {:else if view.status === 'unavailable'}
             <div class="bsr-nudge">{view.title} is unavailable in this translation.</div>
           {:else if view.book !== null}
-            {#each view.rows as row (row.verseId)}
+            {#each view.rows as row (row.key)}
               {#each row.headings as heading, index (index)}
                 <div class="bsr-heading bsr-heading-{heading.level}"
                   >{#each heading.segments as segment, at (at)}{#if segment.emphasized}<mark
@@ -458,6 +458,8 @@
               <div
                 class="bsr-para"
                 class:bsr-para-numbered={view.toggles.atomNumbers === 'on'}
+                class:bsr-verse-step={view.book.atom === 'verse'}
+                class:bsr-para-start={row.startsParagraph}
                 data-verse-id={row.verseId}
                 class:bsr-hl={row.highlighted}
                 class:bsr-sel={verseSelected(row.verseId)}
@@ -483,7 +485,7 @@
               {/each}
             {/each}
           {:else if view.toggles.layout === 'verse-per-line'}
-            {#each view.rows as row (row.verseId)}
+            {#each view.rows as row (row.key)}
               <div
                 class="bsr-verse-line"
                 data-verse-id={row.verseId}
@@ -504,9 +506,9 @@
               </div>
             {/each}
           {:else}
-            {#each paragraphsOf(view.rows) as paragraph (paragraph[0].verseId)}
+            {#each paragraphsOf(view.rows) as paragraph (paragraph[0].key)}
               <p class="bsr-prose">
-                {#each paragraph as row (row.verseId)}
+                {#each paragraph as row (row.key)}
                   <span
                     class="bsr-verse-span"
                     data-verse-id={row.verseId}
@@ -1092,6 +1094,17 @@
   .bsr-para.bsr-sel .bsr-gutter-num,
   .bsr-para.bsr-para-numbered .bsr-gutter-num {
     opacity: 1;
+  }
+
+  /* A verse-atom Book's rows are the steps of its page walk (spec-books §11):
+     the lines of one atom sit tight, and the gap opens only where a whole
+     atom or a stanza begins. */
+  .bsr-para.bsr-verse-step .bsr-book-prose {
+    margin: 0;
+  }
+
+  .bsr-para.bsr-verse-step.bsr-para-start {
+    margin-top: 1.1em;
   }
 
   .bsr-para.bsr-hl {

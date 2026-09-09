@@ -15,7 +15,13 @@ import {
 import type { Epigraph, Heading } from '../modules'
 import type { Passage, PassageSource } from '../rendering'
 import { ModulePassageSource } from '../rendering/module-passage-source'
-import { ENOCH_BOOK, installEnochBook, uninstallEnochBook } from '../../tests/fixtures/enoch-book'
+import {
+  ENOCH_BOOK,
+  ENOCH_MODULE_ID,
+  enochPassageStore,
+  installEnochBook,
+  uninstallEnochBook,
+} from '../../tests/fixtures/enoch-book'
 import type {
   CrossReference,
   CrossReferenceEditing,
@@ -5006,5 +5012,124 @@ describe('ReaderPaneModel verse-atom Book options and section names', () => {
     await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
 
     expect(model.view.book?.atom).toBe('verse')
+  })
+})
+
+describe('ReaderPaneModel page walk of a verse-atom Book', () => {
+  const enoch = (chapter: number, verse: number) => makeVerseId(ENOCH_BOOK, chapter, verse)
+  const enochReader = (): ReaderBook => ({
+    number: ENOCH_BOOK,
+    title: '1 Enoch',
+    author: 'Enoch',
+    year: 1912,
+    editionId: ENOCH_MODULE_ID,
+    atom: 'verse',
+    sections: [1, 2, 3, 4, 5].map((chapter) => ({ chapter, name: `${chapter}` })),
+  })
+  const walkModel = (overrides: Partial<ReaderPaneDeps> = {}) =>
+    bookModelWith({
+      passages: new ModulePassageSource(enochPassageStore()),
+      books: {
+        installed: async () => [enochReader()],
+        epigraphs: async () => [],
+      },
+      ...overrides,
+    })
+  const labels = (model: ReaderPaneModel) => model.view.rows.map((row) => row.label)
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('renders chapter 5 in the page order the source wrote, letters in the number slot', async () => {
+    const model = walkModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    expect(labels(model)).toEqual([
+      '1', '2', '3', '4', '5',
+      '6a', '6b', '6c', '7c', '6d', '6e', '6f', '6g', '6i', '6j', '7a', '7b',
+      '8',
+      '9', '', '', '',
+    ])
+    expect(model.view.rows[8].segments.map((segment) => segment.text).join('')).toBe(
+      'And for you, the godless, there shall be a curse.',
+    )
+    expect(model.view.rows[8].segments[0].lineBreakBefore).toBeUndefined()
+  })
+
+  it('tells the rows of one atom apart, so a walk that revisits 6 keys every row once', async () => {
+    const model = walkModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    const keys = model.view.rows.map((row) => row.key)
+    expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('renders a chapter without `reading` as before — one row per atom', async () => {
+    const model = walkModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 4 })
+
+    expect(model.view.rows).toHaveLength(1)
+    expect(model.view.rows[0].label).toBe('1')
+    expect(model.view.rows[0].startsParagraph).toBe(true)
+  })
+
+  it('opens a stanza gap before a line that starts one, and before every whole atom', async () => {
+    const model = walkModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    const gaps = model.view.rows.map((row) => row.startsParagraph)
+    expect(gaps.slice(0, 5)).toEqual([true, true, true, true, true])
+    expect(gaps.slice(5, 17)).toEqual([
+      true, false, false, false, true, false, false, false, false, false, false, false,
+    ])
+    expect(gaps.slice(17)).toEqual([true, true, false, true, false])
+  })
+
+  it('lands {1 Enoch 5:7} on 7c with every step of the atom highlighted, and asks the reader to reveal it', async () => {
+    const model = walkModel()
+    const revealed: number[] = []
+    model.onReveal((verseId) => revealed.push(verseId))
+
+    await model.openAt(ref('1 Enoch 5:7'), null)
+
+    const highlighted = model.view.rows.filter((row) => row.highlighted)
+    expect(highlighted.map((row) => row.label)).toEqual(['7c', '7a', '7b'])
+    expect(model.view.rows.findIndex((row) => row.highlighted)).toBe(8)
+    expect(revealed).toEqual([enoch(5, 7)])
+  })
+
+  it('selects the whole atom: selecting 7 from any of its rows selects one verse id', async () => {
+    const model = walkModel()
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    await model.selectVerse(model.view.rows[8].verseId)
+
+    expect(model.studyMaterial.selectedVerseId).toBe(enoch(5, 7))
+    expect(model.view.rows.filter((row) => row.verseId === enoch(5, 7))).toHaveLength(3)
+  })
+
+  it('prints an atom’s markers where the walk enters it, not on every line', async () => {
+    const model = walkModel({
+      intersecting: (reference) =>
+        reference.ranges[0].startId === enoch(5, 1)
+          ? [group('Annotations/1 Enoch 5.7.md', '1 Enoch 5:7')]
+          : [],
+    })
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    expect(
+      model.view.rows
+        .filter((row) => row.verseId === enoch(5, 7))
+        .map((row) => [row.label, row.annotations]),
+    ).toEqual([
+      ['7c', 1],
+      ['7a', 1],
+      ['7b', 0],
+    ])
   })
 })

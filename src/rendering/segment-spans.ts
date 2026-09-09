@@ -71,3 +71,16 @@ export const spanSegments = (
   })
   return cut.filter((piece) => covered.has(piece))
 }
+
+// The segments one step of a page walk prints (spec-books §11): the atom's
+// segments cut to the step's span. The break at the step's head is dropped —
+// the boundary between steps is the walk's to draw, not the line's.
+export const stepSegments = (
+  segments: readonly VerseSegment[],
+  span: TextSpan,
+): VerseSegment[] => {
+  const [first, ...rest] = spanSegments(segments, span)
+  if (first === undefined) return []
+  const { lineBreakBefore, ...head } = first
+  return [head, ...rest]
+}

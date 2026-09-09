@@ -1,7 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { ModuleManifest, RefSpan } from '../modules'
-import { makeVerseId, parseReference, type Reference } from '../reference'
-import { ModulePassageSource, verseSegments } from './module-passage-source'
+import {
+  decodeVerseId,
+  makeVerseId,
+  parseReference,
+  type Reference,
+} from '../reference'
+import {
+  ModulePassageSource,
+  verseSegments,
+  type PassageStep,
+} from './module-passage-source'
+import {
+  ENOCH_BOOK,
+  ENOCH_CHAPTER_5,
+  ENOCH_MODULE_ID,
+  enochPassageStore,
+  installEnochBook,
+  uninstallEnochBook,
+} from '../../tests/fixtures/enoch-book'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
@@ -929,5 +946,80 @@ describe('verseSegments', () => {
     expect(verseSegments({ text: 'Plain.' }, [])).toEqual([
       { text: 'Plain.', redLetter: false },
     ])
+  })
+})
+
+describe('ModulePassageSource reading order', () => {
+  const enoch = (chapter: number, verse: number) =>
+    makeVerseId(ENOCH_BOOK, chapter, verse)
+  const source = () => new ModulePassageSource(enochPassageStore())
+  const served = async (text: string) => {
+    const passage = await source().passage(ref(text), ENOCH_MODULE_ID)
+    if (passage.status !== 'ok') throw new Error(`unavailable: ${text}`)
+    return passage
+  }
+  const walk = (steps: readonly PassageStep[]) =>
+    steps.map((step) => {
+      const { verse } = decodeVerseId(step.verseId)
+      return step.line === undefined ? `${verse}` : `${verse}${step.letter ?? `.${step.line}`}`
+    })
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('walks a section with `reading` in its page order, letters on the lettered steps', async () => {
+    const passage = await served('1 Enoch 5:6-7')
+
+    expect(walk(passage.steps ?? [])).toEqual([
+      '6a', '6b', '6c', '7c', '6d', '6e', '6f', '6g', '6i', '6j', '7a', '7b',
+    ])
+    expect(passage.verses.map((verse) => verse.verseId)).toEqual([
+      enoch(5, 6),
+      enoch(5, 7),
+    ])
+  })
+
+  it('maps every step back to the span of its letter-order line', async () => {
+    const passage = await served('1 Enoch 5:7')
+    const seven = ENOCH_CHAPTER_5[7]
+    const lines = seven.lines ?? []
+
+    expect(passage.steps).toEqual([
+      { verseId: enoch(5, 7), line: 2, span: { start: lines[2].start, end: seven.text.length }, letter: 'c' },
+      { verseId: enoch(5, 7), line: 0, span: { start: 0, end: lines[1].start }, letter: 'a' },
+      { verseId: enoch(5, 7), line: 1, span: { start: lines[1].start, end: lines[2].start }, letter: 'b' },
+    ])
+  })
+
+  it('carries a stanza blank inside an atom onto the step that opens it', async () => {
+    const passage = await served('1 Enoch 5:9')
+
+    expect(passage.steps?.map((step) => step.startsParagraph === true)).toEqual([
+      true, false, true, false,
+    ])
+  })
+
+  it('walks a section without `reading` as atoms 1..N, each atom’s lines in stored order', async () => {
+    const passage = await served('1 Enoch 4:1-5:2')
+
+    expect(passage.steps).toEqual([
+      { verseId: enoch(4, 1), span: { start: 0, end: 27 } },
+      { verseId: enoch(5, 1), span: { start: 0, end: 33 } },
+      { verseId: enoch(5, 2), span: { start: 0, end: 42 } },
+    ])
+  })
+
+  it('keeps whole prose atoms as single steps inside a walked section', async () => {
+    const passage = await served('1 Enoch 5:5-6')
+
+    expect(walk(passage.steps ?? [])).toEqual([
+      '5', '6a', '6b', '6c', '6d', '6e', '6f', '6g', '6i', '6j',
+    ])
+  })
+
+  it('serves scripture with no walk at all', async () => {
+    const passage = await setup().passage(ref('John 15:4-5'), 'web')
+
+    expect(passage.status === 'ok' && passage.steps).toBeUndefined()
   })
 })

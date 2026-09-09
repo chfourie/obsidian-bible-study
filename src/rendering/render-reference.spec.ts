@@ -6,6 +6,8 @@ import {
 } from '../../tests/fixtures/humility-book'
 import {
   ENOCH_BOOK,
+  ENOCH_CHAPTER_5,
+  enochPassageStore,
   installEnochBook,
   uninstallEnochBook,
 } from '../../tests/fixtures/enoch-book'
@@ -13,6 +15,7 @@ import { makeVerseId } from '../reference'
 import type { OccurrenceGroup } from '../vault-index'
 import {
   verseSegments,
+  ModulePassageSource,
   type Passage,
   type PassageSource,
 } from './module-passage-source'
@@ -1540,4 +1543,84 @@ describe('renderReference verse-atom book references', () => {
       expect(buildReferenceRenderModel(text.slice(1, -1), context)).toBeNull()
     },
   )
+})
+
+describe('renderReference walks a verse-atom Book’s page', () => {
+  const walked = async (text: string) => {
+    const { parent, deps } = setup()
+    const passages = new ModulePassageSource(enochPassageStore())
+    await renderReference(parent, model(text), { ...deps, passages })
+    return parent
+  }
+  const numberSlots = (parent: HTMLElement): string[] =>
+    [
+      ...parent.querySelectorAll(
+        'sup.scripture-study-verse-number, .scripture-study-line-letter',
+      ),
+    ].map((slot) => slot.textContent ?? '')
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('prints a block as ⁶6a 6b 6c ⁷7c ⁶6d … — the number at each entry, the letter at each line', async () => {
+    const parent = await walked('1 Enoch 5:6-7 block')
+
+    expect(numberSlots(parent)).toEqual([
+      '6', '6a', '6b', '6c',
+      '7', '7c',
+      '6', '6d', '6e', '6f', '6g', '6i', '6j',
+      '7', '7a', '7b',
+    ])
+    const runs = parent.querySelectorAll('.scripture-study-book-paragraph')
+    expect(runs).toHaveLength(2)
+    expect(runs[0].querySelectorAll('br')).toHaveLength(3)
+    expect(runs[1].querySelectorAll('br')).toHaveLength(7)
+    expect(runs[0].textContent?.startsWith('66aIn those days')).toBe(true)
+    expect(runs[1].textContent?.startsWith('66dAnd all the righteous')).toBe(true)
+  })
+
+  it('prints inline as ⁶ … ⁷ … ⁶ … with no letters', async () => {
+    const parent = await walked('1 Enoch 5:6-7 inline')
+
+    expect(parent.querySelector('.scripture-study-line-letter')).toBeNull()
+    expect(numberSlots(parent)).toEqual(['6', '7', '6', '7'])
+  })
+
+  it('says where each step starts in its atom, so a drag maps to the atom’s offsets', async () => {
+    const parent = await walked('1 Enoch 5:7 block')
+    const lines = ENOCH_CHAPTER_5[7].lines ?? []
+
+    expect(
+      [...parent.querySelectorAll('[data-verse-id]')].map((holder) =>
+        holder.getAttribute('data-text-offset'),
+      ),
+    ).toEqual([String(lines[2].start), null, String(lines[1].start)])
+  })
+
+  it('paints a highlight over 5:7 on every step of the walk', async () => {
+    const parent = await walked('1 Enoch 5:6-7 block h2/7.0-140')
+
+    const highlighted = [...parent.querySelectorAll('[data-verse-id]')].map(
+      (holder) => holder.querySelector('.scripture-study-highlight-2') !== null,
+    )
+    expect(highlighted).toEqual([
+      false, false, false, true, false, false, false, false, false, false, true, true,
+    ])
+  })
+
+  it('draws a stanza blank inside an atom as a new prose run in a block and a blank line inline', async () => {
+    const block = await walked('1 Enoch 5:9 block')
+    expect(block.querySelectorAll('.scripture-study-book-paragraph')).toHaveLength(2)
+
+    const inline = await walked('1 Enoch 5:9 inline')
+    expect(inline.querySelectorAll('br')).toHaveLength(4)
+  })
+
+  it('walks a section without `reading` atom by atom, exactly as before', async () => {
+    const parent = await walked('1 Enoch 4:1-5:2 block')
+
+    expect(parent.querySelector('.scripture-study-book-paragraph')?.textContent).toBe(
+      '4:1And ye shall find no peace. 5:1Observe how the trees bear fruit. 2And all His works go on from year to year.',
+    )
+  })
 })

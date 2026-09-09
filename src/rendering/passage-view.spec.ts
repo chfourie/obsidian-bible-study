@@ -1,6 +1,18 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  ENOCH_BOOK,
+  ENOCH_CHAPTER_5,
+  ENOCH_MODULE_ID,
+  enochPassageStore,
+  installEnochBook,
+  uninstallEnochBook,
+} from '../../tests/fixtures/enoch-book'
 import { makeVerseId } from '../reference'
-import type { Passage, PassageVerse } from './module-passage-source'
+import {
+  ModulePassageSource,
+  type Passage,
+  type PassageVerse,
+} from './module-passage-source'
 import { buildReferenceRenderModel } from './reference-render-model'
 import {
   buildPassageView,
@@ -49,8 +61,11 @@ describe('buildPassageView', () => {
       {
         verseId: makeVerseId(43, 15, 4),
         label: null,
+        letter: null,
         segments: [{ text: 'Remain in me.', redLetter: false }],
         startsNewLine: false,
+        startsParagraph: false,
+        textOffset: 0,
         table: null,
       },
     ])
@@ -407,5 +422,77 @@ describe('buildPassageView — highlights', () => {
     )
 
     expect(view.verses[0].segments).toBe(segments)
+  })
+})
+
+describe('buildPassageView — a verse-atom Book’s page walk', () => {
+  const walked = async (text: string) => {
+    const rendered = model(text)
+    const passage = await new ModulePassageSource(enochPassageStore()).passage(
+      rendered.reference,
+      ENOCH_MODULE_ID,
+    )
+    if (passage.status !== 'ok') throw new Error(`unavailable: ${text}`)
+    return buildPassageView(rendered, passage)
+  }
+  const seven = makeVerseId(ENOCH_BOOK, 5, 7)
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('numbers a block at every entry into a different atom and letters every lettered line', async () => {
+    const view = await walked('1 Enoch 5:6-7 block')
+
+    expect(view.verses.map((block) => block.label)).toEqual([
+      '6', null, null, '7', '6', null, null, null, null, null, '7', null,
+    ])
+    expect(view.verses.map((block) => block.letter)).toEqual([
+      '6a', '6b', '6c', '7c', '6d', '6e', '6f', '6g', '6i', '6j', '7a', '7b',
+    ])
+  })
+
+  it('walks inline the same way with the letters omitted', async () => {
+    const view = await walked('1 Enoch 5:6-7 inline')
+
+    expect(view.verses.map((block) => block.label)).toEqual([
+      '6', null, null, '7', '6', null, null, null, null, null, '7', null,
+    ])
+    expect(view.verses.every((block) => block.letter === null)).toBe(true)
+  })
+
+  it('gives each step its own line’s text, with the break the step boundary owns dropped', async () => {
+    const view = await walked('1 Enoch 5:6-7 block')
+    const lines = ENOCH_CHAPTER_5[7].lines ?? []
+
+    const sevenC = view.verses[3]
+    expect(sevenC.segments.map((segment) => segment.text).join('')).toBe(
+      'And for you, the godless, there shall be a curse.',
+    )
+    expect(sevenC.segments[0].lineBreakBefore).toBeUndefined()
+    expect(sevenC.startsNewLine).toBe(true)
+    expect(sevenC.textOffset).toBe(lines[2].start)
+  })
+
+  it('paints a highlight over 5:7 on every step of 7 and on no step of 6', async () => {
+    const view = await walked('1 Enoch 5:6-7 block h1/7.0-140')
+
+    const painted = view.verses.map((block) =>
+      block.segments.some((segment) => segment.highlightSlot === 1),
+    )
+    expect(view.verses.map((block) => block.verseId === seven)).toEqual(painted)
+  })
+
+  it('opens a new run at a stanza blank inside an atom, never at an atom’s first line', async () => {
+    const view = await walked('1 Enoch 5:9 block')
+
+    expect(view.verses.map((block) => block.startsParagraph)).toEqual([
+      false, false, true, false,
+    ])
+  })
+
+  it('numbers a single-atom inline walk not at all', async () => {
+    const view = await walked('1 Enoch 5:7 inline')
+
+    expect(view.verses.map((block) => block.label)).toEqual([null, null, null])
   })
 })

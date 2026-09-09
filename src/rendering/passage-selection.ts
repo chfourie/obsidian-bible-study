@@ -8,6 +8,14 @@ type VerseTextNode = {
   node: Text
 }
 
+export const TEXT_OFFSET_ATTRIBUTE = 'data-text-offset'
+
+// A holder that prints one step of a page walk starts partway into its
+// atom's stored text (spec-books §11); it says where, so its offsets stay
+// the atom's own.
+const textOffsetOf = (holder: HTMLElement): number =>
+  Number(holder.getAttribute(TEXT_OFFSET_ATTRIBUTE) ?? 0)
+
 // Only the verse text carries offsets: verse numbers, the chip, the fallback
 // notice, and the attribution live outside these holders, so a stray drag over
 // them contributes nothing and the selection clamps to the passage.
@@ -20,7 +28,7 @@ const verseTextNodes = (host: HTMLElement): VerseTextNode[] => {
       holder,
       NodeFilter.SHOW_TEXT,
     )
-    let offset = 0
+    let offset = textOffsetOf(holder)
     for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
       const text = node as Text
       nodes.push({ verseId, offset, node: text })

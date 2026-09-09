@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import {
+  ENOCH_BOOK,
+  ENOCH_CHAPTER_5,
+  ENOCH_CONTENT,
+} from '../../tests/fixtures/enoch-book'
 import { makeVerseId } from '../reference'
 import {
   buildSearchIndex,
@@ -8,7 +13,7 @@ import {
   type SearchIndex,
 } from './search-index'
 import { parseSearchQuery } from './search-query'
-import type { ModuleAtom, SearchMatch } from './search-scan'
+import { bookAtoms, type ModuleAtom, type SearchMatch } from './search-scan'
 
 const atom = (verse: number, text: string): ModuleAtom => ({
   verseId: makeVerseId(43, 15, verse),
@@ -230,5 +235,28 @@ describe('searchIndex over Headings', () => {
   it('leaves an atom without Headings with none to report', () => {
     const [hit] = searchIndex(indexOf(HEADED), parseSearchQuery('themselves'))
     expect(hit.headingSpans).toEqual([])
+  })
+})
+
+describe('searchIndex over a section the page interleaves', () => {
+  // Chapter 5's page walks 6a 6b 6c 7c 6d … (spec-books §11); the index reads
+  // the atoms' stored, letter-order text and never the walk, so Hits keep
+  // Canonical Grid order and a match sits at its offset in the atom's string.
+  const index = buildSearchIndex(bookAtoms(ENOCH_CONTENT), 'sha-enoch')
+  const seven = ENOCH_CHAPTER_5[7]
+
+  it('presents 5:6 before 5:7 although 7c prints inside 6', () => {
+    expect(verses(index, 'curse')).toEqual([
+      makeVerseId(ENOCH_BOOK, 5, 6),
+      makeVerseId(ENOCH_BOOK, 5, 7),
+    ])
+  })
+
+  it('locates 7c’s match in the letter-order string, with no letter in the way', () => {
+    const hit = searchIndex(index, parseSearchQuery('godless')).find(
+      (match) => match.verseId === makeVerseId(ENOCH_BOOK, 5, 7),
+    )
+    const at = seven.text.indexOf('godless')
+    expect(hit?.spans).toEqual([{ start: at, end: at + 'godless'.length }])
   })
 })

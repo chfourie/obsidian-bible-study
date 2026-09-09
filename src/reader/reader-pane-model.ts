@@ -67,9 +67,15 @@ import {
   isPoetryVerse,
   markSpanChannel,
   spanSegments,
+  stepSegments,
   verseSegments,
 } from '../rendering'
-import type { PassageSource, PassageVerse, VerseSegment } from '../rendering'
+import type {
+  PassageSource,
+  PassageStep,
+  PassageVerse,
+  VerseSegment,
+} from '../rendering'
 import { strongsFamily } from '../modules'
 import type { Epigraph, Figure, HeadingLevel } from '../modules'
 
@@ -221,7 +227,14 @@ export type TableRowView = {
 }
 
 export type VerseRowView = {
+  // One row per atom — or, in a verse-atom Book, per step of the section's
+  // page walk (spec-books §11), so an atom the page interleaves has a row
+  // for every line and the key tells them apart.
+  key: string
   verseId: number
+  // The row where the walk enters its atom: the number and the atom's
+  // markers print here, and nowhere else along a run of one atom.
+  entersAtom: boolean
   label: string
   segments: VerseSegment[]
   // The Headings printed above this atom, in order — empty for scripture and
@@ -419,6 +432,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // against so dismissing the banner can drop them without a reload.
   #emphasis: readonly EmphasisSpan[] = []
   #verses: PassageVerse[] = []
+  // The page walk over #verses, when the Book has one (spec-books §11).
+  #steps: PassageStep[] | undefined = undefined
   #rows: VerseRowView[] = []
   #status: ReaderPaneView['status'] = 'loading'
   #available: ReaderTranslation[] = []
@@ -1201,6 +1216,15 @@ export class ReaderPaneModel implements StudyMaterialSource {
     return this.#markers.get(verseId) ?? { annotations: 0, mentions: 0 }
   }
 
+  #rowMarkers(row: {
+    verseId: number
+    entersAtom: boolean
+  }): { annotations: number; mentions: number } {
+    return row.entersAtom
+      ? this.#markerCounts(row.verseId)
+      : { annotations: 0, mentions: 0 }
+  }
+
   setDetailsWanted(wanted: boolean): void {
     if (this.#detailsWanted === wanted) return
     this.#detailsWanted = wanted
@@ -1439,7 +1463,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     )
     this.#rows = this.#rows.map((row) => ({
       ...row,
-      ...this.#markerCounts(row.verseId),
+      ...this.#rowMarkers(row),
     }))
     this.#notify()
     const mentions = chapterMentionViews(
@@ -1485,6 +1509,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     const token = ++this.#loadToken
     this.#status = 'loading'
     this.#verses = []
+    this.#steps = undefined
     this.#rows = []
     this.#wordCloud = null
     this.#wordCloudToken++
@@ -1542,6 +1567,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#rows = this.#rowsOf(passage.verses)
     this.#status = 'ok'
     this.#notify()
+    this.#revealEntry()
     if (this.#wordCloudWanted) await this.#refreshWordCloud()
   }
 
@@ -1580,9 +1606,20 @@ export class ReaderPaneModel implements StudyMaterialSource {
     this.#attribution = passage.attribution
     this.#epigraphs = epigraphs
     this.#verses = passage.verses
+    this.#steps = passage.steps
     this.#rows = this.#rowsOf(passage.verses)
     this.#status = 'ok'
     this.#notify()
+    this.#revealEntry()
+  }
+
+  // An entry lands on its first verse as the page prints it — in a walked
+  // section that is the atom's first appearance, 7c for `{1 Enoch 5:7}`
+  // (spec-books §11) — and the reader is asked to bring that row into view.
+  #revealEntry(): void {
+    if (this.#entry === null) return
+    const first = this.#rows.find((row) => row.highlighted)
+    if (first !== undefined) this.#requestReveal(first.verseId)
   }
 
   #emphasizedSegments(verse: PassageVerse): VerseSegment[] {
@@ -1639,27 +1676,77 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   #rowsOf(verses: PassageVerse[]): VerseRowView[] {
-    return verses.map((verse) => {
-      const segments = this.#emphasizedSegments(verse)
-      return {
-        verseId: verse.verseId,
-        label: `${decodeVerseId(verse.verseId).verse}`,
-        segments,
-        table: this.#tableRows(verse, segments),
-        headings: this.#headingRows(verse),
-        figures: verse.figures ?? [],
-        keepsLines:
-          verse.hasLineData === true && isNonBiblicalBook(this.#position.book),
-        poetry: isPoetryVerse(verse.segments, this.#position.book),
-        startsParagraph: verse.startsParagraph === true,
-        highlighted:
-          this.#entry !== null &&
-          this.#entry.ranges.some((range) =>
-            rangeContains(range, verse.verseId),
-          ),
-        ...this.#markerCounts(verse.verseId),
-      }
+    const steps = this.#steps
+    if (steps === undefined) return verses.map((verse) => this.#atomRow(verse))
+    const atoms = new Map(
+      verses.map((verse) => [verse.verseId, this.#atomRow(verse)]),
+    )
+    const seen = new Set<number>()
+    return steps.flatMap((step, index) => {
+      const atom = atoms.get(step.verseId)
+      if (atom === undefined) return []
+      const entersAtom =
+        index === 0 || steps[index - 1].verseId !== step.verseId
+      const firstAppearance = !seen.has(step.verseId)
+      seen.add(step.verseId)
+      return [this.#stepRow(step, atom, entersAtom, firstAppearance)]
     })
+  }
+
+  #atomRow(verse: PassageVerse): VerseRowView {
+    const segments = this.#emphasizedSegments(verse)
+    return {
+      key: `${verse.verseId}`,
+      verseId: verse.verseId,
+      entersAtom: true,
+      label: `${decodeVerseId(verse.verseId).verse}`,
+      segments,
+      table: this.#tableRows(verse, segments),
+      headings: this.#headingRows(verse),
+      figures: verse.figures ?? [],
+      keepsLines:
+        verse.hasLineData === true && isNonBiblicalBook(this.#position.book),
+      poetry: isPoetryVerse(verse.segments, this.#position.book),
+      startsParagraph: verse.startsParagraph === true,
+      highlighted:
+        this.#entry !== null &&
+        this.#entry.ranges.some((range) => rangeContains(range, verse.verseId)),
+      ...this.#markerCounts(verse.verseId),
+    }
+  }
+
+  // One step of the walk as a row of its atom (spec-books §11): a lettered
+  // line takes `6a` in the number slot in place of the number, an unlettered
+  // line keeps ordinary chrome — the number where the walk enters the atom,
+  // nothing on the rest. The atom's furniture prints above its first
+  // appearance; a whole prose atom, or a line that opens a stanza, opens a
+  // paragraph.
+  #stepRow(
+    step: PassageStep,
+    atom: VerseRowView,
+    entersAtom: boolean,
+    firstAppearance: boolean,
+  ): VerseRowView {
+    const { verse } = decodeVerseId(step.verseId)
+    const lined = step.line !== undefined
+    const label =
+      step.letter !== undefined
+        ? `${verse}${step.letter}`
+        : entersAtom
+          ? `${verse}`
+          : ''
+    return {
+      ...atom,
+      key: lined ? `${step.verseId}:${step.line}` : atom.key,
+      entersAtom,
+      label,
+      segments: stepSegments(atom.segments, step.span),
+      table: lined ? null : atom.table,
+      headings: firstAppearance ? atom.headings : [],
+      figures: firstAppearance ? atom.figures : [],
+      startsParagraph: !lined || step.startsParagraph === true,
+      ...this.#rowMarkers({ verseId: step.verseId, entersAtom }),
+    }
   }
 
   async refreshTranslations(): Promise<void> {

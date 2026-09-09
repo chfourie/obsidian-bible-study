@@ -111,6 +111,16 @@ body {
   font-style: normal;
 }
 
+/* A Line letter in a block quote's number slot (spec-books §4, §11): the
+   print's `6a`, chrome beside the text and never part of it. */
+.scripture-study-line-letter {
+  margin-right: 0.3em;
+  color: var(--text-faint);
+  font-size: 0.7em;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Supplied words and Editorial marks (spec-books §10). Settings publishes the
    two opacities as --ss-supplied-opacity / --ss-marks-opacity on `body`; the
    fallbacks are the factory values. Supplied words fade in scripture and
