@@ -6,13 +6,13 @@
 // `reading` only where it is not that identity.
 
 import type { ReadingStep } from '../../src/modules/module-manifest'
-import type { VerseLine } from '../../src/modules/verse-content'
+import type { Footnote, VerseLine } from '../../src/modules/verse-content'
 import {
   atomChannels,
   type EditorialMarkChannels,
   linesAfterStrip,
-  stripAtomMarks,
 } from './parse-editorial-marks'
+import { liftAtomNotes } from './parse-footnotes'
 
 // One metrical line (or a prose verse) as the source has it, with the source
 // line it stands on so a build failure can cite it.
@@ -26,6 +26,7 @@ export type VerseSourceLine = {
 
 export type VerseAtom = EditorialMarkChannels & {
   text: string
+  footnotes?: Footnote[]
   lines?: VerseLine[]
 }
 
@@ -129,17 +130,17 @@ const letterOrder = (lines: VerseSourceLine[]): VerseSourceLine[] =>
       : a.letter.localeCompare(b.letter),
   )
 
-// Editorial-mark wrappers are parsed on the joined atom (spec-books §10), so
-// a wrapper may open on one metrical line and close on a later one; the
-// line starts follow their text through the strip. A failure cites the atom
-// and the source line it opens on.
+// Footnotes and Editorial-mark wrappers are read on the joined atom
+// (spec-books §6, §10), so a wrapper may open on one metrical line and close
+// on a later one; the line starts follow their text through both lifts. A
+// failure cites the atom and the source line it opens on.
 const atomOf = (
   chapter: number,
   atom: number,
   ordered: VerseSourceLine[],
 ): VerseAtom => {
   const firstLine = Math.min(...ordered.map((line) => line.line))
-  const stripped = stripAtomMarks(
+  const stripped = liftAtomNotes(
     `${chapter}:${atom} (line ${firstLine})`,
     ordered.map((line) => line.text).join(' '),
   )

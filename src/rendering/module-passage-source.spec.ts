@@ -1023,3 +1023,33 @@ describe('ModulePassageSource reading order', () => {
     expect(passage.status === 'ok' && passage.steps).toBeUndefined()
   })
 })
+
+describe('ModulePassageSource Footnotes', () => {
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  const source = () => new ModulePassageSource(enochPassageStore())
+
+  it('carries the noted atom’s bodies in anchor order, and no anchor', async () => {
+    const passage = await source().passage(ref('1 Enoch 5:4'), ENOCH_MODULE_ID)
+
+    expect(passage.status === 'ok' && passage.verses[0].footnotes).toEqual([
+      'So Dillmann; the Ethiopic is corrupt here.',
+      'Charles restores the line from the Greek.',
+    ])
+  })
+
+  it('leaves the atom’s own segments exactly as an unnoted atom’s', async () => {
+    const passage = await source().passage(ref('1 Enoch 5:4'), ENOCH_MODULE_ID)
+
+    expect(passage.status === 'ok' && passage.verses[0].segments).toEqual([
+      { text: ENOCH_CHAPTER_5[4].text, redLetter: false },
+    ])
+  })
+
+  it('carries nothing on an atom that has no note', async () => {
+    const passage = await source().passage(ref('1 Enoch 5:5'), ENOCH_MODULE_ID)
+
+    expect(passage.status === 'ok' && passage.verses[0].footnotes).toBeUndefined()
+  })
+})

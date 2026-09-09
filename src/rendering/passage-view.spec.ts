@@ -362,6 +362,28 @@ describe('buildPassageView — highlights', () => {
     ])
   })
 
+  it('highlights a noted atom by the offsets of its stored string alone', () => {
+    // 1 Enoch 5:4 carries two Footnotes; they are lifted out at build, so a
+    // highlight over `been steadfast.` runs where the print's own reading
+    // puts it (spec-books §6).
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.16-31'),
+      passage([
+        {
+          verseId: makeVerseId(43, 15, 4),
+          segments: [{ text: 'But ye have not been steadfast.', redLetter: false }],
+          footnotes: ['So Dillmann; the Ethiopic is corrupt here.'],
+        },
+      ]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'But ye have not ', redLetter: false },
+      { text: 'been steadfast.', redLetter: false, highlightSlot: 1 },
+    ])
+    expect(JSON.stringify(view)).not.toContain('Dillmann')
+  })
+
   it('clamps offsets past the end of the stored verse text', () => {
     const view = buildPassageView(
       model('John 15:4 inline h1/4.7-400'),

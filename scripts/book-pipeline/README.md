@@ -239,6 +239,45 @@ citing the furniture, on a wrapper or `<` in a Heading, a section head or a
 figure's caption or alt text — furniture never carries an Editorial mark.
 A Book with no wrappers builds exactly as before and carries no channel.
 
+## Footnotes
+
+An editor's note on an atom is written where it belongs in the reading and
+lifted out of the stored text at build (spec-books §6, ADR 0012):
+
+```
+2. Behold ye the earth, <marks>⌈</marks>how <emended>steadfast</emended> they
+   are<marks>⌉</marks>. [Footnote: So Dillmann; the Ethiopic is corrupt.]
+```
+
+The marker is `[Footnote: text]`, or `[Footnote2: text]` — a number after
+`Footnote` is *Humility*'s own source shape and is read the same way, because
+nothing addresses a note. The whitespace before the marker is lifted with it,
+so the reading closes up exactly as the print has it, and the note rides
+beside the atom as `footnotes: [{ start, text }]` — the anchor offset into
+the **stored** string, past both this lift and the wrapper strip, in the
+order the notes stand. An atom with no note carries no channel.
+
+Nothing prints the note but the Study Panel: no marker stands in the reader
+page, in a chip, or in a note's `inline` or `block`, and the Search Index
+never reads a note, so a word only Charles wrote earns no Hit.
+
+The note's own text is plain: no Editorial-mark wrapper, no `<`, and no `]`
+(the first one closes the marker). The build fails, citing the atom, on a
+wrapper inside a note and on a `[Footnote` the marker syntax cannot read — a
+missing colon, an unclosed bracket. A marker in an epigraph fails too: a
+Footnote is a channel on an atom.
+
+A marked atom with no note of its own is **not** an error. The build lists
+every one of them at the end —
+
+```
+Footnotes to curate: 15
+  1:1 carries an Editorial mark and no Footnote
+```
+
+— as the curation to-do, so the notes can be written over releases while the
+grid ships.
+
 ## Ref Spans
 
 The scanner links the author's explicit citations only. It reads

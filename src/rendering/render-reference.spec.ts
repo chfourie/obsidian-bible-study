@@ -500,6 +500,35 @@ describe('renderReference inline', () => {
     }
   })
 
+  it('shows neither marker nor note body in the chip, inline or block', async () => {
+    const noted = {
+      status: 'ok' as const,
+      attribution: null,
+      verses: [
+        {
+          verseId: 40001001,
+          segments: [
+            { text: 'But ye have not been steadfast.', redLetter: false },
+          ],
+          footnotes: ['So Dillmann; the Ethiopic is corrupt here.'],
+        },
+      ],
+    }
+    for (const display of ['inline', 'block']) {
+      const { parent, deps } = setup(noted)
+
+      await renderReference(parent, model(`Matthew 1:1 ${display}`), deps)
+
+      expect(
+        parent.querySelector('.scripture-study-passage')?.textContent,
+      ).toContain('But ye have not been steadfast.')
+      expect(parent.textContent).not.toContain('Dillmann')
+      expect(parent.querySelector('.scripture-study-chip')?.textContent).not.toContain(
+        'Dillmann',
+      )
+    }
+  })
+
   it('marks a segment both red-letter and supplied with both classes', async () => {
     const { parent, deps } = setup({
       status: 'ok',

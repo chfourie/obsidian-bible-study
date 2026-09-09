@@ -217,6 +217,24 @@ export const buildBookArtifact = (
   }
 }
 
+// The curation to-do a build prints at the end (spec-books §2): an atom the
+// curator marked but left without a Footnote. A warning, never a failure —
+// the notes are curated over releases, and the grid ships either way.
+export const notesToCurate = (artifact: BookArtifact): string[] => {
+  const book = artifact.manifest.book
+  const separator = book.atom === 'verse' ? ':' : '.'
+  return Object.entries(artifact.books[book.number])
+    .filter(
+      ([, atom]) =>
+        (atom.marks !== undefined || atom.emended !== undefined) &&
+        atom.footnotes === undefined,
+    )
+    .map(([verseId]) => {
+      const { chapter, verse } = decodeVerseId(Number(verseId))
+      return `${chapter}${separator}${verse} carries an Editorial mark and no Footnote`
+    })
+}
+
 export const refSpanCounts = (artifact: BookArtifact): Map<number, number> => {
   const counts = new Map<number, number>(
     artifact.manifest.book.sections.map((section) => [section.chapter, 0]),

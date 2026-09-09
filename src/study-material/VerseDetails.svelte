@@ -113,6 +113,14 @@ controls beside the selection's title.
 
 {#if details.book !== null}
   <p class="bsm-book-citation">{details.book.citation}</p>
+  {#if details.book.footnotes.length > 0}
+    <div class="bsm-group-label">Footnotes</div>
+    <ol class="bsm-footnotes">
+      {#each details.book.footnotes as footnote, index (index)}
+        <li>{footnote}</li>
+      {/each}
+    </ol>
+  {/if}
 {/if}
 
 {#if details.strongs.length > 0}
@@ -243,6 +251,21 @@ controls beside the selection's title.
     color: var(--text-faint);
     font-size: var(--font-ui-smaller);
     user-select: text;
+  }
+
+  /* The atom's notes stand under its citation, the one surface that shows
+     them (spec-books §6). */
+  .bsm-footnotes {
+    margin: 4px 0 8px;
+    padding-left: 1.4em;
+    color: var(--text-muted);
+    font-size: var(--font-ui-smaller);
+    line-height: var(--line-height-normal);
+    user-select: text;
+  }
+
+  .bsm-footnotes li {
+    margin-bottom: 2px;
   }
 
   .bsm-group-label {

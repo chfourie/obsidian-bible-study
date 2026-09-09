@@ -62,7 +62,16 @@ export const ENOCH_CHAPTER_5: Record<number, StructuredVerse> = {
   1: { text: 'Observe how the trees bear fruit.' },
   2: { text: 'And all His works go on from year to year.' },
   3: { text: 'And behold how the sea and the rivers accomplish their tasks.' },
-  4: { text: 'But ye have not been steadfast.' },
+  // The two notes Charles's page carries on this verse, lifted out of the
+  // stored string at build (spec-books §6): the Study Panel is the only
+  // surface that ever shows them.
+  4: {
+    text: 'But ye have not been steadfast.',
+    footnotes: [
+      { start: 30, text: 'So Dillmann; the Ethiopic is corrupt here.' },
+      { start: 31, text: 'Charles restores the line from the Greek.' },
+    ],
+  },
   5: { text: 'Therefore shall ye execrate your days.' },
   6: lettered(
     'abcdefgij',

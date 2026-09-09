@@ -351,3 +351,66 @@ describe('verseSectionAtoms Editorial marks', () => {
     expect(() => atomsOf(lines)).toThrow(message)
   })
 })
+
+describe('verseSectionAtoms Footnotes', () => {
+  it('lifts a note off the verse, anchored in the stored string', () => {
+    const { atoms } = atomsOf([
+      '1. But ye have not been steadfast. [Footnote: So Dillmann; G omits.]',
+    ])
+    expect(atoms).toEqual([
+      {
+        text: 'But ye have not been steadfast.',
+        footnotes: [{ start: 31, text: 'So Dillmann; G omits.' }],
+      },
+    ])
+  })
+
+  it('anchors a note over the stored string, past the wrappers it stands after', () => {
+    const { atoms } = atomsOf([
+      '1. <marks>⌈</marks>how <emended>steadfast</emended> they are<marks>⌉</marks>' +
+        ' [Footnote: Charles emends the Ethiopic here.] and no more.',
+    ])
+    expect(atoms[0]).toEqual({
+      text: '⌈how steadfast they are⌉ and no more.',
+      marks: [
+        { start: 0, end: 1 },
+        { start: 23, end: 24 },
+      ],
+      emended: [{ start: 5, end: 14 }],
+      footnotes: [{ start: 24, text: 'Charles emends the Ethiopic here.' }],
+    })
+  })
+
+  it('leaves a lined atom’s line starts where the stored string has them', () => {
+    const { atoms } = atomsOf([
+      '1a. And all the sinners shall imprecate by you, [Footnote: Dillmann.]',
+      '1b. And all the righteous shall rejoice.',
+    ])
+    expect(atoms[0]).toEqual({
+      text: 'And all the sinners shall imprecate by you, And all the righteous shall rejoice.',
+      footnotes: [{ start: 43, text: 'Dillmann.' }],
+      lines: [{ start: 0, paragraph: true, letter: 'a' }, { start: 44, letter: 'b' }],
+    })
+  })
+
+  it('carries two notes of one verse in the order they stand', () => {
+    const { atoms } = atomsOf([
+      '1. And behold! [Footnote: G reads “and lo”.] He cometh. [Footnote: The daggered words.]',
+    ])
+    expect(atoms[0].footnotes).toEqual([
+      { start: 11, text: 'G reads “and lo”.' },
+      { start: 22, text: 'The daggered words.' },
+    ])
+  })
+
+  it('leaves a verse without a note free of the channel', () => {
+    expect(atomsOf(['1. And ye shall find no peace.']).atoms[0].footnotes).toBeUndefined()
+  })
+
+  it.each([
+    [['1. a [Footnote no colon]'], /atom 1:1 \(line 1\): a `\[Footnote` marker the build cannot read/],
+    [['1. a [Footnote: <marks>⌈</marks> stands here.]'], /atom 1:1 \(line 1\): a Footnote carries no Editorial mark/],
+  ])('fails, citing the atom, on %j', (lines, message) => {
+    expect(() => atomsOf(lines)).toThrow(message)
+  })
+})

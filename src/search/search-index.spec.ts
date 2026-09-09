@@ -260,3 +260,20 @@ describe('searchIndex over a section the page interleaves', () => {
     expect(hit?.spans).toEqual([{ start: at, end: at + 'godless'.length }])
   })
 })
+
+describe('searchIndex over a Book whose atoms carry Footnotes', () => {
+  // A Footnote is never a Hit: the index reads atom text plus Heading only
+  // (spec-books §6), so a word Charles wrote in a note alone earns nothing.
+  const index = buildSearchIndex(bookAtoms(ENOCH_CONTENT), 'sha-enoch')
+
+  it('finds no verse for a word that stands only in a note', () => {
+    expect(verses(index, 'Dillmann')).toEqual([])
+    expect(verses(index, 'Greek')).toEqual([])
+  })
+
+  it('still finds the noted atom by its own text', () => {
+    expect(verses(index, 'steadfast')).toEqual([
+      makeVerseId(ENOCH_BOOK, 5, 4),
+    ])
+  })
+})

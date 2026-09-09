@@ -4148,7 +4148,10 @@ describe('ReaderPaneModel book mode', () => {
     expect(detailsOf(model)).toEqual({
       verseId: makeVerseId(HUMILITY, 1, 2),
       title: 'Humility ch. 1, par. 2',
-      book: { citation: 'Andrew Murray, Humility (1895), ch. 1, par. 2' },
+      book: {
+        citation: 'Andrew Murray, Humility (1895), ch. 1, par. 2',
+        footnotes: [],
+      },
       translations: [],
       strongs: [],
       strongsAttribution: null,
@@ -5131,5 +5134,126 @@ describe('ReaderPaneModel page walk of a verse-atom Book', () => {
       ['7a', 0],
       ['7b', 0],
     ])
+  })
+})
+
+describe('ReaderPaneModel Footnotes', () => {
+  const enochReader = (): ReaderBook => ({
+    number: ENOCH_BOOK,
+    title: '1 Enoch',
+    author: 'Enoch',
+    year: 1912,
+    editionId: ENOCH_MODULE_ID,
+    atom: 'verse',
+    sections: [1, 2, 3, 4, 5].map((chapter) => ({ chapter, name: `${chapter}` })),
+  })
+  const notedModel = () => {
+    const model = bookModelWith({
+      passages: new ModulePassageSource(enochPassageStore()),
+      books: {
+        installed: async () => [enochReader()],
+        epigraphs: async () => [],
+      },
+    })
+    model.setDetailsWanted(true)
+    return model
+  }
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('lists both notes of the selected atom under its locator and citation', async () => {
+    const model = notedModel()
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    await model.selectVerse(makeVerseId(ENOCH_BOOK, 5, 4))
+
+    const details = detailsOf(model)
+    expect(details.title).toBe('1 Enoch 5:4')
+    expect(details.book).toEqual({
+      citation: 'Enoch, 1 Enoch (1912), 5:4',
+      footnotes: [
+        'So Dillmann; the Ethiopic is corrupt here.',
+        'Charles restores the line from the Greek.',
+      ],
+    })
+  })
+
+  it('lists nothing for an atom that carries no note', async () => {
+    const model = notedModel()
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    await model.selectVerse(makeVerseId(ENOCH_BOOK, 5, 5))
+
+    expect(detailsOf(model).book?.footnotes).toEqual([])
+  })
+
+  it('prints no marker and no note body on the page', async () => {
+    const model = notedModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    const row = model.view.rows.find(
+      (candidate) => candidate.verseId === makeVerseId(ENOCH_BOOK, 5, 4),
+    )
+    expect(row?.segments.map((segment) => segment.text).join('')).toBe(
+      'But ye have not been steadfast.',
+    )
+    expect(JSON.stringify(model.view.rows)).not.toContain('Dillmann')
+  })
+})
+
+describe('ReaderPaneModel Footnotes on a paragraph Book', () => {
+  beforeEach(() => {
+    registerBookVersification({
+      book: HUMILITY,
+      sections: HUMILITY_SECTIONS.map(({ chapter }) => ({
+        chapter,
+        paragraphs: 20,
+      })),
+    })
+    registerBook(HUMILITY_REGISTRATION)
+  })
+
+  afterEach(() => {
+    deregisterBookVersification(HUMILITY)
+    deregisterBook(HUMILITY)
+  })
+
+  // Humility's own artifact has carried its three notes since it shipped
+  // (format 5); the plugin reads them as they stand, with no rebuild.
+  it('lists a Humility paragraph’s note, and nothing on the paragraph beside it', async () => {
+    const model = bookModelWith({
+      passages: new ModulePassageSource({
+        manifest: async () => ({
+          id: 'hum-m1895',
+          name: 'Humility',
+          language: 'English',
+          license: 'Public domain',
+          source: '',
+          sourceChecksum: '',
+          formatVersion: 5,
+          kind: 'book' as const,
+          capabilities: { strongsTagged: false },
+        }),
+        bookContent: async () => ({
+          [makeVerseId(HUMILITY, 1, 1)]: {
+            text: 'WE have seen humility in the life of Christ.',
+            footnotes: [{ start: 43, text: 'I knew Jesus, and He was very precious.' }],
+          },
+          [makeVerseId(HUMILITY, 1, 2)]: { text: 'And so pride is the root.' },
+        }),
+      }),
+    })
+    model.setDetailsWanted(true)
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    await model.selectVerse(makeVerseId(HUMILITY, 1, 1))
+    expect(detailsOf(model).book?.footnotes).toEqual([
+      'I knew Jesus, and He was very precious.',
+    ])
+
+    await model.selectVerse(makeVerseId(HUMILITY, 1, 2))
+    expect(detailsOf(model).book?.footnotes).toEqual([])
   })
 })

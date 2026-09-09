@@ -12,6 +12,7 @@ import {
   bookAtomKind,
   verseEmendedOf,
   verseFiguresOf,
+  verseFootnotesOf,
   verseHeadingsOf,
   verseLinesOf,
   verseMarksOf,
@@ -73,6 +74,10 @@ export type PassageVerse = {
   // Book paragraphs only: the section furniture printed with this atom.
   headings?: Heading[]
   figures?: Figure[]
+  // The atom's Footnotes in anchor order, for the Study Panel alone: no
+  // marker and no body ever prints on the page or in a note (spec-books §6,
+  // ADR 0012), so the anchor offset itself never leaves the module.
+  footnotes?: string[]
 }
 
 // One step of a verse-atom Book's page walk (spec-books §11, ADR 0013): a
@@ -334,6 +339,9 @@ export class ModulePassageSource implements PassageSource {
         if (headings.length > 0) passageVerse.headings = headings
         const figures = verseFiguresOf(verse)
         if (figures.length > 0) passageVerse.figures = figures
+        const footnotes = verseFootnotesOf(verse)
+        if (footnotes.length > 0)
+          passageVerse.footnotes = footnotes.map((footnote) => footnote.text)
         const lines = verseLinesOf(verse)
         if (lines.length > 0) passageVerse.hasLineData = true
         const rows = lines

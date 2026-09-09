@@ -410,3 +410,45 @@ describe('parseBookMarkdown Editorial marks', () => {
     expect(paragraph).toEqual({ text: 'Plain text.' })
   })
 })
+
+describe('parseBookMarkdown Footnotes', () => {
+  const book = (body: string, atom: 'verse' | 'paragraph' = 'paragraph') =>
+    parseBookMarkdown(`---\nmodule: x\n---\n\n${body}`, { atom })
+
+  it('lifts a paragraph’s notes out of its stored text', () => {
+    const [paragraph] = book(
+      '## 1. A\n\nWE have seen humility. [Footnote: I knew Jesus.] Once again I repeat.\n',
+    ).sections[0].paragraphs
+    expect(paragraph).toEqual({
+      text: 'WE have seen humility. Once again I repeat.',
+      footnotes: [{ start: 22, text: 'I knew Jesus.' }],
+    })
+  })
+
+  it('anchors a list row’s note over the stored string, line starts unmoved', () => {
+    const [list] = book(
+      '## 1. A\n\n- <marks>⌈</marks>one [Footnote: Dillmann.]\n- two<marks>⌉</marks>\n',
+    ).sections[0].paragraphs
+    expect(list).toEqual({
+      text: '- ⌈one\n- two⌉',
+      marks: [
+        { start: 2, end: 3 },
+        { start: 12, end: 13 },
+      ],
+      footnotes: [{ start: 6, text: 'Dillmann.' }],
+      lines: [{ start: 0 }, { start: 7 }],
+    })
+  })
+
+  it('grows no channel on a Book that carries no note', () => {
+    const [paragraph] = book('## 1. A\n\nPlain text.\n').sections[0].paragraphs
+    expect(paragraph.footnotes).toBeUndefined()
+  })
+
+  it.each([
+    ['## 1. A\n\nOne. [Footnote missing colon]\n', /atom 1\.1: a `\[Footnote` marker the build cannot read/],
+    ['## 1. A\n\n> A quote [Footnote: a note]\n> — Someone\n\nOne.\n', /epigraph 1\.e1 .*: only an atom carries a Footnote/],
+  ])('fails, citing the atom or epigraph, on %j', (body, message) => {
+    expect(() => book(body)).toThrow(message)
+  })
+})

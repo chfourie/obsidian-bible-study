@@ -11,6 +11,7 @@ import {
 } from '../../src/modules/module-manifest'
 import type {
   FigurePlace,
+  Footnote,
   FormatSpan,
   Heading,
   HeadingLevel,
@@ -24,6 +25,7 @@ import {
   linesAfterStrip,
   stripAtomMarks,
 } from './parse-editorial-marks'
+import { assertNoFootnoteMarker, liftAtomNotes } from './parse-footnotes'
 import {
   readVerseBlock,
   type VerseSourceLine,
@@ -46,6 +48,8 @@ export type FigureSource = {
 // quote alike (spec-books §10); an unmarked atom carries none of them.
 export type BookParagraph = EditorialMarkChannels & {
   text: string
+  // The editor's notes on this atom, lifted out of its text (spec-books §6).
+  footnotes?: Footnote[]
   figures?: FigureSource[]
   // Set only on an atom that keeps its own line breaks — a list or a table.
   // The channel addresses the stored text exactly as scripture's does, so a
@@ -191,10 +195,14 @@ const rowOf = (line: string, start: number): Row => {
 const atomOf = (
   locator: string,
   block: string,
-): EditorialMarkChannels & { text: string; lines?: VerseLine[] } => {
+): EditorialMarkChannels & {
+  text: string
+  footnotes?: Footnote[]
+  lines?: VerseLine[]
+} => {
   const lines = block.split('\n').map((line) => line.trim())
   if (!LINE_KEEPING.test(lines[0]))
-    return atomChannels(stripAtomMarks(locator, lines.join(' ')))
+    return atomChannels(liftAtomNotes(locator, lines.join(' ')))
   const rows: string[] = []
   const kept: VerseLine[] = []
   let start = 0
@@ -210,7 +218,7 @@ const atomOf = (
     start += row.text.length + 1
   }
   if (headerRow >= 0) kept[headerRow].header = true
-  const stripped = stripAtomMarks(locator, rows.join('\n'))
+  const stripped = liftAtomNotes(locator, rows.join('\n'))
   return {
     ...atomChannels(stripped),
     lines: linesAfterStrip(kept, stripped.offsetOf),
@@ -230,6 +238,7 @@ const epigraphOf = (locator: string, block: string): Epigraph => {
   const quoted = attributed === null ? lines : lines.slice(0, -1)
   if (attribution.includes('<'))
     throw new Error(`atom ${locator}: a raw \`<\` stands in the attribution`)
+  assertNoFootnoteMarker(`epigraph ${locator}`, lines.join(' '))
   const { text: quote, ...channels } = atomChannels(
     stripAtomMarks(locator, quoted.join(' ')),
   )

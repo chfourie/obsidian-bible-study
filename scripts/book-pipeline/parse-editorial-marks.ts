@@ -108,10 +108,10 @@ export const stripAtomMarks = (
   }
 }
 
-export const atomChannels = ({
+export const atomChannels = <Stripped extends StrippedText>({
   offsetOf: _offsetOf,
   ...channels
-}: StrippedText): EditorialMarkChannels & { text: string } => channels
+}: Stripped): Omit<Stripped, 'offsetOf'> => channels
 
 // A line channel computed over the wrapped text follows its text through
 // the strip: every start and cell boundary lands where its character did.

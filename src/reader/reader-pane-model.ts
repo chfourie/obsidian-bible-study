@@ -6,6 +6,7 @@ import {
   bookName,
   chapterCount,
   decodeVerseId,
+  enumerateVerseIds,
   formatReference,
   isNonBiblicalBook,
   makeVerseId,
@@ -1390,11 +1391,18 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   // The selected paragraphs are already on screen, so a book's details carry
-  // their citation alone rather than repeating the prose beside it.
+  // their citation alone rather than repeating the prose beside it — plus the
+  // Footnotes of the atoms selected, which print nowhere else (spec-books §6).
   #bookDetails(reference: Reference): BookDetailsView | null {
     const citation = bookCitation(reference)
     if (citation === null) return null
-    return { citation: citation.attribution }
+    const selected = new Set(reference.ranges.flatMap(enumerateVerseIds))
+    return {
+      citation: citation.attribution,
+      footnotes: this.#verses
+        .filter((verse) => selected.has(verse.verseId))
+        .flatMap((verse) => verse.footnotes ?? []),
+    }
   }
 
   async #loadDetails(key: string): Promise<void> {

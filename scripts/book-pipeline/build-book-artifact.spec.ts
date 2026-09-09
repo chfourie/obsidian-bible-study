@@ -5,7 +5,11 @@ import {
 } from '../../src/modules/module-manifest'
 import { makeVerseId } from '../../src/reference/verse-id'
 import type { BookRegistryEntry } from './book-registry'
-import { buildBookArtifact, refSpanCounts } from './build-book-artifact'
+import {
+  buildBookArtifact,
+  notesToCurate,
+  refSpanCounts,
+} from './build-book-artifact'
 
 const source = [
   '---',
@@ -390,5 +394,94 @@ describe('buildBookArtifact Editorial marks', () => {
   it('declares no capability flag and keeps the book format version', () => {
     expect(built.manifest.formatVersion).toBe(BOOK_MODULE_FORMAT_VERSION)
     expect(built.manifest.capabilities).toEqual({ strongsTagged: false })
+  })
+})
+
+describe('buildBookArtifact Footnotes', () => {
+  const enoch: BookRegistryEntry = {
+    bookNumber: 103,
+    title: '1 Enoch',
+    author: 'Enoch',
+    moduleId: '1en-c1912',
+    editionCode: '1EN-C1912',
+    year: 1912,
+    abbreviation: '1En',
+    aliases: ['First Enoch'],
+    atom: 'verse',
+    license: 'Public domain in the United States.',
+    source: 'pg.txt',
+    sourceChecksum: '10d3',
+  }
+  const noted = [
+    '---',
+    'module: 1en-c1912',
+    '---',
+    '',
+    '## 1.',
+    '',
+    '1. Behold ye the earth, <marks>⌈</marks>how <emended>steadfast</emended> they are<marks>⌉</marks>. [Footnote: So Dillmann; the Ethiopic is corrupt.]',
+    '2. And ye shall find no peace. [Footnote: G reads otherwise.] The words of Enoch. [Footnote: Charles’s second note.]',
+    '3. But ye have not been steadfast.',
+    '',
+  ].join('\n')
+  const built = buildBookArtifact(noted, [enoch])
+
+  it('publishes the notes beside the atom, every anchor into the stored string', () => {
+    expect(built.books[103][makeVerseId(103, 1, 1)].footnotes).toEqual([
+      { start: 46, text: 'So Dillmann; the Ethiopic is corrupt.' },
+    ])
+    expect(built.books[103][makeVerseId(103, 1, 2)].footnotes).toEqual([
+      { start: 27, text: 'G reads otherwise.' },
+      { start: 47, text: 'Charles’s second note.' },
+    ])
+  })
+
+  it('keeps the marker out of the stored text and out of the format version', () => {
+    expect(built.books[103][makeVerseId(103, 1, 1)].text).toBe(
+      'Behold ye the earth, ⌈how steadfast they are⌉.',
+    )
+    expect(built.manifest.formatVersion).toBe(BOOK_MODULE_FORMAT_VERSION)
+  })
+
+  it('leaves an atom that carries no note free of the channel', () => {
+    expect(built.books[103][makeVerseId(103, 1, 3)].footnotes).toBeUndefined()
+  })
+
+  it('lists a marked atom with no note as the curation to-do, one line each', () => {
+    const unnoted = buildBookArtifact(
+      noted.replace(' [Footnote: So Dillmann; the Ethiopic is corrupt.]', '') +
+        '\n## 2.\n\n1. And <emended>lo</emended>! He cometh.\n',
+      [enoch],
+    )
+    expect(notesToCurate(unnoted)).toEqual([
+      '1:1 carries an Editorial mark and no Footnote',
+      '2:1 carries an Editorial mark and no Footnote',
+    ])
+  })
+
+  it('scans a Ref Span over the stored string the lift left behind', () => {
+    const cited = source.replace(
+      'Why the title IN?',
+      'Why the title IN? [Footnote: The editor’s note.] See 2 Peter 3:13 for it.',
+    )
+    const atom = buildBookArtifact(cited, registry).books[102][
+      makeVerseId(102, 0, 2)
+    ]
+    const [span] = atom.refs ?? []
+    expect(atom.text.slice(span.start, span.end)).toBe('2 Peter 3:13')
+  })
+
+  it('asks for no curation where every marked atom carries a note', () => {
+    expect(notesToCurate(built)).toEqual([])
+  })
+
+  it('locates a paragraph Book’s curation to-do by its paragraph', () => {
+    const marked = source.replace(
+      'Why the title IN?',
+      'Why the <emended>title</emended> IN?',
+    )
+    expect(notesToCurate(buildBookArtifact(marked, registry))).toEqual([
+      '0.2 carries an Editorial mark and no Footnote',
+    ])
   })
 })

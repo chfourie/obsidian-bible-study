@@ -75,6 +75,15 @@ export type VerseLine = {
   letter?: string
 }
 
+// An editor's note on the atom, lifted out of the stored text at build
+// (spec-books §6, ADR 0012): where in the stored string it was anchored, and
+// the note itself. It carries no id, because nothing addresses a note — it is
+// never a Reference and never a Hit, and it prints only in the Study Panel.
+export type Footnote = {
+  start: number
+  text: string
+}
+
 export type StructuredVerse = {
   text: string
   tags?: TagSpan[]
@@ -91,6 +100,9 @@ export type StructuredVerse = {
   // Words the editor emended — plain characters of the text, identified
   // beside it like supplied words (CONTEXT.md — Emended).
   emended?: FormatSpan[]
+  // The editor's notes on this atom, in anchor order; absent on an atom that
+  // carries none (spec-books §6).
+  footnotes?: Footnote[]
   refs?: RefSpan[]
   headings?: Heading[]
   figures?: Figure[]
@@ -124,6 +136,9 @@ export const verseMarksOf = (content: VerseContent): FormatSpan[] =>
 
 export const verseEmendedOf = (content: VerseContent): FormatSpan[] =>
   isStructuredVerse(content) ? (content.emended ?? []) : []
+
+export const verseFootnotesOf = (content: VerseContent): Footnote[] =>
+  isStructuredVerse(content) ? (content.footnotes ?? []) : []
 
 export const verseRefsOf = (content: VerseContent): RefSpan[] =>
   isStructuredVerse(content) ? (content.refs ?? []) : []

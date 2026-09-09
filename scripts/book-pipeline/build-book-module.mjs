@@ -80,6 +80,7 @@ export const buildBookModule = async ({
   const artifactFile = `${moduleId}-module.json`
   const {
     buildBookArtifact,
+    notesToCurate,
     parseBookRegistry,
     parseRefOverrides,
     refSpanCounts,
@@ -136,4 +137,11 @@ export const buildBookModule = async ({
   console.log(`sha256(${artifactFile}) = ${checksum}`)
   console.log(`Artifacts written to ${outDir}/ — attach both files to the`)
   console.log(`GitHub release tagged "${moduleId}-module".`)
+  // The curation to-do, never a gate (spec-books §2): the notes are curated
+  // over releases and the grid ships with the ones already written.
+  const toCurate = notesToCurate(artifact)
+  if (toCurate.length > 0) {
+    console.warn(`Footnotes to curate: ${toCurate.length}`)
+    for (const atom of toCurate) console.warn(`  ${atom}`)
+  }
 }

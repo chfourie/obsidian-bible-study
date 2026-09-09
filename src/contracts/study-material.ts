@@ -94,6 +94,9 @@ export type WordCloudView =
 // scripture selection stacks its translations (spec-books §5).
 export type BookDetailsView = {
   citation: string
+  // The selected atoms' Footnotes in anchor order — the one place a Book's
+  // notes are shown (spec-books §6, ADR 0012); empty on an atom with none.
+  footnotes: string[]
 }
 
 // The selected span's details: each translation carries the text of the whole
