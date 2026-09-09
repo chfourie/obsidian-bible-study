@@ -1063,7 +1063,7 @@ describe('ReaderFeature book mode', () => {
     expect(view.book?.edition).toBe('Humility 1895')
     expect(view.book?.epigraphs).toEqual([
       {
-        quote: 'Cast their crowns.',
+        quote: [{ text: 'Cast their crowns.', redLetter: false }],
         attribution: [{ text: 'Rev. iv. 11', redLetter: false }],
       },
     ])
