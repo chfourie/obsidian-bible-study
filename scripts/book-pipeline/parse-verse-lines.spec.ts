@@ -277,3 +277,77 @@ describe('assertReadingWalk', () => {
     )
   })
 })
+
+describe('verseSectionAtoms Editorial marks', () => {
+  it('strips the wrappers of a prose verse into channels over the stored string', () => {
+    const { atoms } = atomsOf([
+      '1. And the eternal God will tread upon the earth, <supplied>even</supplied> on',
+      'Mount Sinai, <marks>[</marks>And appear from His camp<marks>]</marks>.',
+    ])
+    expect(atoms).toEqual([
+      {
+        text: 'And the eternal God will tread upon the earth, even on Mount Sinai, [And appear from His camp].',
+        supplied: [{ start: 47, end: 51 }],
+        marks: [
+          { start: 68, end: 69 },
+          { start: 93, end: 94 },
+        ],
+      },
+    ])
+  })
+
+  it('parses the wrappers on the joined atom, so one may open on a line and close on a later one', () => {
+    const { atoms } = atomsOf([
+      '1. <emended>tread upon',
+      '1. the earth</emended> <marks>⌈</marks>of',
+      '1. heavens<marks>⌉</marks>.',
+    ])
+    expect(atoms).toEqual([
+      {
+        text: 'tread upon the earth ⌈of heavens⌉.',
+        marks: [
+          { start: 21, end: 22 },
+          { start: 32, end: 33 },
+        ],
+        emended: [{ start: 0, end: 20 }],
+        lines: [{ start: 0, paragraph: true }, { start: 11 }, { start: 25 }],
+      },
+    ])
+  })
+
+  it('reads the wrappers in letter order, whatever the page order', () => {
+    const { atoms } = atomsOf([
+      '1a. <emended>one',
+      '2a. two',
+      '1b. three</emended>',
+      '2b. four',
+    ])
+    expect(atoms[0]).toEqual({
+      text: 'one three',
+      emended: [{ start: 0, end: 9 }],
+      lines: [{ start: 0, paragraph: true, letter: 'a' }, { start: 4, letter: 'b' }],
+    })
+    expect(atoms[1].emended).toBeUndefined()
+  })
+
+  it('keeps each atom’s spans its own: a run over two verses is a wrapper in each', () => {
+    const { atoms } = atomsOf([
+      '1. <marks>⌈</marks>And all the sinners',
+      '2. shall imprecate by you<marks>⌉</marks>.',
+    ])
+    expect(atoms.map((atom) => atom.marks)).toEqual([
+      [{ start: 0, end: 1 }],
+      [{ start: 22, end: 23 }],
+    ])
+  })
+
+  it.each([
+    [['1. <marks>⌈And all', '2. the sinners<marks>⌉</marks>'], /atom 1:1 \(line 1\): <marks> is never closed/],
+    [['1. a', '', '2. And <mark>x</mark>'], /atom 1:2 \(line 3\): <mark> is not one of/],
+    [['1. a <marks></marks> b'], /atom 1:1 \(line 1\): empty <marks>/],
+    [['1. a < b'], /atom 1:1 \(line 1\): a raw `<`/],
+    [['1. <marks>⌈<emended>how⌉</marks> steadfast</emended>'], /atom 1:1 \(line 1\): .*never overlap/],
+  ])('fails, citing the atom, on %j', (lines, message) => {
+    expect(() => atomsOf(lines)).toThrow(message)
+  })
+})

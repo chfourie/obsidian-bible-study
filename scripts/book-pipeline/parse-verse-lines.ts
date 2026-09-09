@@ -7,6 +7,12 @@
 
 import type { ReadingStep } from '../../src/modules/module-manifest'
 import type { VerseLine } from '../../src/modules/verse-content'
+import {
+  atomChannels,
+  type EditorialMarkChannels,
+  linesAfterStrip,
+  stripAtomMarks,
+} from './parse-editorial-marks'
 
 // One metrical line (or a prose verse) as the source has it, with the source
 // line it stands on so a build failure can cite it.
@@ -18,7 +24,7 @@ export type VerseSourceLine = {
   line: number
 }
 
-export type VerseAtom = {
+export type VerseAtom = EditorialMarkChannels & {
   text: string
   lines?: VerseLine[]
 }
@@ -123,10 +129,22 @@ const letterOrder = (lines: VerseSourceLine[]): VerseSourceLine[] =>
       : a.letter.localeCompare(b.letter),
   )
 
-const atomOf = (ordered: VerseSourceLine[]): VerseAtom => {
-  const text = ordered.map((line) => line.text).join(' ')
+// Editorial-mark wrappers are parsed on the joined atom (spec-books §10), so
+// a wrapper may open on one metrical line and close on a later one; the
+// line starts follow their text through the strip. A failure cites the atom
+// and the source line it opens on.
+const atomOf = (
+  chapter: number,
+  atom: number,
+  ordered: VerseSourceLine[],
+): VerseAtom => {
+  const firstLine = Math.min(...ordered.map((line) => line.line))
+  const stripped = stripAtomMarks(
+    `${chapter}:${atom} (line ${firstLine})`,
+    ordered.map((line) => line.text).join(' '),
+  )
   const isProse = ordered.length === 1 && ordered[0].letter === undefined
-  if (isProse) return { text }
+  if (isProse) return atomChannels(stripped)
   const lines: VerseLine[] = []
   let start = 0
   for (const line of ordered) {
@@ -137,7 +155,10 @@ const atomOf = (ordered: VerseSourceLine[]): VerseAtom => {
     })
     start += line.text.length + 1
   }
-  return { text, lines }
+  return {
+    ...atomChannels(stripped),
+    lines: linesAfterStrip(lines, stripped.offsetOf),
+  }
 }
 
 const isIdentityWalk = (
@@ -170,7 +191,9 @@ export const verseSectionAtoms = (
   const groups = groupByAtom(lines)
   assertNoHoles(groups, lines)
   const ordered = groups.map((group) => letterOrder(group.lines))
-  const atoms = ordered.map(atomOf)
+  const atoms = ordered.map((atomLines, index) =>
+    atomOf(chapter, index + 1, atomLines),
+  )
   const stepOf = new Map<VerseSourceLine, ReadingStep>()
   ordered.forEach((atomLines, index) => {
     const whole = atoms[index].lines === undefined

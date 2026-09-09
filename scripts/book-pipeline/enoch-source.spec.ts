@@ -12,6 +12,9 @@ import {
 } from '../../src/modules/prebuilt-release-client'
 import { parseReference } from '../../src/reference/parse-reference'
 import { makeVerseId } from '../../src/reference/verse-id'
+import { buildSearchIndex, searchIndex } from '../../src/search/search-index'
+import { parseSearchQuery } from '../../src/search/search-query'
+import { bookAtoms } from '../../src/search/search-scan'
 import { buildBookArtifact, sha256Hex } from './build-book-artifact'
 import { parseBookRegistry } from './book-registry'
 import { parseRefOverrides } from './ref-overrides'
@@ -91,6 +94,72 @@ describe('1 Enoch, Charles 1912', () => {
       expect(text).not.toMatch(/\.\.\./)
     }
     expect(verse(2, 2).text).toContain('⌈how steadfast they are⌉')
+  })
+
+  it('drops Charles’s supplied parentheses and identifies the words — 1:4’s even among them', () => {
+    const texts = Object.values(artifact.books[103]).map((atom) => atom.text)
+    for (const text of texts) expect(text).not.toMatch(/[()]/)
+    const even = verse(1, 4)
+    expect(even.text).toBe(
+      'And the eternal God will tread upon the earth, even on Mount Sinai, ' +
+        '[And appear from His camp] ' +
+        'And appear in the strength of His might from the heaven ⌈of heavens⌉.',
+    )
+    expect(even.supplied).toEqual([{ start: 47, end: 51 }])
+    expect(even.marks).toEqual([
+      { start: 68, end: 69 },
+      { start: 93, end: 94 },
+      { start: 151, end: 152 },
+      { start: 162, end: 163 },
+    ])
+    expect(even.lines?.map((line) => line.start)).toEqual([0, 68, 95])
+    const at = (atom: { text: string; supplied?: { start: number; end: number }[] }) =>
+      atom.supplied?.map((span) => atom.text.slice(span.start, span.end))
+    expect(at(verse(1, 7))).toEqual(['men'])
+    expect(at(verse(3, 1))).toEqual(['in the winter'])
+    expect(at(verse(5, 9))).toEqual(['the divine'])
+  })
+
+  it('identifies every stay-glyph with one marks span — 1:2’s ⌈⌈which⌉⌉, 1:9’s dense brackets, 5:6’s lacuna', () => {
+    const glyphs = (chapter: number, atom: number) =>
+      verse(chapter, atom).marks?.map((span) =>
+        verse(chapter, atom).text.slice(span.start, span.end),
+      )
+    expect(glyphs(1, 2)).toEqual(['⌈⌈', '⌉⌉'])
+    expect(glyphs(1, 9)).toEqual(['⌈', '⌉', '⌈', '⌉', '⌈', '⌉', '⌈', '⌉', '⌈', '⌉'])
+    expect(glyphs(5, 6)).toEqual(['⌈', '⌉', '⌈', '⌉', '⌈', '⌉', '⌈', '…', '⌉'])
+    const spans = Object.values(artifact.books[103]).flatMap((atom) => atom.marks ?? [])
+    expect(spans).toHaveLength(75)
+    for (const atom of Object.values(artifact.books[103])) {
+      for (const span of atom.marks ?? [])
+        expect(atom.text.slice(span.start, span.end)).toMatch(/^(⌈⌈|⌉⌉|⌈|⌉|\[|\]|…)$/)
+    }
+  })
+
+  it('identifies 2:2’s thick-type steadfast as emended, inside its version bracket', () => {
+    const atom = verse(2, 2)
+    expect(atom.emended).toHaveLength(1)
+    const [emended] = atom.emended ?? []
+    expect(atom.text.slice(emended.start, emended.end)).toBe('steadfast')
+    expect(atom.text.slice(emended.start - 5, emended.end + 10)).toBe('⌈how steadfast they are⌉')
+    const others = Object.entries(artifact.books[103]).filter(
+      ([id, other]) => other.emended !== undefined && Number(id) !== makeVerseId(103, 2, 2),
+    )
+    expect(others).toEqual([])
+  })
+
+  it('grows no channel on an unmarked verse', () => {
+    for (const [chapter, atom] of [[1, 5], [1, 6], [4, 1], [5, 4], [5, 8]])
+      expect(verse(chapter, atom)).not.toHaveProperty('marks')
+    expect(verse(4, 1)).toEqual({ text: expect.any(String) })
+  })
+
+  it('finds `even` in 1:4 through the Search Index, the supplied word being text like any other', () => {
+    const index = buildSearchIndex(bookAtoms(artifact.books[103]), 'test')
+    const hits = searchIndex(index, parseSearchQuery('even'))
+    expect(hits.map((hit) => hit.verseId)).toContain(makeVerseId(103, 1, 4))
+    const hit = hits.find((candidate) => candidate.verseId === makeVerseId(103, 1, 4))
+    expect(hit?.spans.map((span) => verse(1, 4).text.slice(span.start, span.end))).toEqual(['even'])
   })
 
   it('ships nothing of the digitizer’s boilerplate or name', () => {

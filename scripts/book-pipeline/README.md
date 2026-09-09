@@ -184,21 +184,60 @@ a lined atom exactly once, every prose atom exactly once as a whole.
 ```markdown
 ## 5.
 
-3. And behold how the sea and the rivers in like manner accomplish ⌈and
-change not⌉ their tasks ⌈from His commandments⌉.
+3. And behold how the sea and the rivers in like manner accomplish <marks>⌈</marks>and
+change not<marks>⌉</marks> their tasks <marks>⌈</marks>from His commandments<marks>⌉</marks>.
 
 4. But ye—ye have not been steadfast, nor done the commandments of the Lord,
 4. But ye have turned away and spoken proud and hard words
 
 6a. In those days ye shall make your names an eternal execration unto all
 the righteous,
-6b. And by you shall ⌈all⌉ who curse, curse.
+6b. And by you shall <marks>⌈</marks>all<marks>⌉</marks> who curse, curse.
 7c. And for you, the godless, there shall be a curse.
 ```
 
-Editorial-mark glyphs are written as the 1912 print has them — `⌈ ⌉`,
-`⌈⌈ ⌉⌉`, `[ ]`, `( )`, `†`, `…` — as plain characters; a digitization's
-substitutes (`⌜⌝`, `〚〛`, `=thick type=`) are normalized while curating.
+## Editorial marks
+
+A critical edition's marks — Charles's version brackets, interpolations,
+supplied words, thick type — are never inferred from the glyphs (spec-books
+§10, ADR 0008). The curator wraps them as three HTML elements, in atom text
+and in an epigraph's quote, for a paragraph Book and a verse-atom Book
+alike; the wrappers are never stored, and the build emits one span channel
+per element beside the stored text:
+
+| Wrapper | Stored | Channel |
+| --- | --- | --- |
+| `<supplied>even</supplied>` | `even` — the delimiters are not written | `supplied` over the words |
+| `<marks>⌈</marks>which<marks>⌉</marks>` | `⌈which⌉` — the glyph stays | `marks`, one span per wrapper |
+| `<emended>steadfast</emended>` | `steadfast` | `emended` over the words |
+
+Charles's `(even)` in 1:4 is therefore written `<supplied>even</supplied>`,
+his `⌈⌈which⌉⌉` in 1:2 `<marks>⌈⌈</marks>which<marks>⌉⌉</marks>`, and the
+thick type inside 2:2's version bracket
+`<marks>⌈</marks>how <emended>steadfast</emended> they are<marks>⌉</marks>`.
+The glyphs themselves are the 1912 print's — `⌈ ⌉`, `⌈⌈ ⌉⌉`, `〈 〉`, `[ ]`,
+`†`, `…` — so a digitization's substitutes (`⌜⌝`, `〚〛`, `=thick type=`)
+are normalized while curating, and a bracket pair is two `<marks>`
+wrappers, one on each glyph, never one around the enclosed words.
+
+The wrappers are parsed on the joined atom: in a verse-atom section they
+sit after the `N.` / `Na.` prefix, and one may open on a metrical line and
+close on a later line of the same verse. Every offset the build writes
+indexes the stored string, so a list's line starts and a table's cells
+follow their text through the strip. Nesting is allowed — a supplied word
+inside an interpolation, an emended word inside a version bracket. Each
+atom's spans stand alone: a run the print carries over a verse break is
+written as one wrapper closed at the first verse's end and another opened
+in the next.
+
+The build fails, citing the atom (`1:4` for a verse, `1.3` or `1.e1` for a
+paragraph Book's atom or epigraph), on: a wrapper left open at the atom's
+end or closed with none open; overlapping wrappers; an element that is not
+exactly `<supplied>`, `<marks>` or `<emended>` (no capitals, no attributes);
+an empty wrap; a raw `<` anywhere in atom text or an epigraph. It fails,
+citing the furniture, on a wrapper or `<` in a Heading, a section head or a
+figure's caption or alt text — furniture never carries an Editorial mark.
+A Book with no wrappers builds exactly as before and carries no channel.
 
 ## Ref Spans
 

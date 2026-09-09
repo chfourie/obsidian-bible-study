@@ -317,3 +317,96 @@ describe('parseBookMarkdown for a verse-atom Book', () => {
     expect(list.sections[0].reading).toBeUndefined()
   })
 })
+
+describe('parseBookMarkdown Editorial marks', () => {
+  const book = (body: string, atom: 'verse' | 'paragraph' = 'paragraph') =>
+    parseBookMarkdown(`---\nmodule: x\n---\n\n${body}`, { atom })
+
+  it('strips a prose paragraph’s wrappers into channels over the stored string', () => {
+    const [paragraph] = book(
+      '## 1. A\n\nThe <supplied>Lord</supplied> is <marks>⌈</marks>my\n<emended>shepherd</emended><marks>⌉</marks>.\n',
+    ).sections[0].paragraphs
+    expect(paragraph).toEqual({
+      text: 'The Lord is ⌈my shepherd⌉.',
+      supplied: [{ start: 4, end: 8 }],
+      marks: [
+        { start: 12, end: 13 },
+        { start: 24, end: 25 },
+      ],
+      emended: [{ start: 16, end: 24 }],
+    })
+  })
+
+  it('keeps a list’s line starts and a table’s cells on their text through the strip', () => {
+    const [list, table] = book(
+      '## 1. A\n\n- <marks>⌈</marks>one\n- two<marks>⌉</marks>\n\n| <supplied>a</supplied> | b\n| c | <marks>†</marks>d<marks>†</marks>\n',
+    ).sections[0].paragraphs
+    expect(list).toEqual({
+      text: '- ⌈one\n- two⌉',
+      marks: [
+        { start: 2, end: 3 },
+        { start: 12, end: 13 },
+      ],
+      lines: [{ start: 0 }, { start: 7 }],
+    })
+    expect(table).toEqual({
+      text: 'a | b\nc | †d†',
+      supplied: [{ start: 0, end: 1 }],
+      marks: [
+        { start: 10, end: 11 },
+        { start: 12, end: 13 },
+      ],
+      lines: [
+        { start: 0, cells: [{ start: 0, end: 1 }, { start: 4, end: 5 }] },
+        { start: 6, cells: [{ start: 6, end: 7 }, { start: 10, end: 13 }] },
+      ],
+    })
+  })
+
+  it('strips an epigraph’s wrappers into channels over its quote', () => {
+    const [epigraph] = book(
+      '## 1. A\n\n> Not <supplied>I</supplied>, but <marks>⌈</marks>Christ<marks>⌉</marks>.\n> — Galatians 2:20\n\nText.\n',
+    ).sections[0].epigraphs ?? []
+    expect(epigraph).toEqual({
+      quote: 'Not I, but ⌈Christ⌉.',
+      attribution: 'Galatians 2:20',
+      supplied: [{ start: 4, end: 5 }],
+      marks: [
+        { start: 11, end: 12 },
+        { start: 18, end: 19 },
+      ],
+    })
+  })
+
+  it.each([
+    ['## 1. A\n\nOne.\n\nTwo <mark>x</mark>.\n', /atom 1\.2: <mark> is not one of/],
+    ['## 1. A\n\nOne < two.\n', /atom 1\.1: a raw `<`/],
+    ['## 1. A\n\n> A <marks>⌈quote\n> — Someone\n\nOne.\n', /atom 1\.e1: <marks> is never closed/],
+    ['## 1. A\n\n> A quote\n> — Some<one\n\nOne.\n', /atom 1\.e1: a raw `<`/],
+    ['## 1. A\n\n## 2. B\n\n> Fine\n\n> <marks></marks>\n\nOne.\n', /atom 2\.e2: empty <marks>/],
+  ])('fails, citing the atom or epigraph, on %j', (body, message) => {
+    expect(() => book(body)).toThrow(message)
+  })
+
+  it.each([
+    ['# Part <marks>⌈</marks>One\n\n## 1. A\n\nOne.\n', /heading "Part <marks>⌈<\/marks>One": furniture never carries an Editorial mark/],
+    ['## 1. A\n\n### 1.1 <supplied>Head</supplied>\n\nOne.\n', /heading "1\.1 <supplied>Head<\/supplied>"/],
+    ['## 0. Pro<marks>l</marks>ogue {named}\n\nOne.\n', /section head "Pro<marks>l<\/marks>ogue": furniture/],
+    ['## 1. A <emended>b</emended>\n\nOne.\n', /section head "A <emended>b<\/emended>"/],
+    ['## 1. A\n\n![alt](x.png "Fig <marks>1</marks>")\n\nOne.\n', /figure caption "Fig <marks>1<\/marks>"/],
+    ['## 1. A\n\n![a <supplied>tree</supplied>](x.png)\n\nOne.\n', /figure alt "a <supplied>tree<\/supplied>"/],
+  ])('fails, citing the furniture, on %j', (body, message) => {
+    expect(() => book(body)).toThrow(message)
+  })
+
+  it('fails, citing the furniture, in a verse-atom Book too', () => {
+    expect(() => book('## 1.\n\n### The <marks>⌈</marks>Fall\n\n1. One.\n', 'verse')).toThrow(
+      /heading "The <marks>⌈<\/marks>Fall"/,
+    )
+  })
+
+  it('grows no channel on an unmarked Book', () => {
+    const [paragraph] = book('## 1. A\n\nPlain text.\n').sections[0].paragraphs
+    expect(paragraph).toEqual({ text: 'Plain text.' })
+  })
+})

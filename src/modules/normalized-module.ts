@@ -1,6 +1,6 @@
 import type { ConcordanceIndex } from './concordance-index'
 import type { ModuleManifest } from './module-manifest'
-import type { RefSpan, VerseContent } from './verse-content'
+import type { FormatSpan, RefSpan, VerseContent } from './verse-content'
 
 export type BookContent = Record<number, VerseContent>
 
@@ -12,6 +12,11 @@ export type Epigraph = {
   // The live citations in the attribution line, addressed by character offset
   // into it the way an atom's own ref spans are (spec-books §8).
   refs?: RefSpan[]
+  // The quote's Editorial marks, the three channels an atom carries, over
+  // the quote's text (spec-books §10).
+  supplied?: FormatSpan[]
+  marks?: FormatSpan[]
+  emended?: FormatSpan[]
 }
 
 export type ModuleEpigraphs = Record<number, Epigraph[]>

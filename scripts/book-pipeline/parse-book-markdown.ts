@@ -1,7 +1,8 @@
-// Turns a curated Markdown source into the section / paragraph structure a
-// book module is built from (ADR 0002). The conventions the curator follows
-// are documented in README.md beside this file; everything the parser knows
-// about a book lives in the source, so a new book needs no new parser.
+// Turns a curated Markdown source into the section / atom structure a book
+// module is built from (ADR 0002). The conventions the curator follows are
+// documented in README.md beside this file. What varies between Books is the
+// registry's atom kind, which picks the body parser (spec-books §2) — a new
+// book needs no new parser, only a curated source and a registry entry.
 
 import {
   type BookAtomKind,
@@ -16,6 +17,13 @@ import type {
   RefSpan,
   VerseLine,
 } from '../../src/modules/verse-content'
+import {
+  assertNoEditorialMarks,
+  atomChannels,
+  type EditorialMarkChannels,
+  linesAfterStrip,
+  stripAtomMarks,
+} from './parse-editorial-marks'
 import {
   readVerseBlock,
   type VerseSourceLine,
@@ -34,7 +42,9 @@ export type FigureSource = {
   place: FigurePlace
 }
 
-export type BookParagraph = {
+// The three Editorial-mark channels ride on an atom and on an epigraph's
+// quote alike (spec-books §10); an unmarked atom carries none of them.
+export type BookParagraph = EditorialMarkChannels & {
   text: string
   figures?: FigureSource[]
   // Set only on an atom that keeps its own line breaks — a list or a table.
@@ -45,7 +55,7 @@ export type BookParagraph = {
   refs?: RefSpan[]
 }
 
-export type Epigraph = {
+export type Epigraph = EditorialMarkChannels & {
   quote: string
   attribution: string
   refs?: RefSpan[]
@@ -175,9 +185,16 @@ const rowOf = (line: string, start: number): Row => {
 // A block whose first line opens a list or a table keeps its line breaks: the
 // lines stay in the stored text, and a line channel beside them says where
 // each one starts, exactly as a translation's poetry lines do.
-const atomOf = (block: string): { text: string; lines?: VerseLine[] } => {
+// The Editorial-mark wrappers are stripped from the joined atom, so a wrapper
+// may run over a line break; a list's line starts and a table's cells follow
+// their text through the strip.
+const atomOf = (
+  locator: string,
+  block: string,
+): EditorialMarkChannels & { text: string; lines?: VerseLine[] } => {
   const lines = block.split('\n').map((line) => line.trim())
-  if (!LINE_KEEPING.test(lines[0])) return { text: lines.join(' ') }
+  if (!LINE_KEEPING.test(lines[0]))
+    return atomChannels(stripAtomMarks(locator, lines.join(' ')))
   const rows: string[] = []
   const kept: VerseLine[] = []
   let start = 0
@@ -193,19 +210,30 @@ const atomOf = (block: string): { text: string; lines?: VerseLine[] } => {
     start += row.text.length + 1
   }
   if (headerRow >= 0) kept[headerRow].header = true
-  return { text: rows.join('\n'), lines: kept }
+  const stripped = stripAtomMarks(locator, rows.join('\n'))
+  return {
+    ...atomChannels(stripped),
+    lines: linesAfterStrip(kept, stripped.offsetOf),
+  }
 }
 
-const epigraphOf = (block: string): Epigraph => {
+// An epigraph's marks sit on its quote; the attribution line carries Ref
+// Spans instead, so a `<` there has nothing to say.
+const epigraphOf = (locator: string, block: string): Epigraph => {
   const lines = block
     .split('\n')
     .map((line) => QUOTE_LINE.exec(line.trim())?.[1].trim() ?? '')
     .filter((line) => line !== '')
   const last = lines[lines.length - 1] ?? ''
-  const attribution = ATTRIBUTION_LINE.exec(last)
-  return attribution === null
-    ? { quote: lines.join(' '), attribution: '' }
-    : { quote: lines.slice(0, -1).join(' '), attribution: attribution[1] }
+  const attributed = ATTRIBUTION_LINE.exec(last)
+  const attribution = attributed?.[1] ?? ''
+  const quoted = attributed === null ? lines : lines.slice(0, -1)
+  if (attribution.includes('<'))
+    throw new Error(`atom ${locator}: a raw \`<\` stands in the attribution`)
+  const { text: quote, ...channels } = atomChannels(
+    stripAtomMarks(locator, quoted.join(' ')),
+  )
+  return { quote, attribution, ...channels }
 }
 
 // A paragraph Book's section head names the section; a verse-atom section
@@ -218,6 +246,7 @@ const openSection = (head: string, atom: BookAtomKind): ParsedBookSection => {
     throw new Error(
       `A section head must read "<number>. <name>", not "${head}"`,
     )
+  if (name !== undefined) assertNoEditorialMarks('section head', name)
   const section: ParsedBookSection = {
     chapter: Number(match[1]),
     name: name ?? match[1],
@@ -308,6 +337,8 @@ export const parseBookMarkdown = (
   for (const { text: block, line } of blocksOf(body, bodyLine)) {
     const figure = FIGURE.exec(block)
     if (figure !== null) {
+      assertNoEditorialMarks('figure alt', figure[1])
+      if (figure[3] !== undefined) assertNoEditorialMarks('figure caption', figure[3])
       pendingFigures = [
         ...pendingFigures,
         {
@@ -329,22 +360,33 @@ export const parseBookMarkdown = (
         sections.push(current)
         continue
       }
+      assertNoEditorialMarks('heading', heading[2].trim())
       pending = [...pending, { text: heading[2].trim(), level: HEADING_LEVELS[depth] }]
       continue
     }
     if (block.startsWith('>')) {
       if (current === null)
         throw new Error('The source has content before the first section head')
-      current.epigraphs = [...(current.epigraphs ?? []), epigraphOf(block)]
+      current.epigraphs = [
+        ...(current.epigraphs ?? []),
+        epigraphOf(
+          `${current.chapter}.e${(current.epigraphs?.length ?? 0) + 1}`,
+          block,
+        ),
+      ]
       continue
     }
     if (atom === 'verse') {
       atomsOf()
       readVerses({ text: block, line })
     } else {
-      const paragraph: BookParagraph = atomOf(block)
+      const atoms = atomsOf()
+      const paragraph: BookParagraph = atomOf(
+        `${current?.chapter}.${atoms.length + 1}`,
+        block,
+      )
       if (pendingFigures.length > 0) paragraph.figures = pendingFigures
-      atomsOf().push(pending.length === 0 ? paragraph : { ...paragraph, headings: pending })
+      atoms.push(pending.length === 0 ? paragraph : { ...paragraph, headings: pending })
     }
     pending = []
     pendingFigures = []

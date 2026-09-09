@@ -80,7 +80,17 @@ export type StructuredVerse = {
   tags?: TagSpan[]
   lines?: VerseLine[]
   red?: FormatSpan[]
+  // Words an editor or translator supplied — a Tagged Translation's bracketed
+  // words and a critical Book's parenthesised ones share this one channel;
+  // the delimiters are gone from the text (CONTEXT.md — Supplied).
   supplied?: FormatSpan[]
+  // A critical Book's Editorial marks: the glyphs that stay in the stored
+  // string — version and interpolation brackets, restorations, daggers,
+  // lacuna points — one span per glyph (CONTEXT.md — Editorial marks).
+  marks?: FormatSpan[]
+  // Words the editor emended — plain characters of the text, identified
+  // beside it like supplied words (CONTEXT.md — Emended).
+  emended?: FormatSpan[]
   refs?: RefSpan[]
   headings?: Heading[]
   figures?: Figure[]
@@ -108,6 +118,12 @@ export const verseRedLetterOf = (content: VerseContent): FormatSpan[] =>
 
 export const verseSuppliedOf = (content: VerseContent): FormatSpan[] =>
   isStructuredVerse(content) ? (content.supplied ?? []) : []
+
+export const verseMarksOf = (content: VerseContent): FormatSpan[] =>
+  isStructuredVerse(content) ? (content.marks ?? []) : []
+
+export const verseEmendedOf = (content: VerseContent): FormatSpan[] =>
+  isStructuredVerse(content) ? (content.emended ?? []) : []
 
 export const verseRefsOf = (content: VerseContent): RefSpan[] =>
   isStructuredVerse(content) ? (content.refs ?? []) : []

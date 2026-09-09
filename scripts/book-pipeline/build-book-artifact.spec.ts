@@ -321,3 +321,74 @@ describe('buildBookArtifact for a verse-atom Book', () => {
     expect(built.manifest.formatVersion).toBe(BOOK_MODULE_FORMAT_VERSION)
   })
 })
+
+describe('buildBookArtifact Editorial marks', () => {
+  const enoch: BookRegistryEntry = {
+    bookNumber: 103,
+    title: '1 Enoch',
+    author: 'Enoch',
+    moduleId: '1en-c1912',
+    editionCode: '1EN-C1912',
+    year: 1912,
+    abbreviation: '1En',
+    aliases: ['First Enoch'],
+    atom: 'verse',
+    license: 'Public domain in the United States.',
+    source: 'pg.txt',
+    sourceChecksum: '10d3',
+  }
+  const marked = [
+    '---',
+    'module: 1en-c1912',
+    '---',
+    '',
+    '## 1.',
+    '',
+    '> <marks>⌈</marks>Quoted<marks>⌉</marks> <supplied>words</supplied>.',
+    '',
+    '1. And the eternal God will tread upon the earth, <supplied>even</supplied> on Mount Sinai,',
+    '1. <marks>[</marks>And appear from His camp<marks>]</marks>',
+    '2. Behold ye the earth, <marks>⌈</marks>how <emended>steadfast</emended> they are<marks>⌉</marks>.',
+    '',
+  ].join('\n')
+  const built = buildBookArtifact(marked, [enoch])
+
+  it('publishes the three channels beside the text, every offset into the stored string', () => {
+    expect(built.books[103][makeVerseId(103, 1, 1)]).toEqual({
+      text: 'And the eternal God will tread upon the earth, even on Mount Sinai, [And appear from His camp]',
+      supplied: [{ start: 47, end: 51 }],
+      marks: [
+        { start: 68, end: 69 },
+        { start: 93, end: 94 },
+      ],
+      lines: [{ start: 0, paragraph: true }, { start: 68 }],
+    })
+    expect(built.books[103][makeVerseId(103, 1, 2)]).toEqual({
+      text: 'Behold ye the earth, ⌈how steadfast they are⌉.',
+      marks: [
+        { start: 21, end: 22 },
+        { start: 44, end: 45 },
+      ],
+      emended: [{ start: 26, end: 35 }],
+    })
+  })
+
+  it('publishes an epigraph’s channels over its quote', () => {
+    expect(built.epigraphs[1]).toEqual([
+      {
+        quote: '⌈Quoted⌉ words.',
+        attribution: '',
+        supplied: [{ start: 9, end: 14 }],
+        marks: [
+          { start: 0, end: 1 },
+          { start: 7, end: 8 },
+        ],
+      },
+    ])
+  })
+
+  it('declares no capability flag and keeps the book format version', () => {
+    expect(built.manifest.formatVersion).toBe(BOOK_MODULE_FORMAT_VERSION)
+    expect(built.manifest.capabilities).toEqual({ strongsTagged: false })
+  })
+})
