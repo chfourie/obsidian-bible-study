@@ -220,19 +220,41 @@ export const buildBookArtifact = (
 // The curation to-do a build prints at the end (spec-books §2): an atom the
 // curator marked but left without a Footnote. A warning, never a failure —
 // the notes are curated over releases, and the grid ships either way.
-export const notesToCurate = (artifact: BookArtifact): string[] => {
+export const notesToCurate = (
+  artifact: BookArtifact,
+  waived: readonly string[] = [],
+): string[] => {
   const book = artifact.manifest.book
   const separator = book.atom === 'verse' ? ':' : '.'
-  return Object.entries(artifact.books[book.number])
-    .filter(
-      ([, atom]) =>
-        (atom.marks !== undefined || atom.emended !== undefined) &&
-        atom.footnotes === undefined,
-    )
-    .map(([verseId]) => {
+  const marked = new Map(
+    Object.entries(artifact.books[book.number]).map(([verseId, atom]) => {
       const { chapter, verse } = decodeVerseId(Number(verseId))
-      return `${chapter}${separator}${verse} carries an Editorial mark and no Footnote`
-    })
+      return [`${chapter}${separator}${verse}`, atom]
+    }),
+  )
+  // A waiver is checked as strictly as a note: one on an atom the to-do never
+  // listed is a slip — a renumbering, or a note written since.
+  for (const locator of waived) {
+    const atom = marked.get(locator)
+    const why =
+      atom === undefined
+        ? 'which is no atom of the Book'
+        : atom.footnotes !== undefined
+          ? 'which carries a Footnote'
+          : atom.marks === undefined && atom.emended === undefined
+            ? 'which carries no Editorial mark'
+            : null
+    if (why !== null)
+      throw new Error(`the waiver of ${locator} names an atom ${why}`)
+  }
+  return [...marked]
+    .filter(
+      ([locator, atom]) =>
+        (atom.marks !== undefined || atom.emended !== undefined) &&
+        atom.footnotes === undefined &&
+        !waived.includes(locator),
+    )
+    .map(([locator]) => `${locator} carries an Editorial mark and no Footnote`)
 }
 
 export const refSpanCounts = (artifact: BookArtifact): Map<number, number> => {
@@ -258,4 +280,5 @@ export const sha256Hex = (data: string | Uint8Array): string =>
     : createHash('sha256').update(data).digest('hex')
 
 export { parseBookRegistry } from './book-registry'
+export { curationWaivers } from './parse-book-markdown'
 export { parseRefOverrides } from './ref-overrides'

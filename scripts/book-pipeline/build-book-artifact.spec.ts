@@ -475,6 +475,29 @@ describe('buildBookArtifact Footnotes', () => {
     expect(notesToCurate(built)).toEqual([])
   })
 
+  it('takes a waived atom off the to-do, and no other', () => {
+    const unnoted = buildBookArtifact(
+      noted.replace(' [Footnote: So Dillmann; the Ethiopic is corrupt.]', '') +
+        '\n## 2.\n\n1. And <emended>lo</emended>! He cometh.\n',
+      [enoch],
+    )
+    expect(notesToCurate(unnoted, ['2:1'])).toEqual([
+      '1:1 carries an Editorial mark and no Footnote',
+    ])
+    expect(notesToCurate(unnoted, ['1:1', '2:1'])).toEqual([])
+  })
+
+  it.each([
+    ['1:2', 'which carries a Footnote'],
+    ['1:3', 'which carries no Editorial mark'],
+    ['1:4', 'which is no atom of the Book'],
+    ['7.1', 'which is no atom of the Book'],
+  ])('refuses the waiver of %s, %s', (locator, why) => {
+    expect(() => notesToCurate(built, [locator])).toThrow(
+      `the waiver of ${locator} names an atom ${why}`,
+    )
+  })
+
   it('locates a paragraph Book’s curation to-do by its paragraph', () => {
     const marked = source.replace(
       'Why the title IN?',

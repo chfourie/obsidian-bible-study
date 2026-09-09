@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseBookMarkdown } from './parse-book-markdown'
+import { curationWaivers, parseBookMarkdown } from './parse-book-markdown'
 
 const source = [
   '---',
@@ -458,5 +458,47 @@ describe('parseBookMarkdown Footnotes', () => {
     ['## 1. A\n\n![alt](x.png "Fig [Footnote: a note]")\n\nOne.\n', /figure caption "Fig \[Footnote: a note\]": only an atom/],
   ])('fails, citing the furniture, on %j', (body, message) => {
     expect(() => book(body)).toThrow(message)
+  })
+})
+
+describe('parseBookMarkdown curator comments', () => {
+  const book = (body: string, atom: 'verse' | 'paragraph' = 'verse') =>
+    parseBookMarkdown(`---\nmodule: x\n---\n\n${body}`, { atom })
+
+  it('drops a `%%` line before anything reads it — it is neither a wrap nor a delimiter', () => {
+    const [section] = book(
+      '## 1.\n\n1. The words of the blessing\n%% the print wraps here\nof Enoch.\n2. And <marks>⌈</marks>he<marks>⌉</marks> spoke.\n%% waived 1:2 — the key alone explains the bracket\n',
+    ).sections
+    expect(section.paragraphs.map((atom) => atom.text)).toEqual([
+      'The words of the blessing of Enoch.',
+      'And ⌈he⌉ spoke.',
+    ])
+    expect(section.paragraphs[1].lines).toBeUndefined()
+  })
+
+  it('drops a `%%` line in a paragraph Book too, the paragraph unbroken', () => {
+    const [paragraph] = book(
+      '## 1. A\n\nOne line.\n%% a remark\nTwo line.\n',
+      'paragraph',
+    ).sections[0].paragraphs
+    expect(paragraph.text).toBe('One line. Two line.')
+  })
+
+  it('still cites the printed source line after a comment', () => {
+    expect(() => book('## 1.\n\n1. One.\n%% a remark\n\n3. Three.\n')).toThrow(/line 10: verse 3 follows without verse 2/)
+  })
+
+  it('reads the waivers off the source, each with the atom it names', () => {
+    expect(
+      curationWaivers(
+        '---\nmodule: x\n---\n\n## 1.\n\n%% waived 1:2 — the key alone explains the bracket\n1. One.\n%%waived 1.3 — a routine version bracket\n%% a remark that waives nothing\n',
+      ),
+    ).toEqual(['1:2', '1.3'])
+  })
+
+  it('refuses a waiver that gives no reason — a waiver is a conscious one', () => {
+    expect(() => curationWaivers('---\nmodule: x\n---\n\n%% waived 1:2\n')).toThrow(
+      /line 5: the waiver of 1:2 gives no reason/,
+    )
   })
 })

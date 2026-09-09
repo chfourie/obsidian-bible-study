@@ -36,6 +36,13 @@ unwrap justified lines, undo hyphenation, flatten tables. A digitizer's
 boilerplate and name never enter the curated source (spec-books §2): the raw
 text stays in `resources/` as provenance only, and nothing of it ships.
 
+### Curator comments
+
+A line opening with `%%` — Obsidian's comment syntax, so the vault shows the
+source the same way — is the curator's own and is dropped before anything
+else reads it: it neither wraps onto the line above nor ends a block, and
+nothing of it is stored. A waiver (see Footnotes) is one such line.
+
 ### Front matter
 
 ```markdown
@@ -284,6 +291,19 @@ Footnotes to curate: 15
 
 — as the curation to-do, so the notes can be written over releases while the
 grid ships.
+
+Where the print gives no note for a mark — a bracket the key alone explains,
+a routine version bracket Charles passes over — the curator waives the atom
+in a comment line that names it and says why:
+
+```
+%% waived 1:4 — the interpolation bracket is the key's; Charles prints no note on it.
+```
+
+A waived atom leaves the to-do. The build fails on a waiver with no reason,
+and on one naming an atom that is not on the to-do — no such atom, no mark on
+it, or a Footnote written since — so a waiver is as deliberate as a note and
+never survives a renumbering unnoticed.
 
 ## Ref Spans
 

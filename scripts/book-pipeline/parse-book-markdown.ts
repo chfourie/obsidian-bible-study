@@ -139,6 +139,29 @@ const readFrontMatter = (
   return { fields, body: markdown.slice(match[0].length) }
 }
 
+// A curator's comment is a line opening with `%%` — Obsidian's own comment
+// syntax, so the source reads the same in the vault. It is dropped before
+// anything else reads the line: neither a wrap nor a block delimiter, and
+// never stored.
+const CURATOR_COMMENT = /^\s*%%/
+// A waiver names the marked atom whose note the curator has decided the
+// print does not give (spec-books §2: the to-do is driven to zero or each
+// entry consciously waived), and says why.
+const WAIVER = /^\s*%%\s*waived\s+(\S+)\s*(.*)$/
+
+export const curationWaivers = (markdown: string): string[] => {
+  const waivers: string[] = []
+  markdown.split('\n').forEach((raw, index) => {
+    const waiver = WAIVER.exec(raw)
+    if (waiver === null) return
+    const [, locator, reason] = waiver
+    if (reason.trim() === '')
+      throw new Error(`line ${index + 1}: the waiver of ${locator} gives no reason`)
+    waivers.push(locator)
+  })
+  return waivers
+}
+
 // A block with the source line it starts on, so a verse-atom build failure
 // can cite the line the curator has to look at.
 type Block = { text: string; line: number }
@@ -151,6 +174,7 @@ const blocksOf = (body: string, firstLine: number): Block[] => {
     open = null
   }
   body.split('\n').forEach((raw, index) => {
+    if (CURATOR_COMMENT.test(raw)) return
     if (raw.trim() === '') return close()
     open ??= { lines: [], line: firstLine + index }
     open.lines.push(raw)
