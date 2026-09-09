@@ -1246,7 +1246,7 @@ the righteous,
 3. And no lying word is spoken before him.
 
 4. Then shall pain come upon them as on a woman in travail,
-4. <marks>[</marks>And she has pain in bringing forth<marks>]</marks>
+4. <marks>[</marks>And she has pain in bringing forth<marks>]</marks> [Footnote: ［And she has pain, &c.］ Bracketed as a dittograph of the fourth line.]
 4. When her child enters the mouth of the womb,
 4. And she has pain in bringing forth.
 
@@ -1275,7 +1275,7 @@ the righteous,
 10. That they shall hastily go forth from His presence,
 10. And their faces shall be filled with shame,
 10. And the darkness shall grow deeper on their faces.
-11. And <emended>He will deliver</emended> them to the angels for punishment,
+11. And <emended>He will deliver</emended> [Footnote: He will deliver them to the angels, &c. I have here accepted an emendation of Flemming. mβ read ‘the angels of punishment shall take them in charge’.] them to the angels for punishment,
 11. To execute vengeance on them because they have oppressed His children and His elect.
 12. And they shall be a spectacle for the righteous and for His elect:
 12. They shall rejoice over them,
@@ -1325,7 +1325,7 @@ the righteous,
 6. And darkness is our dwelling-place for ever and ever:
 
 7. For we have not believed before Him,
-7. Nor glorified the name of the Lord of Spirits, <marks>[</marks>nor glorified our Lord<marks>]</marks>
+7. Nor glorified the name of the Lord of Spirits, <marks>[</marks>nor glorified our Lord<marks>]</marks> [Footnote: Of Spirits (gq, efv). m ‘of lords’, tu, β-efv ‘of kings’. The following clause is bracketed as a dittograph.]
 
 7. But our hope was in the sceptre of our kingdom,
 7. And in our glory.
@@ -1339,7 +1339,7 @@ the righteous,
 9. And we pass away from before His face on account of our works,
 9. And all our sins are reckoned up in righteousness.’
 
-10. Now they will say unto themselves: ‘Our souls are full of unrighteous gain, but it does not prevent us from descending from the midst thereof into the <marks>†</marks>burden<marks>†</marks> of Sheol.’
+10. Now they will say unto themselves: ‘Our souls are full of unrighteous gain, but it does not prevent us from descending from the midst thereof into the <marks>†</marks>burden<marks>†</marks> [Footnote: Into the †burden†. Kĕbad = βάρος, which the Ethiopic translator may have confused with βάριν as in Pss. 47³, ¹² 121⁷ Lam. 2⁵. If this is so, then we should render ‘into the stronghold of Sheol’. Though the general sense is clear, the details are uncertain. Perhaps we should read ‘into the burden of the flame of Sheol’.] of Sheol.’
 
 11. And after that their faces shall be filled with darkness
 11. And shame before that Son of Man,
@@ -1369,8 +1369,8 @@ the righteous,
 7. And how silver is produced from the dust of the earth, and how soft metal originates in the earth.
 8. For lead and tin are not produced from the earth like the first: it is a fountain that produces them, and an angel stands therein, and that angel is pre-eminent.’
 9. And after that my grandfather Enoch took hold of me by my hand and raised me up, and said unto me: ‘Go, for I have asked the Lord of Spirits as touching this commotion on the earth.
-10. And He said unto me: “Because of their unrighteousness their judgement has been determined upon and shall not be <emended>withheld</emended> by Me for ever. Because of the <emended>sorceries</emended> which they have searched out and learnt, the earth and those who dwell upon it shall be destroyed.”
-11. And these—they have no <emended>place of repentance</emended> for ever, because they have shown them what was hidden, and they are the damned: but as for thee, my son, the Lord of Spirits knows that thou art pure, and guiltless of this reproach concerning the secrets.
+10. And He said unto me: “Because of their unrighteousness their judgement has been determined upon and shall not be <emended>withheld</emended> [Footnote: Halévy has pointed out that the knowledge of the future could hardly have been regarded by the author as criminal. He fixes on ‘months’ as a corruption = חדשים corrupt for חרשים = ‘sorceries’ (Is. 3³). But the objection here is that the bulk of the evidence points not to a Hebrew but an Aramaic original. But since Aramaic speaking Jews (Jer. Taanith, iii. 69) sometimes used חדשיא instead of the regular ירחיא, it is possible that חדשיא was here a corruption of חרשיא. But if ירחיא did stand in the original, it may have been a corruption of סתריא ‘secrets’. Next, in my Ethiopic Text of 1906, p. 118, I pointed out that ‘shall not be reckoned’ is wrong. This phrase = ולא יחשב—a corruption for ולא יחשך ‘shall not be withheld’. At the same time I pointed out in the same work, p. xxxi, that this restoration was possible through Aramaic. Thus יתמנא = ‘shall be numbered’ would be a corruption of יתמנע ‘shall be withheld’. … Bearing this fact in mind, and adopting Halévy’s emendation of ‘months’ and my own of ‘shall not be reckoned’, we arrive at the translation in our text. The meaning is clear and in keeping with the teaching in the earlier chapters of the book: the world will be destroyed because of the wickedness of the inhabitants and the sorceries (or secret things) they have discovered.] by Me for ever. Because of the <emended>sorceries</emended> which they have searched out and learnt, the earth and those who dwell upon it shall be destroyed.”
+11. And these—they have no <emended>place of repentance</emended> [Footnote: Place of repentance. Text = ‘return’ = Aramaic תיובא, which should here be rendered ‘repentance’. The restoration is possible also in Hebrew, since תשובה has both meanings.] for ever, because they have shown them what was hidden, and they are the damned: but as for thee, my son, the Lord of Spirits knows that thou art pure, and guiltless of this reproach concerning the secrets.
 
 12. And He has destined thy name to be among the holy,
 12. And will preserve thee amongst those who dwell on the earth,
@@ -1381,8 +1381,8 @@ the righteous,
 
 ### LXVI. The Angels of the Waters bidden to hold them in Check.
 
-1. And after that he showed me the angels of punishment who are prepared to come and let loose all the powers of the waters which are beneath in the earth in order to bring judgement and destruction on all who <marks>[</marks>abide and<marks>]</marks> dwell on the earth.
-2. And the Lord of Spirits gave commandment to the angels who were going forth, that they should not cause <emended>the waters</emended> to rise but should hold them in check; for those angels were over the powers of the waters.
+1. And after that he showed me the angels of punishment who are prepared to come and let loose all the powers of the waters which are beneath in the earth in order to bring judgement and destruction on all who <marks>[</marks>abide and<marks>]</marks> [Footnote: ［Abide and.］ Bracketed as a dittograph. q om. u, bx omit ‘and dwell’.] dwell on the earth.
+2. And the Lord of Spirits gave commandment to the angels who were going forth, that they should not cause <emended>the waters</emended> [Footnote: Cause the waters to rise. The text here reads ‘hands’ = ידיא corrupt for מיא ‘waters’. The angels of the waters are here bidden to pause in order that during the pause the ark may be built 67². The same idea is found in Rev. 7¹ ˢᵠᵠ·, where the four angels of the winds are bidden to restrain the winds till the servants of God are sealed in their foreheads. Cf. 2 Bar. 6⁴ ˢᵠᵠ·] to rise but should hold them in check; for those angels were over the powers of the waters.
 3. And I went away from the presence of Enoch.
 
 ## 67.
@@ -1391,7 +1391,7 @@ the righteous,
 
 1. And in those days the word of God came unto me, and He said unto me: ‘Noah, thy lot has come up before Me, a lot without blame, a lot of love and uprightness.
 2. And now the angels are making a wooden <supplied>building</supplied>, and when they have completed that task I will place My hand upon it and preserve it, and there shall come forth from it the seed of life, and a change shall set in so that the earth will not remain without inhabitant.
-3. And I will make fast thy seed before me for ever and ever, and I will spread abroad those who dwell with thee: it shall not <emended>be unfruitful</emended> on the face of the earth, but it shall be blessed and multiply on the earth in the name of the Lord.’
+3. And I will make fast thy seed before me for ever and ever, and I will spread abroad those who dwell with thee: it shall not <emended>be unfruitful</emended> [Footnote: It shall not be unfruitful = ’ijĕmakĕn, emended from ’ijĕmakĕr (a, β-bdoxy₁b). bdoxy₁b omit. Otherwise read ’ijĕmêkĕrû ‘they shall not tempt (thy seed)’. But the text is wholly uncertain.] on the face of the earth, but it shall be blessed and multiply on the earth in the name of the Lord.’
 
 4. And He will imprison those angels, who have shown unrighteousness, in that burning valley which my grandfather Enoch had formerly shown to me in the west among the mountains of gold and silver and iron and soft metal and tin.
 5. And I saw that valley in which there was a great convulsion and a convulsion of the waters.
@@ -1403,14 +1403,14 @@ the righteous,
 10. For the judgement shall come upon them, because they believe in the lust of their body and deny the Spirit of the Lord.
 11. And those same waters shall undergo a change in those days; for when those angels are punished in these waters, these water-springs shall change their temperature, and when the angels ascend, this water of the springs shall change and become cold.
 12. And I heard Michael answering and saying: ‘This judgement wherewith the angels are judged is a testimony for the kings and the mighty who possess the earth.’
-13. Because these waters of judgement minister to the healing of the body of the <emended>kings</emended> and the lust of their body; therefore they will not see and will not believe that those waters will change and become a fire which burns for ever.
+13. Because these waters of judgement minister to the healing of the body of the <emended>kings</emended> [Footnote: Kings. Text reads ‘angels’ = מלאכיא corrupt for מלכיא ‘kings’.] and the lust of their body; therefore they will not see and will not believe that those waters will change and become a fire which burns for ever.
 
 ## 68.
 
 ### LXVIII. Michael and Raphael astonied at the Severity of the Judgement.
 
 1. And after that my grandfather Enoch gave me the teaching of all the secrets in the book and in the Parables which had been given to him; and he put them together for me in the words of the book of the Parables.
-2. And on that day Michael answered Raphael and said: ‘The power of the spirit transports and <emended>makes me to tremble</emended> because of the severity of the judgement of the secrets, the judgement of the angels: who can endure the severe judgement which has been executed, and before which they melt away?’
+2. And on that day Michael answered Raphael and said: ‘The power of the spirit transports and <emended>makes me to tremble</emended> [Footnote: Makes me to tremble. Text reads ‘provokes’ = יארגזני, which should here have been rendered ‘makes me to tremble’.] because of the severity of the judgement of the secrets, the judgement of the angels: who can endure the severe judgement which has been executed, and before which they melt away?’
 3. And Michael answered again, and said to Raphael: ‘Who is he whose heart is not softened concerning it, and whose reins are not troubled by this word of judgement <supplied>that</supplied> has gone forth upon them because of those who have thus led them out?’
 4. And it came to pass when he stood before the Lord of Spirits, Michael said thus to Raphael: ‘I will not take their part under the eye of the Lord; for the Lord of Spirits has been angry with them because they do as if they were the Lord.
 5. Therefore all that is hidden shall come upon them for ever and ever; for neither angel nor man shall have his portion <supplied>in it</supplied>, but alone they have received their judgement for ever and ever.’
@@ -1419,21 +1419,22 @@ the righteous,
 
 ### LXIX. The Names and Functions of the (fallen Angels and) Satans: the secret Oath.
 
-1. And after this judgement they shall terrify and <emended>make</emended> them <emended>to tremble</emended> because they have shown this to those who dwell on the earth.
+1. And after this judgement they shall terrify and <emended>make</emended> them <emended>to tremble</emended> [Footnote: Make them to tremble. Text = ‘irritate them’ = יארגיזוהון, which also means ‘make them to tremble’. So Schmidt has pointed out, acting on Halévy’s suggestion that text = ירגיזום.] because they have shown this to those who dwell on the earth.
 
-2. And behold the names of those angels <marks>[</marks>and these are their names: the first of them is Samjâzâ, the second Artâqîfâ, and the third Armên, the fourth Kôkabêl, the fifth <marks>†</marks>Tûrâêl<marks>†</marks>, the sixth Rûmjâl, the seventh Dânjâl, the eighth <marks>†</marks>Nêqâêl<marks>†</marks>, the ninth Barâqêl, the tenth Azâzêl, the eleventh Armârôs, the twelfth Batarjâl, the thirteenth <marks>†</marks>Busasêjal<marks>†</marks>, the fourteenth Hanânêl, the fifteenth <marks>†</marks>Tûrêl<marks>†</marks>, and the sixteenth Sîmâpêsîêl, the seventeenth Jetrêl, the eighteenth Tûmâêl, the nineteenth Tûrêl, the twentieth <marks>†</marks>Rûmâêl<marks>†</marks>, the twenty-first <marks>†</marks>Azâzêl<marks>†</marks>.
-3. And these are the chiefs of their angels and their names, and their chief ones over hundreds and over fifties and over tens.<marks>]</marks>
+2. And behold the names of those angels <marks>[</marks>and these are their names [Footnote: I have bracketed the bulk of this verse and all ver. 3 as an intrusion here. These angels are the angels who fell in the time of Jared: whereas those mentioned in 69⁴ ˢᵠᵠ· are Satans. This list of angels is the same as that in 6⁷, but many corruptions have taken place in the text. Ver. 4 follows naturally on the words ‘Behold the names of those angels’, though probably it ran originally ‘behold the names of the Satans’.]: the first of them is Samjâzâ, the second Artâqîfâ, and the third Armên, the fourth Kôkabêl, the fifth <marks>†</marks>Tûrâêl<marks>†</marks>, the sixth Rûmjâl, the seventh Dânjâl, the eighth <marks>†</marks>Nêqâêl<marks>†</marks>, the ninth Barâqêl, the tenth Azâzêl, the eleventh Armârôs, the twelfth Batarjâl, the thirteenth <marks>†</marks>Busasêjal<marks>†</marks>, the fourteenth Hanânêl, the fifteenth <marks>†</marks>Tûrêl<marks>†</marks>, and the sixteenth Sîmâpêsîêl, the seventeenth Jetrêl, the eighteenth Tûmâêl, the nineteenth Tûrêl, the twentieth <marks>†</marks>Rûmâêl<marks>†</marks>, the twenty-first <marks>†</marks>Azâzêl<marks>†</marks>.
+3. And these are the chiefs of their angels and their names, and their chief ones over hundreds and over fifties and over tens.<marks>]</marks> [Footnote: I have bracketed the bulk of ver. 2 and all ver. 3 as an intrusion here. These angels are the angels who fell in the time of Jared: whereas those mentioned in 69⁴ ˢᵠᵠ· are Satans.]
 
-4. The name of the first Jeqôn: that is, the one who led astray <marks>[</marks>all<marks>]</marks> the sons of <emended>God</emended>, and brought them down to the earth, and led them astray through the daughters of men.
-5. And the second was named Asbeêl: he imparted to the holy sons of <emended>God</emended> evil counsel, and led them astray so that they defiled their bodies with the daughters of men.
-6. And the third was named Gâdreêl: he it is who showed the children of men all the blows of death, and he led astray Eve, and showed <marks>[</marks>the weapons of death to the sons of men<marks>]</marks> the shield and the coat of mail, and the sword for battle, and all the weapons of death to the children of men.
+4. The name of the first Jeqôn: that is, the one who led astray <marks>[</marks>all<marks>]</marks> the sons of <emended>God</emended> [Footnote: Sons of God. Cf. Job 38⁷. The text reads ‘sons of the (+ ‘holy’ t, bcdelopyx₁a₁b) angels’, or (+ ‘holy’ t, bcdelopyx₁a₁b) ‘sons of the angels’. Schmidt thinks that this is a mistranslation of בני אלהיא; but, though בן אלהים means ‘angel’, in the LXX it is never so rendered. בני אלהים is rendered by ἄγγελοι θεοῦ, not by ἄγγελοι alone. Hence, I suppose a corruption of אלהיא into מלאכיא.], and brought them down to the earth, and led them astray through the daughters of men.
+5. And the second was named Asbeêl: he imparted to the holy sons of <emended>God</emended> [Footnote: Sons of God. See the note on ver. 4: the text reads ‘sons of the angels’, a corruption of אלהיא into מלאכיא.] evil counsel, and led them astray so that they defiled their bodies with the daughters of men.
+6. And the third was named Gâdreêl: he it is who showed the children of men all the blows of death, and he led astray Eve, and showed <marks>[</marks>the weapons of death to the sons of men<marks>]</marks> [Footnote: ［The weapons of death to the sons of men.］ A dittograph from the close of the verse.] the shield and the coat of mail, and the sword for battle, and all the weapons of death to the children of men.
 7. And from his hand they have proceeded against those who dwell on the earth from that day and for evermore.
 8. And the fourth was named Pênêmûe: he taught the children of men the bitter and the sweet, and he taught them all the secrets of their wisdom.
 9. And he instructed mankind in writing with ink and paper, and thereby many sinned from eternity to eternity and until this day.
 10. For men were not created for such a purpose, to give confirmation to their good faith with pen and ink.
-11. For men were created exactly like the angels, to the intent that they should continue pure and righteous, and death, which destroys everything, could not have taken hold of them; but through this their knowledge they are perishing, and through this power <marks>†</marks>it is consuming me<marks>†</marks>.
+11. For men were created exactly like the angels, to the intent that they should continue pure and righteous, and death, which destroys everything, could not have taken hold of them; but through this their knowledge they are perishing, and through this power <marks>†</marks>it is consuming me<marks>†</marks> [Footnote: †It is consuming me†. Perhaps we should read ‘they are being consumed’.].
 12. And the fifth was named Kâsdejâ: this is he who showed the children of men all the wicked smitings of spirits and demons, and the smitings of the embryo in the womb, that it may pass away, and <marks>[</marks>the smitings of the soul<marks>]</marks> the bites of the serpent, and the smitings which befall through the noontide heat, the son of the serpent named Tabâ’ĕt.
-13. And this is the <emended>task</emended> of Kâsbeêl, the chief of the oath which he showed to the holy ones when he dwelt high above in glory, and its name is Bîqâ.
+%% waived 69:12 — the bracket carries no note of its own on the page (leaf 253): Charles’s notes on 12 speak only to Rosenmüller and the serpent Tabâ‘ĕt
+13. And this is the <emended>task</emended> [Footnote: Task. The text reads ‘number’ = מנין corrupt for ענין = ‘task’.] of Kâsbeêl, the chief of the oath which he showed to the holy ones when he dwelt high above in glory, and its name is Bîqâ.
 14. This <supplied>angel</supplied> requested Michael to show him the hidden name, that he might enunciate it in the oath, so that those might quake before that name and oath who revealed all that was in secret to the children of men.
 15. And this is the power of this oath, for it is powerful and strong, and he placed this oath Akâe in the hand of Michael.
 16. And these are the secrets of this oath<marks>…</marks>.
@@ -1441,13 +1442,14 @@ the righteous,
 16. And they are strong through his oath:
 16. And the heaven was suspended before the world was created,
 16. And for ever.
+%% waived 69:16 — the print ends the clause in the lacuna dots and gives no note on them (leaf 254); the notes on 16 speak only to ‘They are strong’ and ‘Heaven was suspended’
 
 17. And through it the earth was founded upon the water,
 17. And from the secret recesses of the mountains come beautiful waters,
 17. From the creation of the world and unto eternity.
 
 18. And through that oath the sea was created,
-18. And <marks>†</marks>as its foundation<marks>†</marks> He set for it the sand against the time of <supplied>its</supplied> anger,
+18. And <marks>†</marks>as its foundation<marks>†</marks> [Footnote: †As its foundation† He set for it the sand, &c.: cf. Jer. 5²² Job 26¹⁰ Ps. 104⁹, &c. Masharatâ, ‘its foundation,’ seems corrupt for wasînôtâ, ‘to limit it.’] He set for it the sand against the time of <supplied>its</supplied> anger,
 18. And it dare not pass beyond it from the creation of the world unto eternity.
 
 19. And through that oath are the depths made fast,
@@ -1458,13 +1460,14 @@ the righteous,
 21. And He calls them by their names,
 21. And they answer Him from eternity to eternity.
 
-22. <marks>[</marks>And in like manner the spirits of the water, and of the winds, and of all zephyrs, and <supplied>their</supplied> paths from all the quarters of the winds.
+22. <marks>[</marks>And in like manner [Footnote: 22–24. An interpolation. Ver. 21 deals with the oath, and this subject is resumed in ver. 25. Ver. 23 seems to be an interpolation within an interpolation.] the spirits of the water, and of the winds, and of all zephyrs, and <supplied>their</supplied> paths from all the quarters of the winds.
 23. And there are preserved the voices of the thunder and the light of the lightnings: and there are preserved the chambers of the hail and the chambers of the hoar-frost, and the chambers of the mist, and the chambers of the rain and the dew.
-24. And all these believe and give thanks before the Lord of Spirits, and glorify <supplied>Him</supplied> with all their power, and their food is in every act of thanksgiving: they thank and glorify and extol the name of the Lord of Spirits for ever and ever.<marks>]</marks>
+24. And all these believe and give thanks before the Lord of Spirits, and glorify <supplied>Him</supplied> with all their power, and their food is in every act of thanksgiving: they thank and glorify and extol the name of the Lord of Spirits for ever and ever.<marks>]</marks> [Footnote: 22–24. An interpolation. Ver. 21 deals with the oath, and this subject is resumed in ver. 25. Ver. 23 seems to be an interpolation within an interpolation.]
 
 25. And this oath is mighty over them,
 25. And through it <marks>[</marks>they are preserved and<marks>]</marks> their paths are preserved,
 25. And their course is not destroyed.
+%% waived 69:25 — the bracket carries no note on the page (leaves 255–256): the notes pass from 22–24 to 26–29
 
 ### Close of the Third Parable.
 
@@ -1504,10 +1507,10 @@ the righteous,
 
 1. And it came to pass after this that my spirit was translated
 1. And it ascended into the heavens:
-1. And I saw the <emended>holy sons of God</emended>.
+1. And I saw the <emended>holy sons of God</emended> [Footnote: Holy sons of God. This is practically the same phrase as in 69⁵; cf. 69⁴ (see note) ‘sons of God’, and 106⁵ ‘sons of the God of heaven’. The expression is to be referred ultimately to בני אלהים, where the Elohim are interpreted as angels. bcdoxy₁b omit ‘holy’.].
 
 1. They were stepping on flames of fire:
-1. Their garments were white <marks>[</marks>and their raiment<marks>]</marks>,
+1. Their garments were white <marks>[</marks>and their raiment<marks>]</marks> [Footnote: ［And their raiment］. A duplicate rendering.],
 1. And their faces shone like snow.
 
 2. And I saw two streams of fire,
@@ -1517,6 +1520,7 @@ the righteous,
 3. And the angel Michael <marks>[</marks>one of the archangels<marks>]</marks> seized me by my right hand,
 3. And lifted me up and led me forth into all the secrets,
 3. And he showed me all the secrets of righteousness.
+%% waived 71:3 — the bracket carries no note on the page (leaf 258); Charles’s note on 3 speaks only to ‘And he showed me all the secrets of righteousness’
 
 4. And he showed me all the secrets of the ends of the heaven,
 4. And all the chambers of all the stars, and all the luminaries,
@@ -1555,7 +1559,7 @@ the righteous,
 11. And my spirit was transfigured;
 
 11. And I cried with a loud voice,
-11. <marks>…</marks> with the spirit of power,
+11. <marks>…</marks> with the spirit [Footnote: Spirit of power: cf. 61¹¹. Some word or words seem to have been lost before this phrase.] of power,
 11. And blessed and glorified and extolled.
 
 12. And these blessings which went forth out of my mouth were well pleasing before that Head of Days.
@@ -1565,15 +1569,15 @@ the righteous,
 
 14. And he <supplied>i. e. the angel</supplied> came to me and greeted me with His voice, and said unto me:
 
-14. ‘<emended>This is</emended> the Son of Man who is born unto righteousness;
+14. ‘<emended>This is</emended> [Footnote: This is … is. Emended as explained in note on ver. 13. Text reads ‘Thou art … art’. The following verses show, as Appel has pointed out (p. 44), that after the Head of Days the Son of Man was mentioned, and that Enoch asked some question regarding him. This passage has been lost, but the context requires its restoration. In answer to this question of Enoch an angel comes forward and makes answer in ver. 14. But owing to the loss of this passage the text has been changed by some scribe in verses 14, 16 and been made to apply to Enoch instead of to the Son of Man. The scribe, however, has fallen from his rôle in ver. 17 and forgotten to make the necessary changes; for that verse as it stands refers undoubtedly to the Son of Man and not to Enoch: ‘There will be length of days with that Son of Man.’] the Son of Man who is born unto righteousness;
 14. And righteousness abides over <emended>him</emended>,
-14. And the righteousness of the Head of Days forsakes <emended>him</emended> not.’
+14. And the righteousness of the Head of Days forsakes <emended>him</emended> not [Footnote: Forsakes him not. Text ‘forsakes thee not’. See note on ver. 13.].’
 15. And he said unto me:
 15. ‘He proclaims unto thee peace in the name of the world to come;
 15. For from hence has proceeded peace since the creation of the world,
 15. And so shall it be unto thee for ever and for ever and ever.
 
-16. And all shall walk in <emended>his</emended> ways since righteousness never forsakes <emended>him</emended>:
+16. And all shall walk in <emended>his</emended> ways [Footnote: Throughout the verse I have changed the second person into the third and so restored the verse that it refers, as it did originally, to the Son of Man and not to Enoch.] since righteousness never forsakes <emended>him</emended>:
 16. With <emended>him</emended> will be their dwelling-places, and with <emended>him</emended> their heritage,
 16. And they shall not be separated from <emended>him</emended> for ever and ever and ever.
 
