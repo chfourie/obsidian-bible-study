@@ -44,12 +44,13 @@ export type ModuleKind =
   | 'lsj-lexicon'
   | 'book'
 
-// A Book's atom kind — the work's smallest printed citable unit, one kind
-// for the whole Book (spec-books §1). Absent means `paragraph`, so a Book
-// published before the kind existed loads exactly as it did.
-export type BookAtomKind = 'verse' | 'paragraph'
-
-export const DEFAULT_BOOK_ATOM_KIND: BookAtomKind = 'paragraph'
+// The atom kind a Book's manifest declares is the same kind its citations
+// read (spec-books §1, §4), so the reference layer owns the vocabulary.
+export {
+  DEFAULT_BOOK_ATOM_KIND,
+  type BookAtomKind,
+} from '../reference/books'
+import type { BookAtomKind } from '../reference/books'
 
 // One step of a section's page-order walk (ADR 0013): the atom within the
 // section and, for an atom carrying `lines`, the 0-based index into its

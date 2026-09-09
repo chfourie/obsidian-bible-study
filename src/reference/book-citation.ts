@@ -1,4 +1,10 @@
-import { registeredBook, type RegisteredBook } from './books'
+import {
+  DEFAULT_BOOK_ATOM_KIND,
+  registeredBook,
+  type BookAtomKind,
+  type RegisteredBook,
+} from './books'
+import { referenceLocator } from './format-reference'
 import { decodeVerseId } from './verse-id'
 import { verseCount } from './versification'
 import type { Reference, VerseRange } from './verse-range'
@@ -8,6 +14,7 @@ import type { Reference, VerseRange } from './verse-range'
 // citation for the block attribution line.
 export type BookCitation = {
   title: string
+  atom: BookAtomKind
   locator: string
   reference: string
   attribution: string
@@ -48,7 +55,10 @@ const atomLocator = (
   return `${chapterLabel(book, chapter)}, par. ${verse}`
 }
 
-const locatorFor = (book: RegisteredBook, reference: Reference): string => {
+const paragraphLocator = (
+  book: RegisteredBook,
+  reference: Reference,
+): string => {
   const { ranges } = reference
   const chapters = ranges.flatMap((range) => [
     decodeVerseId(range.startId).chapter,
@@ -68,15 +78,34 @@ const locatorFor = (book: RegisteredBook, reference: Reference): string => {
   return `${label}, ${paragraphWord(atoms)} ${spec}`
 }
 
+const atomKind = (book: RegisteredBook): BookAtomKind =>
+  book.atom ?? DEFAULT_BOOK_ATOM_KIND
+
+// One locator string per reference, shared by the chip and the full citation
+// (spec-books §4). A verse-atom Book reads in scripture's numeric family; a
+// whole-book reference of either kind invents no verse span.
+const locatorFor = (book: RegisteredBook, reference: Reference): string => {
+  const locator = referenceLocator(reference)
+  if (locator === '') return ''
+  return atomKind(book) === 'verse'
+    ? locator
+    : paragraphLocator(book, reference)
+}
+
 export const bookCitation = (reference: Reference): BookCitation | null => {
   const book = registeredBook(reference.book)
   if (book === null) return null
   const locator = locatorFor(book, reference)
+  const cited = `${book.name} (${book.year})`
   return {
     title: book.name,
+    atom: atomKind(book),
     locator,
-    reference: `${book.name} ${locator}`,
-    attribution: `${book.author}, ${book.name} (${book.year}), ${locator}`,
+    reference: locator === '' ? book.name : `${book.name} ${locator}`,
+    attribution:
+      locator === ''
+        ? `${book.author}, ${cited}`
+        : `${book.author}, ${cited}, ${locator}`,
     editionCode: book.editionCode,
     moduleId: book.moduleId,
   }

@@ -4,6 +4,10 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
+import {
+  installEnochBook,
+  uninstallEnochBook,
+} from '../../tests/fixtures/enoch-book'
 import type { StudyMaterial, StudyMaterialSource } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import {
@@ -1487,6 +1491,7 @@ describe('annotations and mentions in the Study Panel', () => {
 describe('book references in the Study Panel', () => {
   beforeEach(installHumilityBook)
   afterEach(uninstallHumilityBook)
+  afterEach(uninstallEnochBook)
 
   const atom = (book: number, chapter: number, verse: number): Reference => ({
     book,
@@ -1568,6 +1573,18 @@ describe('book references in the Study Panel', () => {
     expect(panel.view.entries[0].label).toBe('Humility ch. 1, par. 2')
     expect(panel.view.entries[0].attribution).toBe(
       'Andrew Murray, Humility (1895), ch. 1, par. 2',
+    )
+  })
+
+  it('heads a verse-atom book entry with the same citation a note prints', async () => {
+    installEnochBook()
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{1 Enoch 1:9-11}' })
+
+    expect(panel.view.entries[0].label).toBe('1 Enoch 1:9-11')
+    expect(panel.view.entries[0].attribution).toBe(
+      'Enoch, 1 Enoch (1912), 1:9-11',
     )
   })
 

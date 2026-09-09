@@ -44,10 +44,11 @@ const formatRange = (
   return { text: `${startText}-${endText}`, chapterAfter: end.chapter }
 }
 
-export const formatReference = (reference: Reference): string => {
+// The address alone, in scripture's numeric family — empty for a whole-book
+// reference, which spans no locator at all (spec-books §4).
+export const referenceLocator = (reference: Reference): string => {
   const { book, ranges } = reference
-  const name = bookName(book)
-  if (isWholeBook(book, ranges)) return name
+  if (isWholeBook(book, ranges)) return ''
   let currentChapter: number | null = null
   const segments: string[] = []
   for (const range of ranges) {
@@ -63,5 +64,11 @@ export const formatReference = (reference: Reference): string => {
     segments.push(text)
     currentChapter = chapterAfter
   }
-  return `${name} ${segments.join(',')}`
+  return segments.join(',')
+}
+
+export const formatReference = (reference: Reference): string => {
+  const name = bookName(reference.book)
+  const locator = referenceLocator(reference)
+  return locator === '' ? name : `${name} ${locator}`
 }

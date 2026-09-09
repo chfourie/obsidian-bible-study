@@ -13,12 +13,17 @@ import {
   deregisterManifestBook,
   registerManifestBook,
 } from './book-registration'
-import { MODULE_FORMAT_VERSION, type ModuleManifest } from './module-manifest'
+import {
+  MODULE_FORMAT_VERSION,
+  type BookAtomKind,
+  type ModuleManifest,
+} from './module-manifest'
 
 const HUMILITY_BOOK = 101
 
 const bookManifest = (
   sections: { chapter: number; name: string; paragraphs: number }[],
+  atom?: BookAtomKind,
 ): ModuleManifest => ({
   id: 'hum-m1895',
   name: 'Humility',
@@ -35,6 +40,7 @@ const bookManifest = (
     author: 'Andrew Murray',
     year: 1895,
     abbreviation: 'Hum',
+    atom,
     sections,
   },
 })
@@ -139,5 +145,23 @@ describe('deregisterManifestBook', () => {
     deregisterManifestBook(translationManifest)
 
     expect(chapterCount(HUMILITY_BOOK)).toBe(1)
+  })
+})
+
+// The manifest's atom kind is what the citation path reads (spec-books §1,
+// §4): a Book published before the field existed cites as a paragraph Book.
+describe('registerManifestBook atom kind', () => {
+  const sections = [{ chapter: 1, name: '1', paragraphs: 9 }]
+
+  it('carries a declared verse atom kind onto the registered book', () => {
+    registerManifestBook(bookManifest(sections, 'verse'))
+
+    expect(registeredBook(HUMILITY_BOOK)?.atom).toBe('verse')
+  })
+
+  it('leaves the kind absent when the manifest declares none', () => {
+    registerManifestBook(bookManifest(sections))
+
+    expect(registeredBook(HUMILITY_BOOK)?.atom).toBeUndefined()
   })
 })

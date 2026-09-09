@@ -4,6 +4,11 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
+import {
+  ENOCH_BOOK,
+  installEnochBook,
+  uninstallEnochBook,
+} from '../../tests/fixtures/enoch-book'
 import { makeVerseId } from '../reference'
 import type { OccurrenceGroup } from '../vault-index'
 import {
@@ -1336,4 +1341,123 @@ describe('renderReference book references', () => {
       parent.querySelector('.scripture-study-unavailable')?.textContent,
     ).toContain('Humility ch. 2, par. 2')
   })
+})
+
+describe('renderReference verse-atom book references', () => {
+  const verses = (chapter: number, first: number, ...texts: string[]): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: texts.map((text, index) => ({
+      verseId: makeVerseId(ENOCH_BOOK, chapter, first + index),
+      segments: [{ text, redLetter: false }],
+    })),
+  })
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('reads the chip in scripture’s numeric family with no ch. or par.', async () => {
+    const { parent, deps } = setup(verses(1, 9, 'And behold!'))
+
+    await renderReference(parent, model('1 Enoch 1:9'), deps)
+
+    const chip = parent.querySelector('.scripture-study-chip')
+    expect(chip?.classList.contains('scripture-study-chip-book')).toBe(true)
+    expect(chip?.querySelector('em')?.textContent).toBe('1 Enoch')
+    expect(parent.querySelector('.scripture-study-chip-ref')?.textContent).toBe(
+      '1 Enoch 1:9',
+    )
+  })
+
+  it('leaves a whole-book chip the title alone', async () => {
+    const { parent, deps } = setup(verses(1, 9, 'And behold!'))
+
+    await renderReference(parent, model('1 Enoch'), deps)
+
+    expect(parent.querySelector('.scripture-study-chip-ref')?.textContent).toBe(
+      '1 Enoch',
+    )
+  })
+
+  it('superscripts inline verse numbers only for a multi-atom reference', async () => {
+    const single = setup(verses(1, 9, 'And behold!'))
+    await renderReference(single.parent, model('1 Enoch 1:9 inline'), single.deps)
+
+    expect(
+      single.parent.querySelector('sup.scripture-study-verse-number'),
+    ).toBeNull()
+
+    const multi = setup(verses(1, 9, 'Nine.', 'Ten.', 'Eleven.'))
+    await renderReference(multi.parent, model('1 Enoch 1:9-11 inline'), multi.deps)
+
+    expect(
+      [...multi.parent.querySelectorAll('sup.scripture-study-verse-number')].map(
+        (sup) => sup.textContent,
+      ),
+    ).toEqual(['9', '10', '11'])
+  })
+
+  it('runs a block as book prose, every atom numbered, under one citation line', async () => {
+    const { parent, deps } = setup(verses(1, 9, 'Nine.', 'Ten.', 'Eleven.'))
+
+    await renderReference(parent, model('1 Enoch 1:9-11 block'), deps)
+
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(passage?.querySelector('.scripture-study-verse-line')).toBeNull()
+    const prose = passage?.querySelectorAll('.scripture-study-book-paragraph') ?? []
+    expect([...prose].map((run) => run.textContent)).toEqual([
+      '9Nine. 10Ten. 11Eleven.',
+    ])
+    expect(
+      passage?.querySelector('.scripture-study-attribution')?.textContent,
+    ).toBe('Enoch, 1 Enoch (1912), 1:9-11')
+  })
+
+  it('keeps an atom’s own line breaks inside the prose run', async () => {
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: makeVerseId(ENOCH_BOOK, 1, 9),
+          hasLineData: true,
+          segments: verseSegments(
+            {
+              text: 'And behold! To execute judgement',
+              lines: [{ start: 0 }, { start: 13 }],
+            },
+            [],
+          ),
+        },
+      ],
+    })
+
+    await renderReference(parent, model('1 Enoch 1:9 block'), deps)
+
+    const prose = parent.querySelector('.scripture-study-book-paragraph')
+    expect(prose?.querySelectorAll('br')).toHaveLength(1)
+  })
+
+  it('drops the locator from a whole-book block attribution', async () => {
+    const { parent, deps } = setup(verses(1, 1, 'One.'))
+
+    // Whole-book + display token is outside the typed grammar for every
+    // book alike, so the renderer is driven with the model it would build.
+    await renderReference(
+      parent,
+      { ...model('1 Enoch'), display: 'block' },
+      deps,
+    )
+
+    expect(
+      parent.querySelector('.scripture-study-attribution')?.textContent,
+    ).toBe('Enoch, 1 Enoch (1912)')
+  })
+
+  it.each(['{1 Enoch 5:6a}', '{1 Enoch 0}', '{1 Enoch 109}'])(
+    'refuses %s as an address',
+    (text) => {
+      expect(buildReferenceRenderModel(text.slice(1, -1), context)).toBeNull()
+    },
+  )
 })

@@ -29,6 +29,7 @@ export const registerManifestBook = (manifest: ModuleManifest): void => {
     editionCode: book.editionCode,
     author: book.author,
     year: book.year,
+    atom: book.atom,
     sections: book.sections,
   })
 }

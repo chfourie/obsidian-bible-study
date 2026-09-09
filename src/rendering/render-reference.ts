@@ -83,7 +83,7 @@ const renderChip = (
     ref.setText(model.referenceText)
   } else {
     ref.createEl('em', { text: model.book.title })
-    ref.appendText(` ${model.book.locator}`)
+    if (model.book.locator !== '') ref.appendText(` ${model.book.locator}`)
   }
   if (model.chipLabel !== null) {
     chip.createSpan({
@@ -442,6 +442,21 @@ const renderBookParagraphs =
     renderNavigableAttribution(host, view, model, deps)
   }
 
+// A verse-atom Book's block runs as book prose (spec-books §4): its atoms
+// flow together rather than one to a line, each keeping whatever breaks its
+// own `lines` channel asks for.
+const renderBookProse =
+  (model: ReferenceRenderModel, deps: ReferenceRenderDeps) =>
+  (host: HTMLElement, view: PassageView): void => {
+    renderFallbackNotice(host, view)
+    const prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
+    view.verses.forEach((block, index) => {
+      if (index > 0) prose.appendText(' ')
+      renderSegments(prose, block)
+    })
+    renderNavigableAttribution(host, view, model, deps)
+  }
+
 const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
   view.verses.forEach((block, index) => {
@@ -482,7 +497,9 @@ const renderBlock = (
     ? renderVerseRun
     : model.book === null
       ? renderVerseLines
-      : renderBookParagraphs(model, deps)
+      : model.book.atom === 'verse'
+        ? renderBookProse(model, deps)
+        : renderBookParagraphs(model, deps)
   const mounted = mountPassage(host, model, deps, renderPassage)
   if (deps.intersections) {
     renderIntersections(block, model, deps.intersections, sourcePath)

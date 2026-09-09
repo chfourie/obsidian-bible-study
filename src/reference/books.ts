@@ -16,6 +16,13 @@ export type BookSectionLabel = {
   named?: boolean
 }
 
+// A Book's atom kind — the work's smallest printed citable unit, one kind
+// for the whole Book (spec-books §1). Absent means `paragraph`, so a Book
+// published before the kind existed cites exactly as it did.
+export type BookAtomKind = 'verse' | 'paragraph'
+
+export const DEFAULT_BOOK_ATOM_KIND: BookAtomKind = 'paragraph'
+
 // A non-biblical book, known only while its module is installed. Scripture's
 // 66 stay compiled in; books arrive and leave with their manifests.
 export type RegisteredBook = {
@@ -27,6 +34,7 @@ export type RegisteredBook = {
   editionCode: string
   author: string
   year: number
+  atom?: BookAtomKind
   sections: readonly BookSectionLabel[]
 }
 

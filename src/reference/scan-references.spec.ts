@@ -4,6 +4,10 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
+import {
+  installEnochBook,
+  uninstallEnochBook,
+} from '../../tests/fixtures/enoch-book'
 import { maskInlineCodeSpans, scanReferenceMatches } from './scan-references'
 import { makeVerseId } from './verse-id'
 
@@ -14,6 +18,7 @@ const single = (verseId: number) => [{ startId: verseId, endId: verseId }]
 
 afterEach(() => {
   uninstallHumilityBook()
+  uninstallEnochBook()
 })
 
 describe('maskInlineCodeSpans', () => {
@@ -365,5 +370,29 @@ describe('scanReferenceMatches relative references', () => {
     expect(matches[1].parsed.invalidTokens.map((token) => token.text)).toEqual([
       'web',
     ])
+  })
+})
+
+// The Book grammar is numeric only and stops at the section table (spec-books
+// §3): a Line letter, the volume's own front matter and a digitization's
+// phantom chapter are all plain text, so none of them indexes an Occurrence.
+describe('scanReferenceMatches on a verse-atom Book', () => {
+  it.each(['{1 Enoch 5:6a}', '{1 Enoch 0}', '{1 Enoch 109}'])(
+    'finds no reference in %s',
+    (text) => {
+      installEnochBook()
+
+      expect(scanReferenceMatches(`Quoting ${text} here.`)).toEqual([])
+    },
+  )
+
+  it('still finds the printed verse the letter locates', () => {
+    installEnochBook()
+    const matches = scanReferenceMatches('{1 Enoch 3:2}')
+
+    expect(matches).toHaveLength(1)
+    expect(matches[0].parsed.reference.ranges).toEqual(
+      single(makeVerseId(103, 3, 2)),
+    )
   })
 })
