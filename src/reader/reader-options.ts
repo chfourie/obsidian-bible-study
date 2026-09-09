@@ -1,3 +1,5 @@
+import { ATOM_NUMBERS_LABEL } from '../data-access'
+import { DEFAULT_BOOK_ATOM_KIND, type BookAtomKind } from '../reference'
 import type { ReaderToggles } from './reader-pane-model'
 
 export type ReaderOptionGroup = {
@@ -44,18 +46,21 @@ const STRONGS_GROUP: ReaderOptionGroup = {
   ],
 }
 
-const PARA_NUMBERS_GROUP: ReaderOptionGroup = {
-  key: 'paraNumbers',
-  label: 'Para numbers',
+// The gutter is never called "para" on a Book that prints verses: the label
+// follows the Book's atom kind (spec-books §5).
+const atomNumbersGroup = (atom: BookAtomKind): ReaderOptionGroup => ({
+  key: 'atomNumbers',
+  label: ATOM_NUMBERS_LABEL[atom],
   options: [
     { value: 'on', label: 'On' },
     { value: 'hover', label: 'Hover' },
   ],
-}
+})
 
 export type ReaderOptionContext = {
   strongsAvailable: boolean
   bookMode: boolean
+  atom?: BookAtomKind
 }
 
 // A book has no verse grid, no words of Christ and no Strong's tags, so those
@@ -63,8 +68,9 @@ export type ReaderOptionContext = {
 export const readerOptionGroups = ({
   strongsAvailable,
   bookMode,
+  atom = DEFAULT_BOOK_ATOM_KIND,
 }: ReaderOptionContext): ReaderOptionGroup[] => {
-  if (bookMode) return [NAV_GROUP, PARA_NUMBERS_GROUP]
+  if (bookMode) return [NAV_GROUP, atomNumbersGroup(atom)]
   return strongsAvailable
     ? [...SCRIPTURE_GROUPS, STRONGS_GROUP]
     : SCRIPTURE_GROUPS

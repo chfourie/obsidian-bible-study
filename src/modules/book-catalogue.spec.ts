@@ -27,7 +27,18 @@ describe('BOOK_CATALOGUE', () => {
         editionCode: '1EN-C1912',
         tag: '1en-c1912-module',
         filename: '1en-c1912-module.json',
+        atom: 'verse',
       },
+    ])
+  })
+
+  // The kind is the Book Registry's (§1); the catalogue is where the plugin
+  // reads it before a Book is installed.
+  it('carries the atom kind of a verse-atom Book, leaving paragraph Books bare', () => {
+    expect(BOOK_CATALOGUE.map((entry) => entry.atom)).toEqual([
+      undefined,
+      undefined,
+      'verse',
     ])
   })
 

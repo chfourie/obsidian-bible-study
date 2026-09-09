@@ -75,7 +75,10 @@ export type ScriptureStudySettings = {
   readerNavDefault: PerDeviceDefault<'tree' | 'breadcrumb'>
   readerLayoutDefault: PerDeviceDefault<'verse-per-line' | 'continuous'>
   readerStrongsDefault: PerDeviceDefault<'off' | 'on'>
-  readerParaNumbersDefault: PerDeviceDefault<'on' | 'hover'>
+  // The atom-numbers option of each installed Book, keyed by module id and
+  // split per device (spec-books §5). A Book with no entry reads the factory
+  // value for its atom kind, so this map holds only what the reader chose.
+  bookAtomNumbers: Record<string, PerDeviceDefault<'on' | 'hover'>>
   readerFontScalePercent: number
   suppliedOpacityPercent: number
   marksOpacityPercent: number
@@ -103,7 +106,7 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   readerNavDefault: perDeviceDefault('tree'),
   readerLayoutDefault: perDeviceDefault('verse-per-line'),
   readerStrongsDefault: perDeviceDefault('off'),
-  readerParaNumbersDefault: perDeviceDefault('hover'),
+  bookAtomNumbers: {},
   readerFontScalePercent: FONT_SCALE_DEFAULT,
   suppliedOpacityPercent: SUPPLIED_OPACITY_DEFAULT,
   marksOpacityPercent: MARKS_OPACITY_DEFAULT,

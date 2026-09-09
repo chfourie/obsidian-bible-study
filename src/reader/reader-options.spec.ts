@@ -54,20 +54,38 @@ describe('readerOptionGroups', () => {
     ).toBe(false)
   })
 
-  it('offers only Nav and Para numbers in book mode', () => {
+  it('offers only Nav and the atom numbers of a paragraph Book', () => {
     const groups = readerOptionGroups({
       strongsAvailable: true,
       bookMode: true,
+      atom: 'paragraph',
     })
 
-    expect(groups.map((group) => group.key)).toEqual(['nav', 'paraNumbers'])
+    expect(groups.map((group) => group.key)).toEqual(['nav', 'atomNumbers'])
     expect(groups[1]).toEqual({
-      key: 'paraNumbers',
+      key: 'atomNumbers',
       label: 'Para numbers',
       options: [
         { value: 'on', label: 'On' },
         { value: 'hover', label: 'Hover' },
       ],
     })
+  })
+
+  // The gutter is never called "para" on a Book that prints verses (§5).
+  it('calls a verse-atom Book’s option Verse numbers', () => {
+    const groups = readerOptionGroups({
+      strongsAvailable: false,
+      bookMode: true,
+      atom: 'verse',
+    })
+
+    expect(groups[1].label).toBe('Verse numbers')
+  })
+
+  it('falls back to the paragraph wording while the Book’s kind is unknown', () => {
+    const groups = readerOptionGroups({ strongsAvailable: false, bookMode: true })
+
+    expect(groups[1].label).toBe('Para numbers')
   })
 })

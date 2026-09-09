@@ -10,6 +10,8 @@ import {
   type TFile,
 } from 'obsidian'
 import {
+  ATOM_NUMBERS_LABEL,
+  atomNumbersOf,
   defaultHighlightPalette,
   defaultHighlightWash,
   FONT_SCALE_MAX,
@@ -25,6 +27,9 @@ import {
   type HighlightSlot,
   type HighlightThemeMode,
   type HighlightWash,
+  withAtomNumbers,
+  type AtomNumbers,
+  type AtomNumbersBook,
   type ReaderDevice,
   type ScriptureStudySettings,
 } from '../data-access'
@@ -65,11 +70,28 @@ type ReaderOptionField =
   | 'readerNavDefault'
   | 'readerLayoutDefault'
   | 'readerStrongsDefault'
-  | 'readerParaNumbersDefault'
 
 type ReaderDefaultControlKey =
   | `${ReaderOptionField}Desktop`
   | `${ReaderOptionField}Mobile`
+
+// One control per Book per device: the Book's atom-numbers option is stored
+// per installed Book × device and written only here (spec-books §5, §7).
+type BookAtomNumbersControlKey = `bookAtomNumbers:${string}:${ReaderDevice}`
+
+const bookAtomNumbersControlKey = (
+  moduleId: string,
+  device: ReaderDevice,
+): BookAtomNumbersControlKey => `bookAtomNumbers:${moduleId}:${device}`
+
+const bookAtomNumbersControl = (
+  key: string,
+): { moduleId: string; device: ReaderDevice } | null => {
+  const match = /^bookAtomNumbers:(.+):(desktop|mobile)$/.exec(key)
+  return match === null
+    ? null
+    : { moduleId: match[1], device: match[2] as ReaderDevice }
+}
 
 type SettingsControlKey =
   | 'defaultTranslationId'
@@ -80,6 +102,7 @@ type SettingsControlKey =
   | 'strongsEnabled'
   | 'lsjEnabled'
   | ReaderDefaultControlKey
+  | BookAtomNumbersControlKey
   | 'suppliedOpacityPercent'
   | 'marksOpacityPercent'
   | 'readerFontScalePercent'
@@ -108,14 +131,6 @@ const READER_DEFAULT_CONTROLS: Record<
   },
   readerStrongsDefaultMobile: {
     field: 'readerStrongsDefault',
-    device: 'mobile',
-  },
-  readerParaNumbersDefaultDesktop: {
-    field: 'readerParaNumbersDefault',
-    device: 'desktop',
-  },
-  readerParaNumbersDefaultMobile: {
-    field: 'readerParaNumbersDefault',
     device: 'mobile',
   },
 }
@@ -226,6 +241,9 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         READER_DEFAULT_CONTROLS[key as ReaderDefaultControlKey]
       return settings[field][device]
     }
+    const atomNumbers = bookAtomNumbersControl(key)
+    if (atomNumbers !== null)
+      return atomNumbersOf(settings, this.#book(atomNumbers.moduleId), atomNumbers.device)
     switch (key as SettingsControlKey) {
       case 'defaultTranslationId':
         return (
@@ -274,6 +292,13 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         ...settings,
         [field]: { ...settings[field], [device]: value },
       }))
+    }
+    const atomNumbers = bookAtomNumbersControl(key)
+    if (atomNumbers !== null) {
+      const book = this.#book(atomNumbers.moduleId)
+      return this.#update((settings) =>
+        withAtomNumbers(settings, book, atomNumbers.device, value as AtomNumbers),
+      )
     }
     switch (key as SettingsControlKey) {
       case 'defaultTranslationId':
@@ -510,12 +535,39 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       type: 'page',
       name: 'Books',
       desc: 'Download and manage book modules.',
-      items: view.bookRows.map((row) => ({
-        name: `${row.title} — ${row.author}`,
-        desc: row.editionCode,
-        render: (setting: Setting) => this.#renderBookRow(setting, row),
-      })),
+      items: view.bookRows.flatMap((row) => [
+        {
+          name: `${row.title} — ${row.author}`,
+          desc: row.editionCode,
+          render: (setting: Setting) => this.#renderBookRow(setting, row),
+        },
+        ...this.#atomNumbersPair(row),
+      ]),
     }
+  }
+
+  // The one place a Book's atom-numbers option is written — the pane never
+  // writes it back — worded and defaulted by the Book's atom kind, with a
+  // slot per device exactly like the reader defaults (spec-books §5, §7).
+  #atomNumbersPair(
+    row: BookRowView,
+  ): SettingDefinitionControl<SettingsControlKey>[] {
+    return (['desktop', 'mobile'] as const).map((device) => ({
+      name: `${ATOM_NUMBERS_LABEL[row.atom]} (${device})`,
+      desc: `${row.title} — ${READER_DEFAULT_DESC}`,
+      control: {
+        type: 'dropdown',
+        key: bookAtomNumbersControlKey(row.id, device),
+        options: { on: 'On', hover: 'On hover' },
+      },
+    }))
+  }
+
+  // A row the tab no longer lists reads its kind's factory value rather than
+  // another Book's choice.
+  #book(moduleId: string): AtomNumbersBook {
+    const row = this.model.view.bookRows.find((entry) => entry.id === moduleId)
+    return { moduleId, atom: row?.atom }
   }
 
   // The Books page holds no control of its own, so — like the Translations
@@ -703,11 +755,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           off: 'Off',
           on: 'On',
         }),
-        ...this.#readerDefaultPair(
-          'Paragraph numbers',
-          'readerParaNumbersDefault',
-          { on: 'On', hover: 'On hover' },
-        ),
         // The two fades of spec-books §10, on the Highlight Wash's range: 0 %
         // would hide, which the paint rule forbids. Supplied-opacity moves
         // scripture's supplied words too, so it lives with the reader, not

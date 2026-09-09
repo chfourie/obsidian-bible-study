@@ -77,6 +77,25 @@ describe('SettingsStore', () => {
     expect(data()).not.toHaveProperty('readerDetailsDefault')
   })
 
+  // The upgrade path of the retired paragraph-numbers global (spec-books §5).
+  it('seeds every installed paragraph Book from the retired paragraph-numbers default, then drops it', async () => {
+    const { store, data } = setup({
+      installedModuleIds: ['hum-m1895', 'in-at-e1', '1en-c1912'],
+      readerParaNumbersDefault: { desktop: 'on', mobile: 'on' },
+    })
+
+    const settings = await store.loadSettings()
+    expect(settings.bookAtomNumbers).toEqual({
+      'hum-m1895': { desktop: 'on', mobile: 'on' },
+      'in-at-e1': { desktop: 'on', mobile: 'on' },
+    })
+    expect('readerParaNumbersDefault' in settings).toBe(false)
+
+    await store.updateSettings((current) => current)
+
+    expect(data()).not.toHaveProperty('readerParaNumbersDefault')
+  })
+
   it('bootstraps a legacy online-only default translation on load', async () => {
     const { store } = setup({
       installedModuleIds: ['web'],

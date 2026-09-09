@@ -1,3 +1,4 @@
+import type { BookAtomKind } from '../reference'
 import type { PrebuiltRelease } from './prebuilt-release-client'
 
 // The compiled-in catalogue of downloadable books (spec-books §7). A remote
@@ -10,6 +11,9 @@ export type BookCatalogueEntry = {
   editionCode: string
   tag: string
   filename: string
+  // The Book's atom kind, as its Book Registry entry declares it (§1);
+  // absent = paragraph, so the catalogue reads like the manifest.
+  atom?: BookAtomKind
 }
 
 export const BOOK_CATALOGUE: readonly BookCatalogueEntry[] = [
@@ -36,6 +40,7 @@ export const BOOK_CATALOGUE: readonly BookCatalogueEntry[] = [
     editionCode: '1EN-C1912',
     tag: '1en-c1912-module',
     filename: '1en-c1912-module.json',
+    atom: 'verse',
   },
 ]
 

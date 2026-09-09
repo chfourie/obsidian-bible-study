@@ -260,6 +260,7 @@
       toggles={view.toggles}
       strongsAvailable={view.strongsAvailable}
       bookMode={view.book !== null}
+      atom={view.book?.atom}
       fontScalePercent={view.fontScalePercent}
       onSetToggle={setToggle}
       onIncreaseFontScale={() => model.increaseFontScale()}
@@ -456,7 +457,7 @@
               {/each}
               <div
                 class="bsr-para"
-                class:bsr-para-numbered={view.toggles.paraNumbers === 'on'}
+                class:bsr-para-numbered={view.toggles.atomNumbers === 'on'}
                 data-verse-id={row.verseId}
                 class:bsr-hl={row.highlighted}
                 class:bsr-sel={verseSelected(row.verseId)}

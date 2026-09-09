@@ -11,7 +11,7 @@ import {
   type CrossReference,
 } from '../cross-references'
 import { readAnnotationDetails } from '../annotations'
-import { PluginFeature } from '../data-access'
+import { atomNumbersOf, PluginFeature } from '../data-access'
 import {
   isBookManifest,
   isTranslationManifest,
@@ -148,6 +148,9 @@ export class ReaderFeature
         author: manifest.book.author,
         year: manifest.book.year,
         editionId: manifest.id,
+        ...(manifest.book.atom === undefined
+          ? {}
+          : { atom: manifest.book.atom }),
         sections: manifest.book.sections.map(({ chapter, name, part }) => ({
           chapter,
           name,
@@ -208,6 +211,14 @@ export class ReaderFeature
           installed: () => this.installedBooks(),
           epigraphs: async (editionId, chapter) =>
             (await this.store.epigraphs(editionId))[chapter] ?? [],
+          // Read on the pane's first visit to a Book; a flip in the pane
+          // never writes back (spec-books §5).
+          atomNumbers: (book) =>
+            atomNumbersOf(
+              this.settings,
+              { moduleId: book.editionId, atom: book.atom },
+              device,
+            ),
         },
         newTab: (target) => void this.#openInNewTab(target),
         firstRun: this.#firstRun,
@@ -218,7 +229,6 @@ export class ReaderFeature
           layout: this.settings.readerLayoutDefault[device],
           strongs: this.settings.readerStrongsDefault[device],
           redLetter: this.settings.derivedRedLetter ? 'on' : 'off',
-          paraNumbers: this.settings.readerParaNumbersDefault[device],
         },
         translationId: this.settings.defaultTranslationId,
         annotationOrdering: this.settings.annotationOrdering,

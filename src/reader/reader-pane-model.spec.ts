@@ -32,7 +32,7 @@ import {
   type ReaderNavTarget,
   type ReaderPaneDeps,
   type ReaderPosition,
-  type ReaderToggles,
+  type SeededToggles,
 } from './reader-pane-model'
 
 type MockTexts = Record<string, Record<number, string>>
@@ -63,12 +63,11 @@ const passageSourceOver = (texts: MockTexts): PassageSource => ({
   },
 })
 
-const DEFAULT_TOGGLES: ReaderToggles = {
+const DEFAULT_TOGGLES: SeededToggles = {
   nav: 'tree',
   layout: 'verse-per-line',
   strongs: 'off',
   redLetter: 'off',
-  paraNumbers: 'hover',
 }
 
 const john15Texts = (): MockTexts => ({
@@ -108,7 +107,7 @@ const fakeClipboard = (): {
 
 const modelWith = (
   overrides: Partial<ReaderPaneDeps> = {},
-  toggles: ReaderToggles = DEFAULT_TOGGLES,
+  toggles: SeededToggles = DEFAULT_TOGGLES,
   translationId: string | null = 'web',
   annotationOrdering?: 'created-oldest-first' | 'path-a-z',
 ): ReaderPaneModel =>
@@ -987,7 +986,6 @@ describe('reader toggles', () => {
       layout: 'continuous',
       strongs: 'on',
       redLetter: 'on',
-      paraNumbers: 'on',
     })
 
     expect(model.view.toggles).toEqual({
@@ -995,7 +993,7 @@ describe('reader toggles', () => {
       layout: 'continuous',
       strongs: 'on',
       redLetter: 'on',
-      paraNumbers: 'on',
+      atomNumbers: 'hover',
     })
   })
 
@@ -1012,7 +1010,7 @@ describe('reader toggles', () => {
       layout: 'continuous',
       strongs: 'off',
       redLetter: 'off',
-      paraNumbers: 'hover',
+      atomNumbers: 'hover',
     })
     expect(notified).toBe(2)
   })
@@ -3716,7 +3714,7 @@ const INERT_BOOKS: ReaderBookSource = {
 
 const bookModelWith = (
   overrides: Partial<ReaderPaneDeps> = {},
-  toggles: ReaderToggles = DEFAULT_TOGGLES,
+  toggles: SeededToggles = DEFAULT_TOGGLES,
 ): ReaderPaneModel =>
   new ReaderPaneModel(
     {
@@ -4019,17 +4017,14 @@ describe('ReaderPaneModel book mode', () => {
     expect(model.view.title).toBe('John 15')
   })
 
-  it('carries the paragraph-number option as an in-pane toggle', async () => {
-    const model = bookModelWith(
-      {},
-      { ...DEFAULT_TOGGLES, paraNumbers: 'hover' },
-    )
+  it('carries the atom-numbers option as an in-pane toggle', async () => {
+    const model = bookModelWith()
     await model.openPosition({ book: HUMILITY, chapter: 1 })
-    expect(model.view.toggles.paraNumbers).toBe('hover')
+    expect(model.view.toggles.atomNumbers).toBe('hover')
 
-    model.setToggle('paraNumbers', 'on')
+    model.setToggle('atomNumbers', 'on')
 
-    expect(model.view.toggles.paraNumbers).toBe('on')
+    expect(model.view.toggles.atomNumbers).toBe('on')
   })
 
   it('lands on the paragraph a book chip points at, highlighted and bannered', async () => {
@@ -4784,6 +4779,7 @@ describe('ReaderPaneModel Editorial marks', () => {
     author: 'Enoch',
     year: 1912,
     editionId: '1en-c1912',
+    atom: 'verse',
     sections: [{ chapter: 1, name: '1' }],
   })
   const enochModel = (epigraphs: Epigraph[] = []) =>
@@ -4846,5 +4842,158 @@ describe('ReaderPaneModel Editorial marks', () => {
       { text: '⌉', redLetter: false, marks: true },
       { text: '.', redLetter: false },
     ])
+  })
+})
+
+// A Book's atom-numbers option is the Book's own, seeded on the pane's first
+// visit to it and flipped only inside the pane (spec-books §5), and a
+// verse-atom section the print left untitled is named by its number alone
+// (spec-books §1).
+describe('ReaderPaneModel verse-atom Book options and section names', () => {
+  const ENOCH_SECTIONS: ReaderBookSection[] = [
+    { chapter: 1, name: '1', part: 'Watchers 1–36' },
+    { chapter: 2, name: 'The Parable of Enoch', part: 'Watchers 1–36' },
+    { chapter: 3, name: '3', part: 'Watchers 1–36' },
+    { chapter: 37, name: '37', part: 'Parables 37–71' },
+  ]
+
+  const enoch = (): ReaderBook => ({
+    number: ENOCH_BOOK,
+    title: '1 Enoch',
+    author: 'Enoch',
+    year: 1912,
+    editionId: '1en-c1912',
+    atom: 'verse',
+    sections: ENOCH_SECTIONS,
+  })
+
+  const enochTexts = (): MockTexts => ({
+    '1en-c1912': {
+      [makeVerseId(ENOCH_BOOK, 1, 1)]: 'The words of the blessing of Enoch.',
+      [makeVerseId(ENOCH_BOOK, 2, 1)]: 'Observe ye everything.',
+      [makeVerseId(ENOCH_BOOK, 3, 1)]: 'Observe ye how the trees.',
+    },
+  })
+
+  const twoBookModel = (books: Partial<ReaderBookSource> = {}) =>
+    bookModelWith({
+      passages: passageSourceOver({ ...humilityTexts(), ...enochTexts() }),
+      books: {
+        installed: async () => [humility(), enoch()],
+        epigraphs: async () => [],
+        ...books,
+      },
+    })
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('seeds each Book from its own kind’s factory value while nothing is stored', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+    expect(model.view.toggles.atomNumbers).toBe('on')
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    expect(model.view.toggles.atomNumbers).toBe('hover')
+  })
+
+  it('seeds a Book’s first visit from that Book’s stored value', async () => {
+    const asked: string[] = []
+    const model = twoBookModel({
+      atomNumbers: (book) => {
+        asked.push(book.editionId)
+        return book.editionId === '1en-c1912' ? 'hover' : 'on'
+      },
+    })
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+    expect(model.view.toggles.atomNumbers).toBe('hover')
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    expect(model.view.toggles.atomNumbers).toBe('on')
+    expect(new Set(asked)).toEqual(new Set(['1en-c1912', 'hum-m1895']))
+  })
+
+  it('keeps an in-pane flip to the Book it was made in', async () => {
+    const model = twoBookModel()
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    model.setToggle('atomNumbers', 'hover')
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+    expect(model.view.toggles.atomNumbers).toBe('hover')
+    model.setToggle('atomNumbers', 'on')
+    expect(model.view.toggles.atomNumbers).toBe('on')
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 2 })
+    expect(model.view.toggles.atomNumbers).toBe('hover')
+  })
+
+  it('leaves the stored value alone — a second pane still seeds from it', async () => {
+    const stored: Record<string, 'on' | 'hover'> = { '1en-c1912': 'on' }
+    const books = {
+      atomNumbers: (book: ReaderBook) => stored[book.editionId] ?? 'hover',
+    }
+    const flipped = twoBookModel(books)
+    await flipped.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+    flipped.setToggle('atomNumbers', 'hover')
+
+    const fresh = twoBookModel(books)
+    await fresh.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    expect(fresh.view.toggles.atomNumbers).toBe('on')
+    expect(stored).toEqual({ '1en-c1912': 'on' })
+  })
+
+  it('titles an untitled verse-atom section by its chapter number alone', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
+
+    expect(model.view.title).toBe('1 Enoch 3')
+    expect(model.view.book?.sectionName).toBe('3')
+  })
+
+  it('titles a verse-atom section the print named by number and name', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 2 })
+
+    expect(model.view.title).toBe('1 Enoch 2 · The Parable of Enoch')
+    expect(model.view.book?.sectionName).toBe('2 · The Parable of Enoch')
+  })
+
+  it('leaves a paragraph Book’s title on its section name', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.title).toBe('Humility — The Glory of the Creature')
+    expect(model.view.book?.sectionName).toBe('The Glory of the Creature')
+  })
+
+  it('lists the tree rows and breadcrumb options under their Part labels', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
+
+    expect(
+      model.view.book?.sectionGroups.map(({ label, sections }) => [
+        label,
+        sections.map((section) => section.name),
+      ]),
+    ).toEqual([
+      ['Watchers 1–36', ['1', '2 · The Parable of Enoch', '3']],
+      ['Parables 37–71', ['37']],
+    ])
+  })
+
+  it('words the options menu after the Book’s atom kind', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    expect(model.view.book?.atom).toBe('verse')
   })
 })

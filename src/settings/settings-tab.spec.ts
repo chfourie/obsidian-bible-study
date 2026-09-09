@@ -201,8 +201,8 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Layout (mobile)',
         "Strong's mode (desktop)",
         "Strong's mode (mobile)",
-        'Paragraph numbers (desktop)',
-        'Paragraph numbers (mobile)',
+        'Verse numbers (desktop)',
+        'Verse numbers (mobile)',
         'Folder',
         'Template file',
         'Display ordering',
@@ -706,24 +706,12 @@ describe('ScriptureStudySettingTab reader defaults', () => {
     ).toBe('tree')
   })
 
-  it('persists the paragraph-number default per device', async () => {
-    const { container, settingsStore } = await setup()
+  // The atom-numbers option is a Book's own, on its settings row (§5).
+  it('carries no paragraph-numbers row — a Book\u2019s atom numbers live on its own row', async () => {
+    const { container } = await setup()
 
-    expect(
-      dropdownOf(settingNamed(container, 'Paragraph numbers (desktop)')).value,
-    ).toBe('hover')
-
-    changeDropdown(
-      settingNamed(container, 'Paragraph numbers (mobile)'),
-      'on',
-    )
-    await flushAsync()
-
-    const settings = await settingsStore.loadSettings()
-    expect(settings.readerParaNumbersDefault).toEqual({
-      desktop: 'hover',
-      mobile: 'on',
-    })
+    expect(hasSettingNamed(container, 'Paragraph numbers')).toBe(false)
+    expect(hasSettingNamed(container, 'Para numbers')).toBe(false)
   })
 
   it('persists a desktop reader default change without touching the mobile slot', async () => {
@@ -1170,6 +1158,24 @@ const bookManifest = (): ModuleManifest => ({
   },
 })
 
+// The Book's own row and its two device rows render as one block, so a
+// Book's atom-numbers row is the one at the given offset after its row.
+const atomNumbersSetting = (
+  container: HTMLElement,
+  book: string,
+  device: 'desktop' | 'mobile',
+): HTMLElement => {
+  const items = settingItems(container)
+  const row = items.indexOf(settingNamed(container, book))
+  return items[row + (device === 'desktop' ? 1 : 2)]
+}
+
+const atomNumbersRow = (
+  container: HTMLElement,
+  book: string,
+  device: 'desktop' | 'mobile',
+): HTMLSelectElement => dropdownOf(atomNumbersSetting(container, book, device))
+
 describe('ScriptureStudySettingTab books section', () => {
   it('lists the book beside its author with the edition code', async () => {
     const { container } = await setup({}, { page: 'Books' })
@@ -1257,6 +1263,44 @@ describe('ScriptureStudySettingTab books section', () => {
     ).toBe('release not published')
   })
 
+  it('words and defaults each Book\u2019s atom-numbers rows after its atom kind', async () => {
+    const { container } = await setup({}, { page: 'Books' })
+
+    const names = settingItems(container).map(settingName)
+    expect(names).toEqual([
+      'Humility — Andrew Murray',
+      'Para numbers (desktop)',
+      'Para numbers (mobile)',
+      'IN — A Team',
+      'Para numbers (desktop)',
+      'Para numbers (mobile)',
+      '1 Enoch — Enoch',
+      'Verse numbers (desktop)',
+      'Verse numbers (mobile)',
+    ])
+    expect(
+      atomNumbersRow(container, '1 Enoch — Enoch', 'desktop').value,
+    ).toBe('on')
+    expect(
+      atomNumbersRow(container, 'Humility — Andrew Murray', 'desktop').value,
+    ).toBe('hover')
+  })
+
+  it('persists one Book\u2019s atom numbers on one device, touching no other', async () => {
+    const { container, settingsStore } = await setup({}, { page: 'Books' })
+
+    changeDropdown(
+      atomNumbersSetting(container, '1 Enoch — Enoch', 'desktop'),
+      'hover',
+    )
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.bookAtomNumbers).toEqual({
+      '1en-c1912': { desktop: 'hover', mobile: 'on' },
+    })
+  })
+
   it('keeps the installed book out of the Translations list and both pickers', async () => {
     const { container } = await setup({
       storedSettings: { installedModuleIds: ['web', 'hum-m1895'] },
@@ -1326,11 +1370,11 @@ describe('ScriptureStudySettingTab supplied and Editorial-mark opacity', () => {
     return slider
   }
 
-  it('renders both sliders in Reader defaults right after Paragraph numbers, on the wash’s range, at 50 % and 30 %', async () => {
+  it('renders both sliders in Reader defaults right after Strong’s mode, on the wash’s range, at 50 % and 30 %', async () => {
     const { container } = await setup()
 
     const names = settingItems(container).map(settingName)
-    expect(names.indexOf('Paragraph numbers (mobile)') + 1).toBe(
+    expect(names.indexOf("Strong's mode (mobile)") + 1).toBe(
       names.indexOf('Supplied words opacity'),
     )
     expect(names.indexOf('Supplied words opacity') + 1).toBe(

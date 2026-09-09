@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Platform, WorkspaceLeaf, type Plugin, type View } from 'obsidian'
-import { DEFAULT_SETTINGS } from '../data-access'
+import {
+  DEFAULT_SETTINGS,
+  type ScriptureStudySettings,
+} from '../data-access'
 import {
   deregisterManifestBook,
   registerManifestBook,
@@ -858,7 +861,6 @@ describe('ReaderFeature entry points', () => {
       readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
       readerLayoutDefault: { desktop: 'continuous', mobile: 'verse-per-line' },
       readerStrongsDefault: { desktop: 'on', mobile: 'off' },
-      readerParaNumbersDefault: { desktop: 'on', mobile: 'hover' },
       derivedRedLetter: true,
     })
     await feature.load()
@@ -872,7 +874,7 @@ describe('ReaderFeature entry points', () => {
       layout: 'continuous',
       strongs: 'on',
       redLetter: 'on',
-      paraNumbers: 'on',
+      atomNumbers: 'hover',
     })
   })
 
@@ -884,7 +886,6 @@ describe('ReaderFeature entry points', () => {
       readerNavDefault: { desktop: 'breadcrumb', mobile: 'tree' },
       readerLayoutDefault: { desktop: 'continuous', mobile: 'verse-per-line' },
       readerStrongsDefault: { desktop: 'on', mobile: 'off' },
-      readerParaNumbersDefault: { desktop: 'on', mobile: 'hover' },
     })
     Platform.isMobile = true
     try {
@@ -899,7 +900,6 @@ describe('ReaderFeature entry points', () => {
           nav: 'tree',
           layout: 'verse-per-line',
           strongs: 'off',
-          paraNumbers: 'hover',
         }),
       )
     } finally {
@@ -1251,5 +1251,108 @@ describe('ReaderFeature book mode', () => {
       book: HUMILITY,
       chapter: 0,
     })
+  })
+})
+
+// Each installed Book's atom-numbers option is stored per Book per device
+// and read only when a pane first visits that Book (spec-books §5).
+describe('ReaderFeature per-Book atom numbers', () => {
+  const enochManifest = (): ModuleManifest => ({
+    ...manifest('1en-c1912'),
+    name: '1 Enoch',
+    kind: 'book',
+    book: {
+      number: 103,
+      editionCode: '1EN-C1912',
+      author: 'Enoch',
+      year: 1912,
+      abbreviation: '1En',
+      atom: 'verse',
+      sections: [{ chapter: 1, name: '1', paragraphs: 2 }],
+    },
+  })
+
+  const twoBookStore = (): ModuleStore =>
+    ({
+      installedManifests: async () => [
+        manifest('web'),
+        humilityManifest(),
+        enochManifest(),
+      ],
+      manifest: async (moduleId: string) =>
+        moduleId === 'hum-m1895'
+          ? humilityManifest()
+          : moduleId === '1en-c1912'
+            ? enochManifest()
+            : manifest('web'),
+      bookContent: async (moduleId: string) =>
+        moduleId === 'hum-m1895'
+          ? { [makeVerseId(HUMILITY, 1, 1)]: 'When God created the universe.' }
+          : moduleId === '1en-c1912'
+            ? { [makeVerseId(103, 1, 1)]: 'The words of the blessing.' }
+            : {},
+      epigraphs: async () => ({}),
+    }) as unknown as ModuleStore
+
+  const openedPane = async (
+    settings: Partial<ScriptureStudySettings> = {},
+  ) => {
+    const { feature, leaves } = harness({}, { store: twoBookStore() })
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      ...settings,
+    })
+    await feature.load()
+    return { feature, leaves }
+  }
+
+  const atomNumbersIn = (leaves: { view: unknown }[]): string =>
+    (leaves[0].view as ReaderView).model.view.toggles.atomNumbers
+
+  it('seeds each Book from its own stored value for this device', async () => {
+    const { feature, leaves } = await openedPane({
+      bookAtomNumbers: {
+        'hum-m1895': { desktop: 'on', mobile: 'hover' },
+        '1en-c1912': { desktop: 'hover', mobile: 'on' },
+      },
+    })
+
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+    expect(atomNumbersIn(leaves)).toBe('on')
+
+    await feature.openBook(103)
+    await flushAsync()
+    expect(atomNumbersIn(leaves)).toBe('hover')
+  })
+
+  it('seeds a Book nothing was stored for from its atom kind’s factory value', async () => {
+    const { feature, leaves } = await openedPane()
+
+    await feature.openBook(103)
+    await flushAsync()
+    expect(atomNumbersIn(leaves)).toBe('on')
+
+    await feature.openBook(HUMILITY)
+    await flushAsync()
+    expect(atomNumbersIn(leaves)).toBe('hover')
+  })
+
+  it('writes nothing and reaches no other pane when flipped in a pane', async () => {
+    const stored = { '1en-c1912': { desktop: 'on', mobile: 'on' } } as const
+    const { feature, leaves } = await openedPane({ bookAtomNumbers: stored })
+    await feature.openBook(103)
+    await flushAsync()
+
+    const flipped = leaves[0].view as ReaderView
+    flipped.model.setToggle('atomNumbers', 'hover')
+
+    await feature.openBook(103, { newTab: true })
+    await flushAsync()
+    const second = leaves[1].view as ReaderView
+    expect(flipped.model.view.toggles.atomNumbers).toBe('hover')
+    expect(second.model.view.toggles.atomNumbers).toBe('on')
+    expect(stored).toEqual({ '1en-c1912': { desktop: 'on', mobile: 'on' } })
   })
 })

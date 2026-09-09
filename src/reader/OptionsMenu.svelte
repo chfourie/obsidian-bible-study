@@ -13,12 +13,14 @@ options can be adjusted in one visit.
     type ReaderToggles,
   } from './reader-pane-model'
   import { readerOptionGroups } from './reader-options'
+  import type { BookAtomKind } from '../reference'
   import { activate, computeMenuPanelPosition } from '../ui'
 
   let {
     toggles,
     strongsAvailable,
     bookMode,
+    atom,
     fontScalePercent,
     onSetToggle,
     onIncreaseFontScale,
@@ -28,6 +30,7 @@ options can be adjusted in one visit.
     toggles: ReaderToggles
     strongsAvailable: boolean
     bookMode: boolean
+    atom: BookAtomKind | undefined
     fontScalePercent: number
     onSetToggle: (key: keyof ReaderToggles, value: string) => void
     onIncreaseFontScale: () => void
@@ -35,7 +38,7 @@ options can be adjusted in one visit.
     onResetFontScale: () => void
   } = $props()
 
-  const groups = $derived(readerOptionGroups({ strongsAvailable, bookMode }))
+  const groups = $derived(readerOptionGroups({ strongsAvailable, bookMode, atom }))
 
   let open = $state(false)
   let triggerEl: HTMLElement | undefined = $state()

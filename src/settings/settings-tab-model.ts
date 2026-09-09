@@ -4,6 +4,7 @@ import {
   type ScriptureStudySettings,
   type SettingsStore,
 } from '../data-access'
+import { bookAtomKind, type BookAtomKind } from '../reference'
 import {
   BOOK_CATALOGUE,
   MODULE_FORMAT_VERSION,
@@ -63,6 +64,8 @@ export type BookRowView = {
   title: string
   author: string
   editionCode: string
+  // The Book's atom kind words and defaults its atom-numbers row (§5, §7).
+  atom: BookAtomKind
   installed: boolean
   busy: 'downloading' | 'removing' | null
   error: string | null
@@ -371,6 +374,7 @@ export class SettingsTabModel {
             title: installed.name,
             author: installed.book.author,
             editionCode: installed.book.editionCode,
+            atom: installed.book.atom,
           },
           installed,
         ),
@@ -381,7 +385,7 @@ export class SettingsTabModel {
   #bookRow(
     entry: Pick<
       BookCatalogueEntry,
-      'moduleId' | 'title' | 'author' | 'editionCode'
+      'moduleId' | 'title' | 'author' | 'editionCode' | 'atom'
     >,
     installed: BookManifest | undefined,
   ): BookRowView {
@@ -390,6 +394,7 @@ export class SettingsTabModel {
       title: entry.title,
       author: entry.author,
       editionCode: entry.editionCode,
+      atom: bookAtomKind(installed?.book ?? entry),
       installed: installed !== undefined,
       busy: this.#busy.get(entry.moduleId) ?? null,
       error: this.#errors.get(entry.moduleId) ?? null,

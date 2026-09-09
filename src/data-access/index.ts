@@ -1,3 +1,4 @@
+export * from './atom-numbers'
 export * from './scripture-study-settings.type'
 export * from './bootstrap-translations'
 export * from './migrate-reader-defaults'

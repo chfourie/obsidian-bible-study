@@ -1,6 +1,8 @@
 import {
   BOOK_COUNT,
+  bookAtomKind,
   bookCitation,
+  DEFAULT_BOOK_ATOM_KIND,
   bookName,
   chapterCount,
   decodeVerseId,
@@ -11,6 +13,7 @@ import {
   rangeContains,
   referenceLabel,
   verseCount,
+  type BookAtomKind,
   type Reference,
   type VerseRange,
 } from '../reference'
@@ -52,11 +55,13 @@ import type {
   WordCloudView,
 } from '../contracts'
 import {
+  ATOM_NUMBERS_FACTORY,
   FONT_SCALE_DEFAULT,
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
   FONT_SCALE_STEP,
   type AnnotationOrdering,
+  type AtomNumbers,
 } from '../data-access'
 import {
   isPoetryVerse,
@@ -76,13 +81,18 @@ export type ReaderToggles = {
   layout: 'verse-per-line' | 'continuous'
   strongs: 'off' | 'on'
   redLetter: 'off' | 'on'
-  // Book mode only: whether the margin-gutter paragraph numbers stay on or
-  // surface on hover (spec-books §5).
-  paraNumbers: 'on' | 'hover'
+  // Book mode only: whether the margin-gutter atom numbers stay on or
+  // surface on hover (spec-books §5). Unlike the others it is not a pane
+  // value but the current Book's, so a pane seeds and flips it per Book.
+  atomNumbers: AtomNumbers
 }
+
+export type SeededToggles = Omit<ReaderToggles, 'atomNumbers'>
 
 export type ReaderBookSection = {
   chapter: number
+  // The section's own name; a verse-atom section the print left untitled is
+  // named by its chapter number (spec-books §1).
   name: string
   // The Part this section sits under, for books printed in Parts.
   part?: string
@@ -96,12 +106,17 @@ export type ReaderBook = {
   author: string
   year: number
   editionId: string
+  // Absent = paragraph, exactly as the manifest carries it (spec-books §1).
+  atom?: BookAtomKind
   sections: ReaderBookSection[]
 }
 
 export type ReaderBookSource = {
   installed: () => Promise<ReaderBook[]>
   epigraphs: (editionId: string, chapter: number) => Promise<Epigraph[]>
+  // The Book's stored atom-numbers value for this device, read on a pane's
+  // first visit to it. Absent = the factory value for the Book's atom kind.
+  atomNumbers?: (book: ReaderBook) => AtomNumbers
 }
 
 const NO_BOOKS: ReaderBookSource = {
@@ -175,7 +190,7 @@ export type ReaderPaneDeps = {
 }
 
 export type ReaderPaneConfig = {
-  toggles: ReaderToggles
+  toggles: SeededToggles
   translationId: string | null
   annotationOrdering?: AnnotationOrdering
   fontScalePercent?: number
@@ -278,6 +293,21 @@ export type BookSectionGroup = {
   sections: BookSectionOption[]
 }
 
+// What a verse-atom section is called wherever it is named — tree row,
+// breadcrumb option, Title Bar: the printed chapter number alone where the
+// print titled none, the number and the title where it did (spec-books §1).
+// A paragraph Book's section is its name, as it always was.
+export const sectionLabel = (
+  book: Pick<ReaderBook, 'atom'>,
+  section: Pick<ReaderBookSection, 'chapter' | 'name'>,
+): string => {
+  if (bookAtomKind(book) !== 'verse') return section.name
+  const chapter = String(section.chapter)
+  return section.name === chapter
+    ? chapter
+    : `${chapter} · ${section.name}`
+}
+
 export const sectionGroups = (
   sections: BookSectionOption[],
 ): BookSectionGroup[] => {
@@ -306,6 +336,8 @@ export type EpigraphView = {
 // switcher, and the section carries its heading and epigraphs.
 export type BookModeView = {
   title: string
+  // Words and defaults the pane's atom-numbers option (spec-books §5).
+  atom: BookAtomKind
   author: string
   edition: string
   sectionName: string
@@ -383,7 +415,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #rows: VerseRowView[] = []
   #status: ReaderPaneView['status'] = 'loading'
   #available: ReaderTranslation[] = []
-  #toggles: ReaderToggles
+  #toggles: SeededToggles
+  // An in-pane atom-numbers flip is ephemeral and scoped to the Book it was
+  // made in: it reaches no other Book, no other pane, and never the stored
+  // value (spec-books §5).
+  readonly #atomNumbersByBook = new Map<number, AtomNumbers>()
   #selectedVerseId: number | null = null
   #selectionEnd: number | null = null
   // The loaded details of the current selection, or null while nothing is
@@ -509,8 +545,38 @@ export class ReaderPaneModel implements StudyMaterialSource {
     toggle: Key,
     value: ReaderToggles[Key],
   ): void {
+    if (toggle === 'atomNumbers') {
+      this.#setAtomNumbers(value as AtomNumbers)
+      return
+    }
     if (toggle === 'redLetter') this.#redLetterOverridden = true
-    this.#applyToggle(toggle, value)
+    this.#applyToggle(toggle, value as SeededToggles[keyof SeededToggles])
+  }
+
+  #setAtomNumbers(value: AtomNumbers): void {
+    const book = this.#bookHere()
+    if (book === null) return
+    this.#atomNumbersByBook.set(book.number, value)
+    this.#notify()
+  }
+
+  // The pane's first visit to a Book reads the Book's own stored value; from
+  // there the pane holds whatever it was flipped to, per Book.
+  #atomNumbersHere(): AtomNumbers {
+    const book = this.#bookHere()
+    // Scripture's verse numbers are always on and have no option of their
+    // own, so the value only ever reaches a Book's gutter.
+    if (book === null) return ATOM_NUMBERS_FACTORY[DEFAULT_BOOK_ATOM_KIND]
+    return (
+      this.#atomNumbersByBook.get(book.number) ?? this.#storedAtomNumbers(book)
+    )
+  }
+
+  #storedAtomNumbers(book: ReaderBook): AtomNumbers {
+    return (
+      this.deps.books?.atomNumbers?.(book) ??
+      ATOM_NUMBERS_FACTORY[bookAtomKind(book)]
+    )
   }
 
   // An overridden pane keeps the user's red-letter choice; untouched panes
@@ -524,9 +590,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
     return this.#redLetterOverridden
   }
 
-  #applyToggle<Key extends keyof ReaderToggles>(
+  #applyToggle<Key extends keyof SeededToggles>(
     toggle: Key,
-    value: ReaderToggles[Key],
+    value: SeededToggles[Key],
   ): void {
     const changed = this.#toggles[toggle] !== value
     this.#toggles = { ...this.#toggles, [toggle]: value }
@@ -593,7 +659,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
               name: translation.name,
               active: translation.id === this.#translationId,
             })),
-      toggles: this.#toggles,
+      toggles: { ...this.#toggles, atomNumbers: this.#atomNumbersHere() },
       treeBook: this.#browsedBook ?? this.#position.book,
       fontScalePercent: this.#fontScalePercent,
       hasPreviousChapter: this.#hasPreviousChapter(),
@@ -642,15 +708,17 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #bookView(book: ReaderBook): BookModeView {
     const sections = book.sections.map((section) => ({
       chapter: section.chapter,
-      name: section.name,
+      name: sectionLabel(book, section),
       current: section.chapter === this.#position.chapter,
       ...(section.part === undefined ? {} : { part: section.part }),
     }))
+    const section = this.#sectionOf(book)
     return {
       title: book.title,
+      atom: bookAtomKind(book),
       author: book.author,
       edition: `${book.title} ${book.year}`,
-      sectionName: this.#sectionOf(book)?.name ?? '',
+      sectionName: section === null ? '' : sectionLabel(book, section),
       sections,
       sectionGroups: sectionGroups(sections),
       epigraphs: this.#epigraphs.map(epigraphView),
@@ -695,7 +763,10 @@ export class ReaderPaneModel implements StudyMaterialSource {
     if (book === null)
       return `${bookName(this.#position.book)} ${this.#position.chapter}`
     const section = this.#sectionOf(book)
-    return section === null ? book.title : `${book.title} — ${section.name}`
+    if (section === null) return book.title
+    return bookAtomKind(book) === 'verse'
+      ? `${book.title} ${sectionLabel(book, section)}`
+      : `${book.title} — ${section.name}`
   }
 
   useNavigation(navigate: ReaderNavigation): void {
