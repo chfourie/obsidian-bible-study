@@ -343,19 +343,42 @@
       <div class="bsr-tree">
         <div class="bsr-toc-title">{view.book.title}</div>
         <div class="bsr-toc-author">{view.book.author}</div>
-        {#each view.book.sectionGroups as group, index (index)}
-          {#if group.label !== null}
-            <div class="bsr-toc-part">{group.label}</div>
-          {/if}
-          {#each group.sections as section (section.chapter)}
+        {#if view.book.parts !== null}
+          {#each view.book.parts as part (part.label)}
             <button
               type="button"
-              class="bsr-toc-item"
-              class:bsr-on={section.current}
-              onclick={(event) => void model.goTo(view.position.book, section.chapter, navIntent(event))}
-            >{section.name}</button>
+              class="bsr-tree-book"
+              class:bsr-on={part.current}
+              onclick={() => model.browsePart(part.label)}
+            >{part.expanded ? '▾' : '▸'} {part.label}</button>
+            {#if part.expanded}
+              <div class="bsr-tree-chapters">
+                {#each part.sections as section (section.chapter)}
+                  <button
+                    type="button"
+                    class="bsr-tree-chapter"
+                    class:bsr-on={section.current}
+                    onclick={(event) => void model.goTo(view.position.book, section.chapter, navIntent(event))}
+                  >{section.chapter}</button>
+                {/each}
+              </div>
+            {/if}
           {/each}
-        {/each}
+        {:else}
+          {#each view.book.sectionGroups as group, index (index)}
+            {#if group.label !== null}
+              <div class="bsr-toc-part">{group.label}</div>
+            {/if}
+            {#each group.sections as section (section.chapter)}
+              <button
+                type="button"
+                class="bsr-toc-item"
+                class:bsr-on={section.current}
+                onclick={(event) => void model.goTo(view.position.book, section.chapter, navIntent(event))}
+              >{section.name}</button>
+            {/each}
+          {/each}
+        {/if}
       </div>
     {:else if view.toggles.nav === 'tree'}
       <div class="bsr-tree">
@@ -393,7 +416,7 @@
           disabled={!view.hasPreviousChapter}
           onclick={() => void model.previousChapter()}
         >‹</button>
-        <h1 class="bsr-title">{view.book !== null ? view.book.sectionName : view.title}</h1>
+        <h1 class="bsr-title">{view.book !== null ? view.book.sectionHeading : view.title}</h1>
         <button
           type="button"
           class="bsr-chapter-step"
@@ -406,8 +429,10 @@
         <div class="bsr-inner" class:bsr-book={view.book !== null}>
           {#if view.book !== null}
             <div class="bsr-book-head">
-              <div class="bsr-book-name">{view.book.title}</div>
-              <h1 class="bsr-book-title">{view.book.sectionName}</h1>
+              {#if view.book.headBook !== null}
+                <div class="bsr-book-name">{view.book.headBook}</div>
+              {/if}
+              <h1 class="bsr-book-title">{view.book.sectionHeading}</h1>
             </div>
             {#each view.book.epigraphs as epigraph, index (index)}
               <div class="bsr-epigraph">

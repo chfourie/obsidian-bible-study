@@ -5016,6 +5016,94 @@ describe('ReaderPaneModel verse-atom Book options and section names', () => {
 
     expect(model.view.book?.atom).toBe('verse')
   })
+
+  const partView = (model: ReaderPaneModel) =>
+    (model.view.book?.parts ?? []).map((part) => [
+      part.label,
+      part.expanded,
+      part.current,
+      part.sections.map((section) => section.chapter),
+    ])
+
+  it('stands each Part of a verse-atom Book up as its own chapter grid', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
+
+    expect(partView(model)).toEqual([
+      ['Watchers 1–36', true, true, [1, 2, 3]],
+      ['Parables 37–71', false, false, [37]],
+    ])
+  })
+
+  it('expands the Part the reader browses instead of the one it is in', async () => {
+    const model = twoBookModel()
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
+
+    model.browsePart('Parables 37–71')
+
+    expect(partView(model)).toEqual([
+      ['Watchers 1–36', false, true, [1, 2, 3]],
+      ['Parables 37–71', true, false, [37]],
+    ])
+  })
+
+  it('follows the reader back the moment it moves into another Part', async () => {
+    const model = twoBookModel()
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
+    model.browsePart('Parables 37–71')
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 37 })
+
+    expect(partView(model)).toEqual([
+      ['Watchers 1–36', false, false, [1, 2, 3]],
+      ['Parables 37–71', true, true, [37]],
+    ])
+  })
+
+  it('gives a verse-atom Book printed without Parts one heading of its own name', async () => {
+    const model = bookModelWith({
+      passages: passageSourceOver(enochTexts()),
+      books: {
+        installed: async () => [
+          { ...enoch(), sections: ENOCH_SECTIONS.map(({ part: _part, ...section }) => section) },
+        ],
+        epigraphs: async () => [],
+      },
+    })
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    expect(partView(model)).toEqual([['1 Enoch', true, true, [1, 2, 3, 37]]])
+  })
+
+  it('leaves a paragraph Book its flat section list and no chapter grid', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.book?.parts).toBeNull()
+  })
+
+  it('names the Book in a verse-atom section’s heading', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 3 })
+    expect(model.view.book?.sectionHeading).toBe('1 Enoch 3')
+    expect(model.view.book?.headBook).toBeNull()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 2 })
+    expect(model.view.book?.sectionHeading).toBe('1 Enoch 2 · The Parable of Enoch')
+  })
+
+  it('leaves a paragraph Book’s heading its section name under the Book’s name', async () => {
+    const model = twoBookModel()
+
+    await model.openPosition({ book: HUMILITY, chapter: 1 })
+
+    expect(model.view.book?.sectionHeading).toBe('The Glory of the Creature')
+    expect(model.view.book?.headBook).toBe('Humility')
+  })
 })
 
 describe('ReaderPaneModel page walk of a verse-atom Book', () => {
