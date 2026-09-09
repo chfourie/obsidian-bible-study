@@ -32,6 +32,14 @@ export const defaultHighlightWash = (): HighlightWash => ({
   dark: 26,
 })
 
+// Supplied words fade in scripture and Books alike; Editorial-mark glyphs
+// fade on their own value, so a critical Book's brackets can be dimmed
+// without touching BSB's supplied words (spec-books §10). Both are
+// percentages on the Highlight Wash's range — 0 would hide, which the paint
+// rule forbids.
+export const SUPPLIED_OPACITY_DEFAULT = 50
+export const MARKS_OPACITY_DEFAULT = 30
+
 const SHIPPED_HIGHLIGHT_HUES = [
   '#ffd652',
   '#7ed98a',
@@ -69,6 +77,8 @@ export type ScriptureStudySettings = {
   readerStrongsDefault: PerDeviceDefault<'off' | 'on'>
   readerParaNumbersDefault: PerDeviceDefault<'on' | 'hover'>
   readerFontScalePercent: number
+  suppliedOpacityPercent: number
+  marksOpacityPercent: number
   // Not a default but a memory: the scope the Search Pane was last left in on
   // this device, restored whole on the next start.
   searchScope: PerDeviceDefault<StoredSearchScope>
@@ -95,6 +105,8 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   readerStrongsDefault: perDeviceDefault('off'),
   readerParaNumbersDefault: perDeviceDefault('hover'),
   readerFontScalePercent: FONT_SCALE_DEFAULT,
+  suppliedOpacityPercent: SUPPLIED_OPACITY_DEFAULT,
+  marksOpacityPercent: MARKS_OPACITY_DEFAULT,
   searchScope: {
     desktop: defaultStoredSearchScope(),
     mobile: defaultStoredSearchScope(),

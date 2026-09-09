@@ -122,6 +122,41 @@ describe('SettingsFeature', () => {
     expect(paletteVariable('--ss-hl-dark-1')).toContain('0.26)')
   })
 
+  it('emits the factory supplied and mark opacities on load — BSB’s supplied words dim to 50 %', async () => {
+    const { feature } = setup()
+    feature.useSettings(DEFAULT_SETTINGS)
+
+    await feature.load()
+
+    expect(paletteVariable('--ss-supplied-opacity')).toBe('0.5')
+    expect(paletteVariable('--ss-marks-opacity')).toBe('0.3')
+  })
+
+  it('re-emits the opacities when either changes, each on its own', async () => {
+    const { feature } = setup()
+    await feature.load()
+
+    feature.useSettings({ ...DEFAULT_SETTINGS, suppliedOpacityPercent: 100 })
+    feature.onSettingsChanged()
+    expect(paletteVariable('--ss-supplied-opacity')).toBe('1')
+    expect(paletteVariable('--ss-marks-opacity')).toBe('0.3')
+
+    feature.useSettings({ ...DEFAULT_SETTINGS, marksOpacityPercent: 60 })
+    feature.onSettingsChanged()
+    expect(paletteVariable('--ss-supplied-opacity')).toBe('0.5')
+    expect(paletteVariable('--ss-marks-opacity')).toBe('0.6')
+  })
+
+  it('removes the opacity variables on unload', async () => {
+    const { feature } = setup()
+    await feature.load()
+
+    feature.unload()
+
+    expect(paletteVariable('--ss-supplied-opacity')).toBe('')
+    expect(paletteVariable('--ss-marks-opacity')).toBe('')
+  })
+
   it('removes the emitted variables on unload', async () => {
     const { feature } = setup()
     await feature.load()

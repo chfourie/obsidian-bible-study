@@ -41,7 +41,10 @@ export const resolveHighlightPalette = (stored: unknown): HighlightPalette => {
   }
 }
 
-const resolvePercentage = (value: unknown, fallback: number): number =>
+// A stored percentage on the Highlight Wash's range, or the fallback when it
+// is not one — the validation the wash and the two Editorial-mark opacities
+// share (spec-books §10).
+export const resolveWashPercentage = (value: unknown, fallback: number): number =>
   typeof value === 'number' &&
   Number.isInteger(value) &&
   value >= HIGHLIGHT_WASH_MIN &&
@@ -53,8 +56,8 @@ export const resolveHighlightWash = (stored: unknown): HighlightWash => {
   const wash = (stored ?? {}) as Partial<Record<HighlightThemeMode, unknown>>
   const defaults = defaultHighlightWash()
   return {
-    light: resolvePercentage(wash.light, defaults.light),
-    dark: resolvePercentage(wash.dark, defaults.dark),
+    light: resolveWashPercentage(wash.light, defaults.light),
+    dark: resolveWashPercentage(wash.dark, defaults.dark),
   }
 }
 

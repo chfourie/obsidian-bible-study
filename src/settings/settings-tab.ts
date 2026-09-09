@@ -30,6 +30,10 @@ import {
 } from '../data-access'
 import { LSJ_ATTRIBUTION, STRONGS_ATTRIBUTION } from '../strongs'
 import {
+  resolveMarksOpacity,
+  resolveSuppliedOpacity,
+} from './editorial-marks-style'
+import {
   resolveHighlightPalette,
   resolveHighlightWash,
 } from './highlight-palette'
@@ -76,6 +80,8 @@ type SettingsControlKey =
   | 'strongsEnabled'
   | 'lsjEnabled'
   | ReaderDefaultControlKey
+  | 'suppliedOpacityPercent'
+  | 'marksOpacityPercent'
   | 'readerFontScalePercent'
   | 'annotationsFolder'
   | 'annotationTemplatePath'
@@ -243,6 +249,10 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return view.strongsInstalled
       case 'lsjEnabled':
         return view.lsjInstalled
+      case 'suppliedOpacityPercent':
+        return resolveSuppliedOpacity(settings.suppliedOpacityPercent)
+      case 'marksOpacityPercent':
+        return resolveMarksOpacity(settings.marksOpacityPercent)
       case 'readerFontScalePercent':
         return settings.readerFontScalePercent
       case 'annotationsFolder':
@@ -292,6 +302,16 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return this.model.setStrongsEnabled(value === true)
       case 'lsjEnabled':
         return this.model.setLsjEnabled(value === true)
+      case 'suppliedOpacityPercent':
+        return this.#update((settings) => ({
+          ...settings,
+          suppliedOpacityPercent: value as number,
+        }))
+      case 'marksOpacityPercent':
+        return this.#update((settings) => ({
+          ...settings,
+          marksOpacityPercent: value as number,
+        }))
       case 'readerFontScalePercent':
         return this.#update((settings) => ({
           ...settings,
@@ -688,6 +708,21 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           'readerParaNumbersDefault',
           { on: 'On', hover: 'On hover' },
         ),
+        // The two fades of spec-books §10, on the Highlight Wash's range: 0 %
+        // would hide, which the paint rule forbids. Supplied-opacity moves
+        // scripture's supplied words too, so it lives with the reader, not
+        // with Books; marks-opacity is a fade of its own, so Charles's
+        // brackets can dim without touching BSB. No reset row.
+        this.#opacitySlider(
+          'Supplied words opacity',
+          'Words an editor or translator supplied, shown in italics — in scripture and Books alike.',
+          'suppliedOpacityPercent',
+        ),
+        this.#opacitySlider(
+          'Editorial marks opacity',
+          'The critical marks a Book edition prints — brackets, daggers, lacuna points.',
+          'marksOpacityPercent',
+        ),
         {
           name: 'Text size',
           desc: READER_DEFAULT_DESC + ' Relative to the app font size.',
@@ -701,6 +736,25 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           },
         },
       ],
+    }
+  }
+
+  #opacitySlider(
+    name: string,
+    desc: string,
+    key: 'suppliedOpacityPercent' | 'marksOpacityPercent',
+  ): SettingDefinitionControl<SettingsControlKey> {
+    return {
+      name,
+      desc,
+      control: {
+        type: 'slider',
+        key,
+        min: HIGHLIGHT_WASH_MIN,
+        max: HIGHLIGHT_WASH_MAX,
+        step: HIGHLIGHT_WASH_STEP,
+        displayFormat: (value: number) => `${value}%`,
+      },
     }
   }
 

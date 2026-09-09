@@ -180,4 +180,14 @@ describe('SettingsStore', () => {
 
     expect(updated.installedModuleIds).toEqual(['web', 'bsb'])
   })
+
+  it('seeds the supplied and mark opacities at 50 % and 30 % for an install that never stored them', async () => {
+    const { store } = setup({ installedModuleIds: ['bsb'], readerFontScalePercent: 120 })
+
+    const settings = await store.loadSettings()
+
+    expect(settings.suppliedOpacityPercent).toBe(50)
+    expect(settings.marksOpacityPercent).toBe(30)
+    expect(settings.readerFontScalePercent).toBe(120)
+  })
 })

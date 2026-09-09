@@ -1318,3 +1318,74 @@ describe('ScriptureStudySettingTab LSJ section', () => {
     ).toBe('network gone')
   })
 })
+
+describe('ScriptureStudySettingTab supplied and Editorial-mark opacity', () => {
+  const sliderOf = (setting: HTMLElement): HTMLInputElement => {
+    const slider = setting.querySelector('input[type="range"]')
+    if (!(slider instanceof HTMLInputElement)) throw new Error('no slider')
+    return slider
+  }
+
+  it('renders both sliders in Reader defaults right after Paragraph numbers, on the wash’s range, at 50 % and 30 %', async () => {
+    const { container } = await setup()
+
+    const names = settingItems(container).map(settingName)
+    expect(names.indexOf('Paragraph numbers (mobile)') + 1).toBe(
+      names.indexOf('Supplied words opacity'),
+    )
+    expect(names.indexOf('Supplied words opacity') + 1).toBe(
+      names.indexOf('Editorial marks opacity'),
+    )
+    expect(names.indexOf('Editorial marks opacity')).toBeLessThan(names.indexOf('Text size'))
+    expect(names.filter((name) => /^Reset/.test(name))).toEqual(['Reset highlights'])
+
+    const supplied = sliderOf(settingNamed(container, 'Supplied words opacity'))
+    const marks = sliderOf(settingNamed(container, 'Editorial marks opacity'))
+    expect([supplied.min, supplied.max, supplied.step]).toEqual(['5', '100', '1'])
+    expect([marks.min, marks.max, marks.step]).toEqual(['5', '100', '1'])
+    expect(supplied.value).toBe('50')
+    expect(marks.value).toBe('30')
+  })
+
+  it('persists the supplied opacity when its slider settles, and the marks slider leaves it untouched', async () => {
+    const { container, settingsStore } = await setup()
+
+    const supplied = sliderOf(settingNamed(container, 'Supplied words opacity'))
+    supplied.value = '100'
+    supplied.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    let settings = await settingsStore.loadSettings()
+    expect(settings.suppliedOpacityPercent).toBe(100)
+    expect(settings.marksOpacityPercent).toBe(30)
+
+    const marks = sliderOf(settingNamed(container, 'Editorial marks opacity'))
+    marks.value = '5'
+    marks.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    settings = await settingsStore.loadSettings()
+    expect(settings.suppliedOpacityPercent).toBe(100)
+    expect(settings.marksOpacityPercent).toBe(5)
+  })
+
+  it('writes nothing while a slider is still being dragged', async () => {
+    const { container, settingsStore } = await setup()
+
+    const marks = sliderOf(settingNamed(container, 'Editorial marks opacity'))
+    marks.value = '60'
+    marks.dispatchEvent(new Event('input'))
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).marksOpacityPercent).toBe(30)
+  })
+
+  it('shows the factory value for a stored value off the range', async () => {
+    const { container } = await setup({
+      storedSettings: { suppliedOpacityPercent: 0, marksOpacityPercent: 250 },
+    })
+
+    expect(sliderOf(settingNamed(container, 'Supplied words opacity')).value).toBe('50')
+    expect(sliderOf(settingNamed(container, 'Editorial marks opacity')).value).toBe('30')
+  })
+})

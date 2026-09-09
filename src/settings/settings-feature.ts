@@ -3,6 +3,10 @@ import { PluginFeature, type SettingsStore } from '../data-access'
 import type { ModulesFeature } from '../modules'
 import type { LsjLexicon, StrongsDictionaries } from '../strongs'
 import {
+  applyEditorialMarksVariables,
+  removeEditorialMarksVariables,
+} from './editorial-marks-style'
+import {
   applyHighlightPaletteVariables,
   removeHighlightPaletteVariables,
 } from './highlight-palette-style'
@@ -41,22 +45,24 @@ export class SettingsFeature extends PluginFeature {
 
   override async load(): Promise<void> {
     this.plugin.addSettingTab(new ScriptureStudySettingTab(this.plugin, this.model))
-    this.#emitHighlightPalette()
+    this.#emitStyleVariables()
   }
 
   override onSettingsChanged(): void {
-    this.#emitHighlightPalette()
+    this.#emitStyleVariables()
   }
 
   override unload(): void {
     removeHighlightPaletteVariables(document.body)
+    removeEditorialMarksVariables(document.body)
   }
 
-  #emitHighlightPalette(): void {
+  #emitStyleVariables(): void {
     applyHighlightPaletteVariables(
       document.body,
       this.settings.highlightPalette,
       this.settings.highlightWash,
     )
+    applyEditorialMarksVariables(document.body, this.settings)
   }
 }
