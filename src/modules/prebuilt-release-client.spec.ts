@@ -89,6 +89,17 @@ describe('release URLs', () => {
       'https://github.com/chfourie/obsidian-bible-study/releases/download/hum-m1895-module/checksums.json',
     )
   })
+
+  it('addresses 1 Enoch’s first release at the tag that freezes its grid', () => {
+    const entry = BOOK_CATALOGUE.find((book) => book.moduleId === '1en-c1912')
+    if (entry === undefined) throw new Error('1 Enoch is not catalogued')
+    expect(releaseArtifactUrl(bookRelease(entry))).toBe(
+      'https://github.com/chfourie/obsidian-bible-study/releases/download/1en-c1912-module/1en-c1912-module.json',
+    )
+    expect(releaseChecksumsUrl(bookRelease(entry))).toBe(
+      'https://github.com/chfourie/obsidian-bible-study/releases/download/1en-c1912-module/checksums.json',
+    )
+  })
 })
 
 describe('PrebuiltReleaseClient fetchModule', () => {

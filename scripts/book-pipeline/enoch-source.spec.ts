@@ -11,11 +11,17 @@ import {
   releaseArtifactUrl,
 } from '../../src/modules/prebuilt-release-client'
 import { parseReference } from '../../src/reference/parse-reference'
+import { ModulePassageSource } from '../../src/rendering/module-passage-source'
 import { makeVerseId } from '../../src/reference/verse-id'
 import { buildSearchIndex, searchIndex } from '../../src/search/search-index'
 import { parseSearchQuery } from '../../src/search/search-query'
 import { bookAtoms } from '../../src/search/search-scan'
-import { buildBookArtifact, sha256Hex } from './build-book-artifact'
+import {
+  buildBookArtifact,
+  curationWaivers,
+  notesToCurate,
+  sha256Hex,
+} from './build-book-artifact'
 import { parseBookRegistry } from './book-registry'
 import { parseRefOverrides } from './ref-overrides'
 
@@ -193,9 +199,29 @@ describe('1 Enoch, Charles 1912', () => {
     ])
   })
 
-  it('ships no Footnote yet — every note is #146’s to transcribe', () => {
-    for (const atom of Object.values(artifact.books[103]))
-      expect(atom).not.toHaveProperty('footnotes')
+  it('carries Charles’s note on every marked atom it does not waive — 1:9 lists its notes, 1:6 none', () => {
+    const notes = verse(1, 9).footnotes?.map((note) => note.text)
+    expect(notes).toHaveLength(4)
+    expect(notes?.[0]).toMatch(/^Cometh with ten thousands of ⌈His⌉ holy ones\./)
+    expect(verse(1, 6)).not.toHaveProperty('footnotes')
+    expect(verse(1, 6)).not.toHaveProperty('marks')
+    for (const note of Object.values(artifact.books[103]).flatMap((atom) => atom.footnotes ?? [])) {
+      expect(note.text).not.toMatch(/[<\]]/)
+      expect(note.text).toBeTruthy()
+    }
+  })
+
+  it('freezes the curated Footnote subset: 297 notes on 257 atoms, 20 conscious waivers, nothing left to curate', () => {
+    const noted = Object.values(artifact.books[103]).filter((atom) => atom.footnotes !== undefined)
+    expect(noted).toHaveLength(257)
+    expect(noted.reduce((count, atom) => count + (atom.footnotes?.length ?? 0), 0)).toBe(297)
+    const waived = curationWaivers(source)
+    expect(waived).toEqual([
+      '2:1', '2:3', '5:3', '5:5', '10:13', '14:25', '15:6', '15:12', '60:24', '69:12',
+      '69:16', '69:25', '71:3', '72:6', '73:7', '76:12', '89:25', '91:19', '99:3', '103:10',
+    ])
+    expect(notesToCurate(artifact, waived)).toEqual([])
+    expect(notesToCurate(artifact)).toHaveLength(20)
   })
 
   it('grows no channel on an unmarked verse', () => {
@@ -411,6 +437,26 @@ describe('the built 1 Enoch artifact through the plugin’s own install path', (
   ])('resolves %s once the module is registered', async (text, startId, endId) => {
     registerManifestBook((await install).module.manifest)
     expect(parseReference(text)?.reference.ranges).toEqual([{ startId, endId }])
+  })
+
+  it('lists 1:9’s notes and none for 1:6 through the segmenter the reader reads', async () => {
+    const { module } = await install
+    registerManifestBook(module.manifest)
+    const passages = new ModulePassageSource({
+      manifest: async () => module.manifest,
+      bookContent: async (moduleId, book) =>
+        moduleId === '1en-c1912' ? (module.books.get(book) ?? null) : null,
+    })
+    const reference = (text: string) => {
+      const parsed = parseReference(text)
+      if (parsed === null) throw new Error(`unparsed ${text}`)
+      return parsed.reference
+    }
+    const noted = await passages.passage(reference('1 Enoch 1:9'), '1en-c1912')
+    expect(noted.status === 'ok' && noted.verses[0].footnotes?.length).toBe(4)
+    expect(noted.status === 'ok' && noted.verses[0].segments.map((segment) => segment.text).join('')).not.toContain('Jude')
+    const bare = await passages.passage(reference('1 Enoch 1:6'), '1en-c1912')
+    expect(bare.status === 'ok' && bare.verses[0].footnotes).toBeUndefined()
   })
 
   it.each(['1 Enoch 0', '1 Enoch 109', '1 Enoch 1:10', '1 Enoch 5:6a'])(

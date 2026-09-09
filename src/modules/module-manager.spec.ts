@@ -103,6 +103,46 @@ const humilityModule = (): NormalizedModule => ({
   ]),
 })
 
+const ENOCH_BOOK = 103
+
+const enochModule = (): NormalizedModule => ({
+  manifest: {
+    id: '1en-c1912',
+    name: '1 Enoch',
+    language: 'English',
+    license: 'Public domain in the United States.',
+    source: 'https://example.com/1en-c1912-module.json',
+    sourceChecksum: 'sha-1en-1',
+    formatVersion: 8,
+    kind: 'book',
+    capabilities: { strongsTagged: false },
+    book: {
+      number: ENOCH_BOOK,
+      editionCode: '1EN-C1912',
+      author: 'Enoch',
+      year: 1912,
+      abbreviation: '1En',
+      atom: 'verse',
+      sections: [
+        { chapter: 1, name: '1', paragraphs: 9 },
+        { chapter: 2, name: '2', paragraphs: 3 },
+      ],
+    },
+  },
+  books: new Map([
+    [
+      ENOCH_BOOK,
+      {
+        [makeVerseId(ENOCH_BOOK, 1, 9)]: {
+          text: 'And behold! He cometh with ten thousands of ⌈His⌉ holy ones',
+          marks: [{ start: 44, end: 45 }, { start: 48, end: 49 }],
+          footnotes: [{ start: 60, text: 'Cometh with ten thousands of ⌈His⌉ holy ones. From Deut. 33².' }],
+        },
+      },
+    ],
+  ]),
+})
+
 class FakePrebuiltSource implements PrebuiltModuleSource {
   download: PrebuiltModuleDownload
   published: string | null
@@ -137,12 +177,13 @@ const setup = () => {
   const settingsStore = inMemorySettingsStore()
   const prebuilt = new FakePrebuiltSource()
   const humility = new FakePrebuiltSource(humilityModule())
+  const enoch = new FakePrebuiltSource(enochModule())
   const modulesChanged = vi.fn()
   const manager = new ModuleManager(
     source,
     store,
     settingsStore,
-    { bsb: prebuilt, 'hum-m1895': humility },
+    { bsb: prebuilt, 'hum-m1895': humility, '1en-c1912': enoch },
     modulesChanged,
   )
   return {
@@ -151,6 +192,7 @@ const setup = () => {
     settingsStore,
     prebuilt,
     humility,
+    enoch,
     modulesChanged,
     manager,
   }
@@ -328,6 +370,47 @@ describe('ModuleManager book modules', () => {
     humility.published = 'sha-hum-2'
 
     expect(await manager.modulesWithUpdates()).toEqual(['hum-m1895'])
+  })
+})
+
+describe('ModuleManager and the 1 Enoch release', () => {
+  afterEach(() => {
+    deregisterBookVersification(ENOCH_BOOK)
+    deregisterBook(ENOCH_BOOK)
+  })
+
+  it('installs 1 Enoch from its release on a fresh vault, checksum verified, notes and marks intact', async () => {
+    const { store, manager } = setup()
+
+    const manifest = await manager.downloadModule('1en-c1912')
+
+    expect(manifest.sourceChecksum).toBe('sha-1en-1')
+    expect(await store.manifest('1en-c1912')).toEqual(manifest)
+    expect((await store.bookContent('1en-c1912', ENOCH_BOOK))?.[makeVerseId(ENOCH_BOOK, 1, 9)]).toMatchObject({
+      footnotes: [{ start: 60, text: 'Cometh with ten thousands of ⌈His⌉ holy ones. From Deut. 33².' }],
+      marks: [{ start: 44, end: 45 }, { start: 48, end: 49 }],
+    })
+    expect(chapterCount(ENOCH_BOOK)).toBe(2)
+    expect(isValidVerseId(makeVerseId(ENOCH_BOOK, 1, 9))).toBe(true)
+  })
+
+  it('refuses a 1 Enoch artifact whose bytes do not match the published checksum', async () => {
+    const { enoch, manager } = setup()
+    enoch.published = 'sha-1en-2'
+
+    await expect(manager.downloadModule('1en-c1912')).rejects.toBeInstanceOf(
+      ChecksumMismatchError,
+    )
+  })
+
+  it('reports a 1 Enoch update when its published checksum changes, as it does for Humility', async () => {
+    const { enoch, manager } = setup()
+    await manager.downloadModule('1en-c1912')
+    expect(await manager.modulesWithUpdates()).toEqual([])
+
+    enoch.published = 'sha-1en-2'
+
+    expect(await manager.modulesWithUpdates()).toEqual(['1en-c1912'])
   })
 })
 

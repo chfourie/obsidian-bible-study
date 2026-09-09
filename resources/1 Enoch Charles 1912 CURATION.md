@@ -57,6 +57,128 @@ parentheses dropped · `=thick=` → `<emended>` · `_i. e._` → plain ·
 | 385 | 270 | 108:3–7 | thick `in the fire shall they burn`, †look over†, `(even)` confirmed |
 | 388 | 273 | after 108 | Appendix I (Greek) follows 108:15 directly — no chapter 109 |
 
+## Footnote transcription (ticket 146)
+
+Every atom that carries a `marks` or `emended` span was read against the
+1912 page image and Charles's note on that mark transcribed into a
+`[Footnote: …]` marker at the mark (297 notes on 257 atoms), or waived in a
+`%% waived C:V — reason` line beside the atom where the page gives the mark
+no note of its own (20 waivers: 2:1, 2:3, 5:3, 5:5, 10:13, 14:25, 15:6, 15:12,
+60:24, 69:12, 69:16, 69:25, 71:3, 72:6, 73:7, 76:12, 89:25, 91:19, 99:3,
+103:10). Leaves read per chapter (leaf = page + 115):
+
+| Chapter | Leaves |
+| --- | --- |
+| 1 | 119, 120, 121, 122, 123 |
+| 2 | 124 |
+| 3 | 125 |
+| 5 | 125, 126, 127 |
+| 6 | 130, 131 |
+| 8 | 133, 135 |
+| 9 | 135, 136 |
+| 10 | 137, 138, 139, 140, 141 |
+| 11 | 141 |
+| 12 | 143, 144 |
+| 13 | 144, 145, 146 |
+| 14 | 147, 148, 149, 150 |
+| 15 | 150, 151, 152 |
+| 16 | 152, 153 |
+| 17 | 153, 154 |
+| 18 | 154, 155, 156, 157 |
+| 19 | 157 |
+| 20 | 158 |
+| 21 | 160 |
+| 22 | 161, 162, 163, 164, 165 |
+| 23 | 166 |
+| 24 | 167 |
+| 25 | 167, 168, 169 |
+| 26 | 169, 170 |
+| 27 | 170, 171, 172 |
+| 28 | 172 |
+| 29 | 173 |
+| 30 | 173 |
+| 31 | 173, 174 |
+| 32 | 175, 176 |
+| 34 | 177 |
+| 35 | 177 |
+| 36 | 177, 178 |
+| 37 | 184, 185 |
+| 38 | 186 |
+| 39 | 189, 190, 191 |
+| 40 | 193 |
+| 45 | 199 |
+| 46 | 201, 203, 204 |
+| 47 | 205, 206, 207 |
+| 51 | 215 |
+| 52 | 218 |
+| 53 | 219 |
+| 54 | 222, 223 |
+| 55 | 223 |
+| 56 | 225 |
+| 58 | 227 |
+| 59 | 227, 228 |
+| 60 | 228, 229, 230, 231, 232, 233, 234 |
+| 62 | 238, 240 |
+| 63 | 242 |
+| 65 | 246 |
+| 66 | 247 |
+| 67 | 248, 250 |
+| 68 | 251 |
+| 69 | 251, 252, 253, 254, 255, 256 |
+| 71 | 257, 258, 259, 260 |
+| 72 | 267, 268, 269, 270 |
+| 73 | 273 |
+| 74 | 275, 276, 285 |
+| 75 | 277 |
+| 76 | 278, 279, 280 |
+| 77 | 280, 281 |
+| 78 | 283, 284 |
+| 79 | 285 |
+| 80 | 286, 287 |
+| 82 | 290, 291, 292 |
+| 83 | 298 |
+| 84 | 299, 300 |
+| 86 | 303 |
+| 89 | 308, 309, 310, 311, 312, 313, 316 |
+| 90 | 319, 320, 323, 325, 326, 327, 328, 329, 330, 331 |
+| 91 | 341, 342, 343 |
+| 92 | 339 |
+| 93 | 343, 344, 345, 346, 347 |
+| 94 | 349, 350 |
+| 95 | 351 |
+| 96 | 352, 353, 354 |
+| 99 | 359, 360, 361, 362 |
+| 100 | 365 |
+| 101 | 367, 368 |
+| 102 | 368, 369 |
+| 103 | 373 |
+| 106 | 379, 380, 381, 382, 383 |
+| 108 | 385 |
+
+Conventions the transcriptions follow:
+
+- Charles's wording, sigla (Gᵍ, Gˢ, E, α, β, MS letters), Greek and Hebrew
+  are kept; superscript verse references are written with Unicode
+  superscripts (5⁴, 89⁷⁰, ⁷¹); Charles's `+` (adds) and `>` (omits) stay.
+- A note's own square brackets are written fullwidth `［ ］`, because `]`
+  closes the marker (README §Footnotes); `< >` never occur in a note.
+- Where a note runs on for a column or more, only the part that bears on
+  the mark is transcribed and the cut is marked ` … ` (so 13:6, 22:2, 54:10,
+  65:10, 90:14, 51:4). A note that explains a run of marked verses (39:1–2,
+  59:1–3, 69:2–3, 69:22–24, 93:11–14, 91:12–17) stands on each verse of the
+  run; a note Charles gives once for a repeated emendation (22:9–13 "And
+  this", 77:1–3 "quarter", 101:4/9 "sailors") is repeated in his words on
+  each atom, the repeat citing his verse.
+- Notes on the E / Gᵍ columns (22, 27, 32) anchor on the column whose text
+  the note names.
+
+Page-driven text fixes made while transcribing: **17:1** the reprint's
+`⌈and⌉ brought` closes on `brought` in 1912 (`⌈and brought⌉`, leaf 153) and
+was corrected. Two waivers flag reprint/1912 differences for the spec
+owner rather than fix them: **91:19** prints `for ever` in plain type in
+1912 (leaf 343; the `<emended>` is the reprint's thick type) and **99:3**
+prints a thick `a` (leaf 359) that no note explains.
+
 ## Decisions the next curator should know
 
 - **Sections stand 1–108 in numeric order** (ADR 0014). Chapter 91's three
