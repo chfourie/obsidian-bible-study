@@ -24,7 +24,10 @@ export type VerseAtom = {
 }
 
 const VERSE_LINE = /^(\d+)([a-z])?\.\s+(\S.*)$/
-const PREFIX_SHAPED = /^\d+[A-Za-z]*\.?(\s|$)/
+// A prefix gone wrong is one the curator meant: a dot after digits and
+// letters, or a lone letter with no dot. A bare numeral opening a wrap
+// ("5 years 1820 days") is Charles's prose and joins as any wrap does.
+const MALFORMED_PREFIX = /^\d+(?:[A-Za-z]*\.|[a-z])(\s|$)/
 const LIST_OR_TABLE = /^(?:[-*•]|\|)(\s|$)/
 
 const fail = (line: number, message: string): never => {
@@ -56,7 +59,7 @@ export const readVerseBlock = (
       })
       return
     }
-    if (PREFIX_SHAPED.test(text)) {
+    if (MALFORMED_PREFIX.test(text)) {
       const shape = /^\d+[a-z]?\.\s*$/.test(text)
         ? 'carries no text'
         : 'is malformed — a verse-line reads `N.` or `Na.`'

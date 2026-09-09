@@ -34,6 +34,14 @@ describe('readVerseBlock', () => {
     ])
   })
 
+  it('joins a wrap that opens with a numeral, since a bare number is prose, not a prefix', () => {
+    expect(
+      readVerseBlock('13. In 5 years 1820 days, so that in\n8 years there are 2912 days.', 1),
+    ).toEqual([
+      { atom: 13, text: 'In 5 years 1820 days, so that in 8 years there are 2912 days.', paragraph: true, line: 1 },
+    ])
+  })
+
   it('reads `1.` as verse 1, never as a numbered list', () => {
     expect(readVerseBlock('1. Observe ye every thing', 1)[0]).toMatchObject({
       atom: 1,

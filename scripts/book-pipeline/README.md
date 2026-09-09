@@ -148,7 +148,10 @@ section every body line is one of two things:
   verse the line belongs to; the letter is stripped onto the line as its Line
   letter and never enters the stored text.
 - **A wrap** — an unprefixed line, joined with a single space onto the
-  verse-line before it. A page-wrap is not a metrical line.
+  verse-line before it. A page-wrap is not a metrical line, and one that
+  opens with a bare numeral (`5 years 1820 days`) is still a wrap: only a
+  dot after the digits (`6A.`, `6aa.`) or a lone letter (`6a text`) reads as
+  a prefix gone wrong.
 
 The prefix is repeated on every metrical line — `6a.` / `6b.` / `6c.` for a
 lettered poem, `3.` / `3.` / `3.` for an unlettered one — and the lines are
