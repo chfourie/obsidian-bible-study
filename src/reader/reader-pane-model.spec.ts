@@ -5112,7 +5112,7 @@ describe('ReaderPaneModel page walk of a verse-atom Book', () => {
     expect(model.view.rows.filter((row) => row.verseId === enoch(5, 7))).toHaveLength(3)
   })
 
-  it('prints an atom’s markers where the walk enters it, not on every line', async () => {
+  it('prints an atom’s markers once, on its first row, not on every line', async () => {
     const model = walkModel({
       intersecting: (reference) =>
         reference.ranges[0].startId === enoch(5, 1)
@@ -5128,7 +5128,7 @@ describe('ReaderPaneModel page walk of a verse-atom Book', () => {
         .map((row) => [row.label, row.annotations]),
     ).toEqual([
       ['7c', 1],
-      ['7a', 1],
+      ['7a', 0],
       ['7b', 0],
     ])
   })

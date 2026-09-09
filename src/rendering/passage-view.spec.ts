@@ -61,7 +61,7 @@ describe('buildPassageView', () => {
       {
         verseId: makeVerseId(43, 15, 4),
         label: null,
-        letter: null,
+        letterLabel: null,
         segments: [{ text: 'Remain in me.', redLetter: false }],
         startsNewLine: false,
         startsParagraph: false,
@@ -446,7 +446,7 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
     expect(view.verses.map((block) => block.label)).toEqual([
       '6', null, null, '7', '6', null, null, null, null, null, '7', null,
     ])
-    expect(view.verses.map((block) => block.letter)).toEqual([
+    expect(view.verses.map((block) => block.letterLabel)).toEqual([
       '6a', '6b', '6c', '7c', '6d', '6e', '6f', '6g', '6i', '6j', '7a', '7b',
     ])
   })
@@ -457,7 +457,7 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
     expect(view.verses.map((block) => block.label)).toEqual([
       '6', null, null, '7', '6', null, null, null, null, null, '7', null,
     ])
-    expect(view.verses.every((block) => block.letter === null)).toBe(true)
+    expect(view.verses.every((block) => block.letterLabel === null)).toBe(true)
   })
 
   it('gives each step its own line’s text, with the break the step boundary owns dropped', async () => {

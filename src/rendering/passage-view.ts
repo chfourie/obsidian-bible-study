@@ -1,11 +1,13 @@
 import { highlightSpans } from '../highlights'
 import { decodeVerseId, type HighlightCue } from '../reference'
-import type {
-  Passage,
-  PassageStep,
-  PassageTableRow,
-  PassageVerse,
-  VerseSegment,
+import {
+  lineLetterLabel,
+  walkSteps,
+  type Passage,
+  type PassageStep,
+  type PassageTableRow,
+  type PassageVerse,
+  type VerseSegment,
 } from './module-passage-source'
 import type { ReferenceRenderModel } from './reference-render-model'
 import { markSpanChannel, stepSegments } from './segment-spans'
@@ -13,9 +15,9 @@ import { markSpanChannel, stepSegments } from './segment-spans'
 export type VerseBlock = {
   verseId: number
   label: string | null
-  // The Line letter for the number slot — `6a` — when a block quote walks a
-  // lettered line; inline omits letters (spec-books §4). Null otherwise.
-  letter: string | null
+  // The Line letter's label for the number slot — `6a` — when a block quote
+  // walks a lettered line; inline omits letters (spec-books §4).
+  letterLabel: string | null
   segments: VerseSegment[]
   startsNewLine: boolean
   // A stanza blank inside an atom (spec-books §11): the block opens a new
@@ -93,7 +95,7 @@ const atomBlocks = (
   return verses.map((verse, index) => ({
     verseId: verse.verseId,
     label: numbered ? labels[index] : null,
-    letter: null,
+    letterLabel: null,
     segments: highlightedSegments(verse, cues),
     table: verse.table ?? null,
     startsNewLine:
@@ -115,33 +117,25 @@ const stepBlocks = (
   numbered: boolean,
 ): VerseBlock[] => {
   const labels = verseLabels([...verses])
-  const atoms = new Map(
-    verses.map((verse, index) => [
-      verse.verseId,
-      { verse, label: labels[index], segments: highlightedSegments(verse, cues) },
-    ]),
-  )
-  return steps.flatMap((step, index) => {
-    const atom = atoms.get(step.verseId)
-    if (atom === undefined) return []
-    const entersAtom = index === 0 || steps[index - 1].verseId !== step.verseId
+  const atoms = verses.map((verse, index) => ({
+    verseId: verse.verseId,
+    label: labels[index],
+    table: verse.table ?? null,
+    segments: highlightedSegments(verse, cues),
+  }))
+  return walkSteps(atoms, steps).map(({ step, atom, entersAtom }) => {
     const lined = step.line !== undefined
-    return [
-      {
-        verseId: step.verseId,
-        label: numbered && entersAtom ? atom.label : null,
-        letter:
-          model.display === 'block' && step.letter !== undefined
-            ? `${decodeVerseId(step.verseId).verse}${step.letter}`
-            : null,
-        segments: stepSegments(atom.segments, step.span),
-        table: lined ? null : (atom.verse.table ?? null),
-        startsNewLine: lined,
-        startsParagraph:
-          step.line !== undefined && step.line > 0 && step.startsParagraph === true,
-        textOffset: step.span.start,
-      },
-    ]
+    return {
+      verseId: step.verseId,
+      label: numbered && entersAtom ? atom.label : null,
+      letterLabel: model.display === 'block' ? lineLetterLabel(step) : null,
+      segments: stepSegments(atom.segments, step.span),
+      table: lined ? null : atom.table,
+      startsNewLine: lined,
+      startsParagraph:
+        step.line !== undefined && step.line > 0 && step.startsParagraph === true,
+      textOffset: step.span.start,
+    }
   })
 }
 

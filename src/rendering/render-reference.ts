@@ -244,10 +244,10 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
       text: block.label,
     })
   }
-  if (block.letter !== null) {
+  if (block.letterLabel !== null) {
     parent.createSpan({
       cls: 'scripture-study-line-letter',
-      text: block.letter,
+      text: block.letterLabel,
     })
   }
   // The verse text lives in its own holder so a drag can be mapped back to
@@ -457,8 +457,6 @@ const renderBookParagraphs =
     renderNavigableAttribution(host, view, model, deps)
   }
 
-// Blocks run together on a line unless one of them is a line of its own —
-// a metrical line of a walk, an atom that keeps its breaks, a Psalm verse.
 const joinBlocks = (
   host: HTMLElement,
   block: PassageView['verses'][number],
