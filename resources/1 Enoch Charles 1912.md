@@ -472,18 +472,18 @@ the righteous,
 ### Jerusalem and the Mountains, Ravines, and Streams.
 
 1. And I went from thence to the middle of the earth, and I saw a blessed place <marks>⌈</marks>in which there were trees<marks>⌉</marks> [Footnote: In which there were trees. So Gᵍ, but lost in E owing to hmt., i. e. esaw zabôtû fell out after zabôtû. Or it may have been omitted by the translator owing to the final phrase.] with branches abiding and blooming <marks>[</marks>of a dismembered tree<marks>]</marks> [Footnote: Of a dismembered tree. This phrase can only be interpreted of Israel. If it is original, then ‘in which there were trees’ cannot be original, and the text may refer to the participation of the righteous descendants of Israel in the Messianic Kingdom in Palestine.].
-2. And there I saw a holy mountain, <marks>⌈⌈</marks>and<marks>⌉⌉</marks> underneath the mountain to the east there was a stream and it flowed towards the south.
-3. And I saw towards the east another mountain higher than this, and between them a deep and narrow ravine: in it also ran a stream <marks>⌈</marks>underneath<marks>⌉</marks> the mountain.
-4. And to the west thereof there was another mountain, lower than the former and of small elevation, and a ravine <marks>⌈</marks>deep and dry<marks>⌉</marks> between them: and another deep and dry ravine was at the extremities of the three <marks>⌈</marks>mountains<marks>⌉</marks>.
-5. And all the ravines were deep <marks>⌈⌈</marks>and narrow<marks>⌉⌉</marks>, <supplied>being formed</supplied> of hard rock, and trees were not planted upon them.
-6. And I marvelled <marks>⌈⌈</marks>at the rocks, and I marvelled<marks>⌉⌉</marks> at the ravine, yea, I marvelled very much.
+2. And there I saw a holy mountain, <marks>⌈⌈</marks>and<marks>⌉⌉</marks> underneath [Footnote: And (E). > Gᵍ.] the mountain to the east there was a stream and it flowed towards the south.
+3. And I saw towards the east another mountain higher than this, and between them a deep and narrow ravine: in it also ran a stream <marks>⌈</marks>underneath<marks>⌉</marks> [Footnote: Underneath (Gᵍ). E ‘towards’ or perhaps ‘alongside’.] the mountain.
+4. And to the west thereof there was another mountain, lower than the former and of small elevation, and a ravine <marks>⌈</marks>deep and dry<marks>⌉</marks> [Footnote: Deep and dry (Gᵍ). E ‘underneath it’. Mountains (Gᵍ). > E. Description is accurate.] between them: and another deep and dry ravine was at the extremities of the three <marks>⌈</marks>mountains<marks>⌉</marks>.
+5. And all the ravines were deep <marks>⌈⌈</marks>and narrow<marks>⌉⌉</marks> [Footnote: And narrow (E). > Gᵍ.], <supplied>being formed</supplied> of hard rock, and trees were not planted upon them.
+6. And I marvelled <marks>⌈⌈</marks>at the rocks, and I marvelled<marks>⌉⌉</marks> [Footnote: At the rocks, and I marvelled E. > Gᵍ through hmt.] at the ravine, yea, I marvelled very much.
 
 ## 27.
 
 ### XXVII. The Purpose of the Accursed Valley.
 
-1. Then said I: ‘For what object is this blessed land, which is entirely filled with trees, and this accursed valley <marks>⌈⌈</marks>between?<marks>⌉⌉</marks>’
-2. <marks>⌈⌈</marks>Then Uriel, one of the holy angels who was with me, answered and said: ‘This<marks>⌉⌉</marks> valley is for those who are accursed for ever: here shall all <marks>⌈</marks>the accursed<marks>⌉</marks> be gathered together who utter with their lips against the Lord unseemly words and of His glory speak hard things.
+1. Then said I: ‘For what object is this blessed land, which is entirely filled with trees, and this accursed valley <marks>⌈⌈</marks>between?<marks>⌉⌉</marks> [Footnote: And this accursed valley between (E). Gᵍ = ‘and (why is) this valley accursed’. But Gᵍ has probably lost ἡ before κεκατηραμένη and E is right.]’
+2. <marks>⌈⌈</marks>Then Uriel, one of the holy angels who was with me, answered and said: ‘This<marks>⌉⌉</marks> [Footnote: Then Uriel … said: ‘This (E). > Gᵍ.] valley is for those who are accursed for ever: here shall all <marks>⌈</marks>the accursed<marks>⌉</marks> [Footnote: The accursed (Gᵍ). > E.] be gathered together who utter with their lips against the Lord unseemly words and of His glory speak hard things.
 
 2. E
 2. Here shall they be gathered together, and here shall be their place of judgement.
@@ -492,35 +492,35 @@ the righteous,
 
 3. Gᵍ
 3. Here shall they be gathered together, and here shall be the place of their habitation.
-3. In the last times, in the days of the true judgement in the presence of the righteous for ever: here shall the <emended>godly</emended> bless the Lord of Glory, the Eternal King.
+3. In the last times, in the days of the true judgement in the presence of the righteous for ever: here shall the <emended>godly</emended> [Footnote: The godly = εὐσεβεῖς emended from ἀσεβεῖς. Here E reads maḫârjân, which may be corrupt for mĕḥûrân = ‘those who have obtained mercy’.] bless the Lord of Glory, the Eternal King.
 
 4. In the days of judgement over the former, they shall bless Him for the mercy in accordance with which He has assigned them <supplied>their lot</supplied>.’
-5. Then I blessed the Lord of Glory and set forth His <marks>⌈</marks>glory<marks>⌉</marks> and lauded Him gloriously.
+5. Then I blessed the Lord of Glory and set forth His <marks>⌈</marks>glory<marks>⌉</marks> [Footnote: His ⌈glory⌉ (Gᵍ). E om. ‘glory’ perhaps owing to its occurrence just before.] and lauded Him gloriously.
 
 ## 28.
 
 ### XXVIII-XXXIII. Further Journey to the East.
 
-1. And thence I went <marks>⌈⌈</marks>towards the east<marks>⌉⌉</marks>, into the midst <marks>⌈⌈</marks>of the mountain range<marks>⌉⌉</marks> of the desert, and I saw a wilderness and it was solitary, full of trees <emended>and plants</emended>.
-2. <marks>⌈⌈</marks>And<marks>⌉⌉</marks> water gushed forth from above.
-3. Rushing like a copious watercourse <marks>[</marks>which flowed<marks>]</marks> towards the north-west it caused <emended>clouds</emended> and dew to ascend on every side.
+1. And thence I went <marks>⌈⌈</marks>towards the east<marks>⌉⌉</marks> [Footnote: Towards the East (E). > Gᵍ. Of the mountain range (E). > Gᵍ.], into the midst <marks>⌈⌈</marks>of the mountain range<marks>⌉⌉</marks> of the desert, and I saw a wilderness and it was solitary, full of trees <emended>and plants</emended>.
+2. <marks>⌈⌈</marks>And<marks>⌉⌉</marks> [Footnote: And (E). > Gᵍ.] water gushed forth from above.
+3. Rushing like a copious watercourse <marks>[</marks>which flowed<marks>]</marks> [Footnote: Which flowed. Bracketed as an addition in E.] towards the north-west it caused <emended>clouds</emended> [Footnote: Clouds. Gᵍ E read ὕδωρ. But water is the subject of the verb, and in no case can it be said that water ‘ascends’. Besides, δρόσον shows that we require here some such word as ‘mist’ or ‘cloud’ or ‘vapour’. Now the exact phrase we need is found in Ps. 135⁷ Jer. 10¹³ 51¹⁶ מעלה נשאים, which the LXX in each case renders by ἀνάγειν νεφέλας and the Targums by מסיק ענני. Hence I assume that מין (= ὕδωρ) is here a primitive corruption of עננין = ‘clouds’. The word ‘clouds’ is to be taken in the sense of ‘mist’, for so Onkelos renders אד = ‘mist’ in Gen. 2⁶.] and dew to ascend on every side.
 
 ## 29.
 
 1. And thence I went to another place in the desert, and approached to the east of this mountain range.
-2. And <marks>⌈⌈</marks>there<marks>⌉⌉</marks> I saw <emended>aromatic</emended> trees exhaling the fragrance of frankincense and myrrh, and the trees also were similar to the almond tree.
+2. And <marks>⌈⌈</marks>there<marks>⌉⌉</marks> [Footnote: There (E). > Gᵍ.] I saw <emended>aromatic</emended> [Footnote: Aromatic trees. Gᵍ E read κρίσεως δένδρα. κρίσεως = דדינא which, as Praetorius and Beer have recognized, is corrupt for דריחא. Hence we should have here εὐώδη instead of κρίσεως.] trees exhaling the fragrance of frankincense and myrrh, and the trees also were similar to the almond tree.
 
 ## 30.
 
 1. And beyond these, I went afar to the east, and I saw another place, a valley <supplied>full</supplied> of water.
-2. And <marks>⌈</marks>therein there was<marks>⌉</marks> a tree, the colour <supplied>?</supplied> of fragrant trees such as the mastic.
+2. And <marks>⌈</marks>therein there was<marks>⌉</marks> [Footnote: Therein there was a tree (Gᵍ). E = ‘I saw a beautiful tree’.] a tree, the colour <supplied>?</supplied> of fragrant trees such as the mastic.
 3. And on the sides of those valleys I saw fragrant cinnamon. And beyond these I proceeded to the east.
 
 ## 31.
 
-1. And I saw other mountains, and amongst them were <marks>⌈</marks>groves of<marks>⌉</marks> trees, and there flowed forth from them nectar, which is named sarara and galbanum.
-2. And beyond these mountains I saw another mountain <marks>⌈</marks>to the east of the ends of the earth<marks>⌉</marks>, <marks>⌈⌈</marks>whereon were aloe trees<marks>⌉⌉</marks>, and all the trees were full <emended>of stacte</emended>, being like almond trees.
-3. And when one <emended>burnt</emended> it, it smelt sweeter than any fragrant odour.
+1. And I saw other mountains, and amongst them were <marks>⌈</marks>groves of<marks>⌉</marks> [Footnote: Groves of (Gᵍ). > E.] trees, and there flowed forth from them nectar, which is named sarara and galbanum.
+2. And beyond these mountains I saw another mountain <marks>⌈</marks>to the east of the ends of the earth<marks>⌉</marks> [Footnote: To the east of the ends of the earth (Gᵍ). > E. Whereon were aloe trees (E). > Gᵍ. Observe that Gᵍ and E are complementary. The former gives the habitat of the trees—the furthest east—but not their name. E omits the habitat but supplies the name.], <marks>⌈⌈</marks>whereon were aloe trees<marks>⌉⌉</marks>, and all the trees were full <emended>of stacte</emended>, being like almond trees.
+3. And when one <emended>burnt</emended> [Footnote: Burnt. Gᵍ has τρίβωσιν: E = λάβωσιν, but jĕnaš’ewô may be corrupt for jĕḥasjĕwô = τρίβωσιν. If my identification of this tree in the note on ver. 2 is right, we should expect καύσωσιν here, as eagle wood exhales fragrant odours when burnt. Now τρίβωσιν = ידקקון (Pael) corrupt for ידלקון = καύσωσιν, ‘burnt’.] it, it smelt sweeter than any fragrant odour.
 
 ## 32.
 
@@ -530,17 +530,17 @@ the righteous,
 1. Gᵍ
 1. To the north-east I beheld seven mountains full of choice nard and mastic and cinnamon and pepper.
 
-2. And thence I went over the summits of <marks>⌈</marks>all<marks>⌉</marks> these mountains, far towards the east <marks>⌈</marks>of the earth<marks>⌉</marks>, and passed above the Erythraean sea, and went far from it, and passed over <marks>⌈⌈</marks>the angel<marks>⌉⌉</marks> Zotîêl.
+2. And thence I went over the summits of <marks>⌈</marks>all<marks>⌉</marks> these [Footnote: All (Gᵍ). > E. Of the earth (Gᵍ). > E. The angel (E). > Gᵍ.] mountains, far towards the east <marks>⌈</marks>of the earth<marks>⌉</marks>, and passed above the Erythraean sea, and went far from it, and passed over <marks>⌈⌈</marks>the angel<marks>⌉⌉</marks> Zotîêl.
 
 3. E
 3. And I came to the Garden of Righteousness, and saw beyond those trees many large trees growing there and of goodly fragrance, large, very beautiful and glorious, and the tree of wisdom whereof they eat and know great wisdom.
 
 3. Gᵍ
-3. And I came to the Garden of Righteousness, and from afar off trees more numerous than these trees and great—<marks>†</marks>two<marks>†</marks> trees there, very great, beautiful, and glorious, and magnificent, and the tree of knowledge, whose holy fruit they eat and know great wisdom.
+3. And I came to the Garden of Righteousness, and from afar off trees more numerous than these trees and great—<marks>†</marks>two<marks>†</marks> [Footnote: Growing (E = φυόμενα). Gᵍ reads δύω μέν, but this reading is certainly corrupt. If δύω μέν were original, then τὸ δένδρον τῆς ζωῆς would have to be inserted before καὶ τὸ δένδρον τῆς φρονήσεως. But the tree of life, according to 24²–25, is in the neighbourhood of the chief of the Seven Mountains in the NW. See notes 32¹ 25⁵ 18⁹. The passages from the Zohar quoted by Lawrence, and subsequently adduced by Lods and Lawlor in support of δύω μέν cannot, therefore, bear on our text; but may be derived ultimately from 2 Enoch, and in part from Gen. 3.] trees there, very great, beautiful, and glorious, and magnificent, and the tree of knowledge, whose holy fruit they eat and know great wisdom.
 
-4. <marks>⌈</marks>That tree is in height like the fir, and its leaves are<marks>⌉</marks> like <supplied>those of</supplied> the Carob tree: and its fruit is like the clusters of the vine, very beautiful: and the fragrance of the tree penetrates afar.
-5. Then I said: ‘<marks>⌈</marks>How<marks>⌉</marks> beautiful is the tree, and how attractive is its look!’
-6. Then Raphael, the holy angel who was with me, answered me <marks>⌈⌈</marks>and said<marks>⌉⌉</marks>: ‘This is the tree of wisdom, of which thy father old <supplied>in years</supplied> and thy aged mother, who were before thee, have eaten, and they learnt wisdom and their eyes were opened, and they knew that they were naked and they were driven out of the garden.’
+4. <marks>⌈</marks>That tree is in height like the fir, and its leaves are<marks>⌉</marks> [Footnote: That tree … its leaves are. So Gᵍ. > E through hmt.] like <supplied>those of</supplied> the Carob tree: and its fruit is like the clusters of the vine, very beautiful: and the fragrance of the tree penetrates afar.
+5. Then I said: ‘<marks>⌈</marks>How<marks>⌉</marks> [Footnote: How (Gᵍ ὡς). > E as in 24⁵.] beautiful is the tree, and how attractive is its look!’
+6. Then Raphael, the holy angel who was with me, answered me <marks>⌈⌈</marks>and said<marks>⌉⌉</marks> [Footnote: And said (E). > Gᵍ.]: ‘This is the tree of wisdom, of which thy father old <supplied>in years</supplied> and thy aged mother, who were before thee, have eaten, and they learnt wisdom and their eyes were opened, and they knew that they were naked and they were driven out of the garden.’
 
 ## 33.
 
@@ -555,20 +555,20 @@ the righteous,
 
 1. And from thence I went towards the north to the ends of the earth, and there I saw a great and glorious device at the ends of the whole earth.
 2. And here I saw three portals of heaven open in the heaven: through each of them proceed north winds: when they blow there is cold, hail, frost, snow, dew, and rain.
-3. And out of one portal they blow for good: but when they blow through the other two portals, <marks>†</marks>it is with violence and affliction on the earth, and they blow with violence.<marks>†</marks>
+3. And out of one portal they blow for good: but when they blow through the other two portals, <marks>†</marks>it is with violence and affliction on the earth, and they blow with violence.<marks>†</marks> [Footnote: It is … violence. Probably corrupt for ‘they blow with violence and there is affliction on the earth’.]
 
 ## 35.
 
-1. And from thence I went towards the west to the ends of the earth, and saw there three portals of the heaven open such as I had seen in the <marks>†</marks>east<marks>†</marks>, the same number of portals, and the same number of outlets.
+1. And from thence I went towards the west to the ends of the earth, and saw there three portals of the heaven open such as I had seen in the <marks>†</marks>east<marks>†</marks> [Footnote: The †east†. Read ‘the north’. Otherwise and preferably we should transpose this chapter after 36³.], the same number of portals, and the same number of outlets.
 
 ## 36.
 
 ### XXXVI. The Journey to the South.
 
-1. And from thence I went to the south to the ends of the earth, and saw there three open portals of the heaven: and thence there come dew, rain, <marks>†</marks>and wind<marks>†</marks>.
+1. And from thence I went to the south to the ends of the earth, and saw there three open portals of the heaven: and thence there come dew, rain, <marks>†</marks>and wind<marks>†</marks> [Footnote: †And wind†. As Martin remarks these words are meaningless here. The text seems imperfect. Possibly there stood (cf. 34²) originally something like: ‘And from thence came the south winds, and when they blow there is dew and rain’.].
 2. And from thence I went to the east to the ends of the heaven, and saw here the three eastern portals of heaven open and small portals above them.
 3. Through each of these small portals pass the stars of heaven and run their course to the west on the path which is shown to them.
-4. And as often as I saw I blessed always the Lord of Glory, and I continued to bless the Lord of Glory who has wrought great and glorious wonders, to show the greatness of His work to the angels and to <emended>spirits</emended> and to men, that they might praise His work and all His creation: that they might see the work of His might and praise the great work of His hands and bless Him for ever.
+4. And as often as I saw I blessed always the Lord of Glory, and I continued to bless the Lord of Glory who has wrought great and glorious wonders, to show the greatness of His work to the angels and to <emended>spirits</emended> [Footnote: To spirits and to men (gqu¹ though reading nafâsât (-sâtâ u)). Other MSS. ‘to the spirits of men’.] and to men, that they might praise His work and all His creation: that they might see the work of His might and praise the great work of His hands and bless Him for ever.
 
 # The Parables (XXXVII–LXXI)
 
