@@ -47,10 +47,9 @@ import { freshTabState, type StudyTabState } from './tab-memory'
 
 // A cited verse as the panel prints it: its segments from the one segmenter,
 // so a supplied word or an Editorial mark paints here as it does in the
-// reader (spec-books §10); `text` is the same run joined, for copy and search.
+// reader (spec-books §10).
 export type ReferenceEntryVerse = {
   label: string | null
-  text: string
   segments: VerseSegment[]
 }
 
@@ -585,7 +584,6 @@ export class StudyPanelModel {
         status: 'ok',
         verses: passage.verses.map((verse, index) => ({
           label: labels[index],
-          text: verse.segments.map((segment) => segment.text).join(''),
           segments: verse.segments,
         })),
         attribution: entry.book?.attribution ?? passage.attribution,

@@ -517,4 +517,11 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
 
     expect(view.verses.map((block) => block.label)).toEqual([null, null, null])
   })
+
+  it('a single-atom note reads 7a 7b 7c — the traditional verse, not the page', async () => {
+    const view = await walked('1 Enoch 5:7 block')
+
+    expect(view.verses.map((block) => block.letterLabel)).toEqual(['7a', '7b', '7c'])
+    expect(view.verses.map((block) => block.label)).toEqual(['7', null, null])
+  })
 })

@@ -386,9 +386,11 @@ describe('StudyPanelFeature entry points', () => {
     expect(view.model.view.entries.map((entry) => entry.label)).toEqual([
       'John 15:1',
     ])
-    expect(view.model.view.entries[0].verses[0].text).toBe(
-      'I am the true vine.',
-    )
+    expect(
+      view.model.view.entries[0].verses[0].segments
+        .map((segment) => segment.text)
+        .join(''),
+    ).toBe('I am the true vine.')
   })
 
   it('follows the active note as files open', async () => {

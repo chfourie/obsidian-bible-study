@@ -245,7 +245,6 @@ describe('StudyPanelModel', () => {
     expect(panel.view.entries[0].verses).toEqual([
       {
         label: null,
-        text: `text-${makeVerseId(43, 15, 1)}`,
         segments: [{ text: `text-${makeVerseId(43, 15, 1)}`, redLetter: false }],
       },
     ])
@@ -1633,7 +1632,7 @@ describe('book references in the Study Panel', () => {
     await panel.setActiveNote({ file: 'note.md', content: '{1 Enoch 1:4-5}' })
 
     const [even, steadfast] = panel.view.entries[0].verses
-    expect(even.text).toBe('earth, even on Mount Sinai, [And appear from His camp]')
+    expect(even.segments.map((segment) => segment.text).join('')).toBe('earth, even on Mount Sinai, [And appear from His camp]')
     expect(even.segments.filter((segment) => segment.supplied).map((segment) => segment.text)).toEqual(['even'])
     expect(even.segments.filter((segment) => segment.marks).map((segment) => segment.text)).toEqual(['[', ']'])
     expect(steadfast.segments.filter((segment) => segment.emended).map((segment) => segment.text)).toEqual(['steadfast'])

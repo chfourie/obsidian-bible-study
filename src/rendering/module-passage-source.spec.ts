@@ -980,15 +980,21 @@ describe('ModulePassageSource reading order', () => {
   })
 
   it('maps every step back to the span of its letter-order line', async () => {
-    const passage = await served('1 Enoch 5:7')
+    const passage = await served('1 Enoch 5:6-7')
     const seven = ENOCH_CHAPTER_5[7]
     const lines = seven.lines ?? []
 
-    expect(passage.steps).toEqual([
+    expect(passage.steps?.filter((step) => step.verseId === enoch(5, 7))).toEqual([
       { verseId: enoch(5, 7), line: 2, span: { start: lines[2].start, end: seven.text.length }, letter: 'c' },
       { verseId: enoch(5, 7), line: 0, span: { start: 0, end: lines[1].start }, letter: 'a' },
       { verseId: enoch(5, 7), line: 1, span: { start: lines[1].start, end: lines[2].start }, letter: 'b' },
     ])
+  })
+
+  it('a single-atom note reads 7a 7b 7c — the traditional verse, not the page', async () => {
+    const passage = await served('1 Enoch 5:7')
+
+    expect(walk(passage.steps ?? [])).toEqual(['7a', '7b', '7c'])
   })
 
   it('carries a stanza blank inside an atom onto the step that opens it', async () => {

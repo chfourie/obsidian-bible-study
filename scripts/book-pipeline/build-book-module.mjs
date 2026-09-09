@@ -79,6 +79,7 @@ export const buildBookModule = async ({
   const outDir = `dist/${moduleId}-module`
   const artifactFile = `${moduleId}-module.json`
   const {
+    bookAtomKind,
     buildBookArtifact,
     curationWaivers,
     notesToCurate,
@@ -107,8 +108,9 @@ export const buildBookModule = async ({
     JSON.stringify({ [artifact.manifest.id]: checksum }, null, 2),
   )
 
-  const { atom = 'paragraph', sections } = artifact.manifest.book
-  const atomLabel = atom === 'verse' ? 'verses' : 'paragraphs'
+  const { sections } = artifact.manifest.book
+  const atomLabel =
+    bookAtomKind(artifact.manifest.book) === 'verse' ? 'verses' : 'paragraphs'
   const atomCount = sections.reduce(
     (total, section) => total + section.paragraphs,
     0,

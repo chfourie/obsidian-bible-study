@@ -1,3 +1,5 @@
+import type { BookAtomKind } from '../reference'
+
 // v2: verses may carry optional per-verse channels beside the flat text —
 // lines (poetry/paragraph structure), red (words of Christ), and supplied
 // (translator-added words). Purely additive — v1 modules load and render
@@ -30,8 +32,6 @@ export const BOOK_MODULE_FORMAT_VERSION = 8
 // (v2's line, red-letter and supplied-word channels) that only a re-download
 // brings back.
 export const TRANSLATION_CONTENT_VERSION = 2
-
-import type { BookAtomKind } from '../reference'
 
 export type ModuleCapabilities = {
   strongsTagged: boolean

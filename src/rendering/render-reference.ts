@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian'
 import type { NavigationOptions } from '../contracts'
-import type { Reference } from '../reference'
+import { bookAtomKind, type Reference } from '../reference'
 import { opensInNewPane } from '../ui'
 import { isAnnotation, noteTitle, type OccurrenceGroup } from '../vault-index'
 import {
@@ -527,7 +527,7 @@ const renderBlock = (
     ? renderVerseRun
     : model.book === null
       ? renderVerseLines
-      : model.book.atom === 'verse'
+      : bookAtomKind(model.book) === 'verse'
         ? renderBookProse(model, deps)
         : renderBookParagraphs(model, deps)
   const mounted = mountPassage(host, model, deps, renderPassage)

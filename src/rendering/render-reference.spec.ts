@@ -1626,7 +1626,7 @@ describe('renderReference walks a verse-atom Book’s page', () => {
       [...parent.querySelectorAll('[data-verse-id]')].map((holder) =>
         holder.getAttribute('data-text-offset'),
       ),
-    ).toEqual([String(lines[2].start), null, String(lines[1].start)])
+    ).toEqual([null, String(lines[1].start), String(lines[2].start)])
   })
 
   it('paints a highlight over 5:7 on every step of the walk', async () => {

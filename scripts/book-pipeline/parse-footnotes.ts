@@ -7,6 +7,7 @@
 
 import type { Footnote } from '../../src/modules/verse-content'
 import { type StrippedText, stripAtomMarks } from './parse-editorial-marks'
+import { citing, removalsOffsetOf, type TextRemoval } from './text-removals'
 
 export type NotedText = StrippedText & { footnotes?: Footnote[] }
 
@@ -21,7 +22,7 @@ type LiftedText = {
 
 export const liftFootnotes = (source: string): LiftedText => {
   const footnotes: Footnote[] = []
-  const removals: { at: number; length: number }[] = []
+  const removals: TextRemoval[] = []
   let text = ''
   let consumed = 0
   for (const match of source.matchAll(FOOTNOTE)) {
@@ -42,15 +43,10 @@ export const liftFootnotes = (source: string): LiftedText => {
       'a `[Footnote` marker the build cannot read — a note reads ' +
         `\`[Footnote: text]\`, not "${leftover[0]}"`,
     )
-  const offsetOf = (at: number): number =>
-    at -
-    removals
-      .filter((removal) => removal.at < at)
-      .reduce((removed, removal) => removed + removal.length, 0)
   return {
     text,
     ...(footnotes.length === 0 ? {} : { footnotes }),
-    offsetOf,
+    offsetOf: removalsOffsetOf(removals),
   }
 }
 
@@ -59,13 +55,7 @@ export const liftFootnotes = (source: string): LiftedText => {
 // a mark span, and a line start the caller carries through `offsetOf` —
 // indexes the final stored string (spec-books §6).
 export const liftAtomNotes = (locator: string, source: string): NotedText => {
-  const lifted = ((): LiftedText => {
-    try {
-      return liftFootnotes(source)
-    } catch (error) {
-      throw new Error(`atom ${locator}: ${(error as Error).message}`)
-    }
-  })()
+  const lifted = citing(locator, () => liftFootnotes(source))
   const stripped = stripAtomMarks(locator, lifted.text)
   return {
     ...stripped,

@@ -5,6 +5,7 @@
 // string is the reading, and every span indexes that string.
 
 import type { FormatSpan, VerseLine } from '../../src/modules/verse-content'
+import { citing, removalsOffsetOf, type TextRemoval } from './text-removals'
 
 const WRAPPER_ELEMENTS = ['supplied', 'marks', 'emended'] as const
 type WrapperElement = (typeof WRAPPER_ELEMENTS)[number]
@@ -36,7 +37,7 @@ export const stripEditorialMarks = (wrapped: string): StrippedText => {
     marks: [],
     emended: [],
   }
-  const removals: { at: number; length: number }[] = []
+  const removals: TextRemoval[] = []
   let index = 0
   while (index < wrapped.length) {
     const character = wrapped[index]
@@ -76,11 +77,6 @@ export const stripEditorialMarks = (wrapped: string): StrippedText => {
   const unclosed = open[0]
   if (unclosed !== undefined)
     throw new Error(`<${unclosed.element}> is never closed`)
-  const offsetOf = (at: number): number =>
-    at -
-    removals
-      .filter((removal) => removal.at < at)
-      .reduce((removed, removal) => removed + removal.length, 0)
   return {
     text,
     ...Object.fromEntries(
@@ -91,22 +87,15 @@ export const stripEditorialMarks = (wrapped: string): StrippedText => {
         ],
       ),
     ),
-    offsetOf,
+    offsetOf: removalsOffsetOf(removals),
   }
 }
 
-// The strip as an atom goes through it: the build fails citing the atom —
-// `1:4` for a verse, `1.3` or `1.e1` for a paragraph Book's atom or epigraph.
+// The strip as an atom goes through it: the build fails citing the atom.
 export const stripAtomMarks = (
   locator: string,
   wrapped: string,
-): StrippedText => {
-  try {
-    return stripEditorialMarks(wrapped)
-  } catch (error) {
-    throw new Error(`atom ${locator}: ${(error as Error).message}`)
-  }
-}
+): StrippedText => citing(locator, () => stripEditorialMarks(wrapped))
 
 export const atomChannels = <Stripped extends StrippedText>({
   offsetOf: _offsetOf,

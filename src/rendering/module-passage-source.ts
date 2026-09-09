@@ -228,13 +228,19 @@ const atomSteps = (atom: WalkedAtom): PassageStep[] =>
 
 // The walk over the verses served, section by section as the reference
 // names them: a section's `reading` filtered to those verses, or the identity
-// walk where the page is the atom order (spec-books §11).
+// walk where the page is the atom order (spec-books §11). A single atom is
+// the traditional verse as one reading — 7a 7b 7c in letter order — so only
+// a multi-atom reference walks the page (§4, §11).
 const passageSteps = (
   book: number,
   verses: readonly PassageVerse[],
   content: BookContent,
   sections: readonly BookSection[],
 ): PassageStep[] => {
+  if (verses.length === 1) {
+    const { verseId } = verses[0]
+    return atomSteps(walkedAtom(verseId, content[verseId]))
+  }
   const chapters = new Map<number, Map<number, WalkedAtom>>()
   for (const { verseId } of verses) {
     const { chapter } = decodeVerseId(verseId)

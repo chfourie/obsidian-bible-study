@@ -10,6 +10,7 @@ import {
   type ReadingStep,
 } from '../../src/modules/module-manifest'
 import type { Figure, RefSpan } from '../../src/modules/verse-content'
+import { bookAtomKind } from '../../src/reference/books'
 import { decodeVerseId, makeVerseId } from '../../src/reference/verse-id'
 import {
   bookPublication,
@@ -250,7 +251,7 @@ export const notesToCurate = (
   waived: readonly CurationWaiver[] = [],
 ): string[] => {
   const book = artifact.manifest.book
-  const separator = book.atom === 'verse' ? ':' : '.'
+  const separator = bookAtomKind(book) === 'verse' ? ':' : '.'
   const atoms = new Map(
     Object.entries(artifact.books[book.number]).map(([verseId, atom]) => {
       const { chapter, verse } = decodeVerseId(Number(verseId))
@@ -287,6 +288,7 @@ export const sha256Hex = (data: string | Uint8Array): string =>
     ? createHash('sha256').update(data, 'utf8').digest('hex')
     : createHash('sha256').update(data).digest('hex')
 
+export { bookAtomKind } from '../../src/reference/books'
 export { parseBookRegistry } from './book-registry'
 export { type CurationWaiver, curationWaivers } from './parse-book-markdown'
 export { parseRefOverrides } from './ref-overrides'

@@ -308,9 +308,10 @@ export type BookSectionGroup = {
 }
 
 // What a verse-atom section is called wherever it is named — tree row,
-// breadcrumb option, Title Bar: the printed chapter number alone where the
-// print titled none, the number and the title where it did (spec-books §1).
-// A paragraph Book's section is its name, as it always was.
+// breadcrumb option, Title Bar (spec-books §1, ticket #143): the printed
+// chapter number alone where the print titled none, else `5 · The title`,
+// the `·` keeping the number readable beside a printed head. A paragraph
+// Book's section is its name, as it always was.
 // A verse-atom Book's title runs on from its number (1 Enoch 5); a
 // paragraph Book's names its section after a dash (Humility — Preface).
 const TITLE_JOIN: Record<BookAtomKind, string> = {
