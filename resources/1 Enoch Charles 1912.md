@@ -10,11 +10,11 @@ language: English
 ### I-V. Parable of Enoch on the Future Lot of the Wicked and the Righteous.
 
 1. The words of the blessing of Enoch, wherewith he blessed the elect
-<marks>⌈⌈</marks>and<marks>⌉⌉</marks> righteous, who will be living in the day of tribulation, when all
-the wicked <marks>⌈⌈</marks>and godless<marks>⌉⌉</marks> are to be removed.
+<marks>⌈⌈</marks>and<marks>⌉⌉</marks> righteous [Footnote: The elect and righteous. This designation is found also in 38², ³, ⁴ 39⁶, ⁷ 48¹ 58¹, ² 61¹³ 62¹², ¹³, ¹⁵ 70³.], who will be living in the day of tribulation, when all
+the wicked <marks>⌈⌈</marks>and godless<marks>⌉⌉</marks> [Footnote: All the wicked. Here Gᵍ reads πάντας τοὺς ἐχθρούς = כל־הצרים corrupt for כל־הרעים. Hence E is right here. The same corruption is attested by the LXX in Prov. 20²².] are to be removed.
 2. And he took up his parable and said—Enoch a righteous man, whose eyes
 were opened by God, saw the vision of the Holy One in the heavens,
-<marks>⌈⌈</marks>which<marks>⌉⌉</marks> the angels showed me, and from them I heard everything, and from
+<marks>⌈⌈</marks>which<marks>⌉⌉</marks> [Footnote: Which the angels showed me. Gᵍ reads corruptly ‘he showed me’, and adds καὶ ἁγιολόγων ἁγίων ἤκουσα ἐγώ.] the angels showed me, and from them I heard everything, and from
 them I understood as I saw, but not for this generation, but for a remote
 one which is for to come.
 3. Concerning the elect I said, and took up my parable concerning them:
@@ -22,7 +22,7 @@ one which is for to come.
 3. The Holy Great One will come forth from His dwelling,
 
 4. And the eternal God will tread upon the earth, <supplied>even</supplied> on Mount Sinai,
-4. <marks>[</marks>And appear from His camp<marks>]</marks>
+4. <marks>[</marks>And appear from His camp<marks>]</marks> [Footnote: ［And appear from His camp］. So Gᵍ. This I have bracketed as an addition. It is against the parallelism. It is also against the sense. In 3ᵇ it is already said that ‘the Holy One will come forth from His dwelling’, and the writer has gone on to speak of God’s advent on Sinai. E, it is true, reads ‘And appear with His hosts’. But if Gᵍ originally read ἐν τῇ παρεμβολῇ it is wholly improbable that a scribe would change it into ἐκ τῆς παρεμβολῆς against the context.]
 4. And appear in the strength of His might from the heaven <marks>⌈</marks>of heavens<marks>⌉</marks>.
 
 5. And all shall be smitten with fear,
@@ -33,7 +33,7 @@ one which is for to come.
 6. And the high hills shall be made low,
 6. And shall melt like wax before the flame
 
-7. And the earth shall be <marks>⌈</marks>wholly<marks>⌉</marks> rent in sunder,
+7. And the earth shall be <marks>⌈</marks>wholly<marks>⌉</marks> [Footnote: ‘Wholly’. So Gᵍ σχίσμα ［ῥαγάδι］. σχίσμα and ῥαγάδι appear to be duplicate renderings of the same Hebrew word. διασχισθήσεται … σχίσμα a Hebrew construction.] rent in sunder,
 7. And all that is upon the earth shall perish,
 7. And there shall be a judgement upon all <supplied>men</supplied>.
 
@@ -43,20 +43,20 @@ one which is for to come.
 
 8. And they shall all belong to God,
 8. And they shall be prospered,
-8. And they shall <marks>⌈</marks>all<marks>⌉</marks> be blessed.
+8. And they shall <marks>⌈</marks>all<marks>⌉</marks> be blessed [Footnote: ⌈All⌉ be blessed. Gᵍ reads ‘He will bless them all’.].
 
-8. <marks>⌈</marks>And He will help them all<marks>⌉</marks>,
+8. <marks>⌈</marks>And He will help them all<marks>⌉</marks> [Footnote: ⌈And He will help them⌉. So Gᵍ καὶ πάντων ἀντιλήμψεται. Here there is an obvious dittograph in Gᵍ; for it adds καὶ βοηθήσει ἡμῖν. This line is omitted in E quite wrongly. In fact E preserves only the second line of this stanza Light shall appear unto them (Gᵍ). E reads ‘light (+ ‘of God’ α-g, β-o) shall shine upon them’. Cf. 38⁴.],
 8. And light shall appear unto them,
-8. <marks>⌈</marks>And He will make peace with them<marks>⌉</marks>.
+8. <marks>⌈</marks>And He will make peace with them<marks>⌉</marks> [Footnote: ⌈And He will make peace with them⌉ (Gᵍ). E om. but the tristich requires it.].
 
-9. And behold! He cometh with ten thousands of <marks>⌈</marks>His<marks>⌉</marks> holy ones
+9. And behold! He cometh with ten thousands of <marks>⌈</marks>His<marks>⌉</marks> holy ones [Footnote: Cometh with ten thousands of ⌈His⌉ holy ones. From Deut. 33² ואתא מרבבת קדש. Since the LXX here renders σὺν μυριάσιν Καδής our author has followed the M.T. The ⌈His⌉ is found Gᵍ, Jude, and Ps. Cyprian. As Zahn pointed out, the above passage from Ps. Cyprian is derived directly from our text, and not from it indirectly through Jude. This entire verse has been quoted by Jude 14, 15 in a compressed form, who in the same passage draws upon 5⁴ 27² 60⁸.]
 9. To execute judgement upon all,
-9. And to destroy <marks>⌈</marks>all<marks>⌉</marks> the ungodly:
+9. And to destroy <marks>⌈</marks>all<marks>⌉</marks> the ungodly [Footnote: All the ungodly. The ‘all’ is corrupt in E, but recoverable by an easy emendation.]:
 
 9. And to convict all flesh
-9. Of all the works <marks>⌈</marks>of their ungodliness<marks>⌉</marks> which they have ungodly
+9. Of all the works <marks>⌈</marks>of their ungodliness<marks>⌉</marks> [Footnote: Which they have ungodly committed (Gᵍ). Here E is corrupt, reading warasajû for zarase‘û.] which they have ungodly
 committed,
-9. <marks>⌈</marks>And of all the hard things which<marks>⌉</marks> ungodly sinners <marks>⌈</marks>have spoken<marks>⌉</marks>
+9. <marks>⌈</marks>And of all the hard things which<marks>⌉</marks> ungodly sinners <marks>⌈</marks>have spoken<marks>⌉</marks> [Footnote: ⌈All the hard things which⌉ … ⌈have spoken⌉ (Gᵍ). The text of Gᵍ here presents a dittograph. σκληρῶν ὧν ἐλάλησαν λόγων καὶ περὶ πάντων ὧν κατελάλησαν.]
 against Him.
 
 ## 2.
@@ -65,15 +65,17 @@ against Him.
 change their orbits, <marks>⌈</marks>and<marks>⌉</marks> the luminaries which are in the heaven, how
 they all rise and set in order each in its season, and transgress not
 against their appointed order.
+%% waived 2:1 — the version bracket on ⌈and⌉ has no note of its own on the page (leaf 124); the key alone explains it
 2. Behold ye the earth, and give heed to the things which take place upon
-it from first to last, <marks>⌈</marks>how <emended>steadfast</emended> they are<marks>⌉</marks>, how <marks>⌈</marks>none of the things
-upon earth<marks>⌉</marks> change, <marks>⌈</marks>but<marks>⌉</marks> all the works of God appear <marks>⌈</marks>to you<marks>⌉</marks>.
+it from first to last, <marks>⌈</marks>how <emended>steadfast</emended> they are<marks>⌉</marks> [Footnote: ⌈How steadfast they are.⌉ Gᵍ reads ὡς εἰσιν φθαρτά. But φθαρτά is impossible in this context. The object of the writer is to praise the works of nature. Hence φθαρτά is corrupt. Possibly it is a rendering of נבלים (as in Is. 24⁴) corrupt for נכנים = ‘steadfast’. Hence render: ‘how steadfast they are.’], how <marks>⌈</marks>none of the things
+upon earth<marks>⌉</marks> [Footnote: How ⌈none of the things upon earth⌉, &c. E reads ‘how none of the works of God change in appearing’.] change, <marks>⌈</marks>but<marks>⌉</marks> all the works of God appear <marks>⌈</marks>to you<marks>⌉</marks>.
 3. Behold the summer and the winter, <marks>⌈⌈</marks>how the whole earth is filled with
 water, and clouds and dew and rain lie upon it<marks>⌉⌉</marks>.
+%% waived 2:3 — the ⌈⌈ ⌉⌉ bracket has no note on the page (leaf 124); the key alone explains it
 
 ## 3.
 
-1. Observe and see how <supplied>in the winter</supplied> all the trees <marks>⌈⌈</marks>seem<marks>⌉⌉</marks> as though
+1. Observe and see how <supplied>in the winter</supplied> all the trees <marks>⌈⌈</marks>seem<marks>⌉⌉</marks> [Footnote: 1. In Gᵍ 3¹ᵇ–5¹ᵃ has been lost through homoeoteleuton.] as though
 they had withered and shed all their leaves, except fourteen trees, which
 do not lose their foliage but retain the old foliage from two to three
 years till the new comes.
@@ -87,16 +89,17 @@ tread on the earth, or on a rock by reason of its heat.
 
 ## 5.
 
-1. Observe <marks>⌈⌈</marks>ye<marks>⌉⌉</marks> how the trees cover themselves with green leaves and bear
-fruit: wherefore give ye heed <marks>⌈</marks>and know<marks>⌉</marks> with regard to all <marks>⌈</marks>His works<marks>⌉</marks>,
+1. Observe <marks>⌈⌈</marks>ye<marks>⌉⌉</marks> [Footnote: In Gᵍ 3¹ᵇ–5¹ᵃ has been lost through homoeoteleuton.] how the trees cover themselves with green leaves and bear
+fruit: wherefore give ye heed <marks>⌈</marks>and know<marks>⌉</marks> with regard to all <marks>⌈</marks>His works<marks>⌉</marks> [Footnote: The trees … bear fruit. Gᵍ reads ‘the green leaves on them cover the trees and all their fruit is for honour and glory’. He that liveth (cf. Sir. 18¹) … them so. Here I have emended gabarkemmû la’ĕlûntû kuĕllômû into gabrômû la’ĕlôntû kamâhû in accordance with Gᵍ. Gᵍ = ‘the living God hath made them so and He liveth for ever’. Here there is a manifest dittograph.],
 and recognize how He that liveth for ever hath made them so.
 
-2. And <marks>⌈</marks>all<marks>⌉</marks> His works go on <marks>⌈</marks>thus<marks>⌉</marks> from year to year <marks>⌈</marks>for ever<marks>⌉</marks>, and all
-the tasks <marks>⌈</marks>which<marks>⌉</marks> they accomplish for Him, and <marks>⌈</marks>their tasks<marks>⌉</marks> change not,
-but according as <marks>⌈⌈</marks>God<marks>⌉⌉</marks> hath ordained so is it done.
+2. And <marks>⌈</marks>all<marks>⌉</marks> His works [Footnote: ⌈All⌉ His works. E adds qedmêhû = ‘before Him’. This seems corrupt for kamâhû = ‘thus’ (οὕτως in Gᵍ) or for kuĕllômû = ‘all’.] go on <marks>⌈</marks>thus<marks>⌉</marks> from year to year <marks>⌈</marks>for ever<marks>⌉</marks>, and all
+the tasks <marks>⌈</marks>which<marks>⌉</marks> they accomplish for Him, and <marks>⌈</marks>their tasks<marks>⌉</marks> [Footnote: The tasks which they accomplish for Him. So Gᵍ πάντα ὅσα ἀποτελοῦσιν αὐτῷ τὰ ἔργα. Here τὰ ἔργα does not mean ‘the works’ as in the beginning of the verse, but the ‘offices’ or ‘tasks’ discharged by them as the next sentence—καὶ οὐκ ἀλλοιοῦνται αὐτῶν τὰ ἔργα—proves, and likewise the clause καὶ οὐκ ἀλλοιοῦσιν αὐτῶν τὰ ἔργα in ver. 3. But E omits ὅσα before ἀποτελοῦσιν and αὐτῶν τὰ ἔργα, and renders ‘all His works serve Him and change not’.] change not,
+but according as <marks>⌈⌈</marks>God<marks>⌉⌉</marks> [Footnote: God. > Gᵍ.] hath ordained so is it done.
 
 3. And behold how the sea and the rivers in like manner accomplish <marks>⌈</marks>and
 change not<marks>⌉</marks> their tasks <marks>⌈</marks>from His commandments<marks>⌉</marks>.
+%% waived 5:3 — no note of its own on the page (leaves 125–126); Charles’s only word on it is the clause καὶ οὐκ ἀλλοιοῦσιν αὐτῶν τὰ ἔργα cited in the note on 2
 
 4. But ye—ye have not been steadfast, nor done the commandments of the Lord,
 4. But ye have turned away and spoken proud and hard words
@@ -108,14 +111,15 @@ change not<marks>⌉</marks> their tasks <marks>⌈</marks>from His commandments
 5. And <marks>⌈</marks>the years of your destruction<marks>⌉</marks> shall be multiplied in eternal
 execration,
 5. And ye shall find no mercy.
+%% waived 5:5 — no note on ⌈the years of your destruction⌉ on the page (leaf 126); the key alone explains the bracket
 
 6a. In those days ye shall make your names an eternal execration unto all
 the righteous,
-6b. And by you shall <marks>⌈</marks>all<marks>⌉</marks> who curse, curse.
-6c. <marks>⌈</marks>And all<marks>⌉</marks> the sinners <marks>⌈</marks>and godless<marks>⌉</marks> shall imprecate by you,
+6b. And by you shall <marks>⌈</marks>all<marks>⌉</marks> who curse [Footnote: And by you shall ⌈all⌉ who curse, curse. So Gᵍ καὶ ἐν ὑμῖν καταράσονται πάντες οἱ καταρώμενοι. E = ‘and you shall the sinners curse’. Gᵍ is clearly right and reflects a Hebrew idiom. All who curse will introduce the names of these sinners into their formulas of cursing as instances of persons wholly accursed. The text = בכם יקללו כל־המקללים.], curse.
+6c. <marks>⌈</marks>And all<marks>⌉</marks> the sinners <marks>⌈</marks>and godless<marks>⌉</marks> [Footnote: ⌈And all⌉ the sinners ⌈and godless⌉ shall imprecate by you. So Gᵍ since E is corrupt. Here again we have the same idiom as in the preceding line. ἐν ὑμῖν ὀμοῦνται = בכם ישבעו. This idiom is found in Ps. 102⁹ מהוללי בי נשבעו: ‘they who are mad against me swear by me.’ See also Is. 65¹⁶ and Jer. 29²², ‘And of them shall a curse (קללה) be taken by all the captives of Judah … saying: the Lord make thee like Zedekiah … whom the king of Babylon roasted in the fire.’] shall imprecate by you,
 7c. And for you, the godless, there shall be a curse.
 
-6d. <marks>⌈</marks>And all the <marks>…</marks> shall rejoice,
+6d. <marks>⌈</marks>And all the <marks>…</marks> shall rejoice, [Footnote: And all the … shall rejoice. The MS. reads οἱ αμαρτοι. What does this corrupt form stand for? It may be corrupt for οἱ (ἀν)αμάρ(τη)τοι, a bad rendering of המתחטאים = ‘those cleansed’ or ‘purified’. The piel and hithpael of חטא in this sense means purification from ceremonial and ritual uncleanness in the O.T., whereas the context requires spiritual cleansing.]
 6e. And there shall be forgiveness of sins,
 6f. And every mercy and peace and forbearance:
 6g. There shall be salvation unto them, a goodly light.
@@ -149,8 +153,8 @@ the righteous,
 3. And Semjâzâ, who was their leader, said unto them: ‘I fear ye will not indeed agree to do this deed, and I alone shall have to pay the penalty of a great sin.’
 4. And they all answered him and said: ‘Let us all swear an oath, and all bind ourselves by mutual imprecations not to abandon this plan but to do this thing.’
 5. Then sware they all together and bound themselves by mutual imprecations upon it.
-6. And they were in all two hundred; who descended <marks>⌈</marks>in the days<marks>⌉</marks> of <emended>Jared</emended> on the summit of Mount Hermon, and they called it Mount Hermon, because they had sworn and bound themselves by mutual imprecations upon it.
-7. And these are the names of their leaders: Sêmîazâz, their leader, Arâkîba, Râmêêl, Kôkabîêl, Tâmîêl, Râmîêl, Dânêl, Êzêqêêl, Barâqîjâl, Asâêl, Armârôs, Batârêl, Anânêl, Zaqîêl, Samsâpêêl, Satarêl, Tûrêl, Jômjâêl, <emended>Sariêl</emended>.
+6. And they were in all two hundred; who descended <marks>⌈</marks>in the days<marks>⌉</marks> of <emended>Jared</emended> [Footnote: Who descended … on Mount Hermon. I have here followed Gˢ οἱ καταβάντες ἐν ταῖς ἡμέραις ’Ιάρεδ εἰς τὴν κορυφὴν τοῦ ‘Ερμονιεὶμ ὄρους. The Ethiopic text reads: ‘and they descended on Ardis which is the summit of Mt. Hermon.’ The name Ardis, otherwise unknown, is to be explained with Dillmann as a compression of ’Ιάρεδ εἰς, the translator not having found ἐν ταῖς ἡμέραις in his text. Halévy in the Journal Asiatique, Avril-Mai 1867, pp. 356-7, reproduces this verse in Hebrew, whereby we see at a glance why the angels descended in the days of Jared—from ירד to descend, and why it was that they bound themselves by mutual oaths on Hermon—from חרם a curse. Cf. Book of Jubilees 4¹⁵: ‘Jared; for in his days the angels of the Lord descended on the earth.’ This play on Jared shows that the idea originated in Hebrew.] on the summit of Mount Hermon, and they called it Mount Hermon, because they had sworn and bound themselves by mutual imprecations upon it.
+7. And these are the names of their leaders: Sêmîazâz, their leader, Arâkîba, Râmêêl, Kôkabîêl, Tâmîêl, Râmîêl, Dânêl, Êzêqêêl, Barâqîjâl, Asâêl, Armârôs, Batârêl, Anânêl, Zaqîêl, Samsâpêêl, Satarêl, Tûrêl, Jômjâêl, <emended>Sariêl</emended> [Footnote: This list is incomplete. A name has been lost after Tûrêl. Sariêl. E reads corruptly ’Arâzjâl. This name recurs as Esdrĕêl in 8³. Since in Gˢ 8³ this angel ἐδίδαξε τὰ σημεῖα τῆς σελήνης, these forms are corrupt for Sariel as in Gˢ (Gᵍ ’Ατριήλ but in 8³ Σεριήλ) Σαριήλ = סהריאל where סהר = ‘moon’. See K.A.T.³ 367.].
 8. These are their chiefs of tens.
 
 ## 7.
@@ -164,58 +168,59 @@ the righteous,
 
 ## 8.
 
-1. And Azâzêl taught men to make swords, and knives, and shields, and breastplates, and made known to them <emended>the metals</emended> <marks>〈</marks>of the earth<marks>〉</marks> and the art of working them, and bracelets, and ornaments, and the use of antimony, and the beautifying of the eyelids, and all kinds of costly stones, and all colouring tinctures.
+1. And Azâzêl taught men to make swords, and knives, and shields, and breastplates, and made known to them <emended>the metals</emended> <marks>〈</marks>of the earth<marks>〉</marks> [Footnote: The metals of the earth. So Gˢ. E twice deals with this phrase. First, here it gives only τὰ μετ’ αὐτά corrupt for τὰ μέταλλα, and then at the end of the verse taulâta, a transliteration of τὰ μέταλλα, and appends τῆς γῆς. Hence the above rendering is to be followed. Gᵍ reads only τὰ †μεγάλα. With our text cf. Tertullian, De Cultu Fem. i. 2 ‘Metallorum opera nudaverunt’.] and the art of working them, and bracelets, and ornaments, and the use of antimony, and the beautifying of the eyelids, and all kinds of costly stones, and all colouring tinctures.
 2. And there arose much godlessness, and they committed fornication, and they were led astray, and became corrupt in all their ways.
-3. Semjâzâ taught enchantments, and root-cuttings, Armârôs the resolving of enchantments, Barâqîjâl, <supplied>taught</supplied> astrology, Kôkabêl the constellations, <emended>Ezêqêêl the knowledge of the clouds</emended>, <marks>〈</marks>Araqiêl the signs of the earth, Shamsiêl the signs of the sun<marks>〉</marks>, and Sariêl the course of the moon.
-4. And as men perished, they cried, and their cry went up to heaven<marks>…</marks>.
+3. Semjâzâ taught enchantments, and root-cuttings, Armârôs the resolving of enchantments, Barâqîjâl, <supplied>taught</supplied> astrology, Kôkabêl the constellations, <emended>Ezêqêêl the knowledge of the clouds</emended> [Footnote: Ezêqêêl the knowledge of the clouds. E is here very corrupt. Though it gives Ezêqêêl rightly in 6⁷, here it reads ‘Tamiel’. Gᵍ is also corrupt—Σαθήλ corrupt for Ζακιήλ, as in 6⁷, or ’Εζεκιήλ. Again Gᵍ E have ἀστεροσκοπίαν, which, as I have already pointed out in 6⁷ (which see), is corrupt for ἀεροσκοπίαν (so Gˢ).], <marks>〈</marks>Araqiêl the signs of the earth, Shamsiêl the signs of the sun<marks>〉</marks> [Footnote: 〈Araqiêl … sun〉 supplied from Gˢ, save that for ὁ τρίτος and ὁ ἕβδομος I have given the names these numbers represent.], and Sariêl the course of the moon.
+4. And as men perished, they cried, and their cry went up to heaven<marks>…</marks> [Footnote: They cried, and their cry went up to heaven (E) = ἐβόησαν καὶ ἀνέβη ἡ βοὴ αὐτῶν εἰς τὸν οὐρανόν. Gᵍ om. ἐβόησαν καί. Gˢ¹² reads ἐβόησαν εἰς τὸν οὐρανόν. Our text, therefore, may be a conflation of these two readings: yet cf. 9¹⁰. To heaven. + ‘saying, Bring our cause before the Most High and our destruction before the Great Glory, before the Lord of all the lords in greatness’ Gˢ². Cf. Gˢ¹. This fragment most probably preserves part of the original text: cf. 9², ³. The cry of men is not inarticulate, but a prayer for justice.].
 
 ## 9.
 
 1. And then Michael, Uriel, Raphael, and Gabriel looked down from heaven and saw much blood being shed upon the earth, and all lawlessness being wrought upon the earth.
-2. And they said one to another: ‘The earth, made <marks>†</marks>without inhabitant, cries the voice of their crying<marks>†</marks> up to the gates of heaven.
-3. <marks>⌈⌈</marks>And now to you, the holy ones of heaven<marks>⌉⌉</marks>, the souls of men make their suit, saying, “Bring our cause before the Most High”.’
-4. And they said to the Lord <emended>of the ages</emended>: ‘Lord of lords, God of gods, King of kings <marks>〈</marks>and God of the ages<marks>〉</marks>, the throne of Thy glory <supplied>standeth</supplied> unto all the generations of the ages, and Thy name holy and glorious and blessed unto all the ages!
+2. And they said one to another: ‘The earth, made <marks>†</marks>without inhabitant, cries the voice of their crying<marks>†</marks> [Footnote: The earth †made without inhabitant … heaven (E). Gᵍ reads ‘the voice of them that cry upon the earth to the gates of heaven’. Gˢ¹, ² omit. On ‘made without inhabitant’ cf. 67² 84⁵ T. Naph. 3⁵.] up to the gates of heaven.
+3. <marks>⌈⌈</marks>And now to you, the holy ones of heaven<marks>⌉⌉</marks> [Footnote: And now … heaven (E). Lost in Gᵍˢ¹, ² through hmt.], the souls of men make their suit, saying, “Bring our cause before the Most High”.’
+4. And they said to the Lord <emended>of the ages</emended> [Footnote: Lord of the ages (Gˢ¹). > Gᵍˢ². E = κυρίῳ τῶν βασιλέων, where τ. βασιλέων = מלכיא corrupt for עלמיא = τῶν αἰώνων.]: ‘Lord of lords, God of gods, King of kings <marks>〈</marks>and God of the ages<marks>〉</marks> [Footnote: Of kings (E Gˢ¹, ²). Gᵍ reads τῶν αἰώνων = עלמיא corrupt for מלכיא. 〈God of the ages.〉 Restored from Gˢ¹, ². In Gˢ² ἀνθρώπων, i. e. ανπων is corrupt for αἰώνων.], the throne of Thy glory <supplied>standeth</supplied> unto all the generations of the ages, and Thy name holy and glorious and blessed unto all the ages!
 5. Thou hast made all things, and power over all things hast Thou: and all things are naked and open in Thy sight, and all things Thou seest, and nothing can hide itself from Thee.
-6. Thou seest what Azâzêl hath done, who hath taught all unrighteousness on earth and revealed the eternal secrets which were <supplied>preserved</supplied> in heaven, which men were striving to <emended>learn</emended>:
+6. Thou seest what Azâzêl hath done, who hath taught all unrighteousness on earth and revealed the eternal secrets which were <supplied>preserved</supplied> in heaven, which men were striving to <emended>learn</emended> [Footnote: Revealed the eternal secrets which were … learn. So Gᵍ with the correction of ἔγνωσαν into γνῶναι (cf. Gˢ εἰδέναι); for it is untranslatable as it stands. E is very corrupt: ‘the eternal secrets which are wrought in the heaven mankind knows’ (q). But Gᵍˢ show that ’ĕlla jetgabarû should be emended into ’ĕlla jetgêbarû (= ἃ ἐπιτηδεύουσιν) and transposed after ‘in the heaven’. Next ’a’ĕmara (q) (= ἔγνω) should be emended into ’a’ĕmrô = γνῶναι or εἰδέναι. Thus E agrees with Gᵍ when ἔγνωσαν in the latter is corrected as above suggested. Gˢ = ‘revealed to the world the things that are (preserved) in heaven. And the children of men are practising his (Azazel’s) practices in order to know the mysteries’.]:
 7. And Semjâzâ, to whom Thou hast given authority to bear rule over his associates.
 8. And they have gone to the daughters of men upon the earth, and have slept with the women, and have defiled themselves, and revealed to them all kinds of sins.
 9. And the women have borne giants, and the whole earth has thereby been filled with blood and unrighteousness.
-10. And now, behold, the souls of those who have died are crying and making their suit to the gates of heaven, and their lamentations have ascended: and cannot <emended>cease</emended> because of the lawless deeds which are wrought on the earth.
+10. And now, behold, the souls of those who have died are crying and making their suit to the gates of heaven, and their lamentations have ascended: and cannot <emended>cease</emended> [Footnote: Cease. E Gᵍˢ read ἐξελθεῖν = למנפק corrupt for למפסק = ‘cease’. The lamentations must keep ascending to heaven without ceasing because of the deeds of violence on earth.] because of the lawless deeds which are wrought on the earth.
 11. And Thou knowest all things before they come to pass, and Thou seest these things and Thou dost suffer them, and Thou dost not say to us what we are to do to them in regard to these.’
 
 ## 10.
 
-1. Then said the Most High, the Holy and Great One spake, and sent <emended>Uriel</emended> to the son of Lamech, and said to him:
-2. ‘<marks>〈</marks>Go to Noah and<marks>〉</marks> tell him in my name “Hide thyself!”, and reveal to him the end that is approaching: that the whole earth will be destroyed, and a deluge is about to come upon the whole earth, and will destroy all that is on it.
+1. Then said the Most High, the Holy and Great One spake, and sent <emended>Uriel</emended> [Footnote: Uriel (Gˢ). Gᵍ ’Ιστραήλ. E is corrupt.] to the son of Lamech, and said to him:
+2. ‘<marks>〈</marks>Go to Noah and<marks>〉</marks> [Footnote: 〈Go to Noah and.〉 Restored from Gˢ πορεύου πρὸς τὸν Νῶε καί. This phrase belonged to the original, though already lost in the archetype of E. It belongs to the original, for each new command issued to the angels begins with the word ‘go’. Cf. Gˢ 10⁴, ⁹, ¹¹.] tell him in my name “Hide thyself!”, and reveal to him the end that is approaching: that the whole earth will be destroyed, and a deluge is about to come upon the whole earth, and will destroy all that is on it.
 3. And now instruct him that he may escape and his seed may be preserved for all the generations of the world.’
 4. And again the Lord said to Raphael: ‘Bind Azâzêl hand and foot, and cast him into the darkness: and make an opening in the desert, which is in Dûdâêl, and cast him therein.
 5. And place upon him rough and jagged rocks, and cover him with darkness, and let him abide there for ever, and cover his face that he may not see light.
 6. And on the day of the great judgement he shall be cast into the fire.
-7. And heal the earth which the angels have corrupted, and proclaim the healing of the earth, that they may heal the plague, and that all the children of men may not perish through all the secret things that the Watchers have <emended>disclosed</emended> and have taught their sons.
+7. And heal the earth which the angels have corrupted, and proclaim the healing of the earth, that they may heal the plague, and that all the children of men may not perish through all the secret things that the Watchers have <emended>disclosed</emended> [Footnote: Have disclosed. E Gᵍ have here ἐπάταξαν = אבדו corrupt for אמרו = εἶπον which we find in Gˢ. Cf. ἐμηνύσατε in 16³. For an analogous corruption see 2 Chron. 22¹⁰. Bouriant’s conjecture—ἐπέτασαν—which I formerly followed is impossible.] and have taught their sons.
 8. And the whole earth has been corrupted through the works that were taught by Azâzêl: to him ascribe all sin.’
-9. And to Gabriel said the Lord: ‘Proceed against the bastards and the reprobates, and against the children of fornication: and destroy <marks>[</marks>the children of fornication and<marks>]</marks> the children of the Watchers from amongst men: <marks>[</marks>and cause them to go forth<marks>]</marks>: send them one against the other that they may destroy each other in battle: for length of days shall they not have.
+9. And to Gabriel said the Lord: ‘Proceed against the bastards and the reprobates, and against the children of fornication: and destroy <marks>[</marks>the children of fornication and<marks>]</marks> [Footnote: ［The children of fornication and.］ > Gᵍˢ. This is a dittograph from the preceding clause in E. It is against the context also. ‘The children of the Watchers’ is sufficient: this phrase includes the three classes in the preceding clause.] the children of the Watchers from amongst men: <marks>[</marks>and cause them to go forth<marks>]</marks> [Footnote: ［And cause them to go forth.］ A duplicate rendering in E of πέμψον.]: send them one against the other that they may destroy each other in battle: for length of days shall they not have.
 10. And no request that they <supplied>i. e. their fathers</supplied> make of thee shall be granted unto their fathers on their behalf; for they hope to live an eternal life, and that each one of them will live five hundred years.’
-11. And the Lord said unto Michael: ‘Go, <emended>bind</emended> Semjâzâ and his associates who have united themselves with women so as to have defiled themselves with them in all their uncleanness.
-12. And, when their sons have slain one another, and they have seen the destruction of their beloved ones, bind them fast for seventy generations in the <emended>valleys</emended> of the earth, till the day of their judgement and of their consummation, till the judgement that is for ever and ever is consummated.
+11. And the Lord said unto Michael: ‘Go, <emended>bind</emended> [Footnote: Bind (i. e. δῆσον Gˢ). Gᵍ E read δήλωσον, a corruption native to Gᵍ; for the original acc. μιγέντας remains unchanged, though of course δήλωσον would require μιγεῖσι.] Semjâzâ and his associates who have united themselves with women so as to have defiled themselves with them in all their uncleanness.
+12. And, when their sons have slain one another, and they have seen the destruction of their beloved ones, bind them fast for seventy generations in the <emended>valleys</emended> [Footnote: Valleys (νάπας Gᵍˢ). E reads ‘hills’. νάπαι is used as a rendering of גבעה in Is. 40¹² Ezek. 6³. This fact and the influence of the Greek myth of the Titans may explain how the Ethiopic translator attached this meaning to t. That νάπαι means valleys in this passage is beyond the possibility of doubt. In 67⁴ ˢᵠᵠ· this valley (not valleys) in which the fallen angels are cast is dealt with at length.] of the earth, till the day of their judgement and of their consummation, till the judgement that is for ever and ever is consummated.
 13. In those days they shall be led off to the abyss of fire: <marks>〈</marks>and<marks>〉</marks> to the torment and the prison in which they shall be confined for ever.
-14. And whosoever shall be <emended>condemned</emended> and destroyed will from thenceforth be bound together with them to the end of all generations.
+%% waived 10:13 — the 〈and〉 has no note of its own on the page (leaf 140): Charles’s notes on 13 speak only to ‘abyss of fire’ and ‘in which they’
+14. And whosoever shall be <emended>condemned</emended> [Footnote: Condemned (Gˢ). Gᵍ E read κατακαυσθῇ corrupt for κατακριθῇ.] and destroyed will from thenceforth be bound together with them to the end of all generations.
 15. And destroy all the spirits of the reprobate, and the children of the Watchers, because they have wronged mankind.
-16. Destroy all wrong from the face of the earth, and let every evil work come to an end: and let the plant of righteousness and truth appear: <marks>⌈</marks>and it shall prove a blessing: the works of righteousness and truth<marks>⌉</marks> shall be planted in truth and joy for evermore.
+16. Destroy all wrong from the face of the earth, and let every evil work come to an end: and let the plant of righteousness and truth appear: <marks>⌈</marks>and it shall prove a blessing: the works of righteousness and truth<marks>⌉</marks> [Footnote: Righteousness and truth. After these words Gᵍ omits through hmt. καὶ ἔσται εὐλογία· τὰ ἔργα τῆς δικαιοσύνης καὶ τῆς ἀληθείας, which are preserved by E.] shall be planted in truth and joy for evermore.
 
 17. And then shall all the righteous escape,
 17. And shall live till they beget thousands of children,
-17. And all the days of their youth and their <emended>old age</emended> shall they complete in peace.
+17. And all the days of their youth and their <emended>old age</emended> [Footnote: Their old age: cf. 25³, ⁴ (note). Here Gᵍ E have τὰ σάββατα αὐτῶν = שבתהון in which the word is wrongly vocalized for שׂבתהון = τὸ γῆρας αὐτῶν. The error could also be explained in Hebrew. See Wellhausen, Skizzen, vi. 241, 260.] shall they complete in peace.
 
 18. And then shall the whole earth be tilled in righteousness, and shall all be planted with trees and be full of blessing.
 19. And all desirable trees shall be planted on it, and they shall plant vines on it: and the vine which they plant thereon shall yield wine in abundance, and as for all the seed which is sown thereon each measure <supplied>of it</supplied> shall bear a thousand, and each measure of olives shall yield ten presses of oil.
 20. And cleanse thou the earth from all oppression, and from all unrighteousness, and from all sin, and from all godlessness: and all the uncleanness that is wrought upon the earth destroy from off the earth.
-21. <marks>⌈</marks>And all the children of men shall become righteous<marks>⌉</marks>, and all nations shall offer adoration and shall praise Me, and all shall worship Me.
+21. <marks>⌈</marks>And all the children of men shall become righteous<marks>⌉</marks> [Footnote: And all the children of men shall become righteous (E). > Gᵍ. The conversion of the Gentiles. Cf. 90³⁰ (note) 91¹⁴.], and all nations shall offer adoration and shall praise Me, and all shall worship Me.
 22. And the earth shall be cleansed from all defilement, and from all sin, and from all punishment, and from all torment, and I will never again send <supplied>them</supplied> upon it from generation to generation and for ever.
 
 ## 11.
 
-1. And in those days I will open the store chambers of blessing which are in the heaven, so as to send them down <marks>⌈</marks>upon the earth<marks>⌉</marks> over the work and labour of the children of men.
-2. And truth and peace shall be associated together throughout all the days of the world and throughout all the generations <emended>of men</emended>.’
+1. And in those days I will open the store chambers of blessing which are in the heaven, so as to send them down <marks>⌈</marks>upon the earth<marks>⌉</marks> [Footnote: Upon the earth (E). > Gᵍ.] over the work and labour of the children of men.
+2. And truth and peace shall be associated together throughout all the days of the world and throughout all the generations <emended>of men</emended> [Footnote: Of men (Gᵍ). E = αἰώνων, a corruption of ανπων = ἀνθρώπων.].’
 
 ## 12.
 
