@@ -1,0 +1,7 @@
+# Verse-atom source uses `N.` / `Na.` prefixes
+
+Stored poetic lineation is locked (ADR 0007: space-joined text + `lines`; ADR 0010: letters are locators, source is page order). Paragraph-atom source already treats `1.` as a list and stores `\n`; a verse-atom Book cannot. Charles 1912 is the first instance; a later verse-atom Book uses the same parser. Kind is the Book’s (`verse` | `paragraph`, ticket 117) — no new front matter.
+
+**Decision:** in a verse-atom section, a body line is a verse-line `^(\d+)([a-z])?\.\s+.+` or a wrap (unprefixed, same block → space-join onto the previous verse-line). Digit = atom in this `##` section; letter = line letter, stripped. Repeat the prefix on every metrical line; prose is one prefix + wraps and carries no `lines`. Mixed (1:3): unlettered lead-in, then more `N.` / `Na.` — unlettered only before letters of that atom. Editorial-mark wrappers sit after the prefix and are parsed on the joined atom (ADR 0008). Blank line → `paragraph: true` on the next verse-line; first verse-line of a section too. Build fails (cite the line) on no prefix and not a wrap, `6A.` / `6aa.` / empty text, duplicate letter, unlettered after lettered, lists/tables, or holes in `1..N`. Missing letters are not invented. Paragraph Books unchanged.
+
+**Rejected:** HTML `<line>`; `5:6a` in the prefix (chapter is the `##` head); indent-as-poetry; LINE_KEEPING `1.` lists in verse-atom source; blank line as atom delimiter.
