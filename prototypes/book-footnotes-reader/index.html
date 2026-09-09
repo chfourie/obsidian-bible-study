@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE — throwaway. Wayfinder ticket #127: how do Book footnotes appear
+     in the reader and in notes?
+     Three variants, switchable via ?variant= (floating bottom bar, ←/→ keys):
+       A — Study Panel, no marker: body lives in Study; notes suppress footnotes
+       B — Under the atom: marker + apparatus under each verse; notes block prints them
+       C — Popover: marker; body on tap; notes keep the marker
+     Host: winning quiet-book page from ticket #116. Delete when the ticket resolves. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book footnotes — prototype</title>
+<style>
+  :root, [data-theme="dark"] {
+    --bg: #1e1e1e; --bg2: #262626; --bg3: #2f2f2f; --border: #3a3a3a;
+    --text: #dcddde; --muted: #9a9a9a; --faint: #6e6e6e;
+    --accent: #a78bfa; --accent-dim: rgba(167,139,250,.14);
+    --note-bg: #252320; --supplied-opacity: .5; --marks-opacity: .3;
+  }
+  [data-theme="light"] {
+    --bg: #f7f4ee; --bg2: #efebe3; --bg3: #e7e1d6; --border: #d4cdb8;
+    --text: #2a261f; --muted: #6a6458; --faint: #938c7e;
+    --accent: #6d4fd6; --accent-dim: rgba(109,79,214,.12);
+    --note-bg: #f3efe6;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-thumb { background: #555; border-radius: 5px; }
+
+  #app { height: 100vh; display: flex; flex-direction: column; }
+
+  .qbar {
+    flex-shrink: 0; padding: 8px 14px 10px; border-bottom: 1px solid var(--border);
+    background: var(--bg2); font-size: .78rem; line-height: 1.45; color: var(--muted);
+  }
+  .qbar strong { color: var(--text); font-weight: 600; }
+  .state {
+    margin-top: 6px; font-variant-numeric: tabular-nums; color: var(--faint); font-size: .72rem;
+  }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .spacer { flex: 1; }
+  .pill {
+    border: 1px solid var(--accent); border-radius: 999px; padding: 2px 12px;
+    font-size: .78rem; background: var(--accent-dim); color: var(--accent);
+  }
+  .pill .ed { color: var(--faint); font-style: italic; margin-left: 4px; }
+  .theme-btn, .seg button {
+    color: var(--muted); font-size: .78rem; padding: 3px 8px;
+    border: 1px solid var(--border); border-radius: 6px;
+  }
+  .theme-btn:hover, .seg button:hover { color: var(--text); }
+  .seg { display: inline-flex; border-radius: 999px; overflow: hidden; }
+  .seg button { border-radius: 0; border-right-width: 0; }
+  .seg button:first-child { border-radius: 999px 0 0 999px; }
+  .seg button:last-child { border-radius: 0 999px 999px 0; border-right-width: 1px; }
+  .seg button.on { background: var(--accent-dim); color: var(--accent); }
+
+  .main { flex: 1; display: flex; min-height: 0; }
+  .content { flex: 1; overflow-y: auto; min-width: 0; }
+
+  .supplied { font-style: italic; opacity: var(--supplied-opacity); }
+  .mark { color: var(--accent); opacity: var(--marks-opacity); }
+  .emended { font-weight: 700; }
+
+  .toc {
+    width: 220px; flex-shrink: 0; border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 14px 0 40px; font-size: .82rem;
+  }
+  .toc-title { padding: 0 16px 4px; font-size: .95rem; font-weight: 600; }
+  .toc-author { padding: 0 16px 12px; color: var(--faint); font-size: .74rem; font-style: italic; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .toc-part { padding: 10px 16px 2px; color: var(--faint); font-size: .68rem; letter-spacing: .04em; }
+  .toc-item { display: flex; gap: 8px; width: 100%; text-align: left; padding: 4px 16px; color: var(--muted); border-left: 2px solid transparent; }
+  .toc-item.on { color: var(--accent); border-left-color: var(--accent); background: var(--accent-dim); }
+  .toc-num { width: 1.6em; flex-shrink: 0; color: var(--faint); text-align: right; }
+
+  .b-inner { max-width: 40rem; margin: 0 auto; padding: 36px 32px 48px; font-family: Georgia, "Iowan Old Style", "Times New Roman", serif; }
+  .b-chap-num { text-align: center; color: var(--faint); font-size: .85rem; letter-spacing: .25em; margin: 0 0 6px; }
+  .b-chap-title { text-align: center; font-size: 1.35rem; font-weight: 400; margin: 0 0 28px; font-variant: small-caps; letter-spacing: .04em; }
+  .verse-wrap { position: relative; margin: 0 0 1.05em; cursor: pointer; }
+  .b-prose { line-height: 1.9; font-size: 1.05rem; text-align: justify; hyphens: auto; margin: 0; }
+  .b-poem { line-height: 1.75; font-size: 1.05rem; margin: 0; text-align: left; }
+  .gutter-num {
+    position: absolute; left: -2.5em; top: .2em; width: 2em; text-align: right;
+    color: var(--accent); font-size: .72rem; font-weight: 600;
+    font-family: -apple-system, sans-serif;
+  }
+  .verse-wrap.sel .b-prose, .verse-wrap.sel .b-poem { background: var(--accent-dim); border-radius: 4px; }
+  .attribution { margin-top: 8px; color: var(--faint); font-size: .72rem; font-style: italic; font-family: -apple-system, sans-serif; }
+
+  .fn-mark {
+    display: inline; font-family: -apple-system, sans-serif; font-size: .68em;
+    font-weight: 700; color: var(--accent); vertical-align: super; line-height: 0;
+    padding: 0 1px; cursor: pointer;
+  }
+  .fn-mark.on { background: var(--accent-dim); border-radius: 3px; }
+
+  .fn-under {
+    margin: .45em 0 0; padding: .55em .75em .6em;
+    border-left: 2px solid var(--border); font-family: -apple-system, sans-serif;
+    font-size: .78rem; line-height: 1.45; color: var(--muted);
+  }
+  .fn-under .fn-n { color: var(--accent); font-weight: 700; font-size: .72em; vertical-align: super; margin-right: 4px; }
+  .fn-under + .fn-under { margin-top: .25em; }
+
+  .popover {
+    position: absolute; z-index: 30; left: 1.5rem; top: 1.6em; width: min(22rem, calc(100% - 2rem));
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    font-family: -apple-system, sans-serif; font-size: .78rem; line-height: 1.45; color: var(--muted);
+  }
+  .popover strong { color: var(--text); font-weight: 600; font-size: .72rem; }
+
+  .study {
+    width: 300px; flex-shrink: 0; border-left: 1px solid var(--border);
+    overflow-y: auto; padding: 12px 14px 40px; font-size: .8rem; background: var(--bg2);
+  }
+  .study-loc { font-weight: 600; }
+  .study-loc em { font-style: italic; }
+  .study-cite { color: var(--faint); font-size: .72rem; margin: 4px 0 14px; }
+  .study h2 { font-size: .68rem; letter-spacing: .06em; color: var(--faint); font-weight: 600; margin: 14px 0 6px; text-transform: uppercase; }
+  .study-empty { color: var(--faint); font-style: italic; }
+  .study-fn { margin: 0 0 10px; line-height: 1.5; color: var(--muted); }
+  .study-fn .fn-n { color: var(--accent); font-weight: 700; margin-right: 4px; }
+
+  .vault {
+    margin: 28px 0 80px; padding: 16px 18px 18px; background: var(--note-bg);
+    border: 1px solid var(--border); border-radius: 10px;
+    font-family: -apple-system, sans-serif;
+  }
+  .vault h2 { margin: 0 0 4px; font-size: .82rem; font-weight: 600; }
+  .vault .hint { color: var(--faint); font-size: .72rem; margin: 0 0 12px; }
+  .vault .body { font-size: .9rem; line-height: 1.55; color: var(--text); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--accent); border-radius: 999px; padding: 1px 10px 1px 8px;
+    font-size: .78rem; background: var(--accent-dim); color: var(--accent); cursor: pointer;
+  }
+  .chip .ico { font-size: .7rem; opacity: .8; }
+  .note-inline { font-family: Georgia, serif; font-size: 1rem; line-height: 1.7; }
+  .note-block { font-family: Georgia, serif; font-size: 1.02rem; line-height: 1.75; }
+  .note-block .cite { margin-top: 8px; color: var(--faint); font-size: .72rem; font-style: italic; font-family: -apple-system, sans-serif; }
+  .note-vnum { color: var(--accent); font-size: .72em; font-weight: 700; vertical-align: super; margin-right: 3px; }
+  .hum { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .hum .lbl { color: var(--faint); font-size: .7rem; margin-bottom: 6px; letter-spacing: .04em; }
+
+  .switcher {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 100;
+    display: flex; align-items: center; gap: 10px;
+    background: #0d0d0d; color: #ddd; border: 1px solid #555; border-radius: 999px;
+    padding: 8px 16px; box-shadow: 0 6px 24px rgba(0,0,0,.6); font-size: .82rem;
+  }
+  .switcher b { color: #fff; }
+  .switcher .desc { color: #aaa; max-width: 28rem; }
+  .sw-arrow { color: #ccc; font-size: 1rem; padding: 0 4px; }
+  .sw-arrow:hover { color: #fff; }
+
+  @media (max-width: 900px) {
+    .toc { display: none; }
+    .main { flex-direction: column; }
+    .study { width: 100%; max-height: 36vh; border-left: none; border-top: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const VARIANTS = {
+  A: 'Study Panel — no marker; body in Study; notes suppress',
+  B: 'Under the atom — marker + apparatus always on; notes block prints them',
+  C: 'Popover — marker; body on tap; notes keep the marker',
+};
+const KEYS = Object.keys(VARIANTS);
+
+const MARK_MEANING = {
+  '⌈⌈': 'in E, not in Gᵍ/Gˢ',
+  '⌉⌉': 'in E, not in Gᵍ/Gˢ',
+  '⌈': 'in Gᵍ, not in E',
+  '⌉': 'in Gᵍ, not in E',
+  '[': 'interpolation',
+  ']': 'interpolation',
+};
+
+function fromParts(parts) {
+  let text = '';
+  const supplied = [], marks = [], emended = [];
+  for (const p of parts) {
+    if (typeof p === 'string') { text += p; continue; }
+    const start = text.length;
+    text += p.t;
+    const end = text.length;
+    if (p.k === 's') supplied.push({ start, end });
+    if (p.k === 'e') emended.push({ start, end });
+    if (p.k === 'm') marks.push({ start, end });
+  }
+  return { text, supplied, emended, marks, footnotes: [] };
+}
+
+function attachFn(v, lemma, text) {
+  const at = v.text.indexOf(lemma);
+  if (at < 0) throw new Error('lemma missing: ' + lemma);
+  v.footnotes.push({ start: at + lemma.length, text });
+  return v;
+}
+
+const CHAPTER = {
+  num: 1, printed: 'I', name: 'The Future Lot of the Wicked and the Righteous',
+  verses: [
+    attachFn(fromParts([
+      'The words of the blessing of Enoch, wherewith he blessed the elect ',
+      { k: 'm', t: '⌈⌈' }, 'and', { k: 'm', t: '⌉⌉' },
+      ' righteous, who will be living in the day of tribulation, when all the wicked ',
+      { k: 'm', t: '⌈⌈' }, 'and godless', { k: 'm', t: '⌉⌉' },
+      ' are to be removed.',
+    ]), 'blessing',
+      'The blessing of Enoch. Cf. Deut. xxxiii. 1, “the blessing of Moses.” “Elect and righteous” is a standing phrase of the Parables (xxxviii. 2–4; xxxix. 6, 7).'),
+    attachFn(fromParts([
+      'And he took up his parable and said—Enoch a righteous man, whose eyes were opened by God, saw the vision of the Holy One in the heavens, ',
+      { k: 'm', t: '⌈' }, 'which', { k: 'm', t: '⌉' },
+      ' the angels showed me, and from them I heard everything, and from them I understood as I saw, but not for this generation, but for a remote one which is for to come.',
+    ]), 'parable',
+      '“Parable” = mashal, a discourse. Gᵍ “from the words of the Watchers and holy ones”; E “which the angels showed me.”'),
+    attachFn(Object.assign(fromParts([
+      'Concerning the elect I said, and took up my parable concerning them:\n',
+      'The Holy Great One will come forth from His dwelling,',
+    ]), { n: 3, shape: 'poem' }), 'Holy Great One',
+      'A poem of tristichs (vv. 3–9). “Holy Great One” as a divine title; Gᵍ ἅγιος καὶ μέγας.'),
+    attachFn(Object.assign(fromParts([
+      'And the eternal God will tread upon the earth, ',
+      { k: 's', t: 'even' },
+      ' on Mount Sinai,\n',
+      { k: 'm', t: '[' }, 'And appear from His camp', { k: 'm', t: ']' }, '\n',
+      'And appear in the strength of His might from the heaven ',
+      { k: 'm', t: '⌈' }, 'of heavens', { k: 'm', t: '⌉' }, '.',
+    ]), { n: 4, shape: 'poem' }), 'His camp',
+      'Second line an interpolation (Gᵍ omits). E “and appear with His hosts.” (even) is supplied.'),
+    attachFn(Object.assign(fromParts([
+      'And all shall be smitten with fear,\nAnd the Watchers shall quake,\nAnd great fear and trembling shall seize them unto the ends of the earth.',
+    ]), { n: 5, shape: 'poem' }), 'Watchers',
+      'Here = fallen angels (also x. 9, 15, xii. 4). In xii. 2, 3, xx. 1 = archangels. The name first occurs in Dan. iv. 13, 17, 23.'),
+    Object.assign(fromParts([
+      'And the high mountains shall be shaken,\nAnd the high hills shall be made low,\nAnd shall melt like wax before the flame',
+    ]), { n: 6, shape: 'poem' }),
+    attachFn(Object.assign(fromParts([
+      'And the earth shall be ',
+      { k: 'm', t: '⌈' }, 'wholly', { k: 'm', t: '⌉' },
+      ' rent in sunder,\nAnd all that is upon the earth shall perish,\nAnd there shall be a judgement upon all ',
+      { k: 's', t: 'men' }, '.',
+    ]), { n: 7, shape: 'poem' }), 'rent in sunder',
+      'wholly: Gᵍ; E omits. “men” supplied.'),
+    attachFn(Object.assign(fromParts([
+      'But with the righteous He will make peace,\nAnd will protect the elect,\nAnd mercy shall be upon them.\n\nAnd they shall all belong to God,\nAnd they shall be prospered,\nAnd they shall ',
+      { k: 'm', t: '⌈' }, 'all', { k: 'm', t: '⌉' },
+      ' be blessed.\n\n',
+      { k: 'm', t: '⌈' }, 'And He will help them all', { k: 'm', t: '⌉' },
+      ',\nAnd light shall appear unto them,\n',
+      { k: 'm', t: '⌈' }, 'And He will make peace with them', { k: 'm', t: '⌉' }, '.',
+    ]), { n: 8, shape: 'poem' }), 'belong to God',
+      'This stanza restored from the Greek. E omits two clauses of the tristich.'),
+  ],
+};
+
+CHAPTER.verses[0].n = 1; CHAPTER.verses[0].shape = 'prose';
+CHAPTER.verses[1].n = 2; CHAPTER.verses[1].shape = 'prose';
+
+const v9 = Object.assign(fromParts([
+  'And behold! He cometh with ten thousands of ',
+  { k: 'm', t: '⌈' }, 'His', { k: 'm', t: '⌉' },
+  ' holy ones\nTo execute judgement upon all,\nAnd to destroy ',
+  { k: 'm', t: '⌈' }, 'all', { k: 'm', t: '⌉' },
+  ' the ungodly:\n\nAnd to convict all flesh\nOf all the works ',
+  { k: 'm', t: '⌈' }, 'of their ungodliness', { k: 'm', t: '⌉' },
+  ' which they have ungodly committed,\n',
+  { k: 'm', t: '⌈' }, 'And of all the hard things which', { k: 'm', t: '⌉' },
+  ' ungodly sinners ',
+  { k: 'm', t: '⌈' }, 'have spoken', { k: 'm', t: '⌉' },
+  ' against Him.',
+]), { n: 9, shape: 'poem' });
+attachFn(v9, 'holy ones',
+  'Quoted by St. Jude 14, 15; Pseudo-Cyprian; Pseudo-Vigilius. Gᵍ supplies the defects in E. 4QEnᵃ: “myriads of His holy ones.” Jude: “the Lord came with his holy myriads.”');
+attachFn(v9, 'ungodly committed',
+  'Gᵍ “of all the works of their ungodliness.” The verse is the epiphany of the Holy Great One, identified by Jude with the Lord.');
+CHAPTER.verses.push(v9);
+
+const HUMILITY = {
+  n: 'hum', chapter: 2, shape: 'prose',
+  text: 'WE have seen humility in the life of Christ, as He laid open His heart to us.',
+  supplied: [], marks: [], emended: [],
+  footnotes: [{
+    start: 'WE have seen humility in the life of Christ, as He laid open His heart to us.'.length,
+    text: "I knew Jesus, and He was very precious.'—GEORGE FOXE.",
+  }],
+};
+
+function cover(spans, a, b) {
+  return (spans || []).some(s => s.start <= a && s.end >= b);
+}
+
+function cutsOf(v) {
+  const cuts = new Set([0, v.text.length]);
+  for (const ch of ['supplied', 'marks', 'emended']) {
+    for (const s of v[ch] || []) { cuts.add(s.start); cuts.add(s.end); }
+  }
+  for (const fn of v.footnotes || []) cuts.add(fn.start);
+  return [...cuts].sort((a, b) => a - b);
+}
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function paintSeg(seg) {
+  const lines = seg.text.split('\n');
+  return lines.map((line, i) => {
+    let html = esc(line);
+    const cls = [
+      seg.supplied ? 'supplied' : '',
+      seg.marks ? 'mark' : '',
+      seg.emended ? 'emended' : '',
+    ].filter(Boolean).join(' ');
+    if (cls) {
+      const title = seg.marks ? (MARK_MEANING[seg.text] || 'editorial mark') : '';
+      html = `<span class="${cls}"${title ? ` title="${esc(title)}"` : ''}>${html}</span>`;
+    }
+    return html + (i < lines.length - 1 ? '<br>' : '');
+  }).join('');
+}
+
+function fnsAt(v, offset) {
+  return (v.footnotes || []).map((fn, i) => ({ fn, i })).filter(x => x.fn.start === offset);
+}
+
+function markerHtml(v, i, clickable) {
+  const on = state.open && state.open.n === v.n && state.open.i === i ? ' on' : '';
+  const handler = clickable
+    ? ` onclick="event.stopPropagation(); openFn(${JSON.stringify(v.n)}, ${i})"`
+    : '';
+  return `<button class="fn-mark${on}" type="button"${handler}>${i + 1}</button>`;
+}
+
+function paintVerse(v, { markers, clickable }) {
+  const points = cutsOf(v);
+  let html = '';
+  for (let i = 0; i < points.length - 1; i++) {
+    const start = points[i], end = points[i + 1];
+    if (start === end) continue;
+    html += paintSeg({
+      text: v.text.slice(start, end),
+      supplied: cover(v.supplied, start, end),
+      marks: cover(v.marks, start, end),
+      emended: cover(v.emended, start, end),
+    });
+    if (markers) {
+      for (const { i: idx } of fnsAt(v, end)) html += markerHtml(v, idx, clickable);
+    }
+  }
+  if (markers) {
+    for (const { i: idx } of fnsAt(v, 0)) html = markerHtml(v, idx, clickable) + html;
+  }
+  return html;
+}
+
+const state = {
+  variant: new URLSearchParams(location.search).get('variant') || 'A',
+  theme: 'dark',
+  selected: 9,
+  open: null,
+  notesMode: 'block',
+};
+
+if (!VARIANTS[state.variant]) state.variant = 'A';
+
+function verseByN(n) {
+  if (n === 'hum') return HUMILITY;
+  return CHAPTER.verses.find(v => v.n === n);
+}
+
+function stateLine() {
+  const v = verseByN(state.selected);
+  const nFn = (v.footnotes || []).length;
+  const open = state.open ? ` · popover ${state.open.n}:${state.open.i + 1}` : ' · popover closed';
+  return `variant ${state.variant} · theme ${state.theme} · selected 1:${state.selected} (${nFn} footnote${nFn === 1 ? '' : 's'}) · notes ${state.notesMode}${state.variant === 'C' ? open : ''}`;
+}
+
+function setVariant(next) {
+  state.variant = next;
+  state.open = null;
+  const url = new URL(location.href);
+  url.searchParams.set('variant', next);
+  history.replaceState(null, '', url);
+  render();
+}
+
+function selectVerse(n) {
+  if (typeof n === 'number') state.selected = n;
+  if (state.variant !== 'C') state.open = null;
+  render();
+}
+
+function openFn(n, i) {
+  if (typeof n === 'number') state.selected = n;
+  const same = state.open && state.open.n === n && state.open.i === i;
+  state.open = same ? null : { n, i };
+  render();
+}
+
+function toolbar() {
+  return `
+    <div class="toolbar">
+      <button class="theme-btn" id="theme-btn">${state.theme === 'dark' ? 'Light' : 'Dark'} page</button>
+      <span class="spacer"></span>
+      <span class="pill">1 Enoch<span class="ed">1912</span></span>
+    </div>`;
+}
+
+function toc() {
+  return `
+    <div class="toc">
+      <div class="toc-title">1 Enoch</div>
+      <div class="toc-author">R. H. Charles, 1912</div>
+      <div class="toc-part">The Watchers</div>
+      <button class="toc-item on" type="button"><span class="toc-num">1</span> Future lot of the wicked and the righteous</button>
+      <button class="toc-item" type="button"><span class="toc-num">2</span> Nature as witness</button>
+    </div>`;
+}
+
+function studyFns(v) {
+  const fns = v.footnotes || [];
+  if (!fns.length) return `<div class="study-empty">No footnotes on this verse.</div>`;
+  return fns.map((fn, i) =>
+    `<div class="study-fn"><span class="fn-n">${i + 1}</span>${esc(fn.text)}</div>`
+  ).join('');
+}
+
+function study() {
+  const v = verseByN(state.selected);
+  return `
+    <div class="study">
+      <div class="study-loc"><em>1 Enoch</em> 1:${state.selected}</div>
+      <div class="study-cite">R. H. Charles, <i>The Book of Enoch</i> (1912), ch. 1, v. ${state.selected}</div>
+      <h2>Footnotes</h2>
+      ${state.variant === 'A'
+        ? studyFns(v)
+        : state.variant === 'B'
+          ? `<div class="study-empty">Bodies print under the verse. Study does not repeat them.</div>`
+          : `<div class="study-empty">Tap a marker. Body stays in the popover; Study does not hold a list.</div>`}
+    </div>`;
+}
+
+function underFns(v) {
+  return (v.footnotes || []).map((fn, i) =>
+    `<div class="fn-under"><span class="fn-n">${i + 1}</span>${esc(fn.text)}</div>`
+  ).join('');
+}
+
+function popover(v) {
+  if (!(state.open && state.open.n === v.n)) return '';
+  const fn = v.footnotes[state.open.i];
+  if (!fn) return '';
+  return `<div class="popover"><strong>Footnote ${state.open.i + 1}</strong><div>${esc(fn.text)}</div></div>`;
+}
+
+function verseBlock(v) {
+  const sel = v.n === state.selected ? ' sel' : '';
+  const bodyClass = v.shape === 'poem' ? 'b-poem' : 'b-prose';
+  const markers = state.variant !== 'A';
+  const clickable = state.variant === 'C';
+  const body = `<div class="${bodyClass}">${paintVerse(v, { markers, clickable })}</div>`;
+  return `
+    <div class="verse-wrap${sel}" onclick="selectVerse(${v.n})">
+      <span class="gutter-num">${v.n}</span>
+      ${body}
+      ${state.variant === 'B' ? underFns(v) : ''}
+      ${state.variant === 'C' ? popover(v) : ''}
+    </div>`;
+}
+
+function notePassage(v, mode, book, loc, cite) {
+  if (mode === 'chip') {
+    return `<button class="chip" type="button" onclick="selectVerse(${v.n})"><span class="ico">▣</span>${book} ${loc}</button>`;
+  }
+  const markers = state.variant !== 'A';
+  const clickable = state.variant === 'C';
+  const painted = paintVerse(v, { markers, clickable });
+  if (mode === 'inline') {
+    return `<span class="note-inline">${painted}</span>`;
+  }
+  return `
+    <div class="note-block">
+      <span class="note-vnum">${v.n}</span>${painted}
+      ${state.variant === 'B' ? underFns(v) : ''}
+      ${state.variant === 'C' ? popover(v) : ''}
+      <div class="cite">${cite}</div>
+    </div>`;
+}
+
+function vault() {
+  const v = v9;
+  const mode = state.notesMode;
+  return `
+    <div class="vault">
+      <h2>In a vault note</h2>
+      <p class="hint">Same reference, three display modes. Variant A suppresses footnotes here. B prints bodies only in block. C keeps the marker.</p>
+      <div class="seg" style="margin-bottom:10px">
+        <button type="button" class="${mode === 'chip' ? 'on' : ''}" onclick="state.notesMode='chip'; render()">Chip</button>
+        <button type="button" class="${mode === 'inline' ? 'on' : ''}" onclick="state.notesMode='inline'; render()">Inline</button>
+        <button type="button" class="${mode === 'block' ? 'on' : ''}" onclick="state.notesMode='block'; render()">Block</button>
+      </div>
+      <div class="body">
+        Jude quotes this directly:
+        ${notePassage(v, mode, '1 Enoch', '1:9', 'R. H. Charles, The Book of Enoch (1912), ch. 1, v. 9')}
+      </div>
+      <div class="hum">
+        <div class="lbl">SPARSE CONTRAST — Humility (three notes in the whole book)</div>
+        ${notePassage(HUMILITY, mode, 'Humility', 'ch. 2, par. 1', 'Andrew Murray, Humility (1895), ch. 2, par. 1')}
+      </div>
+    </div>`;
+}
+
+function render() {
+  document.documentElement.dataset.theme = state.theme;
+  const v = state.variant;
+  document.getElementById('app').innerHTML = `
+    <div class="qbar">
+      <strong>How do Book footnotes appear?</strong>
+      Flip A/B/C. Density test is <strong>1:9</strong> (two long notes). Empty case is <strong>1:6</strong>. Combo with marks is <strong>1:4</strong>. Scroll to the mock vault note and try Chip / Inline / Block. Humility is the sparse contrast.
+      <div class="state" id="state-line">${stateLine()}</div>
+    </div>
+    ${toolbar()}
+    <div class="main">
+      ${toc()}
+      <div class="content">
+        <div class="b-inner">
+          <div class="b-chap-num">CHAPTER I</div>
+          <h1 class="b-chap-title">${CHAPTER.name}</h1>
+          ${CHAPTER.verses.map(verseBlock).join('')}
+          <div class="attribution">R. H. Charles, The Book of Enoch (Clarendon, 1912). Public domain. Notes shortened from Charles’s APOT apparatus.</div>
+          ${vault()}
+        </div>
+      </div>
+      ${study()}
+    </div>
+    <div class="switcher">
+      <button class="sw-arrow" type="button" onclick="cycle(-1)">←</button>
+      <b>${v}</b>
+      <span class="desc">${VARIANTS[v]}</span>
+      <button class="sw-arrow" type="button" onclick="cycle(1)">→</button>
+    </div>`;
+  document.getElementById('theme-btn').addEventListener('click', (event) => {
+    event.stopPropagation();
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    render();
+  });
+}
+
+function cycle(dir) {
+  const i = KEYS.indexOf(state.variant);
+  setVariant(KEYS[(i + dir + KEYS.length) % KEYS.length]);
+}
+
+document.addEventListener('keydown', (e) => {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+  if (e.key === 'ArrowLeft') cycle(-1);
+  if (e.key === 'ArrowRight') cycle(1);
+});
+
+render();
+</script>
+</body>
+</html>
