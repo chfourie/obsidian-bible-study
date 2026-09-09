@@ -41,7 +41,6 @@ const body = pg.slice(firstLine, lastLine)
 
 const log = (line, message) => console.error(`line ${line}: ${message}`)
 
-// A PG block: consecutive non-blank lines, each kept with its indent.
 const blocks = []
 let open = null
 body.forEach((raw, index) => {
@@ -65,7 +64,6 @@ const COLUMN_LABEL = { E: 'E', 'G^g': 'Gᵍ', 'G^s': 'Gˢ' }
 const CHAPTER_START = /^(\[?)([IVXLC]+)\.\s+(.*)$/
 const PART_HEAD = /^[A-Z][A-Z .,()\-—’]*$/
 
-// chapters: number → { entries: [{ verse, letter?, text, stanza, headings }] }
 const chapters = new Map()
 let chapter = null
 let verse = 0
@@ -113,6 +111,8 @@ const splitProse = (joined, line) => {
     const [whole, bracket, digits, caret, italic] = match
     const number = Number(digits)
     const letter = caret ?? italic
+    // Charles restores a verse a few places ahead of its number (106:17
+    // before 15); a numeral far ahead (74:16's "80.") is text.
     const accepted =
       number === maxVerse + 1 ||
       number === verse + 1 ||
@@ -236,17 +236,17 @@ const readPoetry = (lines) => {
 }
 
 for (const block of blocks) {
-  const first = block.lines[0]
-  if (block.lines.length === 1 && COLUMN_LABEL[first.text] !== undefined) {
-    columnLabel = COLUMN_LABEL[first.text]
+  const opening = block.lines[0]
+  if (block.lines.length === 1 && COLUMN_LABEL[opening.text] !== undefined) {
+    columnLabel = COLUMN_LABEL[opening.text]
     continue
   }
-  if (/—EDD\.\]$/.test(first.text)) {
-    log(first.line, `SPCK editors' note dropped: ${first.text}`)
+  if (/—EDD\.\]$/.test(opening.text)) {
+    log(opening.line, `SPCK editors' note dropped: ${opening.text}`)
     continue
   }
   if (block.lines.every((l) => PART_HEAD.test(l.text) && l.indent > 0)) {
-    log(first.line, `part head skipped: ${block.lines.map((l) => l.text).join(' / ')}`)
+    log(opening.line, `part head skipped: ${block.lines.map((l) => l.text).join(' / ')}`)
     continue
   }
   const joinedHead = block.lines.map((l) => l.text).join(' ')
@@ -258,23 +258,23 @@ for (const block of blocks) {
     continue
   }
   let lines = block.lines
-  const start = CHAPTER_START.exec(first.text)
+  const start = CHAPTER_START.exec(opening.text)
   if (start !== null && /^[IVXLC]+$/.test(start[2])) {
     const number = romanToNumber(start[2])
     if (number !== chapter) {
-      if (number !== (chapter ?? 0) + 1) log(first.line, `chapter ${number} after ${chapter}`)
+      if (number !== (chapter ?? 0) + 1) log(opening.line, `chapter ${number} after ${chapter}`)
       enterChapter(number)
     }
-    lines = [{ ...first, text: `${start[1]}${start[3]}` }, ...block.lines.slice(1)]
+    lines = [{ ...opening, text: `${start[1]}${start[3]}` }, ...block.lines.slice(1)]
   } else if (switchTo !== null) {
-    log(first.line, `chapter ${switchTo} entered from its heading`)
+    log(opening.line, `chapter ${switchTo} entered from its heading`)
     enterChapter(switchTo)
   }
   switchTo = null
   if (columnLabel !== null) {
     readProse(lines)
     columnLabel = null
-  } else if (first.indent === 0) {
+  } else if (opening.indent === 0) {
     readProse(lines)
   } else {
     readPoetry(lines)

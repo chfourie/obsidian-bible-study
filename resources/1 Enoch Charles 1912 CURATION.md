@@ -45,7 +45,7 @@ parentheses dropped · `=thick=` → `<emended>` · `_i. e._` → plain ·
 | 163 | 48 | 22:5–8 | 〈the spirit of〉, thick `a dead man`; **22:8 E prints thick `hollow places`** where the PG text has italics — curated as `<emended>` |
 | 185 | 70 | 38 head | chapter opens `1. The first Parable.` with no roman numeral; both heads confirmed |
 | 230 | 115 | 60:6–8 | **verse 25 printed after 60:6** as `25.` (the PG text reads `5.`) — curated as 25, page order kept as the reading walk; †Dûidâin† confirmed |
-| 259 | 144 | 71:8–13 | `[Lost passage …]` is an unnumbered bracketed paragraph after 13 — curated as a second line of 71:13; **71:11 opens `. . . with the spirit of power`** — the lacuna the PG text drops was added |
+| 259 | 144 | 71:8–13 | `[Lost passage …]` is an unnumbered bracketed paragraph after 13 — curated as a Heading on 71:14; **71:11 opens `. . . with the spirit of power`** — the lacuna the PG text drops was added |
 | 326 | 211 | 90:13–17 | doublets set in two columns (13 ‖ 16, 19 full width, 14 ‖ 17) — prose, page order kept |
 | 339 | 224 | 92 head, 92:1–3 | `XCII. XCI. 1-10, 18-19. …` head and `[Enoch indeed … earth]`, `(which is)`, `[Shall arise]` confirmed |
 | 340 | 225 | 91 head, 91:1–4 | `XCI. 1-11, 18-19. …` follows 92:5 on the page; lineation confirmed |
@@ -84,8 +84,14 @@ parentheses dropped · `=thick=` → `<emended>` · `_i. e._` → plain ·
 - **`( )` is always supplied**, including Charles's glosses `(lit. …)`,
   `(i. e. …)` and the query `(?)` in 31:2 — the key gives the parentheses
   one meaning and the pipeline one channel.
-- **`[Lost passage …]` (71, between 13 and 14)** is a second, unlettered line
-  of verse 13, its brackets marks.
+- **`[Lost passage …]` (71, between 13 and 14)** is Charles's note, not a
+  verse: it is a `###` Heading on 71:14 (furniture beside the grid, §1), its
+  brackets and `(as in 46³)` plain text, so `{1 Enoch 71:13}` cites only
+  the translation.
+- **Column labels `E` / `Gᵍ` are stored text** (searchable, highlightable):
+  the spec has no furniture that can stand inside a verse's lines, and a
+  Heading attaches to one atom, which a column of 22:9–14 is not. Flagged
+  for the spec owner with 39:6b/7b and 1:2.
 - **The SPCK editors' bracket** before 52 (`[Only six are mentioned … —EDD.]`)
   is not Charles's and was dropped.
 - **1:2 keeps ⌈⌈which⌉⌉** although the 1912 page prints single corners:

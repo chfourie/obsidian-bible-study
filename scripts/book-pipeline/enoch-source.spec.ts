@@ -48,17 +48,17 @@ const ATOMS_PER_CHAPTER = [
   10, 20, 11, 6, 10, 6, 4, 3, 77, 42, 19, 5, 14, 11, 7, 8, 10, 16, 16, 13,
   9, 11, 15, 13, 2, 19, 3, 15,
 ]
-const PARTS: [string, number, number][] = [
-  ['The Book of the Watchers (I–XXXVI)', 1, 36],
-  ['The Parables (XXXVII–LXXI)', 37, 71],
-  ['The Book of the Courses of the Heavenly Luminaries (LXXII–LXXXII)', 72, 82],
-  ['The Dream-Visions (LXXXIII–XC)', 83, 90],
-  ['The Epistle of Enoch (XCI–CV)', 91, 105],
-  ['Fragment of the Book of Noah (CVI–CVII)', 106, 107],
-  ['An Appendix to the Book of Enoch (CVIII)', 108, 108],
+const PARTS = [
+  { part: 'The Book of the Watchers (I–XXXVI)', from: 1, to: 36 },
+  { part: 'The Parables (XXXVII–LXXI)', from: 37, to: 71 },
+  { part: 'The Book of the Courses of the Heavenly Luminaries (LXXII–LXXXII)', from: 72, to: 82 },
+  { part: 'The Dream-Visions (LXXXIII–XC)', from: 83, to: 90 },
+  { part: 'The Epistle of Enoch (XCI–CV)', from: 91, to: 105 },
+  { part: 'Fragment of the Book of Noah (CVI–CVII)', from: 106, to: 107 },
+  { part: 'An Appendix to the Book of Enoch (CVIII)', from: 108, to: 108 },
 ]
 const partOf = (chapter: number) =>
-  PARTS.find(([, from, to]) => chapter >= from && chapter <= to)?.[0]
+  PARTS.find(({ from, to }) => chapter >= from && chapter <= to)?.part
 
 describe('1 Enoch, Charles 1912', () => {
   it('publishes the verse-atom module the catalogue offers as 1en-c1912', () => {
@@ -175,7 +175,7 @@ describe('1 Enoch, Charles 1912', () => {
       }
     }
     expect(Object.fromEntries(glyphCounts)).toEqual({
-      '⌈⌈': 50, '⌉⌉': 50, '⌈': 67, '⌉': 67, '〈': 13, '〉': 13, '[': 68, ']': 68, '†': 137, '…': 7,
+      '⌈⌈': 50, '⌉⌉': 50, '⌈': 67, '⌉': 67, '〈': 13, '〉': 13, '[': 67, ']': 67, '†': 137, '…': 7,
     })
   })
 
@@ -240,7 +240,7 @@ describe('1 Enoch, Charles 1912', () => {
   })
 
   it('opens each Part on its first chapter and Charles’s chapter heads on the verse they precede', () => {
-    for (const [part, from] of PARTS)
+    for (const { part, from } of PARTS)
       expect(verse(from, 1).headings?.[0]).toEqual({ text: part, level: 'part' })
     expect(verse(38, 1).headings?.map((heading) => heading.text)).toEqual([
       'XXXVIII-XLIV. The First Parable.',
@@ -250,6 +250,11 @@ describe('1 Enoch, Charles 1912', () => {
       { text: 'LXXXIX. 10-27. From the Death of Noah to the Exodus.', level: 'section' },
     ])
     expect(verse(89, 11).headings).toBeUndefined()
+    expect(verse(71, 14).headings?.map((heading) => heading.text)).toEqual([
+      '[Lost passage wherein the Son of Man was described as accompanying the Head of Days, ' +
+        'and Enoch asked one of the angels (as in 46³) concerning the Son of Man as to who he was.]',
+    ])
+    expect(verse(71, 13).lines).toBeUndefined()
   })
 
   it('prints Charles’s parallel E and Gᵍ columns as labelled lines of the one verse (22:2)', () => {

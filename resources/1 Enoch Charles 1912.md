@@ -1552,7 +1552,7 @@ the righteous,
 12. And these blessings which went forth out of my mouth were well pleasing before that Head of Days.
 13. And that Head of Days came with Michael and Gabriel, Raphael and Phanuel, thousands and ten thousands of angels without number.
 
-13. <marks>[</marks>Lost passage wherein the Son of Man was described as accompanying the Head of Days, and Enoch asked one of the angels <supplied>as in 46³</supplied> concerning the Son of Man as to who he was.<marks>]</marks>
+### [Lost passage wherein the Son of Man was described as accompanying the Head of Days, and Enoch asked one of the angels (as in 46³) concerning the Son of Man as to who he was.]
 
 14. And he <supplied>i. e. the angel</supplied> came to me and greeted me with His voice, and said unto me:
 
