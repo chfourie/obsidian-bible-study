@@ -6,7 +6,7 @@ This document consolidates every decision from the [wayfinder map](https://githu
 
 Plugin id: `scripture-study`. Stack: TypeScript, Svelte 5, esbuild + esbuild-svelte, vitest, eslint-plugin-obsidianmd — conventions mirrored from `obsidian-journal-folder`. The scaffold is committed and green (issue #5).
 
-Addendum: non-biblical books (readable, referencable, cross-referencable works on the same id grid — first instance *Humility*, Andrew Murray) are specified in [spec-books.md](spec-books.md).
+Addendum: non-biblical books (readable, referencable, cross-referencable works on the same id grid — the paragraph Books *Humility*, Andrew Murray, and *IN*, and the verse-atom Book *1 Enoch*, R. H. Charles 1912, with its Editorial marks, Line letters and Footnotes) are specified in [spec-books.md](spec-books.md).
 
 ---
 
