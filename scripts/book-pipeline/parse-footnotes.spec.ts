@@ -56,7 +56,7 @@ describe('liftFootnotes', () => {
   it('refuses an Editorial-mark wrapper inside a note', () => {
     expect(() =>
       liftFootnotes('And behold [Footnote: <marks>⌈</marks> is Charles’s.]'),
-    ).toThrow('a Footnote carries no Editorial mark')
+    ).toThrow('a raw `<` stands in the Footnote')
   })
 })
 

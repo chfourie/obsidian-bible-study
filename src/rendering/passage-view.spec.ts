@@ -363,9 +363,9 @@ describe('buildPassageView — highlights', () => {
   })
 
   it('highlights a noted atom by the offsets of its stored string alone', () => {
-    // 1 Enoch 5:4 carries two Footnotes; they are lifted out at build, so a
+    // The atom's notes were lifted out at build (spec-books §6), so a
     // highlight over `been steadfast.` runs where the print's own reading
-    // puts it (spec-books §6).
+    // puts it — the note body is nowhere in the view.
     const view = buildPassageView(
       model('John 15:4 inline h1/4.16-31'),
       passage([

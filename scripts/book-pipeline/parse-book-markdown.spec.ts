@@ -447,8 +447,16 @@ describe('parseBookMarkdown Footnotes', () => {
 
   it.each([
     ['## 1. A\n\nOne. [Footnote missing colon]\n', /atom 1\.1: a `\[Footnote` marker the build cannot read/],
-    ['## 1. A\n\n> A quote [Footnote: a note]\n> — Someone\n\nOne.\n', /epigraph 1\.e1 .*: only an atom carries a Footnote/],
+    ['## 1. A\n\n> A quote [Footnote: a note]\n> — Someone\n\nOne.\n', /epigraph 1\.e1: only an atom carries a Footnote/],
   ])('fails, citing the atom or epigraph, on %j', (body, message) => {
+    expect(() => book(body)).toThrow(message)
+  })
+
+  it.each([
+    ['# Part One [Footnote: a note]\n\n## 1. A\n\nOne.\n', /heading "Part One \[Footnote: a note\]": only an atom carries a Footnote/],
+    ['## 1. A [Footnote: a note]\n\nOne.\n', /section head "A \[Footnote: a note\]": only an atom/],
+    ['## 1. A\n\n![alt](x.png "Fig [Footnote: a note]")\n\nOne.\n', /figure caption "Fig \[Footnote: a note\]": only an atom/],
+  ])('fails, citing the furniture, on %j', (body, message) => {
     expect(() => book(body)).toThrow(message)
   })
 })

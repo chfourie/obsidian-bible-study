@@ -5188,6 +5188,23 @@ describe('ReaderPaneModel Footnotes', () => {
     expect(detailsOf(model).book?.footnotes).toEqual([])
   })
 
+  it('runs the notes of every atom a selection covers, in grid order', async () => {
+    const model = notedModel()
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 5 })
+
+    await model.selectVerse(makeVerseId(ENOCH_BOOK, 5, 3))
+    model.extendSelectionTo(makeVerseId(ENOCH_BOOK, 5, 4))
+    await flushAsync()
+
+    expect(detailsOf(model).book).toEqual({
+      citation: 'Enoch, 1 Enoch (1912), 5:3-4',
+      footnotes: [
+        'So Dillmann; the Ethiopic is corrupt here.',
+        'Charles restores the line from the Greek.',
+      ],
+    })
+  })
+
   it('prints no marker and no note body on the page', async () => {
     const model = notedModel()
 

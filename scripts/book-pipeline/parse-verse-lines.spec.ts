@@ -409,7 +409,7 @@ describe('verseSectionAtoms Footnotes', () => {
 
   it.each([
     [['1. a [Footnote no colon]'], /atom 1:1 \(line 1\): a `\[Footnote` marker the build cannot read/],
-    [['1. a [Footnote: <marks>⌈</marks> stands here.]'], /atom 1:1 \(line 1\): a Footnote carries no Editorial mark/],
+    [['1. a [Footnote: <marks>⌈</marks> stands here.]'], /atom 1:1 \(line 1\): a raw `<` stands in the Footnote/],
   ])('fails, citing the atom, on %j', (lines, message) => {
     expect(() => atomsOf(lines)).toThrow(message)
   })

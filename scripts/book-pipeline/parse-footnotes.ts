@@ -27,7 +27,9 @@ export const liftFootnotes = (source: string): LiftedText => {
   for (const match of source.matchAll(FOOTNOTE)) {
     const body = match[1].trim()
     if (body.includes('<'))
-      throw new Error(`a Footnote carries no Editorial mark: "${body}"`)
+      throw new Error(
+        `a raw \`<\` stands in the Footnote "${body}" — a note is plain text`,
+      )
     text += source.slice(consumed, match.index)
     footnotes.push({ start: text.length, text: body })
     removals.push({ at: match.index, length: match[0].length })
@@ -79,9 +81,10 @@ export const liftAtomNotes = (locator: string, source: string): NotedText => {
   }
 }
 
-// Furniture and an epigraph carry no note (spec-books §6): a Footnote is a
-// channel on an atom, so a marker written anywhere else is a curator's slip.
-export const assertNoFootnoteMarker = (kind: string, text: string): void => {
+// A Footnote is a channel on an atom (spec-books §6), so a marker written
+// where no atom stands — an epigraph, a Heading, a figure's caption — is a
+// curator's slip, exactly as an Editorial-mark wrapper there is (§10).
+export const assertNoFootnoteMarker = (where: string, text: string): void => {
   if (text.includes('[Footnote'))
-    throw new Error(`${kind} "${text}": only an atom carries a Footnote`)
+    throw new Error(`${where}: only an atom carries a Footnote`)
 }

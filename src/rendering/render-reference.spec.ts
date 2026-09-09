@@ -523,10 +523,13 @@ describe('renderReference inline', () => {
         parent.querySelector('.scripture-study-passage')?.textContent,
       ).toContain('But ye have not been steadfast.')
       expect(parent.textContent).not.toContain('Dillmann')
-      expect(parent.querySelector('.scripture-study-chip')?.textContent).not.toContain(
-        'Dillmann',
-      )
     }
+
+    const { parent, deps } = setup(noted)
+    await renderReference(parent, model('Matthew 1:1'), deps)
+
+    const chip = parent.querySelector('.scripture-study-chip')
+    expect(chip?.textContent).toBe('Matthew 1:1')
   })
 
   it('marks a segment both red-letter and supplied with both classes', async () => {

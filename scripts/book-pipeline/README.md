@@ -264,8 +264,9 @@ never reads a note, so a word only Charles wrote earns no Hit.
 The note's own text is plain: no Editorial-mark wrapper, no `<`, and no `]`
 (the first one closes the marker). The build fails, citing the atom, on a
 wrapper inside a note and on a `[Footnote` the marker syntax cannot read — a
-missing colon, an unclosed bracket. A marker in an epigraph fails too: a
-Footnote is a channel on an atom.
+missing colon, an unclosed bracket. It fails, citing the epigraph or the
+furniture, on a marker in an epigraph, a Heading, a section head or a
+figure's caption or alt text: a Footnote is a channel on an atom.
 
 A marked atom with no note of its own is **not** an error. The build lists
 every one of them at the end —

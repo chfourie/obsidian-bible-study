@@ -116,6 +116,14 @@ const HEADING_LEVELS: Record<number, HeadingLevel> = {
 
 const DEFAULT_LANGUAGE = 'English'
 
+// Furniture carries neither an Editorial mark nor a Footnote (spec-books
+// §6, §10): a Heading, a section head and a figure's caption or alt text are
+// plain printed text.
+const assertPlainFurniture = (kind: string, text: string): void => {
+  assertNoEditorialMarks(kind, text)
+  assertNoFootnoteMarker(`${kind} "${text}"`, text)
+}
+
 const readFrontMatter = (
   markdown: string,
 ): { fields: Map<string, string>; body: string } => {
@@ -255,7 +263,7 @@ const openSection = (head: string, atom: BookAtomKind): ParsedBookSection => {
     throw new Error(
       `A section head must read "<number>. <name>", not "${head}"`,
     )
-  if (name !== undefined) assertNoEditorialMarks('section head', name)
+  if (name !== undefined) assertPlainFurniture('section head', name)
   const section: ParsedBookSection = {
     chapter: Number(match[1]),
     name: name ?? match[1],
@@ -346,8 +354,8 @@ export const parseBookMarkdown = (
   for (const { text: block, line } of blocksOf(body, bodyLine)) {
     const figure = FIGURE.exec(block)
     if (figure !== null) {
-      assertNoEditorialMarks('figure alt', figure[1])
-      if (figure[3] !== undefined) assertNoEditorialMarks('figure caption', figure[3])
+      assertPlainFurniture('figure alt', figure[1])
+      if (figure[3] !== undefined) assertPlainFurniture('figure caption', figure[3])
       pendingFigures = [
         ...pendingFigures,
         {
@@ -369,7 +377,7 @@ export const parseBookMarkdown = (
         sections.push(current)
         continue
       }
-      assertNoEditorialMarks('heading', heading[2].trim())
+      assertPlainFurniture('heading', heading[2].trim())
       pending = [...pending, { text: heading[2].trim(), level: HEADING_LEVELS[depth] }]
       continue
     }
