@@ -1,3 +1,6 @@
 # Fixture slices keep their upstream byte-for-byte line endings.
 tests/fixtures/*.tsv -text
 tests/fixtures/*.txt -text
+# A Book's provenance text keeps the digitizer's byte-for-byte line endings: the
+# registry records its SHA-256 as downloaded.
+resources/*.txt -text
