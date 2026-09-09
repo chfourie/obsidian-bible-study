@@ -584,6 +584,16 @@ describe('SettingsTabModel books section', () => {
         error: null,
         updateAvailable: false,
       },
+      {
+        id: '1en-c1912',
+        title: '1 Enoch',
+        author: 'Enoch',
+        editionCode: '1EN-C1912',
+        installed: false,
+        busy: null,
+        error: null,
+        updateAvailable: false,
+      },
     ])
   })
 
@@ -632,6 +642,7 @@ describe('SettingsTabModel books section', () => {
     expect(model.view.bookRows.map((row) => row.id)).toEqual([
       'hum-m1895',
       'in-at-e1',
+      '1en-c1912',
       'hum-m1901',
     ])
   })

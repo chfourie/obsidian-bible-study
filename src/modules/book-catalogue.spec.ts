@@ -20,6 +20,14 @@ describe('BOOK_CATALOGUE', () => {
         tag: 'in-at-e1-module',
         filename: 'in-at-e1-module.json',
       },
+      {
+        moduleId: '1en-c1912',
+        title: '1 Enoch',
+        author: 'Enoch',
+        editionCode: '1EN-C1912',
+        tag: '1en-c1912-module',
+        filename: '1en-c1912-module.json',
+      },
     ])
   })
 
@@ -30,7 +38,7 @@ describe('BOOK_CATALOGUE', () => {
   })
 
   it('lists every catalogued book module id', () => {
-    expect(BOOK_MODULE_IDS).toEqual(['hum-m1895', 'in-at-e1'])
+    expect(BOOK_MODULE_IDS).toEqual(['hum-m1895', 'in-at-e1', '1en-c1912'])
   })
 
   it('derives the release coordinates a prebuilt client downloads from', () => {

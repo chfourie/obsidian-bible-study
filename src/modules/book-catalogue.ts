@@ -29,6 +29,14 @@ export const BOOK_CATALOGUE: readonly BookCatalogueEntry[] = [
     tag: 'in-at-e1-module',
     filename: 'in-at-e1-module.json',
   },
+  {
+    moduleId: '1en-c1912',
+    title: '1 Enoch',
+    author: 'Enoch',
+    editionCode: '1EN-C1912',
+    tag: '1en-c1912-module',
+    filename: '1en-c1912-module.json',
+  },
 ]
 
 export const BOOK_MODULE_IDS: readonly string[] = BOOK_CATALOGUE.map(

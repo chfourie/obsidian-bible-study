@@ -1,0 +1,5 @@
+{
+  "comment": "Hand-kept corrections to the citations scripts/book-pipeline/parse-book-refs.ts cannot carry on its own (spec-books §8). `at` is chapter.verse; `text` must still match its atom exactly once or the build fails. Charles's translation cites no scripture in its verses, so the lists stay empty.",
+  "fix": [],
+  "suppress": []
+}
