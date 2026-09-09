@@ -1,28 +1,40 @@
 # The book pipeline
 
 Turns a curated Markdown source into a Book module artifact — manifest plus
-paragraph atoms plus their live citations. One pipeline serves every book
-(spec-books §2, ADR 0002); adding a book means curating a Markdown file and
-appending an entry to [`scripts/book-registry.json`](../book-registry.json),
-never writing a parser.
+atoms plus their live citations. One pipeline serves every book (spec-books
+§2, ADR 0002); adding a book means curating a Markdown file and appending an
+entry to [`scripts/book-registry.json`](../book-registry.json), never writing
+a parser.
 
 ```
 markdown + registry + ref overrides  ->  buildBookArtifact  ->  artifact
 ```
 
-`buildBookArtifact` is pure. The runner beside it
-(`scripts/build-in-module.mjs` for *IN*) reads the files, writes
-`dist/<module-id>-module/`, and prints the per-section paragraph and Ref Span
-counts the maintainer reviews before the release that freezes the grid.
+`buildBookArtifact` is pure. The registry entry's `atom` kind — `verse` or
+`paragraph`, absent meaning paragraph (spec-books §1) — selects how the body
+is read: blank-line paragraphs for *Humility* and *IN* ([Atoms](#atoms)), or
+`N.` / `Na.` verse-lines for *1 Enoch* ([Verse-atom Books](#verse-atom-books)).
+The build copies the kind into the manifest's `book` sub-object and fails on
+a registry/manifest mismatch, as it does on any other identity field.
+
+The IO glue is shared too: `build-book-module.mjs` beside this file reads
+the source, registry, overrides and images, writes `dist/<module-id>-module/`,
+and prints the per-section atom and Ref Span counts the maintainer reviews
+before the release that freezes the grid. Each Book's runner only names the
+book — `scripts/build-in-module.mjs` for *IN*, `scripts/build-enoch-module.mjs`
+for *1 Enoch*.
 
 ## Curating a source
 
 A source is one Markdown file, committed beside whatever it was made from —
 for *IN*, `resources/IN First Edition.md` beside the PDF the registry records
-the SHA-256 of. Producing it is a one-time job: extract the text (`pdftotext
--layout` is a fine aid, and is not a build dependency), then clean it by hand
-— strip page numbers, running heads and footers, unwrap justified lines, undo
-hyphenation, flatten tables.
+the SHA-256 of; for *1 Enoch*, `resources/1 Enoch Charles 1912.md` beside the
+Project Gutenberg #77935 plain text. Producing it is a one-time job: extract
+the text (`pdftotext -layout` is a fine aid, and is not a build dependency),
+then clean it by hand — strip page numbers, running heads and footers,
+unwrap justified lines, undo hyphenation, flatten tables. A digitizer's
+boilerplate and name never enter the curated source (spec-books §2): the raw
+text stays in `resources/` as provenance only, and nothing of it ships.
 
 ### Front matter
 
@@ -44,6 +56,7 @@ if the registry does not carry it, or carries it too thinly to publish from.
 | `# PART ONE: Fall of Man – Death through Sin` | Part title — a `part` Heading |
 | `## 12. Our Pathway` | section head: chapter number, then the printed name |
 | `## 0. Prologue {named}` | a section the printed work gives no number to |
+| `## 5.` | a verse-atom section the printed work gives no name to |
 | `### 12.1 Repentance – Crucified` | a `section` Heading |
 | `#### 12.4.1 Preparation` | a `sub-section` Heading |
 
@@ -51,7 +64,9 @@ Only `##` opens a section. Every other heading attaches to the paragraph that
 follows it and consumes no id, so a Part title written above the chapter head
 it opens lands on that chapter's first paragraph. `{named}` marks front and
 back matter, whose name replaces the chapter locator when a reference to it is
-displayed (spec-books §4).
+displayed (spec-books §4). A paragraph Book's section always carries a name;
+a verse-atom section may be `## 5.` alone, and is then named by its printed
+chapter number (`"5"`) without being `named` (spec-books §1).
 
 A Heading rides in the artifact on the paragraph it precedes, in source
 order, as `{ text, level }` — never inside the paragraph's own text, so
@@ -120,6 +135,67 @@ A blank line separates atoms. Within one atom:
 
 The first published release freezes the grid: later releases may fix text
 inside a paragraph but never split, merge, insert, delete or renumber one.
+
+## Verse-atom Books
+
+A Book whose registry entry says `"atom": "verse"` is read by the verse-line
+parser instead (spec-books §11, ADR 0011): the atom is the printed verse, and
+the chapter is the `##` section head, never part of a prefix. Within a
+section every body line is one of two things:
+
+- **A verse-line** — `N. text` for a verse or a metrical line of it, `Na.
+  text` for a line the print letters (Charles's `6a`). The digit says which
+  verse the line belongs to; the letter is stripped onto the line as its Line
+  letter and never enters the stored text.
+- **A wrap** — an unprefixed line, joined with a single space onto the
+  verse-line before it. A page-wrap is not a metrical line.
+
+The prefix is repeated on every metrical line — `6a.` / `6b.` / `6c.` for a
+lettered poem, `3.` / `3.` / `3.` for an unlettered one — and the lines are
+written in the edition's **page order**. A prose verse is one prefix plus its
+wraps and carries no `lines`; a poem's lines ride in the `lines` channel,
+flush, one atom per verse, with the atom's text space-joined. A mixed verse
+(1:3) is an unlettered lead-in followed by that verse's lines: the lead-in
+is line 0 of the same atom, and unlettered lines come only before the
+lettered ones.
+
+A blank line sets `paragraph` on the next verse-line — a stanza gap inside a
+verse or a break before the next — and never delimits an atom; a section's
+first verse-line carries it too. Because a prose verse has no `lines`, a
+blank line before one has nowhere to land and is not encoded. `1.` is verse 1,
+never a list: lists and tables fail the build in a verse-atom section.
+
+The atom's stored `lines` are in **letter order** whatever their place on the
+page (ADR 0010), so `7c.` written between `6c.` and `6d.` stores on verse 7
+after `7a` and `7b`, and the page walk survives as the section's `reading`
+— present only where the page is not the identity walk (ADR 0013). Missing
+letters are never invented: `6a`, `6c` with no `6b` stays two lines.
+
+The build fails, citing the source line, on a line with no prefix that is
+not a wrap; a malformed prefix (`6A.`, `6aa.`) or one with no text; a
+repeated letter within a verse; an unlettered line after a lettered one in
+the same verse; a hole in the section's `1..N`; a list or table. A present
+`reading` is checked citing the section — every atom walked, every line of
+a lined atom exactly once, every prose atom exactly once as a whole.
+
+```markdown
+## 5.
+
+3. And behold how the sea and the rivers in like manner accomplish ⌈and
+change not⌉ their tasks ⌈from His commandments⌉.
+
+4. But ye—ye have not been steadfast, nor done the commandments of the Lord,
+4. But ye have turned away and spoken proud and hard words
+
+6a. In those days ye shall make your names an eternal execration unto all
+the righteous,
+6b. And by you shall ⌈all⌉ who curse, curse.
+7c. And for you, the godless, there shall be a curse.
+```
+
+Editorial-mark glyphs are written as the 1912 print has them — `⌈ ⌉`,
+`⌈⌈ ⌉⌉`, `[ ]`, `( )`, `†`, `…` — as plain characters; a digitization's
+substitutes (`⌜⌝`, `〚〛`, `=thick type=`) are normalized while curating.
 
 ## Ref Spans
 

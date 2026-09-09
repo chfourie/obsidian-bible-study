@@ -235,3 +235,89 @@ describe('buildBookArtifact', () => {
     ])
   })
 })
+
+describe('buildBookArtifact for a verse-atom Book', () => {
+  const enoch: BookRegistryEntry = {
+    bookNumber: 103,
+    title: '1 Enoch',
+    author: 'Enoch',
+    moduleId: '1en-c1912',
+    editionCode: '1EN-C1912',
+    year: 1912,
+    abbreviation: '1En',
+    aliases: ['First Enoch'],
+    atom: 'verse',
+    license: 'Public domain in the United States.',
+    source: 'pg.txt',
+    sourceChecksum: '10d3',
+  }
+  const verseSource = [
+    '---',
+    'module: 1en-c1912',
+    '---',
+    '',
+    '# The Book of the Watchers',
+    '',
+    '## 1.',
+    '',
+    '1. The words of the blessing of Enoch.',
+    '2. Concerning the elect I said:',
+    '2. The Holy Great One will come forth,',
+    '',
+    '## 5.',
+    '',
+    '1a. In those days',
+    '1b. And by you',
+    '2c. And for you',
+    '',
+    '1c. And all',
+    '2a. But for the elect',
+    '2b. And they',
+    '',
+  ].join('\n')
+  const built = buildBookArtifact(verseSource, [enoch])
+
+  it('copies the registry’s atom kind into the manifest’s book sub-object', () => {
+    expect(built.manifest.book.atom).toBe('verse')
+    expect(buildBookArtifact(source, registry).manifest.book.atom).toBeUndefined()
+  })
+
+  it('names the untitled sections by number and counts their verses as paragraphs', () => {
+    expect(built.manifest.book.sections).toEqual([
+      { chapter: 1, name: '1', paragraphs: 2, part: 'The Book of the Watchers' },
+      {
+        chapter: 5,
+        name: '5',
+        paragraphs: 2,
+        part: 'The Book of the Watchers',
+        reading: [
+          { atom: 1, line: 0 },
+          { atom: 1, line: 1 },
+          { atom: 2, line: 2 },
+          { atom: 1, line: 2 },
+          { atom: 2, line: 0 },
+          { atom: 2, line: 1 },
+        ],
+      },
+    ])
+  })
+
+  it('keys each verse atom by its verse id, its lines in letter order', () => {
+    expect(built.books[103][makeVerseId(103, 5, 2)]).toEqual({
+      text: 'But for the elect And they And for you',
+      lines: [
+        { start: 0, letter: 'a' },
+        { start: 'But for the elect '.length, letter: 'b' },
+        { start: 'But for the elect And they '.length, letter: 'c' },
+      ],
+    })
+    expect(built.books[103][makeVerseId(103, 1, 1)]).toEqual({
+      text: 'The words of the blessing of Enoch.',
+      headings: [{ text: 'The Book of the Watchers', level: 'part' }],
+    })
+  })
+
+  it('publishes a verse-atom Book at the same book format version', () => {
+    expect(built.manifest.formatVersion).toBe(BOOK_MODULE_FORMAT_VERSION)
+  })
+})

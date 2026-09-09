@@ -3,6 +3,11 @@
 // are documented in README.md beside this file; everything the parser knows
 // about a book lives in the source, so a new book needs no new parser.
 
+import {
+  type BookAtomKind,
+  DEFAULT_BOOK_ATOM_KIND,
+  type ReadingStep,
+} from '../../src/modules/module-manifest'
 import type {
   FigurePlace,
   FormatSpan,
@@ -11,6 +16,11 @@ import type {
   RefSpan,
   VerseLine,
 } from '../../src/modules/verse-content'
+import {
+  readVerseBlock,
+  type VerseSourceLine,
+  verseSectionAtoms,
+} from './parse-verse-lines'
 
 export type { Heading, HeadingLevel }
 
@@ -47,6 +57,9 @@ export type ParsedBookSection = {
   named?: true
   epigraphs?: Epigraph[]
   paragraphs: BookParagraph[]
+  // A verse-atom section whose page order is not the identity walk
+  // (spec-books §11, ADR 0013).
+  reading?: ReadingStep[]
 }
 
 export type ParsedBookSource = {
@@ -55,11 +68,19 @@ export type ParsedBookSource = {
   sections: ParsedBookSection[]
 }
 
+// The Book's atom kind selects the body parser (spec-books §2): blank-line
+// paragraphs for a paragraph Book, `N.` / `Na.` verse-lines for a verse-atom
+// Book. The kind is the registry's, never front matter (ADR 0011).
+export type ParseBookOptions = {
+  atom?: BookAtomKind
+}
+
 const FRONT_MATTER = /^---\n([\s\S]*?)\n---\n/
 const HEADING = /^(#{1,6})\s+(.*)$/
 // A section head carries the printed chapter number and the section name;
-// `{named}` marks a section the printed work gives no number to.
-const SECTION_HEAD = /^(\d+)\.\s+(.+?)(\s*\{named\})?$/
+// `{named}` marks a section the printed work gives no number to. A verse-atom
+// section the print left untitled is `## 5.` alone (spec-books §1).
+const SECTION_HEAD = /^(\d+)\.(?:\s+(.+?))?(\s*\{named\})?$/
 // The first line of a block that keeps its line breaks: a list item or a row
 // of a table the curator has already flattened.
 const LINE_KEEPING = /^(?:[-*•]|\||\d+[.)])\s*/
@@ -96,11 +117,25 @@ const readFrontMatter = (
   return { fields, body: markdown.slice(match[0].length) }
 }
 
-const blocksOf = (body: string): string[] =>
-  body
-    .split(/\n\s*\n/)
-    .map((block) => block.trim())
-    .filter((block) => block !== '')
+// A block with the source line it starts on, so a verse-atom build failure
+// can cite the line the curator has to look at.
+type Block = { text: string; line: number }
+
+const blocksOf = (body: string, firstLine: number): Block[] => {
+  const blocks: Block[] = []
+  let open: { lines: string[]; line: number } | null = null
+  const close = (): void => {
+    if (open !== null) blocks.push({ text: open.lines.join('\n').trim(), line: open.line })
+    open = null
+  }
+  body.split('\n').forEach((raw, index) => {
+    if (raw.trim() === '') return close()
+    open ??= { lines: [], line: firstLine + index }
+    open.lines.push(raw)
+  })
+  close()
+  return blocks
+}
 
 // A table row reads as cells, not as pipes: the leading pipe is the curator's
 // row marker and carries no text, and the ones between cells become a single
@@ -173,30 +208,64 @@ const epigraphOf = (block: string): Epigraph => {
     : { quote: lines.slice(0, -1).join(' '), attribution: attribution[1] }
 }
 
-const openSection = (head: string): ParsedBookSection => {
+// A paragraph Book's section head names the section; a verse-atom section
+// the print left untitled takes its printed chapter number as its name and
+// is not `named` (spec-books §1).
+const openSection = (head: string, atom: BookAtomKind): ParsedBookSection => {
   const match = SECTION_HEAD.exec(head)
-  if (match === null)
+  const name = match?.[2]?.trim()
+  if (match === null || (name === undefined && atom !== 'verse'))
     throw new Error(
       `A section head must read "<number>. <name>", not "${head}"`,
     )
   const section: ParsedBookSection = {
     chapter: Number(match[1]),
-    name: match[2].trim(),
+    name: name ?? match[1],
     paragraphs: [],
   }
   return match[3] === undefined ? section : { ...section, named: true }
 }
 
-export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
-  const { fields, body } = readFrontMatter(markdown)
-  const moduleId = fields.get('module')
+// The module a source is curated for, read before the body is parsed so the
+// registry can say which parser the body takes.
+export const sourceModuleId = (markdown: string): string => {
+  const moduleId = readFrontMatter(markdown).fields.get('module')
   if (moduleId === undefined)
     throw new Error('The source front matter names no `module`')
+  return moduleId
+}
+
+export const parseBookMarkdown = (
+  markdown: string,
+  options: ParseBookOptions = {},
+): ParsedBookSource => {
+  const atom = options.atom ?? DEFAULT_BOOK_ATOM_KIND
+  const moduleId = sourceModuleId(markdown)
+  const { fields, body } = readFrontMatter(markdown)
+  const bodyLine = markdown.slice(0, markdown.length - body.length).split('\n').length
 
   const sections: ParsedBookSection[] = []
   let current: ParsedBookSection | null = null
   let pending: Heading[] = []
   let pendingFigures: FigureSource[] = []
+  // A verse-atom section's lines in page order, settled into atoms when the
+  // section closes: a blank line is never an atom delimiter, so an atom's
+  // lines may span blocks and a later verse's line may stand inside an
+  // earlier verse's poem.
+  let verseLines: VerseSourceLine[] = []
+  const furniture = new Map<number, Pick<BookParagraph, 'headings' | 'figures'>>()
+
+  const settleVerses = (): void => {
+    if (current === null || atom !== 'verse') return
+    const { atoms, reading } = verseSectionAtoms(current.chapter, verseLines)
+    current.paragraphs = atoms.map((verse, index) => ({
+      ...verse,
+      ...(furniture.get(index + 1) ?? {}),
+    }))
+    if (reading !== undefined) current.reading = reading
+    verseLines = []
+    furniture.clear()
+  }
 
   // A figure stands with the paragraph that follows it; one that closes a
   // section has none, so it stands below the paragraph it followed instead.
@@ -224,7 +293,19 @@ export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
     return current.paragraphs
   }
 
-  for (const block of blocksOf(body)) {
+  const readVerses = (block: Block): void => {
+    const lines = readVerseBlock(block.text, block.line)
+    const first = lines[0].atom
+    if (pending.length > 0 || pendingFigures.length > 0)
+      furniture.set(first, {
+        ...(furniture.get(first) ?? {}),
+        ...(pending.length === 0 ? {} : { headings: pending }),
+        ...(pendingFigures.length === 0 ? {} : { figures: pendingFigures }),
+      })
+    verseLines.push(...lines)
+  }
+
+  for (const { text: block, line } of blocksOf(body, bodyLine)) {
     const figure = FIGURE.exec(block)
     if (figure !== null) {
       pendingFigures = [
@@ -242,8 +323,9 @@ export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
     if (heading !== null) {
       const depth = heading[1].length
       if (depth === 2) {
+        settleVerses()
         settleFigures()
-        current = openSection(heading[2].trim())
+        current = openSection(heading[2].trim(), atom)
         sections.push(current)
         continue
       }
@@ -256,12 +338,18 @@ export const parseBookMarkdown = (markdown: string): ParsedBookSource => {
       current.epigraphs = [...(current.epigraphs ?? []), epigraphOf(block)]
       continue
     }
-    const paragraph: BookParagraph = atomOf(block)
-    if (pendingFigures.length > 0) paragraph.figures = pendingFigures
-    atomsOf().push(pending.length === 0 ? paragraph : { ...paragraph, headings: pending })
+    if (atom === 'verse') {
+      atomsOf()
+      readVerses({ text: block, line })
+    } else {
+      const paragraph: BookParagraph = atomOf(block)
+      if (pendingFigures.length > 0) paragraph.figures = pendingFigures
+      atomsOf().push(pending.length === 0 ? paragraph : { ...paragraph, headings: pending })
+    }
     pending = []
     pendingFigures = []
   }
+  settleVerses()
   settleFigures()
 
   return {

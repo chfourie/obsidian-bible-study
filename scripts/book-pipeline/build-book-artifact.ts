@@ -4,7 +4,11 @@
 // a test without touching a file the build writes.
 
 import { createHash } from 'node:crypto'
-import { BOOK_MODULE_FORMAT_VERSION } from '../../src/modules/module-manifest'
+import {
+  type BookAtomKind,
+  BOOK_MODULE_FORMAT_VERSION,
+  type ReadingStep,
+} from '../../src/modules/module-manifest'
 import type { Figure, RefSpan } from '../../src/modules/verse-content'
 import { decodeVerseId, makeVerseId } from '../../src/reference/verse-id'
 import {
@@ -17,6 +21,7 @@ import {
   type FigureSource,
   type ParsedBookSection,
   parseBookMarkdown,
+  sourceModuleId,
 } from './parse-book-markdown'
 import { scanBookRefSpans, sectionRangesOf } from './parse-book-refs'
 import { OverrideLedger, type RefOverrides } from './ref-overrides'
@@ -27,6 +32,7 @@ export type BookSection = {
   named?: true
   paragraphs: number
   part?: string
+  reading?: ReadingStep[]
 }
 
 export type BookManifestData = {
@@ -36,6 +42,7 @@ export type BookManifestData = {
   year: number
   abbreviation: string
   aliases: string[]
+  atom?: BookAtomKind
   sections: BookSection[]
 }
 
@@ -85,6 +92,7 @@ const sectionTable = (sections: ParsedBookSection[]): BookSection[] => {
       ...(named ? { named: true as const } : {}),
       paragraphs: section.paragraphs.length,
       ...(part === undefined || named ? {} : { part }),
+      ...(section.reading === undefined ? {} : { reading: section.reading }),
     }
   })
 }
@@ -121,8 +129,10 @@ export const buildBookArtifact = (
   refOverrides: RefOverrides = {},
   images: BookImages = {},
 ): BookArtifact => {
-  const { moduleId, language, sections } = parseBookMarkdown(markdown)
-  const publication = bookPublication(registry, moduleId)
+  const publication = bookPublication(registry, sourceModuleId(markdown))
+  const { language, sections } = parseBookMarkdown(markdown, {
+    atom: publication.atom,
+  })
   const book = publication.bookNumber
 
   const sectionRanges = sectionRangesOf(book, sections)
@@ -198,6 +208,7 @@ export const buildBookArtifact = (
         year: publication.year,
         abbreviation: publication.abbreviation,
         aliases: publication.aliases,
+        ...(publication.atom === undefined ? {} : { atom: publication.atom }),
         sections: sectionTable(sections),
       },
     },

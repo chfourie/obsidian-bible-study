@@ -192,9 +192,128 @@ describe('parseBookMarkdown', () => {
     ).toThrow(/before the first section head/i)
   })
 
+  it('refuses a paragraph Book’s section head without a name', () => {
+    expect(() =>
+      parseBookMarkdown('---\nmodule: x\n---\n\n## 5.\n\ntext\n'),
+    ).toThrow(/section head/i)
+  })
+
   it('refuses a section head without a chapter number', () => {
     expect(() =>
       parseBookMarkdown('---\nmodule: x\n---\n\n## Prologue\n\ntext\n'),
     ).toThrow(/section head/i)
+  })
+})
+
+describe('parseBookMarkdown for a verse-atom Book', () => {
+  const verseSource = [
+    '---',
+    'module: 1en-c1912',
+    '---',
+    '',
+    '# The Book of the Watchers',
+    '',
+    '### I-V. Parable of Enoch',
+    '',
+    '## 1.',
+    '',
+    '1. The words of the blessing of Enoch, wherewith he blessed',
+    'the elect. 2. And he took up his parable.',
+    '2. Concerning the elect I said:',
+    '',
+    '3. The Holy Great One will come forth,',
+    '3. And the eternal God will tread upon the earth.',
+    '',
+    '',
+    '',
+    '### A head inside the chapter',
+    '',
+    '4a. And all shall be smitten with fear,',
+    '4b. And the Watchers shall quake.',
+    '',
+    '## 2. Titled',
+    '',
+    '1. Observe ye every thing.',
+    '',
+    '## 3. Prologue {named}',
+    '',
+    '1. Observe and see.',
+    '',
+  ].join('\n')
+  const parsed = parseBookMarkdown(verseSource, { atom: 'verse' })
+
+  it('names an untitled section by its printed chapter number, not `named`', () => {
+    expect(parsed.sections.map(({ chapter, name, named }) => ({ chapter, name, named }))).toEqual([
+      { chapter: 1, name: '1', named: undefined },
+      { chapter: 2, name: 'Titled', named: undefined },
+      { chapter: 3, name: 'Prologue', named: true },
+    ])
+  })
+
+  it('stores one atom per printed verse, in verse order', () => {
+    expect(parsed.sections[0].paragraphs.map((verse) => verse.text)).toEqual([
+      'The words of the blessing of Enoch, wherewith he blessed the elect. 2. And he took up his parable.',
+      'Concerning the elect I said:',
+      'The Holy Great One will come forth, And the eternal God will tread upon the earth.',
+      'And all shall be smitten with fear, And the Watchers shall quake.',
+    ])
+    expect(parsed.sections[0].paragraphs[3].lines).toEqual([
+      { start: 0, paragraph: true, letter: 'a' },
+      { start: 'And all shall be smitten with fear, '.length, letter: 'b' },
+    ])
+  })
+
+  it('attaches the Part and section Headings to the verse they precede', () => {
+    expect(parsed.sections[0].paragraphs[0].headings).toEqual([
+      { text: 'The Book of the Watchers', level: 'part' },
+      { text: 'I-V. Parable of Enoch', level: 'section' },
+    ])
+    expect(parsed.sections[0].paragraphs[3].headings).toEqual([
+      { text: 'A head inside the chapter', level: 'section' },
+    ])
+    expect(parsed.sections[0].paragraphs[1].headings).toBeUndefined()
+  })
+
+  it('emits no reading for a section walked in the identity order', () => {
+    expect(parsed.sections.every((section) => section.reading === undefined)).toBe(true)
+  })
+
+  it('emits the page walk as reading where a later verse’s line stands inside an earlier verse', () => {
+    const interleaved = parseBookMarkdown(
+      '---\nmodule: x\n---\n\n## 5.\n\n1a. One\n1b. Two\n2c. Seven\n\n1c. Three\n2a. Five\n2b. Six\n',
+      { atom: 'verse' },
+    )
+    expect(interleaved.sections[0].reading).toEqual([
+      { atom: 1, line: 0 },
+      { atom: 1, line: 1 },
+      { atom: 2, line: 2 },
+      { atom: 1, line: 2 },
+      { atom: 2, line: 0 },
+      { atom: 2, line: 1 },
+    ])
+  })
+
+  it('cites the source line of a failure, counting front matter and blank runs', () => {
+    expect(() =>
+      parseBookMarkdown(verseSource.replace('4b. And the Watchers', '4B. And the Watchers'), {
+        atom: 'verse',
+      }),
+    ).toThrow(/^line 23: /)
+  })
+
+  it('reads `1.` as verse 1, never as a list, and refuses a list or table', () => {
+    expect(parsed.sections[1].paragraphs[0]).toEqual({ text: 'Observe ye every thing.' })
+    expect(() =>
+      parseBookMarkdown('---\nmodule: x\n---\n\n## 1.\n\n1. Verse\n- item\n', { atom: 'verse' }),
+    ).toThrow(/line 8: .*list or table/i)
+    expect(() =>
+      parseBookMarkdown('---\nmodule: x\n---\n\n## 1.\n\n1. Verse\n\n| a | b\n', { atom: 'verse' }),
+    ).toThrow(/line 9: .*list or table/i)
+  })
+
+  it('leaves a paragraph Book’s `1.` list exactly as it was', () => {
+    const list = parseBookMarkdown('---\nmodule: x\n---\n\n## 1. A\n\n1. one\n2. two\n')
+    expect(list.sections[0].paragraphs[0].text).toBe('1. one\n2. two')
+    expect(list.sections[0].reading).toBeUndefined()
   })
 })
