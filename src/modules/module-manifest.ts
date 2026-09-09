@@ -44,11 +44,27 @@ export type ModuleKind =
   | 'lsj-lexicon'
   | 'book'
 
+// A Book's atom kind — the work's smallest printed citable unit, one kind
+// for the whole Book (spec-books §1). Absent means `paragraph`, so a Book
+// published before the kind existed loads exactly as it did.
+export type BookAtomKind = 'verse' | 'paragraph'
+
+export const DEFAULT_BOOK_ATOM_KIND: BookAtomKind = 'paragraph'
+
+// One step of a section's page-order walk (ADR 0013): the atom within the
+// section and, for an atom carrying `lines`, the 0-based index into its
+// letter-order lines. `line` is omitted only for a whole prose atom.
+export type ReadingStep = {
+  atom: number
+  line?: number
+}
+
 // One addressable section of a book: its chapter number in the BBBCCCVVV id
-// space, its display name, and how many paragraph atoms it holds. The whole
-// table is the book's versification data (spec-books §1). `named` marks a
-// section the printed work carries no chapter number for — its name replaces
-// the chapter locator when a reference to it is displayed (§4).
+// space, its display name, and how many atoms it holds — `paragraphs` keeps
+// its name whatever the Book's atom kind (spec-books §1). The whole table is
+// the book's versification data. `named` marks a section the printed work
+// carries no chapter number for — its name replaces the chapter locator when
+// a reference to it is displayed (§4).
 export type BookSection = {
   chapter: number
   name: string
@@ -57,6 +73,10 @@ export type BookSection = {
   // The Part this section sits under, when the book is divided into Parts:
   // the text of the part-level Heading opening the Part's first section.
   part?: string
+  // The section's full walk in the edition's page order, present only where
+  // that walk is not the identity — atoms 1..N, each atom's lines in stored
+  // order (spec-books §11, ADR 0013).
+  reading?: ReadingStep[]
 }
 
 export type BookMetadata = {
@@ -66,6 +86,7 @@ export type BookMetadata = {
   year: number
   abbreviation: string
   aliases?: string[]
+  atom?: BookAtomKind
   sections: BookSection[]
 }
 

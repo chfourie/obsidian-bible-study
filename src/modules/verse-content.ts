@@ -69,6 +69,10 @@ export type VerseLine = {
   cells?: FormatSpan[]
   // Set on the one row whose cells print as the table's column headings.
   header?: boolean
+  // Verse-atom Books only: the print's Line letter on this metrical line
+  // (`"a"` of Charles's `6a`) — a locator, never part of the stored text
+  // (CONTEXT.md — Line letter). Absent on an unlettered line.
+  letter?: string
 }
 
 export type StructuredVerse = {

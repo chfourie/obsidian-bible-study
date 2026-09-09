@@ -59,6 +59,17 @@ describe('parseBookRegistry', () => {
   it('rejects a registry that is not a list', () => {
     expect(() => parseBookRegistry(registryJson(humility))).toThrow(/list/i)
   })
+
+  it('reads a verse-atom entry’s atom kind', () => {
+    const enoch = { ...humility, bookNumber: 103, moduleId: '1en-c1912', editionCode: '1EN-C1912', atom: 'verse' }
+    expect(parseBookRegistry(registryJson([enoch]))[0].atom).toBe('verse')
+  })
+
+  it('rejects an atom kind that is neither verse nor paragraph', () => {
+    expect(() =>
+      parseBookRegistry(registryJson([{ ...humility, atom: 'stanza' }])),
+    ).toThrow(/atom/i)
+  })
 })
 
 describe('assertRegisteredBook', () => {
@@ -79,10 +90,20 @@ describe('assertRegisteredBook', () => {
     ['title', { title: 'Humility: The Beauty of Holiness' }],
     ['author', { author: 'A. Murray' }],
     ['editionCode', { editionCode: 'HUM-1895' }],
+    ['atom', { atom: 'verse' as const }],
   ])('fails when %s disagrees with the registry', (field, override) => {
     expect(() =>
       assertRegisteredBook({ ...humility, ...override }, registry),
     ).toThrow(new RegExp(field, 'i'))
+  })
+
+  it('reads an absent atom kind as paragraph on either side', () => {
+    expect(() =>
+      assertRegisteredBook({ ...humility, atom: 'paragraph' }, registry),
+    ).not.toThrow()
+    expect(() =>
+      assertRegisteredBook(humility, [{ ...humility, atom: 'paragraph' }]),
+    ).not.toThrow()
   })
 })
 
@@ -150,5 +171,25 @@ describe('scripts/book-registry.json', () => {
       abbreviation: 'IN',
       aliases: ['In'],
     })
+  })
+
+  it('leaves the paragraph Books without an atom kind, so they load unchanged', () => {
+    expect(bookPublication(registry, 'in-at-e1').atom).toBeUndefined()
+    expect(registry.find((entry) => entry.moduleId === 'hum-m1895')?.atom).toBeUndefined()
+  })
+
+  it('registers 1 Enoch as book 103, a verse-atom Book complete enough to publish', () => {
+    expect(bookPublication(registry, '1en-c1912')).toMatchObject({
+      bookNumber: 103,
+      title: '1 Enoch',
+      author: 'Enoch',
+      editionCode: '1EN-C1912',
+      year: 1912,
+      abbreviation: '1En',
+      aliases: ['First Enoch', 'Book of Enoch', 'Ethiopic Enoch'],
+      atom: 'verse',
+      source: '1 Enoch Charles 1912 PG77935.txt',
+    })
+    expect(bookPublication(registry, '1en-c1912').license).toMatch(/public domain/i)
   })
 })

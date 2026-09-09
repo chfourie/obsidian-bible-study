@@ -20,5 +20,23 @@
     "license": "No rights reserved. Any part of this publication may be reproduced in its context. Copies may be distributed by any means.",
     "source": "IN First Edition.pdf",
     "sourceChecksum": "adb9dc5b18e5f8769522e5ec42b8b0b7802e87ce4df29fa76599358de968ddde"
+  },
+  {
+    "bookNumber": 103,
+    "title": "1 Enoch",
+    "author": "Enoch",
+    "moduleId": "1en-c1912",
+    "editionCode": "1EN-C1912",
+    "year": 1912,
+    "abbreviation": "1En",
+    "aliases": [
+      "First Enoch",
+      "Book of Enoch",
+      "Ethiopic Enoch"
+    ],
+    "atom": "verse",
+    "license": "Public domain in the United States. R. H. Charles's English translation, The Book of Enoch or 1 Enoch, Oxford: Clarendon Press, 1912 (Charles d. 1931).",
+    "source": "1 Enoch Charles 1912 PG77935.txt",
+    "sourceChecksum": "10d325355a810badf67bbbd1fe6bda77dc6e294eae78c2f6c69290188af45b14"
   }
 ]

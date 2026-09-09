@@ -3,12 +3,21 @@
 // against it, so a renumbered or re-identified book fails the build instead
 // of shipping a module that collides with a published grid.
 
+import {
+  type BookAtomKind,
+  DEFAULT_BOOK_ATOM_KIND,
+} from '../../src/modules/module-manifest'
+
 export type BookRegistryEntry = {
   bookNumber: number
   title: string
   author: string
   moduleId: string
   editionCode: string
+  // The work's smallest printed citable unit, one kind for the whole Book
+  // (spec-books §1); absent means paragraph, so the Books registered before
+  // the kind existed carry none.
+  atom?: BookAtomKind
   // What the generic Markdown pipeline needs to publish a module without
   // knowing anything about the book itself. Humility's bespoke pipeline
   // predates the registry carrying them, so they stay optional here and are
@@ -24,7 +33,13 @@ export type BookRegistryEntry = {
 }
 
 // A registry entry complete enough to publish from.
-export type BookPublication = Required<BookRegistryEntry>
+export type BookPublication = Required<Omit<BookRegistryEntry, 'atom'>> &
+  Pick<BookRegistryEntry, 'atom'>
+
+const ATOM_KINDS: readonly BookAtomKind[] = ['verse', 'paragraph']
+
+export const atomKindOf = (entry: { atom?: BookAtomKind }): BookAtomKind =>
+  entry.atom ?? DEFAULT_BOOK_ATOM_KIND
 
 // Scripture holds 1–66 and 67–100 is reserved for canon extensions.
 export const FIRST_BOOK_NUMBER = 101
@@ -47,6 +62,14 @@ const readEntry = (candidate: unknown): BookRegistryEntry => {
     throw new Error(
       `Registry entry "${String(entry.moduleId)}" has book number ` +
         `${String(bookNumber)}; books start at ${FIRST_BOOK_NUMBER}`,
+    )
+  if (
+    entry.atom !== undefined &&
+    !ATOM_KINDS.includes(entry.atom as BookAtomKind)
+  )
+    throw new Error(
+      `Registry entry "${String(entry.moduleId)}" has atom kind ` +
+        `"${String(entry.atom)}"; a Book's atom is "verse" or "paragraph"`,
     )
   return entry as unknown as BookRegistryEntry
 }
@@ -91,6 +114,11 @@ export const assertRegisteredBook = (
         `Manifest ${field} "${registration[field]}" disagrees with ` +
           `registry "${entry[field]}"`,
       )
+  if (atomKindOf(entry) !== atomKindOf(registration))
+    throw new Error(
+      `Manifest atom kind "${atomKindOf(registration)}" disagrees with ` +
+        `registry "${atomKindOf(entry)}"`,
+    )
 }
 
 const PUBLICATION_FIELDS = [
