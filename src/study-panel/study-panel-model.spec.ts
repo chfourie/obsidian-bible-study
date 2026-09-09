@@ -5,6 +5,7 @@ import {
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
 import {
+  ENOCH_BOOK,
   installEnochBook,
   uninstallEnochBook,
 } from '../../tests/fixtures/enoch-book'
@@ -17,6 +18,7 @@ import {
   type Reference,
 } from '../reference'
 import type { Passage, PassageSource } from '../rendering'
+import { ModulePassageSource } from '../rendering/module-passage-source'
 import { extractOccurrences, VaultReferenceIndex } from '../vault-index'
 import {
   StudyPanelModel,
@@ -241,7 +243,11 @@ describe('StudyPanelModel', () => {
     ])
     expect(panel.view.entries[0].status).toBe('ok')
     expect(panel.view.entries[0].verses).toEqual([
-      { label: null, text: `text-${makeVerseId(43, 15, 1)}` },
+      {
+        label: null,
+        text: `text-${makeVerseId(43, 15, 1)}`,
+        segments: [{ text: `text-${makeVerseId(43, 15, 1)}`, redLetter: false }],
+      },
     ])
   })
 
@@ -1586,6 +1592,52 @@ describe('book references in the Study Panel', () => {
     expect(panel.view.entries[0].attribution).toBe(
       'Enoch, 1 Enoch (1912), 1:9-11',
     )
+  })
+
+  it('paints a verse-atom book passage’s supplied word, brackets and emended word', async () => {
+    installEnochBook()
+    const panel = model(
+      new ModulePassageSource({
+        manifest: async () => ({
+          id: '1en-c1912',
+          name: '1 Enoch',
+          language: 'English',
+          license: 'Public domain',
+          source: '',
+          sourceChecksum: '',
+          formatVersion: 8,
+          kind: 'book',
+          capabilities: { strongsTagged: false },
+        }),
+        bookContent: async () => ({
+          [makeVerseId(ENOCH_BOOK, 1, 4)]: {
+            text: 'earth, even on Mount Sinai, [And appear from His camp]',
+            supplied: [{ start: 7, end: 11 }],
+            marks: [
+              { start: 28, end: 29 },
+              { start: 53, end: 54 },
+            ],
+          },
+          [makeVerseId(ENOCH_BOOK, 1, 5)]: {
+            text: '⌈how steadfast they are⌉',
+            marks: [
+              { start: 0, end: 1 },
+              { start: 23, end: 24 },
+            ],
+            emended: [{ start: 5, end: 14 }],
+          },
+        }),
+      }),
+    )
+
+    await panel.setActiveNote({ file: 'note.md', content: '{1 Enoch 1:4-5}' })
+
+    const [even, steadfast] = panel.view.entries[0].verses
+    expect(even.text).toBe('earth, even on Mount Sinai, [And appear from His camp]')
+    expect(even.segments.filter((segment) => segment.supplied).map((segment) => segment.text)).toEqual(['even'])
+    expect(even.segments.filter((segment) => segment.marks).map((segment) => segment.text)).toEqual(['[', ']'])
+    expect(steadfast.segments.filter((segment) => segment.emended).map((segment) => segment.text)).toEqual(['steadfast'])
+    expect(steadfast.segments.filter((segment) => segment.marks).map((segment) => segment.text)).toEqual(['⌈', '⌉'])
   })
 
   it('never substitutes a translation for an absent book module', async () => {

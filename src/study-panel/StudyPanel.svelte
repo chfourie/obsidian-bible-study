@@ -8,6 +8,7 @@ opens the reference in the reader with the entry's translation.
   import { setIcon } from 'obsidian'
   import type { NavigationOptions } from '../contracts'
   import type { Reference } from '../reference'
+  import type { VerseSegment } from '../rendering'
   import ChapterAnnotationList from '../study-material/ChapterAnnotationList.svelte'
   import ChapterMentionList from '../study-material/ChapterMentionList.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
@@ -61,6 +62,14 @@ opens the reference in the reader with the entry's translation.
     model.editCrossReference(id, { newPane: opensInNewPane(event) })
   }
 </script>
+
+<!-- Supplied words and Editorial marks paint here as everywhere else
+     (spec-books §10); the panel's passages otherwise stay plain text. -->
+{#snippet markedText(segment: VerseSegment)}{#if segment.supplied || segment.marks || segment.emended}<span
+      class:scripture-study-supplied={segment.supplied}
+      class:scripture-study-marks={segment.marks}
+      class:scripture-study-emended={segment.emended}
+    >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
 
 {#snippet panelTitle(title: string | null)}
   <div class="bsp-title" title={title ?? ''}>
@@ -214,7 +223,7 @@ opens the reference in the reader with the entry's translation.
                     <p class="bsp-verse">
                       {#if verse.label !== null}
                         <span class="bsp-verse-number">{verse.label}</span>
-                      {/if}{verse.text}
+                      {/if}{#each verse.segments as segment, part (part)}{@render markedText(segment)}{/each}
                     </p>
                   {/each}
                 </div>

@@ -294,8 +294,10 @@ export const sectionGroups = (
 
 // The attribution comes through as segments so its citation lights up on the
 // same channel the prose uses (spec-books §8).
+// The quote comes through the one segmenter too, so an epigraph's Editorial
+// marks paint as an atom's do (spec-books §10).
 export type EpigraphView = {
-  quote: string
+  quote: VerseSegment[]
   attribution: VerseSegment[]
 }
 
@@ -339,7 +341,15 @@ export type ReaderPaneView = {
 }
 
 const epigraphView = (epigraph: Epigraph): EpigraphView => ({
-  quote: epigraph.quote,
+  quote: verseSegments(
+    {
+      text: epigraph.quote,
+      ...(epigraph.supplied === undefined ? {} : { supplied: epigraph.supplied }),
+      ...(epigraph.marks === undefined ? {} : { marks: epigraph.marks }),
+      ...(epigraph.emended === undefined ? {} : { emended: epigraph.emended }),
+    },
+    [],
+  ),
   attribution: verseSegments(
     epigraph.refs === undefined
       ? epigraph.attribution

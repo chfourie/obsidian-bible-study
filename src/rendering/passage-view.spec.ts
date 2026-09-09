@@ -315,6 +315,38 @@ describe('buildPassageView — highlights', () => {
     ])
   })
 
+  it('counts a mark glyph and a supplied word as characters of the highlighted string', () => {
+    // 1 Enoch 1:4's stretch `even on Mount Sinai, [And appear` — a highlight
+    // from the supplied word across the interpolation bracket keeps every
+    // offset the stored string has (spec-books §10).
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.22-54'),
+      passage([
+        {
+          verseId: makeVerseId(43, 15, 4),
+          segments: [
+            { text: 'tread upon the earth, ', redLetter: false },
+            { text: 'even', redLetter: false, supplied: true },
+            { text: ' on Mount Sinai, ', redLetter: false },
+            { text: '[', redLetter: false, marks: true },
+            { text: 'And appear from His camp', redLetter: false },
+            { text: ']', redLetter: false, marks: true },
+          ],
+        },
+      ]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'tread upon the earth, ', redLetter: false },
+      { text: 'even', redLetter: false, supplied: true, highlightSlot: 1 },
+      { text: ' on Mount Sinai, ', redLetter: false, highlightSlot: 1 },
+      { text: '[', redLetter: false, marks: true, highlightSlot: 1 },
+      { text: 'And appear', redLetter: false, highlightSlot: 1 },
+      { text: ' from His camp', redLetter: false },
+      { text: ']', redLetter: false, marks: true },
+    ])
+  })
+
   it('clamps offsets past the end of the stored verse text', () => {
     const view = buildPassageView(
       model('John 15:4 inline h1/4.7-400'),

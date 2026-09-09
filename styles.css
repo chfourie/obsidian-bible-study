@@ -111,8 +111,23 @@ body {
   font-style: normal;
 }
 
+/* Supplied words and Editorial marks (spec-books §10). Settings publishes the
+   two opacities as --ss-supplied-opacity / --ss-marks-opacity on `body`; the
+   fallbacks are the factory values. Supplied words fade in scripture and
+   Books alike; mark glyphs take the accent at their own fade; an emended
+   word is weight alone, neither faded nor accented. */
 .scripture-study-supplied {
   font-style: italic;
+  opacity: var(--ss-supplied-opacity, 0.5);
+}
+
+.scripture-study-marks {
+  color: var(--text-accent);
+  opacity: var(--ss-marks-opacity, 0.3);
+}
+
+.scripture-study-emended {
+  font-weight: var(--font-bold);
 }
 
 .scripture-study-red-letter {

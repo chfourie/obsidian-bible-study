@@ -149,9 +149,11 @@
   }
 </script>
 
-{#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.psalmHeading}<span
+{#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.marks || segment.emended || segment.psalmHeading}<span
       class:scripture-study-red-letter={segment.redLetter}
       class:scripture-study-supplied={segment.supplied}
+      class:scripture-study-marks={segment.marks}
+      class:scripture-study-emended={segment.emended}
       class:scripture-study-psalm-heading={segment.psalmHeading}
     >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
 
@@ -174,6 +176,8 @@
       class="bsr-strongs-word"
       class:scripture-study-red-letter={segment.redLetter}
       class:scripture-study-supplied={segment.supplied}
+      class:scripture-study-marks={segment.marks}
+      class:scripture-study-emended={segment.emended}
       class:scripture-study-psalm-heading={segment.psalmHeading}
       onclick={(event) => onWordClick(event, row.verseId, segment.strongs ?? [])}
       onkeydown={(event) => {
@@ -406,7 +410,7 @@
             </div>
             {#each view.book.epigraphs as epigraph, index (index)}
               <div class="bsr-epigraph">
-                {epigraph.quote}
+                {#each epigraph.quote as segment, part (part)}{@render formattedText(segment)}{/each}
                 <span class="bsr-epigraph-src"
                   >—{#each epigraph.attribution as segment, part (part)}{@render citedText(segment)}{/each}</span>
               </div>

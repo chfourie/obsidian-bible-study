@@ -445,6 +445,58 @@ describe('renderReference inline', () => {
     )
   })
 
+  it('paints 1:4’s supplied word, brackets and 2:2’s emended word by class, the copy text clean', async () => {
+    const enoch = {
+      status: 'ok' as const,
+      attribution: null,
+      verses: [
+        {
+          verseId: 40001001,
+          segments: [
+            { text: 'earth, ', redLetter: false },
+            { text: 'even', redLetter: false, supplied: true },
+            { text: ' on Mount Sinai, ', redLetter: false },
+            { text: '[', redLetter: false, marks: true },
+            { text: 'And appear from His camp', redLetter: false },
+            { text: ']', redLetter: false, marks: true },
+          ],
+        },
+        {
+          verseId: 40001002,
+          segments: [
+            { text: '⌈', redLetter: false, marks: true },
+            { text: 'how ', redLetter: false },
+            { text: 'steadfast', redLetter: false, emended: true },
+            { text: ' they are', redLetter: false },
+            { text: '⌉', redLetter: false, marks: true },
+          ],
+        },
+      ],
+    }
+    for (const display of ['inline', 'block']) {
+      const { parent, deps } = setup(enoch)
+
+      await renderReference(parent, model(`Matthew 1:1-2 ${display}`), deps)
+
+      expect(
+        [...parent.querySelectorAll('.scripture-study-supplied')].map((el) => el.textContent),
+      ).toEqual(['even'])
+      expect(
+        [...parent.querySelectorAll('.scripture-study-marks')].map((el) => el.textContent),
+      ).toEqual(['[', ']', '⌈', '⌉'])
+      expect(
+        [...parent.querySelectorAll('.scripture-study-emended')].map((el) => el.textContent),
+      ).toEqual(['steadfast'])
+      expect(parent.querySelector('.scripture-study-marks')?.hasAttribute('title')).toBe(false)
+      expect(parent.querySelector('.scripture-study-passage')?.textContent).toContain(
+        'earth, even on Mount Sinai, [And appear from His camp]',
+      )
+      expect(parent.querySelector('.scripture-study-passage')?.textContent).toContain(
+        '⌈how steadfast they are⌉',
+      )
+    }
+  })
+
   it('marks a segment both red-letter and supplied with both classes', async () => {
     const { parent, deps } = setup({
       status: 'ok',

@@ -7,9 +7,11 @@ import type {
   VerseContent,
 } from '../modules'
 import {
+  verseEmendedOf,
   verseFiguresOf,
   verseHeadingsOf,
   verseLinesOf,
+  verseMarksOf,
   verseRedLetterOf,
   verseRefsOf,
   verseSuppliedOf,
@@ -28,6 +30,10 @@ export type VerseSegment = {
   text: string
   redLetter: boolean
   supplied?: boolean
+  // A critical Book's Editorial marks (spec-books §10): the stretch is a
+  // mark glyph, or an emended word. Paint only — the text is the atom's.
+  marks?: boolean
+  emended?: boolean
   strongs?: string[]
   lineBreakBefore?: boolean
   lineStart?: boolean
@@ -100,6 +106,8 @@ export const verseSegments = (
   const text = verseTextOf(verse)
   const orderedTags = [...verseTagsOf(verse)].sort((a, b) => a.start - b.start)
   const suppliedSpans = verseSuppliedOf(verse)
+  const markSpans = verseMarksOf(verse)
+  const emendedSpans = verseEmendedOf(verse)
   const refSpans = verseRefsOf(verse)
   const lines = [...verseLinesOf(verse)]
     .filter((line) => line.start < text.length)
@@ -109,6 +117,8 @@ export const verseSegments = (
     ...orderedTags,
     ...redSpans,
     ...suppliedSpans,
+    ...markSpans,
+    ...emendedSpans,
     ...refSpans,
   ]) {
     cuts.add(span.start)
@@ -127,6 +137,8 @@ export const verseSegments = (
       redLetter: covering(redSpans, start, end),
     }
     if (covering(suppliedSpans, start, end)) segment.supplied = true
+    if (covering(markSpans, start, end)) segment.marks = true
+    if (covering(emendedSpans, start, end)) segment.emended = true
     if (tag !== undefined) segment.strongs = tag.strongs
     const ref = refSpans.find(
       (candidate) => candidate.start <= start && end <= candidate.end,

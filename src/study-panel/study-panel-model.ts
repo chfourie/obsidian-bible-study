@@ -33,6 +33,7 @@ import {
   exceedsDisplayVerseLimit,
   type PassageSource,
   type PassageVerse,
+  type VerseSegment,
 } from '../rendering'
 import type { StudySubTab } from '../study-material'
 import {
@@ -44,7 +45,14 @@ import {
 } from '../vault-index'
 import { freshTabState, type StudyTabState } from './tab-memory'
 
-export type ReferenceEntryVerse = { label: string | null; text: string }
+// A cited verse as the panel prints it: its segments from the one segmenter,
+// so a supplied word or an Editorial mark paints here as it does in the
+// reader (spec-books §10); `text` is the same run joined, for copy and search.
+export type ReferenceEntryVerse = {
+  label: string | null
+  text: string
+  segments: VerseSegment[]
+}
 
 export type ReferenceEntryStatus =
   | 'loading'
@@ -578,6 +586,7 @@ export class StudyPanelModel {
         verses: passage.verses.map((verse, index) => ({
           label: labels[index],
           text: verse.segments.map((segment) => segment.text).join(''),
+          segments: verse.segments,
         })),
         attribution: entry.book?.attribution ?? passage.attribution,
       }

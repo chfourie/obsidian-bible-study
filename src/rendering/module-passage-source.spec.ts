@@ -857,4 +857,77 @@ describe('verseSegments', () => {
       { text: '.', redLetter: false },
     ])
   })
+
+  // 1 Enoch 1:4 and 2:2 as the pipeline stores them (spec-books §10): the
+  // supplied word, the interpolation brackets and the emended word are all
+  // cut by the one segmenter, so every surface paints them the same way.
+  const enoch14 = {
+    text: 'tread upon the earth, even on Mount Sinai, [And appear from His camp]',
+    supplied: [{ start: 22, end: 26 }],
+    marks: [
+      { start: 43, end: 44 },
+      { start: 68, end: 69 },
+    ],
+    lines: [{ start: 0 }, { start: 43 }],
+  }
+  const enoch22 = {
+    text: 'last, ⌈how steadfast they are⌉, how',
+    marks: [
+      { start: 6, end: 7 },
+      { start: 29, end: 30 },
+    ],
+    emended: [{ start: 11, end: 20 }],
+  }
+
+  it('flags 1:4’s supplied word and each interpolation bracket as its own segment', () => {
+    expect(verseSegments(enoch14, [])).toEqual([
+      { text: 'tread upon the earth, ', redLetter: false, lineStart: true },
+      { text: 'even', redLetter: false, supplied: true },
+      { text: ' on Mount Sinai, ', redLetter: false },
+      { text: '[', redLetter: false, marks: true, lineStart: true, lineBreakBefore: true },
+      { text: 'And appear from His camp', redLetter: false },
+      { text: ']', redLetter: false, marks: true },
+    ])
+  })
+
+  it('flags 2:2’s emended word beside its version brackets', () => {
+    expect(verseSegments(enoch22, [])).toEqual([
+      { text: 'last, ', redLetter: false },
+      { text: '⌈', redLetter: false, marks: true },
+      { text: 'how ', redLetter: false },
+      { text: 'steadfast', redLetter: false, emended: true },
+      { text: ' they are', redLetter: false },
+      { text: '⌉', redLetter: false, marks: true },
+      { text: ', how', redLetter: false },
+    ])
+  })
+
+  it('lets a Ref Span run over a bracket, the glyph keeping its mark', () => {
+    const ranges = [{ startId: john(5, 30), endId: john(5, 30) }]
+    expect(
+      verseSegments(
+        {
+          text: 'ten thousands of ⌈His⌉ holy ones',
+          marks: [
+            { start: 17, end: 18 },
+            { start: 21, end: 22 },
+          ],
+          refs: [{ start: 17, end: 32, ranges }],
+        },
+        [],
+      ),
+    ).toEqual([
+      { text: 'ten thousands of ', redLetter: false },
+      { text: '⌈', redLetter: false, marks: true, refs: ranges },
+      { text: 'His', redLetter: false, refs: ranges },
+      { text: '⌉', redLetter: false, marks: true, refs: ranges },
+      { text: ' holy ones', redLetter: false, refs: ranges },
+    ])
+  })
+
+  it('grows no flag on an unmarked atom', () => {
+    expect(verseSegments({ text: 'Plain.' }, [])).toEqual([
+      { text: 'Plain.', redLetter: false },
+    ])
+  })
 })

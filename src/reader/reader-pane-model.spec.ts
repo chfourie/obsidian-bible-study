@@ -14,6 +14,8 @@ import {
 } from '../reference'
 import type { Epigraph, Heading } from '../modules'
 import type { Passage, PassageSource } from '../rendering'
+import { ModulePassageSource } from '../rendering/module-passage-source'
+import { ENOCH_BOOK, installEnochBook, uninstallEnochBook } from '../../tests/fixtures/enoch-book'
 import type {
   CrossReference,
   CrossReferenceEditing,
@@ -3924,7 +3926,7 @@ describe('ReaderPaneModel book mode', () => {
     expect(view.book?.sectionName).toBe('The Glory of the Creature')
     expect(view.book?.epigraphs).toEqual([
       {
-        quote: CROWNS.quote,
+        quote: [{ text: CROWNS.quote, redLetter: false }],
         attribution: [{ text: 'Rev. iv. 11', redLetter: false }],
       },
     ])
@@ -4739,6 +4741,110 @@ describe('sectionGroups', () => {
           { chapter: 1, name: 'The Glory of the Creature', current: true },
         ],
       },
+    ])
+  })
+})
+
+// 1 Enoch's marked verses reach the reader — its rows, its epigraph and the
+// details the Study Panel shows — through the one segmenter, never a
+// Book-side paint (spec-books §10, §12).
+describe('ReaderPaneModel Editorial marks', () => {
+  const enochManifest = {
+    id: '1en-c1912',
+    name: '1 Enoch',
+    language: 'English',
+    license: 'Public domain',
+    source: '',
+    sourceChecksum: '',
+    formatVersion: 8,
+    kind: 'book' as const,
+    capabilities: { strongsTagged: false },
+  }
+  const content = {
+    [makeVerseId(ENOCH_BOOK, 1, 1)]: {
+      text: 'tread upon the earth, even on Mount Sinai, [And appear from His camp]',
+      supplied: [{ start: 22, end: 26 }],
+      marks: [
+        { start: 43, end: 44 },
+        { start: 68, end: 69 },
+      ],
+    },
+    [makeVerseId(ENOCH_BOOK, 1, 2)]: {
+      text: '⌈how steadfast they are⌉',
+      marks: [
+        { start: 0, end: 1 },
+        { start: 23, end: 24 },
+      ],
+      emended: [{ start: 5, end: 14 }],
+    },
+  }
+  const enochReader = (): ReaderBook => ({
+    number: ENOCH_BOOK,
+    title: '1 Enoch',
+    author: 'Enoch',
+    year: 1912,
+    editionId: '1en-c1912',
+    sections: [{ chapter: 1, name: '1' }],
+  })
+  const enochModel = (epigraphs: Epigraph[] = []) =>
+    bookModelWith({
+      passages: new ModulePassageSource({
+        manifest: async () => enochManifest,
+        bookContent: async () => content,
+      }),
+      books: {
+        installed: async () => [enochReader()],
+        epigraphs: async () => epigraphs,
+      },
+    })
+
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('rows carry 1:4’s faded supplied word and brackets, and 2:2’s bold emended word', async () => {
+    const model = enochModel()
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    const flagged = (row: number) =>
+      model.view.rows[row].segments
+        .filter((segment) => segment.supplied || segment.marks || segment.emended)
+        .map(({ text, supplied, marks, emended }) => ({ text, supplied, marks, emended }))
+    expect(flagged(0)).toEqual([
+      { text: 'even', supplied: true, marks: undefined, emended: undefined },
+      { text: '[', supplied: undefined, marks: true, emended: undefined },
+      { text: ']', supplied: undefined, marks: true, emended: undefined },
+    ])
+    expect(flagged(1)).toEqual([
+      { text: '⌈', supplied: undefined, marks: true, emended: undefined },
+      { text: 'steadfast', supplied: undefined, marks: undefined, emended: true },
+      { text: '⌉', supplied: undefined, marks: true, emended: undefined },
+    ])
+  })
+
+  it('segments an epigraph’s quote by its own channels', async () => {
+    const model = enochModel([
+      {
+        quote: 'Not I, but ⌈Christ⌉.',
+        attribution: '',
+        supplied: [{ start: 4, end: 5 }],
+        marks: [
+          { start: 11, end: 12 },
+          { start: 18, end: 19 },
+        ],
+      },
+    ])
+
+    await model.openPosition({ book: ENOCH_BOOK, chapter: 1 })
+
+    expect(model.view.book?.epigraphs[0].quote).toEqual([
+      { text: 'Not ', redLetter: false },
+      { text: 'I', redLetter: false, supplied: true },
+      { text: ', but ', redLetter: false },
+      { text: '⌈', redLetter: false, marks: true },
+      { text: 'Christ', redLetter: false },
+      { text: '⌉', redLetter: false, marks: true },
+      { text: '.', redLetter: false },
     ])
   })
 })

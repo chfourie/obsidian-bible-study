@@ -62,9 +62,11 @@ controls beside the selection's title.
       : row.label
 </script>
 
-{#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.psalmHeading}<span
+{#snippet formattedText(segment: VerseSegment)}{#if segment.redLetter || segment.supplied || segment.marks || segment.emended || segment.psalmHeading}<span
       class:scripture-study-red-letter={segment.redLetter}
       class:scripture-study-supplied={segment.supplied}
+      class:scripture-study-marks={segment.marks}
+      class:scripture-study-emended={segment.emended}
       class:scripture-study-psalm-heading={segment.psalmHeading}
     >{segment.text}</span>{:else}{segment.text}{/if}{/snippet}
 

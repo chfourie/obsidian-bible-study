@@ -205,6 +205,8 @@ const renderSegment = (parent: HTMLElement, segment: VerseSegment): void => {
         ]),
     ...(segment.redLetter ? ['scripture-study-red-letter'] : []),
     ...(segment.supplied ? ['scripture-study-supplied'] : []),
+    ...(segment.marks ? ['scripture-study-marks'] : []),
+    ...(segment.emended ? ['scripture-study-emended'] : []),
     ...(segment.psalmHeading ? ['scripture-study-psalm-heading'] : []),
     ...(indented ? [`scripture-study-indent-${segment.indent}`] : []),
   ]
