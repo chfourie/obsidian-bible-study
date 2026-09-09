@@ -2152,7 +2152,7 @@ the righteous,
 4. And it shall guide you on good paths,
 4. And righteousness shall be your companion.
 
-5. For I know that violence <emended>must</emended> increase on the earth,
+5. For I know that violence <emended>must</emended> [Footnote: Violence must increase. The text reads ‘the state (or ‘essence’) of violence shall increase’. But this is wholly unlikely. I have therefore emended hĕlâwê (= ‘state’) into halawô, i. e. the substantive verb with suffix. When we combine halawô with jĕṣan‘ĕ the two = ‘must increase’.] increase on the earth,
 5. And a great chastisement be executed on the earth,
 5. And all unrighteousness come to an end:
 
@@ -2184,7 +2184,7 @@ the righteous,
 10. And the righteous shall arise from their sleep,
 10. And wisdom shall arise and be given unto them.
 
-11. <marks>[</marks>And after that the roots of unrighteousness shall be cut off, and the sinners shall be destroyed by the sword <marks>…</marks> shall be cut off from the blasphemers in every place, and those who plan violence and those who commit blasphemy shall perish by the sword.<marks>]</marks>
+11. <marks>[</marks>And after that the roots of unrighteousness shall be cut off, and the sinners shall be destroyed by the sword <marks>…</marks> [Footnote: As we have already seen (p. 224), 91¹²⁻¹⁷ originally stood after 93¹⁻¹⁰. As for this verse, we must regard it as an interpolation added by the final editor in order to introduce vv. 12–17 which he had torn from their original context. This verse is wholly out of place here. Judgement has already been consummated, all evil works destroyed, and all the wicked handed over to a judgement of fire (vv. 7–9). In ver. 10 the Resurrection ensues and judgement is now over. But in ver. 11 all this is ignored and a moral chaos is represented as still existing—a moral chaos of exactly the same nature as existed before the judgement of vv. 7–9. Moreover, the period of the Sword—man’s part in the final judgement—precedes the Resurrection; cf. 90¹⁹ 91¹². The Resurrection follows upon the destruction of all evil and the final judgement, 100⁴, ⁵. Finally, this verse seems modelled partly on vv. 7 and 8, and partly on ver. 12, the expressions about blasphemers being drawn from ver. 7, the phrase ‘roots of unrighteousness shall be cut off’ from ver. 8, and the reference to the Sword from ver. 12 (see p. 232).] shall be cut off from the blasphemers in every place, and those who plan violence and those who commit blasphemy shall perish by the sword.<marks>]</marks>
 
 ### XCI. 12-17. The Last Three Weeks.
 
@@ -2221,18 +2221,19 @@ the righteous,
 19. And walk in the paths of righteousness,
 19. And walk not in the paths of violence;
 19. For all who walk in the paths of unrighteousness shall perish for <emended>ever</emended>.’
+%% waived 91:19 — the 1912 page (leaf 343) prints ‘for ever’ in plain type and gives no note on it; the thick type is the reprint’s
 
 ## 92.
 
 ### XCII. XCI. 1-10, 18-19. Enoch’s Book of Admonition for his Children.
 
-1. The book written by Enoch—<marks>[</marks>Enoch indeed wrote this complete doctrine of wisdom, <supplied>which is</supplied> praised of all men and a judge of all the earth<marks>]</marks> for all my children who shall dwell on the earth; and for the future generations who shall observe uprightness and peace.
+1. The book written by Enoch—<marks>[</marks>Enoch indeed wrote this complete doctrine of wisdom, <supplied>which is</supplied> praised of all men and a judge of all the earth<marks>]</marks> [Footnote: ［Enoch indeed . . . all the earth］. I have, with some hesitation, bracketed these words as an interpolation. Enoch does not attempt a complete doctrine of wisdom, and seeing that it was for the chosen race only it could hardly be said to be ‘praised of all men’.] for all my children who shall dwell on the earth; and for the future generations who shall observe uprightness and peace.
 
 2. Let not your spirit be troubled on account of the times;
 2. For the Holy and Great One has appointed days for all things.
 
 3. And the righteous one shall arise from sleep,
-3. <marks>[</marks>Shall arise<marks>]</marks> and walk in the paths of righteousness,
+3. <marks>[</marks>Shall arise<marks>]</marks> [Footnote: The righteous one. Used collectively as in 91¹⁰. Instead of ‘and the righteous . . . from sleep, shall arise’ g reads ‘and wisdom shall arise’.] and walk in the paths of righteousness,
 3. And all his path and conversation shall be in eternal goodness and grace.
 
 4. He will be gracious to the righteous and give him eternal uprightness,
@@ -2246,7 +2247,7 @@ the righteous,
 
 ### XCIII, XCI. 12-17. The Apocalypse of Weeks.
 
-1. And after that Enoch both <marks>†</marks>gave<marks>†</marks> and began to recount from the books.
+1. And after that Enoch both <marks>†</marks>gave<marks>†</marks> [Footnote: †Gave† (a–mt). t, β ‘was’. I do not see how the corruption can be explained.] and began to recount from the books.
 2. And Enoch said:
 
 2. ‘Concerning the children of righteousness and concerning the elect of the world,
@@ -2271,7 +2272,7 @@ the righteous,
 
 5. And after that in the third week at its close
 5. A man shall be elected as the plant of righteous judgement.
-5. And <emended>his posterity</emended> shall become the plant of righteousness for evermore.
+5. And <emended>his posterity</emended> [Footnote: His posterity. The text reads ‘after him (or ‘it’) it shall come (or ‘become’) the plant of righteousness’, &c. But, since this is unsatisfactory however we take it, I suggest that אחריו (= ‘after him’ or ‘it’) stood before the translator but was corrupt for אחריתו = ‘his posterity’.] shall become the plant of righteousness for evermore.
 
 6. And after that in the fourth week, at its close,
 6. Visions of the holy and righteous shall be seen,
@@ -2295,10 +2296,10 @@ the righteous,
 10. The elect righteous of the eternal plant of righteousness,
 10. To receive sevenfold instruction concerning all His creation.
 
-11. <marks>[</marks>For who is there of all the children of men that is able to hear the voice of the Holy One without being troubled? And who can think His thoughts? and who is there that can behold all the works of heaven?
+11. <marks>[</marks>For who is there [Footnote: 11–14. The verses are completely out of place in their present context, as Laurence, Hoffmann, and Schodde have already remarked, and subsequently Beer and Martin. They would belong rather to the Book of the Heavenly Luminaries, 72–79 82, but are foreign in character to the whole tone of this book, 91–104, and do not as a matter of fact rightly describe any one of the books of Enoch.] of all the children of men that is able to hear the voice of the Holy One without being troubled? And who can think His thoughts? and who is there that can behold all the works of heaven?
 12. And how should there be one who could behold the heaven, and who is there that could understand the things of heaven and see a soul or a spirit and could tell thereof, or ascend and see all their ends and think them or do like them?
 13. And who is there of all men that could know what is the breadth and the length of the earth, and to whom has been shown the measure of all of them?
-14. Or is there any one who could discern the length of the heaven and how great is its height, and upon what it is founded, and how great is the number of the stars, and where all the luminaries rest?<marks>]</marks>
+14. Or is there any one who could discern the length of the heaven and how great is its height, and upon what it is founded, and how great is the number of the stars, and where all the luminaries rest?<marks>]</marks> [Footnote: 11–14. The verses are completely out of place in their present context, as Laurence, Hoffmann, and Schodde have already remarked, and subsequently Beer and Martin. They would belong rather to the Book of the Heavenly Luminaries, 72–79 82, but are foreign in character to the whole tone of this book, 91–104, and do not as a matter of fact rightly describe any one of the books of Enoch.]
 
 ## 94.
 
@@ -2323,7 +2324,7 @@ the righteous,
 5. And hold fast my words in the thoughts of your hearts,
 5. And suffer them not to be effaced from your hearts;
 
-5. For know that sinners will tempt men to <emended>evilly-entreat</emended> wisdom,
+5. For know that sinners will tempt men to <emended>evilly-entreat</emended> [Footnote: To evilly-entreat. The text = ‘to make . . evil’, apparently a misrendering of κακοποιεῖν.] wisdom,
 5. So that no place may be found for her,
 5. And no manner of temptation may minish.
 
@@ -2338,7 +2339,7 @@ the righteous,
 7. For from all their foundations shall they be overthrown,
 7. And by the sword shall they fall.
 
-7. <marks>[</marks>And those who acquire gold and silver in judgement suddenly shall perish.<marks>]</marks>
+7. <marks>[</marks>And those who acquire gold and silver in judgement suddenly shall perish.<marks>]</marks> [Footnote: ［And those who acquire . . . perish.］ I have bracketed this sentence as an interpolation. The subject of riches is not dealt with till the next woe in ver. 8. Our author does not condemn the acquisition of wealth in itself but its acquisition by wrong means. Cf. 97⁸, from which passage this interpolation may in part be drawn. The removal of this sentence sets the stanza right.]
 
 8. Woe to you, ye rich, for ye have trusted in your riches,
 8. And from your riches shall ye depart,
@@ -2360,13 +2361,13 @@ the righteous,
 
 ### XCV. Enoch’s Grief: fresh Woes against the Sinners.
 
-1. Oh that mine eyes were <marks>[</marks>a cloud of<marks>]</marks> waters
+1. Oh that mine eyes were <marks>[</marks>a cloud of<marks>]</marks> [Footnote: Oh that mine eyes were ［a cloud of］ waters. ‘Cloud’ here is impossible, however it may be in the next line. Its genesis is, I think, clear. The text = מי־יתן עיני ענן מים. Here the impossible ענן is either a dittograph of עיני: then we should have ‘Oh that mine eyes were waters’: or it is a corruption of עין. In that case we should have ‘Oh that mine eyes were a spring of waters’. In this latter case we might compare 2 Bar. 35² ‘Become ye springs, O mine eyes, and ye, mine eyelids, a fount of tears’. Our text, of course, is based on Jer. 9¹ ‘Oh that my head were waters, and mine eyes a fountain of tears’.] waters
 1. That I might weep over you,
-1. And pour down my tears as a cloud <marks>†</marks>of<marks>†</marks> waters:
+1. And pour down my tears as a cloud <marks>†</marks>of<marks>†</marks> waters [Footnote: As a cloud of waters = בענן מים, which should probably have been translated ‘as a cloud pours waters’: or still better take מים as corrupt for זרם: then we should have ‘as a cloud (pours) rain’.]:
 1. That so I might rest from my trouble of heart!
 
 2. <marks>†</marks>Who has permitted you to practise reproaches and wickedness?
-2. And so judgement shall overtake you, sinners.<marks>†</marks>
+2. And so judgement shall overtake you, sinners.<marks>†</marks> [Footnote: Who has permitted (lit. ‘given’) you (g,β (= מי נתנכם)). But a–g (= מי יתנכם) ‘Who will give you’ or ‘Oh that ye were’ is probably right. Then either omitting ‘to practise’ with g, or emending tĕgabĕrû into tĕtgabarû, we should have ‘Oh that ye were become a reproach and wickedness’. In that case we should in the next line adopt the subjunctive with β and not the indicative in a. The couplet would then run: ‘Oh that ye were become a reproach and an evil And that so judgement might overtake you, sinners.’]
 
 3. Fear not the sinners, ye righteous;
 3. For again will the Lord deliver them into your hands,
@@ -2392,7 +2393,7 @@ the righteous,
 1. Be hopeful, ye righteous; for suddenly shall the sinners perish before you,
 1. And ye shall have lordship over them according to your desires.
 
-2. <marks>[</marks>And in the day of the tribulation of the sinners,
+2. <marks>[</marks>And in the day [Footnote: This verse must be an interpolation: it is foolish in itself and interrupts the context. It is the wicked who will flee to hide themselves in secret places, 97³ 100⁴ 102¹, and not the righteous: the latter will not have to conceal themselves on the day of judgement, 104⁵. Perhaps the first three lines may be original.] of the tribulation of the sinners,
 2. Your children shall mount and rise as eagles,
 2. And higher than the vultures will be your nest,
 
@@ -2410,10 +2411,10 @@ the righteous,
 4. And this fact shall be a testimony against you for a memorial of <supplied>your</supplied> evil deeds.
 
 5. Woe to you who devour the finest of the wheat,
-5. And drink <emended>wine in large bowls</emended>,
+5. And drink <emended>wine in large bowls</emended> [Footnote: †Wine in large bowls†, i. e. not in wine cups. Like the magnates in Samaria, Amos 6⁶, these wealthy sinners drank from flagons, not from cups. The text which is here corrupt = ‘the strength of the root of the fountain’ = ἰσχὺν ῥίζης πηγῆς = כח עיקר עין corrupt for במזרקי יין—the actual phrase used of the drinking-vessels of the luxurious nobles in Samaria.],
 5. And tread under foot the lowly with your might.
 
-6. Woe to you who drink water <emended>from every fountain</emended>,
+6. Woe to you who drink water <emended>from every fountain</emended> [Footnote: Drink water from every fountain. For ‘from every fountain’ the text reads literally ‘at every time’ = בכל־עת corrupt for מכל־עין ‘from every fountain’. The words are here used metaphorically as opposed to ‘the fountain of life’ used at the close of the stanza. Jer. 2¹³—‘they have forsaken Me the fountain of living waters’—was in the mind of our author. Cf. Ps. 36⁹.],
 6. For suddenly shall ye be consumed and wither away,
 6. Because ye have forsaken the fountain of life.
 
@@ -2525,12 +2526,13 @@ the righteous,
 
 2. Woe to them who pervert the words of uprightness,
 2. And transgress the eternal law,
-2. And transform themselves into what they were not <marks>[</marks>into sinners<marks>]</marks>:
+2. And transform themselves into what they were not <marks>[</marks>into sinners<marks>]</marks> [Footnote: ［Into sinners.］ Bracketed as a gloss.]:
 2. They shall be trodden under foot upon the earth.
 
 3. In those days make ready, ye righteous, to raise your prayers as <emended>a</emended> memorial,
 3. And place them as a testimony before the angels,
 3. That they may place the sin of the sinners for a memorial before the Most High.
+%% waived 99:3 — the thick-type ‘a’ has no note of its own on the page (leaves 359–360): Charles’s note on 3 speaks only to ‘Your prayers’ and ‘Place them … before the angels’
 
 4. In those days the nations shall be stirred up,
 4. And the families of the nations shall arise on the day of destruction.
@@ -2541,7 +2543,7 @@ the righteous,
 5. And shall have no pity on their beloved ones.
 
 6. And again I swear to you, ye sinners, that sin is prepared for a day of unceasing bloodshed.
-7. And they who worship stones, and grave images of gold and silver and wood <marks>〈</marks>and stone<marks>〉</marks> and clay, and those who worship impure spirits and demons, and all kinds of idols not according to knowledge, shall get no manner of help from them.
+7. And they who worship stones, and grave images of gold and silver and wood <marks>〈</marks>and stone<marks>〉</marks> [Footnote: Grave images of gold and silver and wood 〈and stone〉 . . . worship . . . demons: cf. Rev. 9²⁰. I have added ‘and stone’ in accordance with Tertullian as quoted below. The passage in Tertullian, De Idol. iv, runs ‘Qui servitis lapidibus, et qui imagines facitis aureas et argenteas et ligneas et lapideas et fictiles, et servitis phantasmatibus et daemoniis et spiritibus infamibus ［MSS. give infamis］ et omnibus erroribus non secundum scientiam, nullum ab iis invenietis auxilium’; cf. Book of Jubilees 1¹¹ 11⁴.] and clay, and those who worship impure spirits and demons, and all kinds of idols not according to knowledge, shall get no manner of help from them.
 
 8. And they shall become godless by reason of the folly of their hearts,
 8. And their eyes shall be blinded through the fear of their hearts,
@@ -2575,7 +2577,7 @@ the righteous,
 
 16. For He shall cast down your glory,
 16. And bring affliction on your hearts,
-16. And shall arouse <emended>His fierce indignation</emended>,
+16. And shall arouse <emended>His fierce indignation</emended> [Footnote: His fierce indignation. ₁gβ read ‘the spirit of His indignation’ = רוח אפו corrupt for חרון אפו ‘His fierce indignation’. gmqt read ‘His indignation and His spirit’ (‘His spirit’ in nom. in qt). + ‘into your heart’ ₁g.],
 16. And destroy you all with the sword;
 16. And all the holy and righteous shall remember your sins.
 
@@ -2604,13 +2606,13 @@ the righteous,
 5. Until He makes an end of all wickedness and all sin,
 5. And though the righteous sleep a long sleep, they have nought to fear.
 
-6. And <supplied>then</supplied> the children of the earth shall see the wise <emended>in security</emended>,
+6. And <supplied>then</supplied> the children of the earth shall see the wise <emended>in security</emended> [Footnote: Next ’ĕmûna is here a rendering of πεποιθότα(ς) as in Prov. 10⁹, which in turn goes back to בטח (adv.) = ‘in security’, but used frequently = ‘dwelling in security’ as in Gen. 34²⁵ Ezek. 30⁹.],
 6. And shall understand all the words of this book,
 6. And recognize that their riches shall not be able to save them
 6. In the overthrow of their sins.
 
 7. Woe to you, sinners, on the day of strong anguish,
-7. <emended>Ye who</emended> afflict the righteous and burn them with fire:
+7. <emended>Ye who</emended> [Footnote: On the day of strong anguish. The MSS. have wrongly transposed this phrase into the next clause. I have restored it as suggested in my edition of 1893. Ye who. The MSS. read sôba (= ‘when’) corrupt for ’ĕlla. The text as it stands is very unsatisfactory: ‘Woe to you sinners when ye afflict . . . on the day of strong anguish.’ The woe is not felt till the judgement-day: then they shall be requited according to their works; cf. 45² (note). Otherwise they must be taken of the time of the persecution of the righteous.] afflict the righteous and burn them with fire:
 7. Ye shall be requited according to your works.
 
 8. Woe to you, ye obstinate of heart,
@@ -2634,13 +2636,13 @@ the righteous,
 1. Observe the heaven, ye children of heaven, and every work of the Most High, and fear ye Him and work no evil in His presence.
 2. If He closes the windows of heaven, and withholds the rain and the dew from descending on the earth on your account, what will ye do then?
 3. And if He sends His anger upon you because of your deeds, ye cannot petition Him; for ye spake proud and insolent words against His righteousness: therefore ye shall have no peace.
-4. And see ye not the <emended>sailors</emended> of the ships, how their ships are tossed to and fro by the waves, and are shaken by the winds, and are in sore trouble?
+4. And see ye not the <emended>sailors</emended> [Footnote: Sailors of the ships. Text = ‘kings of the ships’ = מלכי האניות corrupt, as Halévy pointed out, for מלחי הא״ = ‘sailors of the ships’. For the thought of the verse cf. Ps. 107²³⁻²⁷.] of the ships, how their ships are tossed to and fro by the waves, and are shaken by the winds, and are in sore trouble?
 5. And therefore do they fear because all their goodly possessions go upon the sea with them, and they have evil forebodings of heart that the sea will swallow them and they will perish therein.
 
 6. Are not the entire sea and all its waters, and all its movements, the work of the Most High, and has He not set limits to its doings, and confined it throughout by the sand?
 7. And at His reproof it is afraid and dries up, and all its fish die and all that is in it; but ye sinners that are on the earth fear Him not.
 8. Has He not made the heaven and the earth, and all that is therein? Who has given understanding and wisdom to everything that moves on the earth and in the sea?
-9. Do not the <emended>sailors</emended> of the ships fear the sea? Yet sinners fear not the Most High.
+9. Do not the <emended>sailors</emended> [Footnote: Sailors of the ships: see note on ver. 4 — text = ‘kings of the ships’, corrupt for ‘sailors of the ships’.] of the ships fear the sea? Yet sinners fear not the Most High.
 
 ## 102.
 
@@ -2654,7 +2656,7 @@ the righteous,
 2. And all the luminaries shall be affrighted with great fear,
 2. And all the earth shall be affrighted and tremble and be alarmed.
 
-3. And all the <marks>†</marks>angels shall execute their commands<marks>†</marks>
+3. And all the <marks>†</marks>angels shall execute their commands<marks>†</marks> [Footnote: The †angels shall execute their commands†. The text is against the parallelism and is clearly here corrupt. It is not good angels that will seek to hide themselves. ‘Angels’ = מלאכים corrupt for מלכים = ‘kings’. We have then a parallel here to Rev. 6¹⁵. But what is the original text behind ‘execute their commands’ I cannot see.]
 3. And shall seek to hide themselves from the presence of the Great Glory,
 3. And the children of earth shall tremble and quake;
 3. And ye sinners shall be accursed for ever,
@@ -2664,7 +2666,7 @@ the righteous,
 
 5. And grieve not if your soul into Sheol has descended in grief,
 5. And that in your life your body fared not according to your goodness,
-5. But <emended>wait for</emended> the day of the <emended>judgement</emended> of sinners,
+5. But <emended>wait for</emended> [Footnote: Wait for. Here I emend ’ĕnka ba (= ‘moreover on’ which is here unmeaning) into ṣenḥû la = ‘wait for’ in 108², where this verb occurs in a like context: ‘wait for those days’, i. e. the days of judgement.] the day of the <emended>judgement</emended> [Footnote: Judgement of sinners. Here the text has ‘ye became sinners’, i. e. kônkemmû ḫaṭeâna (ḫaṭeân g₁g, a), which I have emended into kuenanê ḫaṭeân = ‘judgement of sinners’. The next line shows that it is the judgement day to which this line must refer. The parallelism is thus restored.] of sinners,
 5. And for the day of cursing and chastisement.
 
 6. And yet when ye die the sinners speak over you:
@@ -2727,6 +2729,7 @@ the righteous,
 
 10. And we have been destroyed and have not found any to help us even with a word:
 10. We have been tortured <marks>[</marks>and destroyed<marks>]</marks>, and hoped not to see life from day to day.
+%% waived 103:10 — the bracket carries no note on the page (leaf 373): Charles’s note on 10 speaks only to ‘We … have not found any to help us even with a word’
 
 11. We hoped to be the head and have become the tail:
 11. We have toiled laboriously and had no satisfaction in our toil;
@@ -2734,7 +2737,7 @@ the righteous,
 11. And they have laid their yoke heavily upon us.
 
 12. They have had dominion over us that hated us <marks>†</marks>and smote us;
-12. And to those that hated us<marks>†</marks> we have bowed our necks,
+12. And to those that hated us<marks>†</marks> we have [Footnote: To those that hated us. I think that this is a dittograph from the preceding line, and that the clause which should be here has been transposed into that line. Hence I suggest that we should read: ‘They have had dominion over us that hated us, And to those that smote us we have bowed our necks, But they pitied us not.’] bowed our necks,
 12. But they pitied us not.
 13. We desired to get away from them that we might escape and be at rest,
 13. But found no place whereunto we should flee and be safe from them.
@@ -2776,22 +2779,22 @@ the righteous,
 ## 106.
 
 1. And after some days my son Methuselah took a wife for his son Lamech, and she became pregnant by him and bore a son.
-2. And his body was white as snow and red as the blooming of a rose, and the hair of his head <marks>†</marks>and his long locks were white as wool, and his eyes beautiful<marks>†</marks>. And when he opened his eyes, he lighted up the whole house like the sun, and the whole house was very bright.
-3. And thereupon he arose in the hands of the midwife, opened his mouth, and <marks>†</marks>conversed with<marks>†</marks> the Lord of righteousness.
+2. And his body was white as snow and red as the blooming of a rose, and the hair of his head <marks>†</marks>and his long locks were white as wool, and his eyes beautiful<marks>†</marks> [Footnote: †And his long locks . . . beautiful†. It is rather astonishing that the new-born infant should have ‘long locks’. Since there is no mention of these in the Latin, and since it is possible that dĕmdĕmâhû . . . šanâj ’a‘ĕjentîhû (= ‘his long locks . . . and (> ₁gq) his eyes beautiful’) is corrupt for ’ĕgarîhû laḍaḥâj ’a‘ĕjentîhû. If this is right we should have ‘was white . . . and his eyes were like the rays of the sun’. This restoration is supported by the Ethiopic version in ver. 5 ‘his eyes are as the rays of the sun’: also ‘septies’ (ver. 10) or ‘in septies’ (ver. 2) seems corrupt for ‘capitis’, which depends on ‘capilli’. See ver. 10 (note).]. And when he opened his eyes, he lighted up the whole house like the sun, and the whole house was very bright.
+3. And thereupon he arose in the hands of the midwife, opened his mouth, and <marks>†</marks>conversed with<marks>†</marks> [Footnote: †Conversed with†. Here tanâgara = ‘conversed with’ is corrupt for taganaja = προσεκύνησε or ἐξωμολογήσατο. Hence render ‘praised’. Cf. ‘laudavit’ in the Latin. But ‘adoravit’ occurs there also and = προσεκύνησε. In ver. 11, where the substance of ver. 3 recurs, the Ethiopic = εὐλόγησε and the Latin ‘oravit’—evidently a corruption for ‘adoravit’. Thus the Ethiopic = ἐξωμολογήσατο (or προσεκύνησε) (ver. 3) and εὐλόγησε (ver. 11) and the Latin εὐλόγησε (ver. 3) and προσεκύνησε (vv. 3, 11). From this it is clear that the Latin and the Ethiopic presuppose different words in the Greek version before them.] the Lord of righteousness.
 4. And his father Lamech was afraid of him and fled, and came to his father Methuselah.
 5. And he said unto him: ‘I have begotten a strange son, diverse from and unlike man, and resembling the sons of the God of heaven; and his nature is different, and he is not like us, and his eyes are as the rays of the sun, and his countenance is glorious.
 6. And it seems to me that he is not sprung from me but from the angels, and I fear that in his days a wonder may be wrought on the earth.
 7. And now, my father, I am here to petition thee and implore thee that thou mayest go to Enoch, our father, and learn from him the truth, for his dwelling-place is amongst the angels.’
-8. And when Methuselah heard the words of his son, he came to me to the ends of the earth; for he had heard that I was there, and he cried aloud, and I heard his voice and I came to him. And I said unto him: ‘Behold, here am I, my son, <emended>wherefore</emended> hast thou come to me?’
+8. And when Methuselah heard the words of his son, he came to me to the ends of the earth; for he had heard that I was there, and he cried aloud, and I heard his voice and I came to him. And I said unto him: ‘Behold, here am I, my son, <emended>wherefore</emended> [Footnote: Wherefore. So Latin ‘quid est quod’ = διὰ τί. But the Ethiopic = διότι, a corruption of the former.] hast thou come to me?’
 9. And he answered and said: ‘Because of a great cause of anxiety have I come to thee, and because of a disturbing vision have I approached.
 10. And now, my father, hear me: unto Lamech my son there hath been born a son, the like of whom there is none, and his nature is not like man’s nature, and the colour of his body is whiter than snow and redder than the bloom of a rose, and the hair of his head is whiter than white wool, and his eyes are like the rays of the sun, and he opened his eyes and thereupon lighted up the whole house.
 11. And he arose in the hands of the midwife, and opened his mouth and blessed the Lord of heaven.
 12. And his father Lamech became afraid and fled to me, and did not believe that he was sprung from him, but that he was in the likeness of the angels of heaven; and behold I have come to thee that thou mayest make known to me the truth.’
-13. And I, Enoch, answered and said unto him: ‘The Lord will do a new thing on the earth, and this I have already seen in a vision, and make known to thee that in the generation of my father Jared some of the <emended>angels</emended> of heaven transgressed the word of the Lord.
+13. And I, Enoch, answered and said unto him: ‘The Lord will do a new thing on the earth, and this I have already seen in a vision, and make known to thee that in the generation of my father Jared some of the <emended>angels</emended> [Footnote: Some of the angels. Here I emend ’ĕmmal‘ĕlta (= ‘some from the heights’) of u, β–ehkn into emmalâ’ĕkta = ‘some of the angels’. n reads ‘angels’. I question whether the rendering ‘some from the heights’ is possible.] of heaven transgressed the word of the Lord.
 14. And behold they commit sin and transgress the law, and have united themselves with women and commit sin with them, and have married some of them, and have begotten children by them.
 17. And they shall produce on the earth giants not according to the spirit, but according to the flesh, and there shall be a great punishment on the earth, and the earth shall be cleansed from all impurity.
 15. Yea, there shall come a great destruction over the whole earth, and there shall be a deluge and a great destruction for one year.
-16. And this son who has been born unto you shall be left on the earth, and his three children shall be saved with him: when all mankind that are on the earth shall die <marks>[</marks>he and his sons shall be saved<marks>]</marks>.
+16. And this son who has been born unto you shall be left on the earth, and his three children shall be saved with him: when all mankind that are on the earth shall die <marks>[</marks>he and his sons shall be saved<marks>]</marks> [Footnote: ［He and his sons shall be saved.］ > g₁gq. A repetition of the clause in ver. 18.].
 18. And now make known to thy son Lamech that he who has been born is in truth his son, and call his name Noah; for he shall be left to you, and he and his sons shall be saved from the destruction, which shall come upon the earth on account of all the sin and all the unrighteousness, which shall be consummated on the earth in his days.
 19. And after that there shall be still more unrighteousness than that which was first consummated on the earth; for I know the mysteries of the holy ones; for He, the Lord, has showed me and informed me, and I have read <supplied>them</supplied> in the heavenly tablets.
 
@@ -2807,8 +2810,8 @@ the righteous,
 
 1. Another book which Enoch wrote for his son Methuselah and for those who will come after him, and keep the law in the last days.
 2. Ye who have done good shall wait for those days till an end is made of those who work evil, and an end of the might of the transgressors.
-3. And wait ye indeed till sin has passed away, for their names shall be blotted out of the book of life and out of the holy books, and their seed shall be destroyed for ever, and their spirits shall be slain, and they shall cry and make lamentation in a place that is a chaotic wilderness, and <emended>in the fire shall they burn</emended>; for there is no earth there.
-4. And I saw there something like an invisible cloud; for by reason of its depth I could not <marks>†</marks>look over<marks>†</marks>, and I saw a flame of fire blazing brightly, and things like shining mountains circling and sweeping to and fro.
+3. And wait ye indeed till sin has passed away, for their names shall be blotted out of the book of life and out of the holy books, and their seed shall be destroyed for ever, and their spirits shall be slain, and they shall cry and make lamentation in a place that is a chaotic wilderness, and <emended>in the fire shall they burn</emended> [Footnote: In the fire shall they burn = ba’ĕsât jĕnaddû. So I emend ba’ĕsât naddû (g₁gmqt, β–abcx) = ‘in the fire they have burnt’. abcx emend into ba’ĕsât jĕnadĕdû ‘in fire they shall burn’. But 21³ ba’ĕsât . . . jĕnaddû supports my emendation.]; for there is no earth there.
+4. And I saw there something like an invisible cloud; for by reason of its depth I could not <marks>†</marks>look over<marks>†</marks> [Footnote: †Look over†. We might emend lâ‘ĕla (= ‘over’) into lĕ‘ĕlnâhû and render ‘behold its height’ or emend both words into behîl ḫasĕrô ‘tell its circuit’ (or ‘size’). But the text is uncertain.], and I saw a flame of fire blazing brightly, and things like shining mountains circling and sweeping to and fro.
 5. And I asked one of the holy angels who was with me and said unto him: ‘What is this shining thing? for it is not a heaven, but only the flame of a blazing fire, and the voice of weeping and crying and lamentation and strong pain.’
 6. And he said unto me: ‘This place which thou seest—here are cast the spirits of sinners and blasphemers, and of those who work wickedness, and of those who pervert every thing that the Lord hath spoken through the mouth of the prophets—<supplied>even</supplied> the things that shall be.
 7. For some of them are written and inscribed above in the heaven, in order that the angels may read them and know that which shall befall the sinners, and the spirits of the humble, and of those who have afflicted their bodies, and been recompensed by God; and of those who have been put to shame by wicked men:
