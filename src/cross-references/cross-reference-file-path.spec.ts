@@ -101,6 +101,17 @@ describe('renamedCrossReferencePath', () => {
     ).toBe('Cross-References/John 15.1-8 + Romans 11.17-24.md')
   })
 
+  it('leaves a collision-suffixed note where it is when its members are unchanged', () => {
+    expect(
+      renamedCrossReferencePath(
+        'Cross-References/John 15.1-8 + Psalms 80.8-16 1.md',
+        vine,
+        vine,
+        never,
+      ),
+    ).toBe(null)
+  })
+
   it('counts a member it cannot parse toward the generated name', () => {
     expect(
       renamedCrossReferencePath(

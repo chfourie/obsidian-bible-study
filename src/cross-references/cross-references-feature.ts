@@ -80,8 +80,8 @@ export class CrossReferencesFeature extends PluginFeature {
     this.#index?.indexNote(created.path, created.content)
   }
 
-  // A vault that kept the retired data file at the root persisted an empty
-  // folder; notes never go to the root, so that reads as the default.
+  // Notes never go to the vault root, so an empty setting — what a vault that
+  // predates the notes folder persisted — reads as the default folder.
   #notesFolder(): string {
     return this.settings.crossReferencesFolder || DEFAULT_SETTINGS.crossReferencesFolder
   }

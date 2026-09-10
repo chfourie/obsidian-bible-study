@@ -52,6 +52,8 @@ export const renamedCrossReferencePath = (
   const before = generatedName(membersBefore)
   const after = generatedName(membersAfter)
   if (before === null || after === null || !isGeneratedName(basename, before)) return null
-  if (after === basename) return null
+  // Already the name these members generate — a collision suffix and all, so a
+  // note that took one never drifts to a further suffix on each save.
+  if (isGeneratedName(basename, after)) return null
   return uniqueNotePath(folder, after, exists)
 }

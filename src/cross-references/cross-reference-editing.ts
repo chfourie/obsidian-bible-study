@@ -1,7 +1,7 @@
 import type { Reference } from '../reference'
 
-// A cross-reference always connects at least two references; the editing
-// strip refuses to save below that floor rather than let one degenerate.
+// The editing strip refuses to save below this floor rather than let a
+// cross-reference degenerate into a connection with nothing to connect.
 export const CROSS_REFERENCE_MINIMUM_MEMBERS = 2
 
 // Everything the reader's editing strip asks of cross-references: the
