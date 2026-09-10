@@ -47,30 +47,76 @@ export type ChristQuoteCandidate = {
 
 const ATX_HEADING = /^ {0,3}#{1,6}(\s|$)/
 
-const isBlank = (line: BodyLine): boolean => line.text.trim() === ''
+// Any indent, not CommonMark's three spaces: Obsidian nests list items
+// under a tab by default.
+const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])(?:\s|$)/
 
-const isHeading = (line: BodyLine): boolean => ATX_HEADING.test(line.text)
+const TABLE_ROW = /^ {0,3}\|/
 
-const paragraphs = (lines: BodyLine[]): BodyLine[][] => {
-  const found: BodyLine[][] = []
-  let current: BodyLine[] = []
-  let previousIndex = -1
-  let previousWasHeading = false
-  for (const line of lines) {
-    const continues =
-      !isBlank(line) &&
-      !isHeading(line) &&
-      !previousWasHeading &&
-      line.index === previousIndex + 1
-    if (!continues && current.length > 0) {
-      found.push(current)
-      current = []
-    }
-    if (!isBlank(line)) current.push(line)
-    previousIndex = line.index
-    previousWasHeading = isHeading(line)
+const BLOCKQUOTE_MARKERS = /^(?: {0,3}>\s?)+/
+
+type LineShape = {
+  blank: boolean
+  heading: boolean
+  listItem: boolean
+  tableRow: boolean
+  quoteDepth: number
+}
+
+const shapeOf = (line: BodyLine): LineShape => {
+  const markers = BLOCKQUOTE_MARKERS.exec(line.text)?.[0] ?? ''
+  const body = line.text.slice(markers.length)
+  return {
+    blank: body.trim() === '',
+    heading: ATX_HEADING.test(body),
+    listItem: LIST_ITEM.test(body),
+    tableRow: TABLE_ROW.test(body),
+    quoteDepth: markers.split('>').length - 1,
   }
-  if (current.length > 0) found.push(current)
+}
+
+// A heading and a table row are paragraphs of their own; a list item or a
+// deeper blockquote opens one; a later line without a marker continues the
+// paragraph it follows, as markdown's lazy continuation does.
+const startsParagraph = (
+  shape: LineShape,
+  previous: LineShape | null,
+): boolean =>
+  previous === null ||
+  previous.heading ||
+  previous.tableRow ||
+  shape.heading ||
+  shape.tableRow ||
+  shape.listItem ||
+  shape.quoteDepth > previous.quoteDepth
+
+type Paragraph = {
+  lines: BodyLine[]
+  tableRow: boolean
+}
+
+const paragraphs = (lines: BodyLine[]): Paragraph[] => {
+  const found: Paragraph[] = []
+  let current: Paragraph | null = null
+  let previousIndex = -1
+  let previous: LineShape | null = null
+  for (const line of lines) {
+    const shape = shapeOf(line)
+    if (shape.blank) {
+      previous = null
+    } else if (
+      current === null ||
+      line.index !== previousIndex + 1 ||
+      startsParagraph(shape, previous)
+    ) {
+      current = { lines: [line], tableRow: shape.tableRow }
+      found.push(current)
+    } else {
+      current.lines.push(line)
+    }
+    if (!shape.blank) previous = shape
+    previousIndex = line.index
+  }
   return found
 }
 
@@ -87,11 +133,22 @@ const closingMarkOffset = (
   return null
 }
 
+// Each table cell is a paragraph of its own.
+const cellEnd = (
+  paragraph: Paragraph,
+  line: BodyLine,
+  from: number,
+): number => {
+  if (!paragraph.tableRow) return Number.POSITIVE_INFINITY
+  const pipe = line.text.indexOf('|', from)
+  return pipe === -1 ? Number.POSITIVE_INFINITY : line.start + pipe
+}
+
 const scanParagraph = (
-  paragraph: BodyLine[],
+  paragraph: Paragraph,
   found: ChristQuoteCandidate[],
 ): void => {
-  const lines = paragraph.map((line) => ({
+  const lines = paragraph.lines.map((line) => ({
     ...line,
     text: maskInlineCodeSpans(line.text),
   }))
@@ -122,7 +179,7 @@ const scanParagraph = (
       markAt + 1,
       CLOSING_MARK[opening.mark],
     )
-    if (close === null) continue
+    if (close === null || close > cellEnd(paragraph, line, markAt + 1)) continue
     candidate.close = close
     while (lines[lineAt].start + lines[lineAt].text.length <= close) lineAt++
     from = close - lines[lineAt].start

@@ -451,7 +451,7 @@ describe('processRenderedElement', () => {
       )
     })
 
-    it('keeps the close search inside the quote\'s own block', async () => {
+    it('keeps the close search inside the opening paragraph when no source is supplied', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p>c"Abide in me</p><p>and I in you"</p>'
 
@@ -459,6 +459,75 @@ describe('processRenderedElement', () => {
 
       expect(redLetterTexts(root)).toEqual([])
       expect(root.textContent).toBe('c"Abide in meand I in you"')
+    })
+
+    it('never reaches into a nested list item for the close when no source is supplied', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<ul><li>c"Abide<ul><li>in me"</li></ul></li></ul>'
+
+      await process(root, deps)
+
+      expect(redLetterTexts(root)).toEqual([])
+      expect(root.innerHTML).toBe('<ul><li>c"Abide<ul><li>in me"</li></ul></li></ul>')
+    })
+
+    // A quote the source wrongly lets span a paragraph edge swallows the
+    // next opening, so a second quote past the edge shows which model the
+    // source applied even where the DOM bounds the close on its own.
+    it('lets a nested list item start a new paragraph', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<ul><li>c"Abide<ul><li>in me c"x" more"</li></ul></li></ul>'
+
+      await process(root, deps, '- c"Abide\n  - in me c"x" more"')
+
+      expect(redLetterTexts(root)).toEqual(['"x"'])
+    })
+
+    it('lets a list item start a new paragraph but a continuation line stay in it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<ul><li>c"Abide</li><li>in me c"x" more"</li></ul>' +
+        '<ol><li>c"I</li><li>in you c"y" more"</li></ol>' +
+        '<ul><li>c"He<br>said"</li></ul>' +
+        '<p>c"Then</p><ul><li>he left c"z" more"</li></ul>'
+
+      await process(
+        root,
+        deps,
+        '- c"Abide\n- in me c"x" more"\n\n1. c"I\n2) in you c"y" more"\n\n* c"He\n  said"\n\nc"Then\n+ he left c"z" more"',
+      )
+
+      expect(redLetterTexts(root)).toEqual(['"x"', '"y"', '"Hesaid"', '"z"'])
+    })
+
+    it('keeps a quote inside one table cell and lets a cell edge or row end it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody>' +
+        '<tr><td>c"Abide</td><td>in me c"x" more"</td></tr>' +
+        '<tr><td>c"I in you"</td><td>x</td></tr>' +
+        '<tr><td>c"He</td><td>y</td></tr>' +
+        '<tr><td>said c"w" more"</td><td>z</td></tr>' +
+        '</tbody></table>'
+
+      await process(
+        root,
+        deps,
+        '| a | b |\n| - | - |\n| c"Abide | in me c"x" more" |\n| c"I in you" | x |\n| c"He | y |\n| said c"w" more" | z |',
+      )
+
+      expect(redLetterTexts(root)).toEqual(['"x"', '"I in you"', '"w"'])
+    })
+
+    it('keeps a blockquote continuing over its lines as one paragraph', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<blockquote><p>c"Abide<br>in me"</p></blockquote>' +
+        '<p>c"Then</p><blockquote><p>he left c"z" more"</p></blockquote>'
+
+      await process(root, deps, '> c"Abide\n> in me"\n\nc"Then\n> he left c"z" more"')
+
+      expect(redLetterTexts(root)).toEqual(['"Abidein me"', '"z"'])
     })
 
     it('renders a reference chip inside the quote as its usual chip within the red range', async () => {

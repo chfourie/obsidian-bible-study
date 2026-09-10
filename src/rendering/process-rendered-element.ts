@@ -46,8 +46,9 @@ const EXEMPT_SELECTOR = 'code, pre'
 
 const RED_LETTER_CLASS = 'scripture-study-red-letter'
 
-const BLOCK_SELECTOR =
-  'p, li, h1, h2, h3, h4, h5, h6, td, th, dt, dd, blockquote, div'
+// The elements Obsidian renders a paragraph into; the root stands in for
+// text it leaves outside any of them.
+const PARAGRAPH_SELECTOR = 'p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote'
 
 const textWalker = (root: HTMLElement): TreeWalker =>
   root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
@@ -66,8 +67,8 @@ const textNodesUnder = (root: HTMLElement): Text[] => {
   return nodes
 }
 
-const blockOf = (root: HTMLElement, node: Text): HTMLElement =>
-  node.parentElement?.closest<HTMLElement>(BLOCK_SELECTOR) ?? root
+const paragraphOf = (node: Text, root: Node): Node =>
+  node.parentElement?.closest(PARAGRAPH_SELECTOR) ?? root
 
 export class NoteScanCache {
   #last: {
@@ -200,6 +201,8 @@ const atStartOf = (range: Range): boolean => range.startOffset === 0
 
 const atEndOf = (range: Range): boolean => {
   const container = range.endContainer
+  // nodeType rather than instanceof Text: a popout window's nodes are
+  // not instances of this window's constructors.
   const length =
     container.nodeType === Node.TEXT_NODE
       ? (container as Text).length
@@ -207,15 +210,13 @@ const atEndOf = (range: Range): boolean => {
   return range.endOffset === length
 }
 
-// A boundary at the very edge of an inline element moves outside it, so
-// extracting the range never leaves an emptied shell of that element
-// behind; an element the quote genuinely straddles is split, its outer
-// part staying where it was.
-const widenToElementEdges = (range: Range, block: HTMLElement): void => {
-  while (range.startContainer !== block && atStartOf(range)) {
+// So that extracting the range never leaves an emptied shell of an inline
+// element behind.
+const widenToElementEdges = (range: Range, paragraph: Node): void => {
+  while (range.startContainer !== paragraph && atStartOf(range)) {
     range.setStartBefore(range.startContainer)
   }
-  while (range.endContainer !== block && atEndOf(range)) {
+  while (range.endContainer !== paragraph && atEndOf(range)) {
     range.setEndAfter(range.endContainer)
   }
 }
@@ -223,12 +224,12 @@ const widenToElementEdges = (range: Range, block: HTMLElement): void => {
 const wrapChristQuote = (
   open: TextPoint,
   close: TextPoint,
-  block: HTMLElement,
+  paragraph: Node,
 ): HTMLElement => {
   const range = open.node.ownerDocument.createRange()
   range.setStart(open.node, open.offset)
   range.setEnd(close.node, close.offset + 1)
-  widenToElementEdges(range, block)
+  widenToElementEdges(range, paragraph)
   const span = createSpan({ cls: RED_LETTER_CLASS })
   span.append(range.extractContents())
   range.insertNode(span)
@@ -238,23 +239,28 @@ const wrapChristQuote = (
 const nextText = (walker: TreeWalker): Text | null =>
   walker.nextNode() as Text | null
 
+// Borrows the pass's walker and hands it back where it stood.
 const findClosingMark = (
-  root: HTMLElement,
-  block: HTMLElement,
+  walker: TreeWalker,
+  paragraph: Node,
   open: TextPoint,
   closing: string,
 ): TextPoint | null => {
-  const walker = textWalker(root)
-  walker.currentNode = open.node
+  const resumeAt = walker.currentNode
   let node: Text | null = open.node
   let from = open.offset
-  while (node && block.contains(node)) {
+  let found: TextPoint | null = null
+  while (node && paragraphOf(node, walker.root) === paragraph) {
     const offset = node.data.indexOf(closing, from)
-    if (offset !== -1) return { node, offset }
+    if (offset !== -1) {
+      found = { node, offset }
+      break
+    }
     node = nextText(walker)
     from = 0
   }
-  return null
+  walker.currentNode = resumeAt
+  return found
 }
 
 const nextTextAfter = (walker: TreeWalker, span: HTMLElement): Text | null => {
@@ -283,11 +289,11 @@ const decorateChristQuotes = (
     if (escaped) node.deleteData(prefix + 1, 1)
     const markAt = prefix + 1
     from = markAt
-    const block = blockOf(root, node)
+    const paragraph = paragraphOf(node, root)
     const close = isQuote
       ? findClosingMark(
-          root,
-          block,
+          walker,
+          paragraph,
           { node, offset: markAt + 1 },
           CLOSING_MARK[mark],
         )
@@ -295,7 +301,7 @@ const decorateChristQuotes = (
     if (!close) continue
     node.deleteData(prefix, 1)
     if (close.node === node) close.offset -= 1
-    const span = wrapChristQuote({ node, offset: prefix }, close, block)
+    const span = wrapChristQuote({ node, offset: prefix }, close, paragraph)
     node = nextTextAfter(walker, span)
     from = 0
   }
