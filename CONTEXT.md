@@ -45,7 +45,7 @@ Superseded in v1.1: every translation is a downloadable Module sourced from the 
 The single user-configured translation (restricted to installed modules) served when a requested translation is unavailable. Substitution is always visible — the rendered output names the translation actually served. Never applied in the reader's multi-translation stacked view.
 
 ### Cross-Reference
-A symmetric connection between two or more References that belong together in study (e.g. a shared theme or allusion). All members are mutually connected — there is no direction and no primary member. Not a note: cross-references live in a single plugin-managed data file inside the vault, so they sync and back up with the vault without imposing per-item filenames. Distinct from a Reference: a Reference is an address; a Cross-Reference is an edge between addresses.
+A symmetric connection between two or more References that belong together in study (e.g. a shared theme or allusion). All members are mutually connected — there is no direction and no primary member. A vault note dedicated to the connection: its members and a one-line summary live in frontmatter as source of truth, and its body is the user's own room for as much further material as they like. Its filename is organisation only. Distinct from a Reference: a Reference is an address; a Cross-Reference is an edge between addresses.
 
 ### Study Panel
 The single right-sidebar surface that follows the last-focused note or reader tab: for a reader, two sub-tabs — Study, with the chapter's Annotations, Mentions, Cross-References, and Word Cloud, and Translations, with the selection's whole text in every installed translation plus tapped-word Strong's details, loaded only while that tab shows; for a note, the same three sections for its referenced scriptures, plus the passages it references. Remembers its state per tab (in memory, for the tab's lifetime). The reader itself shows only scripture text — all companion material lives here.
@@ -54,13 +54,13 @@ The single right-sidebar surface that follows the last-focused note or reader ta
 The reader's static header naming what is in view (chapter reference or Book section) and owning previous/next stepping. The single stepping surface besides the end-of-content footer nav; pickers live in the nav surfaces, not here.
 
 ### Occurrence
-One appearance of a reference at a position in a vault note (in the body or in annotation frontmatter). The unit the vault index stores; intersection queries return occurrences.
+One appearance of a reference at a position in a vault note (in the body, or declared in Annotation or Cross-Reference frontmatter). The unit the vault index stores; intersection queries return occurrences.
 
 ### Annotation
 A vault note dedicated to commenting on a reference, with the reference in its frontmatter as source of truth. Indexed like any note but surfaced in the Study Panel for any chapter or note whose references intersect it.
 
 ### Mention
-An intersecting note that is not an Annotation: a vault note whose body references overlap the scripture in view. Derived, not declared — a note with a frontmatter ref is always an Annotation, never a Mention, even if its body also references the same verses.
+An intersecting note that is neither an Annotation nor a Cross-Reference: a vault note whose body references overlap the scripture in view. Derived, not declared — a note declaring a reference in its frontmatter is always an Annotation or a Cross-Reference, never a Mention, even if its body also references the same verses.
 
 ### Tagged Translation
 A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB (built from the public-domain Berean word-level tables) and KJV (built from bolls.life's `<S>`-tagged dump); the capability is per-translation.

@@ -1,7 +1,7 @@
 # 0003 — Cross-references live in a single plugin-managed data file, not vault notes
 
 Date: 2026-08-17
-Status: accepted
+Status: superseded by [0015](0015-cross-references-are-vault-notes.md)
 
 ## Context
 
