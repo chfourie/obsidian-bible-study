@@ -9,12 +9,13 @@ import {
   installEnochBook,
   uninstallEnochBook,
 } from '../../tests/fixtures/enoch-book'
+import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
 import type { StudyMaterial, StudyMaterialSource } from '../contracts'
 import type { CrossReference } from '../cross-references'
 import {
   enumerateVerseIds,
+  formatReference,
   makeVerseId,
-  referencesIntersect,
   type Reference,
 } from '../reference'
 import type { Passage, PassageSource } from '../rendering'
@@ -23,7 +24,6 @@ import { extractOccurrences, VaultReferenceIndex } from '../vault-index'
 import {
   StudyPanelModel,
   type AnnotationDetails,
-  type StudyPanelCrossReferences,
   type StudyPanelDeps,
 } from './study-panel-model'
 import { freshTabState } from './tab-memory'
@@ -55,26 +55,6 @@ const fakeSource = () => {
     requests,
     useResponse: (fn: (reference: Reference) => Passage) => {
       respond = fn
-    },
-  }
-}
-
-const noCrossReferences: StudyPanelCrossReferences = {
-  intersecting: () => [],
-}
-
-const fakeCrossReferenceStore = () => {
-  let entries: CrossReference[] = []
-  const deps: StudyPanelCrossReferences = {
-    intersecting: (reference) =>
-      entries.filter((entry) =>
-        entry.members.some((member) => referencesIntersect(member, reference)),
-      ),
-  }
-  return {
-    deps,
-    setEntries: (next: CrossReference[]) => {
-      entries = next
     },
   }
 }
@@ -151,7 +131,6 @@ const fakeStudyMaterial = () => {
 const model = (
   source: PassageSource,
   translationId: string | null = 'web',
-  crossReferences: StudyPanelCrossReferences = noCrossReferences,
   editCrossReference: StudyPanelDeps['editCrossReference'] = () => {},
   intersections: Partial<
     Pick<StudyPanelDeps, 'intersecting' | 'annotationDetails'>
@@ -162,7 +141,6 @@ const model = (
       passages: source,
       extract: (content) =>
         extractOccurrences(content, { translationIds: ['web', 'niv', 'kjv'] }),
-      crossReferences,
       editCrossReference,
       intersecting: intersections.intersecting ?? (() => []),
       annotationDetails: intersections.annotationDetails ?? (async () => null),
@@ -579,83 +557,118 @@ describe('cross-references in the Study Panel', () => {
   const psalm80Vine = reference(19, [[80, 8], [80, 16]])
   const romans11Olive = reference(45, [[11, 17], [11, 24]])
 
-  const vineCrossReference: CrossReference = {
-    id: 'xr-vine',
-    members: [john15Vine, psalm80Vine, romans11Olive],
-    description: 'Vine and vineyard imagery for Israel',
+  // A cross-reference note as the plugin writes it, members in grammar form.
+  const noteOf = (
+    members: readonly Reference[],
+    summary: string | null = null,
+    body = '',
+  ): string =>
+    crossReferenceNote({ members: members.map(formatReference), summary, body })
+
+  const vineNote = noteOf(
+    [john15Vine, psalm80Vine, romans11Olive],
+    'Vine and vineyard imagery for Israel',
+  )
+
+  // The panel over a vault of cross-reference notes, seen through the real
+  // index so rows classify exactly as they do live.
+  const panelOver = (
+    notes: Record<string, string>,
+    editCrossReference: StudyPanelDeps['editCrossReference'] = () => {},
+  ) => {
+    const vault = fakeVault(notes)
+    return {
+      panel: model(fakeSource().source, 'web', editCrossReference, vault),
+      vault,
+    }
   }
 
-  it('lists an intersecting cross-reference with every member and its description', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([vineCrossReference])
-    const panel = model(fakeSource().source, 'web', store.deps)
+  it('lists an intersecting cross-reference with every member, its summary, path and body flag', async () => {
+    const { panel } = panelOver({ 'Cross-References/Vine.md': vineNote })
 
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
     expect(panel.view.crossReferences).toEqual([
       {
-        id: 'xr-vine',
-        description: 'Vine and vineyard imagery for Israel',
+        path: 'Cross-References/Vine.md',
+        summary: 'Vine and vineyard imagery for Israel',
+        hasBody: false,
         members: [
           { label: 'John 15:1-8', reference: john15Vine, index: 0 },
           { label: 'Psalms 80:8-16', reference: psalm80Vine, index: 1 },
           { label: 'Romans 11:17-24', reference: romans11Olive, index: 2 },
         ],
-        allMembers: vineCrossReference.members,
+        allMembers: [john15Vine, psalm80Vine, romans11Olive],
       },
     ])
   })
 
-  it('leaves non-intersecting cross-references out of the panel', async () => {
-    const elsewhere: CrossReference = {
-      id: 'xr-elsewhere',
-      members: [reference(43, [[15, 9], [15, 9]]), reference(19, [[23, 1], [23, 1]])],
-      description: null,
-    }
-    const store = fakeCrossReferenceStore()
-    store.setEntries([vineCrossReference, elsewhere])
-    const panel = model(fakeSource().source, 'web', store.deps)
+  it('flags a note whose body holds anything', async () => {
+    const { panel } = panelOver({
+      'written.md': noteOf([john15Vine, psalm80Vine], null, '\nMy notes.\n'),
+    })
 
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
-    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
-      'xr-vine',
+    expect(panel.view.crossReferences.map((entry) => entry.hasBody)).toEqual([
+      true,
+    ])
+  })
+
+  it('leaves non-intersecting cross-references out of the panel', async () => {
+    const { panel } = panelOver({
+      'vine.md': vineNote,
+      'elsewhere.md': noteOf([
+        reference(43, [[15, 9], [15, 9]]),
+        reference(19, [[23, 1], [23, 1]]),
+      ]),
+    })
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+
+    expect(panel.view.crossReferences.map((entry) => entry.path)).toEqual([
+      'vine.md',
     ])
   })
 
   it('lists a cross-reference at most once even when it intersects several entries', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([vineCrossReference])
-    const panel = model(fakeSource().source, 'web', store.deps)
+    const { panel } = panelOver({ 'vine.md': vineNote })
 
     await panel.setActiveNote({
       file: 'note.md',
       content: '{John 15:4} and {Psalms 80:10}',
     })
 
-    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
-      'xr-vine',
+    expect(panel.view.crossReferences.map((entry) => entry.path)).toEqual([
+      'vine.md',
     ])
     expect(
       panel.view.crossReferences[0].members.map((member) => member.label),
     ).toEqual(['Psalms 80:8-16', 'John 15:1-8', 'Romans 11:17-24'])
   })
 
-  it('orders members by book and start verse', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([
-      {
-        id: 'xr-order',
-        members: [
-          john15Vine,
-          romans11Olive,
-          reference(43, [[8, 31], [8, 32]]),
-          psalm80Vine,
-        ],
-        description: null,
-      },
+  it('never lists a cross-reference note among the mentions', async () => {
+    const { panel } = panelOver({
+      'vine.md': noteOf([john15Vine, psalm80Vine], null, 'Compare {John 15:4}.'),
+    })
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
+
+    expect(panel.view.mentions).toEqual([])
+    expect(panel.view.crossReferences.map((entry) => entry.path)).toEqual([
+      'vine.md',
     ])
-    const panel = model(fakeSource().source, 'web', store.deps)
+  })
+
+  it('orders members by book and start verse', async () => {
+    const { panel } = panelOver({
+      'order.md': noteOf([
+        john15Vine,
+        romans11Olive,
+        reference(43, [[8, 31], [8, 32]]),
+        psalm80Vine,
+      ]),
+    })
 
     await panel.setActiveNote({ file: 'note.md', content: '{Romans 11:20}' })
 
@@ -670,19 +683,13 @@ describe('cross-references in the Study Panel', () => {
   })
 
   it('leads a cross-reference with members sharing a chapter with the note', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([
-      {
-        id: 'xr-order',
-        members: [
-          psalm80Vine,
-          reference(43, [[15, 22], [15, 25]]),
-          reference(43, [[8, 31], [8, 32]]),
-        ],
-        description: null,
-      },
-    ])
-    const panel = model(fakeSource().source, 'web', store.deps)
+    const { panel } = panelOver({
+      'order.md': noteOf([
+        psalm80Vine,
+        reference(43, [[15, 22], [15, 25]]),
+        reference(43, [[8, 31], [8, 32]]),
+      ]),
+    })
 
     await panel.setActiveNote({ file: 'note.md', content: '{Psalms 80:10}' })
 
@@ -692,137 +699,110 @@ describe('cross-references in the Study Panel', () => {
   })
 
   it('keeps a cross-reference whose members are all in the note', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([
-      {
-        id: 'xr-self',
-        members: [john15Vine, reference(43, [[15, 2], [15, 3]])],
-        description: 'The vine',
-      },
-    ])
-    const panel = model(fakeSource().source, 'web', store.deps)
+    const { panel } = panelOver({
+      'self.md': noteOf(
+        [john15Vine, reference(43, [[15, 2], [15, 3]])],
+        'The vine',
+      ),
+    })
 
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:1-8}' })
 
-    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
-      'xr-self',
+    expect(panel.view.crossReferences.map((entry) => entry.path)).toEqual([
+      'self.md',
     ])
   })
 
   it('orders cross-references by their leading member', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([
-      {
-        id: 'xr-john',
-        members: [romans11Olive, reference(43, [[15, 22], [15, 25]])],
-        description: null,
-      },
-      {
-        id: 'xr-deuteronomy',
-        members: [romans11Olive, reference(5, [[9, 2], [9, 5]])],
-        description: null,
-      },
-      {
-        id: 'xr-same-chapter',
-        members: [romans11Olive, reference(45, [[11, 1], [11, 4]])],
-        description: null,
-      },
-    ])
-    const panel = model(fakeSource().source, 'web', store.deps)
+    const { panel } = panelOver({
+      'john.md': noteOf([romans11Olive, reference(43, [[15, 22], [15, 25]])]),
+      'deuteronomy.md': noteOf([romans11Olive, reference(5, [[9, 2], [9, 5]])]),
+      'same-chapter.md': noteOf([
+        romans11Olive,
+        reference(45, [[11, 1], [11, 4]]),
+      ]),
+    })
 
     await panel.setActiveNote({ file: 'note.md', content: '{Romans 11:20}' })
 
-    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
-      'xr-same-chapter',
-      'xr-deuteronomy',
-      'xr-john',
+    expect(panel.view.crossReferences.map((entry) => entry.path)).toEqual([
+      'same-chapter.md',
+      'deuteronomy.md',
+      'john.md',
     ])
   })
 
-  it('updates live when the cross-reference store changes', async () => {
-    const store = fakeCrossReferenceStore()
-    const panel = model(fakeSource().source, 'web', store.deps)
+  it('updates live when the vault index changes', async () => {
+    const { panel, vault } = panelOver({})
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
     expect(panel.view.crossReferences).toEqual([])
-
-    store.setEntries([vineCrossReference])
-    panel.refreshCrossReferences()
-
-    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
-      'xr-vine',
-    ])
-  })
-
-  it('notifies subscribers when cross-references refresh', async () => {
-    const store = fakeCrossReferenceStore()
-    const panel = model(fakeSource().source, 'web', store.deps)
-    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
     let notified = 0
     panel.subscribe(() => {
       notified += 1
     })
 
-    store.setEntries([vineCrossReference])
-    panel.refreshCrossReferences()
+    vault.editNote('vine.md', vineNote)
+    await panel.refreshIntersectingNotes()
 
-    expect(notified).toBe(1)
+    expect(panel.view.crossReferences.map((entry) => entry.path)).toEqual([
+      'vine.md',
+    ])
+    expect(notified).toBeGreaterThan(0)
+  })
+
+  it('reads a cross-reference note focused as a tab as the passages it references', async () => {
+    const { panel } = panelOver({ 'Cross-References/Vine.md': vineNote })
+
+    await panel.setActiveNote({ file: 'Cross-References/Vine.md', content: vineNote })
+
+    expect(panel.view.entries.map((entry) => entry.label)).toEqual([
+      'John 15:1-8',
+      'Psalms 80:8-16',
+      'Romans 11:17-24',
+    ])
+    expect(panel.view.crossReferences).toEqual([])
   })
 
   describe('editing a cross-reference from the panel', () => {
-    it('hands the full member list and description to the reader to edit', async () => {
-      const store = fakeCrossReferenceStore()
-      store.setEntries([vineCrossReference])
+    it('hands the full member list and summary to the reader, the path as handle', async () => {
       const edited: CrossReference[] = []
-      const panel = model(
-        fakeSource().source,
-        'web',
-        store.deps,
-        (entry) => {
-          edited.push(entry)
-        },
-      )
+      const { panel } = panelOver({ 'vine.md': vineNote }, (entry) => {
+        edited.push(entry)
+      })
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
-      panel.editCrossReference('xr-vine')
+      panel.editCrossReference('vine.md')
 
       expect(edited).toEqual([
         {
-          id: 'xr-vine',
-          members: vineCrossReference.members,
-          description: vineCrossReference.description,
+          id: 'vine.md',
+          members: [john15Vine, psalm80Vine, romans11Olive],
+          description: 'Vine and vineyard imagery for Israel',
         },
       ])
     })
 
     it('passes the new-pane request on to the editor', async () => {
-      const store = fakeCrossReferenceStore()
-      store.setEntries([vineCrossReference])
       const requested: (boolean | undefined)[] = []
-      const panel = model(
-        fakeSource().source,
-        'web',
-        store.deps,
-        (_entry, options) => {
-          requested.push(options?.newPane)
-        },
-      )
+      const { panel } = panelOver({ 'vine.md': vineNote }, (_entry, options) => {
+        requested.push(options?.newPane)
+      })
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
-      panel.editCrossReference('xr-vine')
-      panel.editCrossReference('xr-vine', { newPane: true })
+      panel.editCrossReference('vine.md')
+      panel.editCrossReference('vine.md', { newPane: true })
 
       expect(requested).toEqual([undefined, true])
     })
 
-    it('ignores editing an id that is not currently surfaced', async () => {
-      const store = fakeCrossReferenceStore()
+    it('ignores editing a path that is not currently surfaced', async () => {
       let edited = 0
-      const panel = model(fakeSource().source, 'web', store.deps, () => {
+      const { panel } = panelOver({}, () => {
         edited++
       })
       await panel.setActiveNote({ file: 'note.md', content: '{John 15:4}' })
 
-      panel.editCrossReference('xr-unknown')
+      panel.editCrossReference('unknown.md')
 
       expect(edited).toBe(0)
     })
@@ -1244,7 +1224,7 @@ describe('annotations and mentions in the Study Panel', () => {
     file: string,
     content: string,
   ): Promise<StudyPanelModel> => {
-    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, vault)
+    const panel = model(fakeSource().source, 'web', () => {}, vault)
     await panel.setActiveNote({ file, content })
     return panel
   }
@@ -1406,7 +1386,7 @@ describe('annotations and mentions in the Study Panel', () => {
       'Annotations/Newer.md': '---\nref: John 15:1\n---\nNewer.',
     })
     let reads = 0
-    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, {
+    const panel = model(fakeSource().source, 'web', () => {}, {
       intersecting: vault.intersecting,
       annotationDetails: (file) => {
         reads += 1
@@ -1443,7 +1423,7 @@ describe('annotations and mentions in the Study Panel', () => {
     const vault = fakeVault({
       'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nBody.',
     })
-    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, {
+    const panel = model(fakeSource().source, 'web', () => {}, {
       intersecting: vault.intersecting,
       annotationDetails: async () => null,
     })
@@ -1511,11 +1491,13 @@ describe('book references in the Study Panel', () => {
   const humilityParagraph = atom(HUMILITY_BOOK, 1, 2)
   const johnVine = atom(43, 15, 5)
 
-  const mixedCrossReference: CrossReference = {
-    id: 'xr-pride',
-    members: [johnVine, humilityParagraph],
-    description: 'Pride and its cure',
-  }
+  const prideVault = () =>
+    fakeVault({
+      'Cross-References/Pride.md': crossReferenceNote({
+        members: [johnVine, humilityParagraph].map(formatReference),
+        summary: 'Pride and its cure',
+      }),
+    })
 
   it("resolves a book entry's translation slot to the edition module", async () => {
     const source = fakeSource()
@@ -1653,9 +1635,7 @@ describe('book references in the Study Panel', () => {
   })
 
   it('labels the members of a mixed cross-reference each in its own format', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([mixedCrossReference])
-    const panel = model(fakeSource().source, 'web', store.deps)
+    const panel = model(fakeSource().source, 'web', () => {}, prideVault())
 
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:5}' })
 
@@ -1665,14 +1645,12 @@ describe('book references in the Study Panel', () => {
   })
 
   it('surfaces the same cross-reference from the book end of it', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([mixedCrossReference])
-    const panel = model(fakeSource().source, 'web', store.deps)
+    const panel = model(fakeSource().source, 'web', () => {}, prideVault())
 
     await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
 
-    expect(panel.view.crossReferences.map((entry) => entry.id)).toEqual([
-      'xr-pride',
+    expect(panel.view.crossReferences.map((entry) => entry.path)).toEqual([
+      'Cross-References/Pride.md',
     ])
   })
 
@@ -1681,7 +1659,7 @@ describe('book references in the Study Panel', () => {
       'Annotations/Humility 1.2.md': '---\nref: Humility 1:2\n---\nPride.',
       'Sermons/Lowly.md': 'See {Humility 1:2}.',
     })
-    const panel = model(fakeSource().source, 'web', noCrossReferences, () => {}, vault)
+    const panel = model(fakeSource().source, 'web', () => {}, vault)
 
     await panel.setActiveNote({ file: 'note.md', content: '{Humility 1:2}' })
 
@@ -1694,12 +1672,18 @@ describe('book references in the Study Panel', () => {
   })
 
   it('goes dormant with the module and comes back on reinstall', async () => {
-    const store = fakeCrossReferenceStore()
-    store.setEntries([mixedCrossReference])
-    const panel = model(fakeSource().source, 'web', store.deps)
+    const pride = crossReferenceNote({
+      members: [johnVine, humilityParagraph].map(formatReference),
+      summary: 'Pride and its cure',
+    })
+    const vault = fakeVault({ 'Cross-References/Pride.md': pride })
+    const panel = model(fakeSource().source, 'web', () => {}, vault)
     const note = 'On {John 15:5} and {Humility 1:2}.'
 
+    // Uninstalling a module rescans the vault, so the book member drops out
+    // of the index — skipped, never dropped from the note (spec §5a).
     uninstallHumilityBook()
+    vault.editNote('Cross-References/Pride.md', pride)
     await panel.setActiveNote({ file: 'note.md', content: note })
 
     expect(panel.view.entries.map((entry) => entry.label)).toEqual([
@@ -1707,9 +1691,10 @@ describe('book references in the Study Panel', () => {
     ])
     expect(
       panel.view.crossReferences[0].members.map((member) => member.label),
-    ).toEqual(['John 15:5', 'Book 101 1:2'])
+    ).toEqual(['John 15:5'])
 
     installHumilityBook()
+    vault.editNote('Cross-References/Pride.md', pride)
     await panel.setActiveNote({ file: 'note.md', content: note })
 
     expect(panel.view.entries.map((entry) => entry.label)).toEqual([

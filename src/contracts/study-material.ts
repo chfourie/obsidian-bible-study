@@ -122,7 +122,7 @@ export type CollectionView = {
   canSave: boolean
   error: string | null
   // True when this strip edits an existing cross-reference rather than
-  // building a new one — saving writes back to the same id.
+  // building a new one — saving writes back to the same note.
   editing: boolean
   // Deleting the edited cross-reference takes a second press to go through.
   confirmingDelete: boolean

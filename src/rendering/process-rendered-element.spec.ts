@@ -60,11 +60,13 @@ describe('processRenderedElement', () => {
         {
           file: 'Sermons/Abiding.md',
           annotationReference: null,
+          crossReference: null,
           occurrences: [],
         },
         {
           file: 'Topics/Union.md',
           annotationReference: null,
+          crossReference: null,
           occurrences: [],
         },
       ],

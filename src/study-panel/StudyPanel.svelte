@@ -5,15 +5,15 @@ with the passage text inline — headings fold their passage, and the book icon
 opens the reference in the reader with the entry's translation.
 -->
 <script lang="ts">
-  import { setIcon } from 'obsidian'
   import type { NavigationOptions } from '../contracts'
+  import type { CrossReferenceView } from '../cross-references'
   import type { Reference } from '../reference'
   import type { VerseSegment } from '../rendering'
   import ChapterAnnotationList from '../study-material/ChapterAnnotationList.svelte'
   import ChapterMentionList from '../study-material/ChapterMentionList.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
   import type { StudyMaterialHost } from '../study-material'
-  import { activate, opensInNewPane } from '../ui'
+  import { activate, icon, opensInNewPane } from '../ui'
   import type {
     ReferenceEntryView,
     StudyPanelModel,
@@ -42,25 +42,18 @@ opens the reference in the reader with the entry's translation.
     }),
   )
 
-  function icon(node: HTMLElement, name: string) {
-    setIcon(node, name)
-    return {
-      update(next: string) {
-        node.empty()
-        setIcon(node, next)
-      },
-    }
-  }
-
   function open(entry: ReferenceEntryView, event: MouseEvent | KeyboardEvent) {
     openReference(entry.reference, entry.translation, {
       newPane: opensInNewPane(event),
     })
   }
 
-  const editCrossReference = (id: string, event: MouseEvent): void => {
-    model.editCrossReference(id, { newPane: opensInNewPane(event) })
+  const editCrossReference = (path: string, event: MouseEvent): void => {
+    model.editCrossReference(path, { newPane: opensInNewPane(event) })
   }
+
+  const noteTooltip = (entry: CrossReferenceView): string =>
+    entry.hasBody ? 'Open note (has notes)' : 'Open note'
 </script>
 
 <!-- Supplied words and Editorial marks paint here as everywhere else
@@ -118,19 +111,31 @@ opens the reference in the reader with the entry's translation.
       {#if view.crossReferences.length > 0}
         <div class="bsp-xrefs">
           <div class="bsp-group-label">Cross-references</div>
-          {#each view.crossReferences as entry, index (entry.id)}
+          {#each view.crossReferences as entry, index (entry.path)}
             {#if index > 0}
               <hr class="bsp-xref-divider" />
             {/if}
             <div class="bsp-xref-block">
-              <button
-                type="button"
-                class="bsp-xref-edit"
-                aria-label="Edit cross-reference in the reader"
-                onclick={(event) => editCrossReference(entry.id, event)}
-              >✎</button>
-              {#if entry.description !== null}
-                <div class="bsp-xref-description">{entry.description}</div>
+              <div class="bsp-xref-actions">
+                <button
+                  type="button"
+                  class="bsp-xref-action"
+                  aria-label="Edit cross-reference in the reader"
+                  onclick={(event) => editCrossReference(entry.path, event)}
+                >✎</button>
+                <button
+                  type="button"
+                  class="bsp-xref-action bsp-xref-note"
+                  class:bsp-xref-note-filled={entry.hasBody}
+                  aria-label={noteTooltip(entry)}
+                  title={noteTooltip(entry)}
+                  use:icon={'file-text'}
+                  onclick={(event) =>
+                    host.openNote(entry.path, { newPane: opensInNewPane(event) })}
+                ></button>
+              </div>
+              {#if entry.summary !== null}
+                <div class="bsp-xref-summary">{entry.summary}</div>
               {/if}
               <div class="bsp-xref-members">
                 {#each entry.members as member (member.index)}
@@ -351,12 +356,12 @@ opens the reference in the reader with the entry's translation.
     text-transform: uppercase;
   }
 
-  /* The whole block is one hover target: anywhere over the description or its
-     members reveals the single edit icon anchored to the block. */
+  /* The whole block is one hover target: anywhere over the summary or its
+     members reveals the two icons anchored to the block. */
   .bsp-xref-block {
     position: relative;
     margin: 2px -4px;
-    padding: 2px 24px 2px 4px;
+    padding: 2px 44px 2px 4px;
     border-radius: 4px;
     font-size: var(--font-ui-small);
   }
@@ -374,17 +379,28 @@ opens the reference in the reader with the entry's translation.
     border-top: 1px solid var(--background-modifier-border);
   }
 
-  .bsp-xref-description {
+  .bsp-xref-summary {
     color: var(--text-muted);
   }
 
-  .bsp-xref-edit {
+  .bsp-xref-actions {
     position: absolute;
     top: 4px;
     right: 4px;
     display: flex;
     align-items: flex-start;
+    gap: 6px;
     opacity: 0;
+  }
+
+  .bsp-xref-block:hover .bsp-xref-actions,
+  .bsp-xref-actions:focus-within {
+    opacity: 1;
+  }
+
+  .bsp-xref-action {
+    display: flex;
+    align-items: flex-start;
     background: none;
     border: none;
     box-shadow: none;
@@ -397,13 +413,20 @@ opens the reference in the reader with the entry's translation.
     cursor: pointer;
   }
 
-  .bsp-xref-block:hover .bsp-xref-edit,
-  .bsp-xref-edit:focus-visible {
-    opacity: 1;
+  .bsp-xref-action:hover {
+    color: var(--text-accent);
   }
 
-  .bsp-xref-edit:hover {
-    color: var(--text-accent);
+  .bsp-xref-note :global(svg) {
+    width: var(--icon-s);
+    height: var(--icon-s);
+  }
+
+  /* A note with something written in it shows a filled page; an empty one
+     stays an outline (spec §5a). */
+  .bsp-xref-note-filled :global(svg) {
+    fill: currentColor;
+    fill-opacity: 0.35;
   }
 
   .bsp-xref-members {

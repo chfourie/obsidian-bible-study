@@ -12,7 +12,7 @@ import type {
   StudyMaterialSource,
 } from '../contracts'
 import {
-  crossReferenceView,
+  crossReferenceViews,
   orderCrossReferences,
   type CrossReference,
   type CrossReferenceView,
@@ -37,8 +37,9 @@ import {
 } from '../rendering'
 import type { StudySubTab } from '../study-material'
 import {
-  isAnnotation,
+  isMention,
   noteTitle,
+  type CrossReferenceDeclaration,
   type ExtractedOccurrence,
   type Occurrence,
   type OccurrenceGroup,
@@ -107,23 +108,20 @@ export type StudyPanelViewState = {
   collapsedTranslations: ReadonlySet<string>
 }
 
-export type StudyPanelCrossReferences = {
-  intersecting: (reference: Reference) => CrossReference[]
-}
-
 export type { AnnotationDetails } from '../annotations'
 
 export type StudyPanelDeps = {
   passages: PassageSource
   extract: (content: string) => ExtractedOccurrence[]
-  crossReferences: StudyPanelCrossReferences
   // The panel surfaces cross-references but never edits them in place: editing
-  // happens in the reader's strip, which lives outside the panel.
+  // happens in the reader's strip, which lives outside the panel. The entry's
+  // id is the note path (ADR 0015).
   editCrossReference: (
     entry: CrossReference,
     options?: NavigationOptions,
   ) => void
-  // The vault index's intersection query, the same shape the reader takes.
+  // The vault index's intersection query, the same shape the reader takes:
+  // annotations, mentions and cross-reference rows all come out of it.
   intersecting: (reference: Reference) => OccurrenceGroup[]
   annotationDetails: (file: string) => Promise<AnnotationDetails | null>
 }
@@ -370,7 +368,6 @@ export class StudyPanelModel {
     }
     this.#file = note.file
     this.#entries = this.#pendingEntries(note.content)
-    this.#crossReferences = this.#computeCrossReferences()
     this.#notify()
     await Promise.all([
       this.#loadEntries(token),
@@ -378,15 +375,9 @@ export class StudyPanelModel {
     ])
   }
 
-  // Cross-references are not notes: occurrence indexing does not apply, so
-  // the caller wires store changes to this explicitly (mirroring the reader).
-  refreshCrossReferences(): void {
-    this.#crossReferences = this.#computeCrossReferences()
-    this.#notify()
-  }
-
-  // The annotation and mention sections come from the vault index, whose
-  // change feed the caller wires to this (mirroring the reader).
+  // The annotation, mention and cross-reference sections all come from the
+  // vault index, whose change feed the caller wires to this (mirroring the
+  // reader).
   async refreshIntersectingNotes(): Promise<void> {
     await this.#loadIntersectingNotes()
   }
@@ -410,16 +401,22 @@ export class StudyPanelModel {
   #intersectingGroups(references: Reference[]): OccurrenceGroup[] {
     const merged = new Map<
       string,
-      { annotationReference: Reference | null; occurrences: Map<string, Occurrence> }
+      {
+        annotationReference: Reference | null
+        crossReference: CrossReferenceDeclaration | null
+        occurrences: Map<string, Occurrence>
+      }
     >()
     for (const reference of references) {
       for (const group of this.deps.intersecting(reference)) {
         if (group.file === this.#file) continue
         const entry = merged.get(group.file) ?? {
           annotationReference: null,
+          crossReference: null,
           occurrences: new Map<string, Occurrence>(),
         }
         entry.annotationReference ??= group.annotationReference
+        entry.crossReference ??= group.crossReference
         for (const occurrence of group.occurrences)
           entry.occurrences.set(
             `${occurrence.source}|${occurrence.position}`,
@@ -431,6 +428,7 @@ export class StudyPanelModel {
     return [...merged.entries()].map(([file, entry]) => ({
       file,
       annotationReference: entry.annotationReference,
+      crossReference: entry.crossReference,
       occurrences: [...entry.occurrences.values()],
     }))
   }
@@ -439,6 +437,7 @@ export class StudyPanelModel {
     const token = ++this.#intersectionToken
     const references = this.#entries.map((entry) => entry.reference)
     if (references.length === 0) {
+      this.#crossReferences = []
       this.#annotations = []
       this.#annotationItems = []
       this.#annotationScope = []
@@ -450,9 +449,17 @@ export class StudyPanelModel {
     // is simply every range of every note reference, whatever book each is in.
     const scope = references.flatMap((reference) => reference.ranges)
     const groups = this.#intersectingGroups(references)
+    // Every member is listed, the note's own reference included: without it
+    // there is nothing to say what the others are references to. The rows
+    // need no note read, so they land before the annotations do.
+    this.#crossReferences = orderCrossReferences(
+      crossReferenceViews(groups, []),
+      references,
+    )
+    this.#notify()
     const mentions = chapterMentionViews(
       groups
-        .filter((group) => !isAnnotation(group))
+        .filter(isMention)
         .map((group) => ({
           file: group.file,
           references: group.occurrences.map(
@@ -477,27 +484,14 @@ export class StudyPanelModel {
     this.#notify()
   }
 
-  #computeCrossReferences(): CrossReferenceView[] {
-    const references = this.#entries.map((entry) => entry.reference)
-    const seen = new Map<string, CrossReferenceView>()
-    for (const reference of references) {
-      for (const entry of this.deps.crossReferences.intersecting(reference)) {
-        // Every member is listed, the note's own reference included: without
-        // it there is nothing to say what the others are references to.
-        if (!seen.has(entry.id)) seen.set(entry.id, crossReferenceView(entry, []))
-      }
-    }
-    return orderCrossReferences([...seen.values()], references)
-  }
-
-  editCrossReference(id: string, options?: NavigationOptions): void {
-    const entry = this.#crossReferences.find((candidate) => candidate.id === id)
+  editCrossReference(path: string, options?: NavigationOptions): void {
+    const entry = this.#crossReferences.find((candidate) => candidate.path === path)
     if (entry === undefined) return
     this.deps.editCrossReference(
       {
-        id,
+        id: path,
         members: entry.allMembers,
-        description: entry.description,
+        description: entry.summary,
       },
       options,
     )

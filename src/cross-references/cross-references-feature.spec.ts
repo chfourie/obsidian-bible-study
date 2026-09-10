@@ -177,6 +177,7 @@ describe('creating a cross-reference note from the strip', () => {
   const noteHarness = (seedNotes: Record<string, string> = {}) => {
     const notes = new Map(Object.entries(seedNotes))
     const folders = new Set<string>()
+    const indexed: [string, string][] = []
     const plugin = {
       app: { vault: { on: () => ({}) } },
       registerEvent: () => {},
@@ -200,9 +201,10 @@ describe('creating a cross-reference note from the strip', () => {
     const feature = new CrossReferencesFeature(plugin, {
       vault: dataVault,
       noteVault,
+      index: { indexNote: (path, content) => indexed.push([path, content]) },
     })
     feature.useSettings({ ...DEFAULT_SETTINGS })
-    return { feature, notes, folders }
+    return { feature, notes, folders, indexed }
   }
 
   it('writes the note with the three keys into the default folder, created on demand', async () => {
@@ -267,5 +269,25 @@ describe('creating a cross-reference note from the strip', () => {
     await feature.catalog.create(vine, 'Vine imagery')
 
     expect(feature.store.all()).toEqual([])
+  })
+
+  it('hands the created note to the index at once', async () => {
+    const { feature, notes, indexed } = noteHarness()
+
+    await feature.catalog.create(vine, 'Vine imagery')
+
+    const path = 'Cross-References/John 15.1-8 + Psalms 80.8-16.md'
+    expect(indexed).toEqual([[path, notes.get(path)]])
+  })
+
+  it('refuses to change or delete a note in place for now', async () => {
+    const { feature } = noteHarness()
+
+    await expect(feature.catalog.update('vine.md', vine, null)).rejects.toThrow(
+      'not supported yet',
+    )
+    await expect(feature.catalog.delete('vine.md')).rejects.toThrow(
+      'not supported yet',
+    )
   })
 })

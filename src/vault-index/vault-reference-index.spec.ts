@@ -5,7 +5,13 @@ import {
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
 import { makeVerseId, type Reference } from '../reference'
-import { isAnnotation, VaultReferenceIndex } from './vault-reference-index'
+import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
+import {
+  isAnnotation,
+  isCrossReference,
+  isMention,
+  VaultReferenceIndex,
+} from './vault-reference-index'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
@@ -72,6 +78,7 @@ describe('VaultReferenceIndex', () => {
       {
         file: 'Annotations/John 15.4.md',
         annotationReference: johnRef(15, 4),
+        crossReference: null,
         occurrences: [
           {
             file: 'Annotations/John 15.4.md',
@@ -150,6 +157,7 @@ describe('VaultReferenceIndex', () => {
       {
         file: 'Sermons/Abiding.md',
         annotationReference: null,
+        crossReference: null,
         occurrences: [
           {
             file: 'Sermons/Abiding.md',
@@ -282,5 +290,143 @@ describe('VaultReferenceIndex dormancy of an uninstalled book', () => {
 
     expect(index.intersectingOccurrences(humilityParagraph)).toHaveLength(1)
     expect(CONTENT).toBe('On {John 15:5} and {Humility 1:2}.')
+  })
+})
+
+describe('VaultReferenceIndex cross-reference notes', () => {
+  const vine = crossReferenceNote({
+    members: ['John 15:1-8', 'Psalm 80:8-16'],
+    summary: 'Vine imagery',
+  })
+  const psalmRef = (start: number, end: number): Reference => ({
+    book: 19,
+    ranges: [{ startId: makeVerseId(19, 80, start), endId: makeVerseId(19, 80, end) }],
+  })
+
+  it('groups an intersecting member with every member, the summary and the body flag', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('Cross-References/Vine.md', vine)
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([
+      {
+        file: 'Cross-References/Vine.md',
+        annotationReference: null,
+        crossReference: {
+          members: [johnRef(15, 1, 15, 8), psalmRef(8, 16)],
+          summary: 'Vine imagery',
+          hasBody: false,
+        },
+        occurrences: [
+          {
+            file: 'Cross-References/Vine.md',
+            position: 0,
+            reference: johnRef(15, 1, 15, 8),
+            source: 'cross-reference-frontmatter',
+          },
+        ],
+      },
+    ])
+  })
+
+  it('classifies a cross-reference, never a mention, even when only its body intersects', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote(
+      'Cross-References/Vine.md',
+      crossReferenceNote({ members: ['John 15:1-8'], body: 'compare {Luke 15:4}' }),
+    )
+
+    const groups = index.intersectingOccurrences({
+      book: 42,
+      ranges: [{ startId: makeVerseId(42, 15, 4), endId: makeVerseId(42, 15, 4) }],
+    })
+    expect(groups.map(isCrossReference)).toEqual([true])
+    expect(groups.map(isMention)).toEqual([false])
+    expect(groups.map(isAnnotation)).toEqual([false])
+  })
+
+  it('is both annotation and cross-reference when it carries ref and refs', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote(
+      'both.md',
+      crossReferenceNote({ members: ['Psalm 80:8-16'], ref: 'John 15:4' }),
+    )
+
+    const groups = index.intersectingOccurrences(johnRef(15, 4))
+    expect(groups.map(isAnnotation)).toEqual([true])
+    expect(groups.map(isCrossReference)).toEqual([true])
+    expect(groups[0].crossReference?.members).toEqual([psalmRef(8, 16)])
+  })
+
+  it('is a mention with neither frontmatter declaration', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('note.md', 'see {John 15:4}')
+
+    const groups = index.intersectingOccurrences(johnRef(15, 4))
+    expect(groups.map(isMention)).toEqual([true])
+    expect(groups[0].crossReference).toBe(null)
+  })
+
+  it('keeps only the parseable members', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote(
+      'one.md',
+      crossReferenceNote({ members: ['John 15:1-8', 'Jhon 15:4'] }),
+    )
+
+    expect(
+      index.intersectingOccurrences(johnRef(15, 4))[0].crossReference?.members,
+    ).toEqual([johnRef(15, 1, 15, 8)])
+  })
+
+  it('reflects a changed summary and body on re-index', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('vine.md', vine)
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.indexNote(
+      'vine.md',
+      crossReferenceNote({
+        members: ['John 15:1-8', 'Psalm 80:8-16'],
+        summary: 'Israel as vine',
+        body: 'Notes.',
+      }),
+    )
+
+    expect(notified).toBe(1)
+    expect(index.intersectingOccurrences(johnRef(15, 4))[0].crossReference).toEqual({
+      members: [johnRef(15, 1, 15, 8), psalmRef(8, 16)],
+      summary: 'Israel as vine',
+      hasBody: true,
+    })
+  })
+
+  it('follows a rename with its declaration', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('vine.md', vine)
+
+    index.renameNote('vine.md', 'Cross-References/Vine.md')
+
+    const groups = index.intersectingOccurrences(johnRef(15, 4))
+    expect(groups.map((group) => group.file)).toEqual(['Cross-References/Vine.md'])
+    expect(groups[0].crossReference?.summary).toBe('Vine imagery')
+  })
+
+  it('evicts a deleted cross-reference note', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('vine.md', vine)
+
+    index.removeNote('vine.md')
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))).toEqual([])
+  })
+
+  it('leaves a plain mention with no cross-reference declaration', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('Annotations/John 15.4.md', '---\nref: John 15:4\n---\nnotes')
+
+    expect(index.intersectingOccurrences(johnRef(15, 4))[0].crossReference).toBe(
+      null,
+    )
   })
 })

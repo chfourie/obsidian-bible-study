@@ -3,6 +3,7 @@ import {
   deregisterBook,
   deregisterBookVersification,
   enumerateVerseIds,
+  formatReference,
   makeVerseId,
   parseReference,
   rangeContains,
@@ -26,7 +27,8 @@ import type {
   CrossReference,
   CrossReferenceEditing,
 } from '../cross-references'
-import type { OccurrenceGroup } from '../vault-index'
+import { VaultReferenceIndex, type OccurrenceGroup } from '../vault-index'
+import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
 import type { StudyMaterialSource, VerseDetailsView } from '../contracts'
 import {
   paragraphsOf,
@@ -89,12 +91,30 @@ const john15Texts = (): MockTexts => ({
 const crossReferencesOf = (
   overrides: Partial<CrossReferenceEditing> = {},
 ): CrossReferenceEditing => ({
-  intersecting: () => [],
   create: async () => {},
   update: async () => {},
   delete: async () => {},
   ...overrides,
 })
+
+// A cross-reference note as the plugin writes it, members in grammar form.
+const noteOf = (
+  members: readonly Reference[],
+  summary: string | null = null,
+  body = '',
+): string =>
+  crossReferenceNote({ members: members.map(formatReference), summary, body })
+
+// The vault index over a set of notes, as the reader reads it — the real
+// index, so groups classify exactly as they do live.
+const indexOver = (notes: Record<string, string> = {}) => {
+  const index = new VaultReferenceIndex()
+  for (const [file, content] of Object.entries(notes)) index.indexNote(file, content)
+  return {
+    index,
+    intersecting: (reference: Reference) => index.intersectingOccurrences(reference),
+  }
+}
 
 // Captures what the copy action would put on the system clipboard, so specs
 // never touch the real one.
@@ -149,6 +169,7 @@ const group = (
 ): OccurrenceGroup => ({
   file,
   annotationReference: frontmatter === null ? null : ref(frontmatter),
+  crossReference: null,
   occurrences: [...(frontmatter === null ? [] : [frontmatter]), ...body].map(
     (text, position) => ({
       file,
@@ -2343,48 +2364,60 @@ describe('occurrence emphasis from a word cloud word', () => {
 })
 
 describe('cross-references intersecting the viewed chapter', () => {
-  const vineCrossReference: CrossReference = {
-    id: 'xr-vine',
-    members: [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')],
-    description: 'Vine and vineyard imagery for Israel',
-  }
-  const storeOver = (entries: () => CrossReference[]): CrossReferenceEditing =>
-    crossReferencesOf({
-      intersecting: (reference) =>
-        entries().filter((entry) =>
-          entry.members.some((member) => referencesIntersect(member, reference)),
-        ),
-    })
+  const vineMembers = [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')]
+  const vineNote = noteOf(vineMembers, 'Vine and vineyard imagery for Israel')
 
-  it('lists every member, the viewed chapter\'s included', async () => {
-    const model = modelWith({
-      crossReferences: storeOver(() => [vineCrossReference]),
-    })
+  it('lists every member, the viewed chapter\'s included, with the note path and body flag', async () => {
+    const model = modelWith(indexOver({ 'Cross-References/Vine.md': vineNote }))
 
     await model.openAt(ref('John 15:4'), 'web')
 
     expect(model.studyMaterial.selectedVerseId).toBe(null)
     expect(model.studyMaterial.chapterCrossReferences).toEqual([
       {
-        id: 'xr-vine',
-        description: 'Vine and vineyard imagery for Israel',
+        path: 'Cross-References/Vine.md',
+        summary: 'Vine and vineyard imagery for Israel',
+        hasBody: false,
         members: [
           { label: 'John 15:1-8', reference: ref('John 15:1-8'), index: 0 },
           { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
           { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
         ],
-        allMembers: vineCrossReference.members,
+        allMembers: vineMembers,
       },
     ])
   })
 
+  it('flags a note with a written body', async () => {
+    const model = modelWith(
+      indexOver({ 'vine.md': noteOf(vineMembers, null, '\nNotes.\n') }),
+    )
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(
+      model.studyMaterial.chapterCrossReferences.map((entry) => entry.hasBody),
+    ).toEqual([true])
+  })
+
+  it('never lists a cross-reference note as a mention or marks its verses', async () => {
+    const model = modelWith(
+      indexOver({ 'vine.md': noteOf(vineMembers, null, 'Compare {John 15:4}.') }),
+    )
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(model.studyMaterial.chapterMentions).toEqual([])
+    expect(model.view.rows.every((row) => row.mentions === 0)).toBe(true)
+    expect(
+      model.studyMaterial.chapterCrossReferences.map((entry) => entry.path),
+    ).toEqual(['vine.md'])
+  })
+
   it('leads with the member intersecting the viewed chapter', async () => {
-    const abiding: CrossReference = {
-      id: 'xr-abiding',
-      members: [ref('John 8:31-32'), ref('John 15:7-8')],
-      description: null,
-    }
-    const model = modelWith({ crossReferences: storeOver(() => [abiding]) })
+    const model = modelWith(
+      indexOver({ 'abiding.md': noteOf([ref('John 8:31-32'), ref('John 15:7-8')]) }),
+    )
 
     await model.openAt(ref('John 15:4'), 'web')
 
@@ -2394,12 +2427,15 @@ describe('cross-references intersecting the viewed chapter', () => {
   })
 
   it('orders members intersecting the chapter by start verse', async () => {
-    const branches: CrossReference = {
-      id: 'xr-branches',
-      members: [ref('Psalm 80:8-16'), ref('John 15:1-2'), ref('John 15:7-8')],
-      description: null,
-    }
-    const model = modelWith({ crossReferences: storeOver(() => [branches]) })
+    const model = modelWith(
+      indexOver({
+        'branches.md': noteOf([
+          ref('Psalm 80:8-16'),
+          ref('John 15:1-2'),
+          ref('John 15:7-8'),
+        ]),
+      }),
+    )
 
     await model.openAt(ref('John 15:4'), 'web')
 
@@ -2416,16 +2452,15 @@ describe('cross-references intersecting the viewed chapter', () => {
   })
 
   it('orders members elsewhere by book and start verse', async () => {
-    const shuffled: CrossReference = {
-      id: 'xr-vine',
-      members: [
-        ref('Romans 11:17-24'),
-        ref('John 15:1-8'),
-        ref('Psalm 80:8-16'),
-      ],
-      description: null,
-    }
-    const model = modelWith({ crossReferences: storeOver(() => [shuffled]) })
+    const model = modelWith(
+      indexOver({
+        'shuffled.md': noteOf([
+          ref('Romans 11:17-24'),
+          ref('John 15:1-8'),
+          ref('Psalm 80:8-16'),
+        ]),
+      }),
+    )
 
     await model.openAt(ref('John 15:4'), 'web')
 
@@ -2435,80 +2470,66 @@ describe('cross-references intersecting the viewed chapter', () => {
   })
 
   it('orders cross-references by their leading member', async () => {
-    const later: CrossReference = {
-      id: 'xr-later',
-      members: [ref('John 15:22-25'), ref('Deuteronomy 9:2-5')],
-      description: null,
-    }
-    const earlier: CrossReference = {
-      id: 'xr-earlier',
-      members: [ref('John 15:7-8'), ref('John 8:31-32')],
-      description: null,
-    }
-    const away: CrossReference = {
-      id: 'xr-away',
-      members: [ref('John 15:1'), ref('Deuteronomy 9:2-5')],
-      description: null,
-    }
-    const model = modelWith({
-      crossReferences: storeOver(() => [later, earlier, away]),
-    })
+    const model = modelWith(
+      indexOver({
+        'later.md': noteOf([ref('John 15:22-25'), ref('Deuteronomy 9:2-5')]),
+        'earlier.md': noteOf([ref('John 15:7-8'), ref('John 8:31-32')]),
+        'away.md': noteOf([ref('John 15:1'), ref('Deuteronomy 9:2-5')]),
+      }),
+    )
 
     await model.openAt(ref('John 15:4'), 'web')
 
-    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.id)).toEqual([
-      'xr-away',
-      'xr-earlier',
-      'xr-later',
+    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.path)).toEqual([
+      'away.md',
+      'earlier.md',
+      'later.md',
     ])
   })
 
   it('leaves cross-references touching no verse of the chapter out', async () => {
-    const elsewhere: CrossReference = {
-      id: 'xr-elsewhere',
-      members: [ref('Psalm 23:1'), ref('Romans 8:1')],
-      description: null,
-    }
-    const model = modelWith({
-      crossReferences: storeOver(() => [vineCrossReference, elsewhere]),
-    })
+    const model = modelWith(
+      indexOver({
+        'vine.md': vineNote,
+        'elsewhere.md': noteOf([ref('Psalm 23:1'), ref('Romans 8:1')]),
+      }),
+    )
 
     await model.openAt(ref('John 15:4'), 'web')
 
-    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.id)).toEqual([
-      'xr-vine',
+    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.path)).toEqual([
+      'vine.md',
     ])
   })
 
   it('re-scopes to the chapter navigated to', async () => {
-    const nextChapter: CrossReference = {
-      id: 'xr-next',
-      members: [ref('John 16:1'), ref('Psalm 23:1')],
-      description: null,
-    }
-    const model = modelWith({
-      crossReferences: storeOver(() => [vineCrossReference, nextChapter]),
-    })
+    const model = modelWith(
+      indexOver({
+        'vine.md': vineNote,
+        'next.md': noteOf([ref('John 16:1'), ref('Psalm 23:1')]),
+      }),
+    )
     await model.openAt(ref('John 15:4'), 'web')
 
     await model.nextChapter()
 
     expect(model.studyMaterial.chapterCrossReferences).toEqual([
       {
-        id: 'xr-next',
-        description: null,
+        path: 'next.md',
+        summary: null,
+        hasBody: false,
         members: [
           { label: 'John 16:1', reference: ref('John 16:1'), index: 0 },
           { label: 'Psalms 23:1', reference: ref('Psalm 23:1'), index: 1 },
         ],
-        allMembers: nextChapter.members,
+        allMembers: [ref('John 16:1'), ref('Psalm 23:1')],
       },
     ])
   })
 
-  it('updates live when the cross-reference store changes', async () => {
-    let entries: CrossReference[] = []
-    const model = modelWith({ crossReferences: storeOver(() => entries) })
+  it('updates live when the vault index changes', async () => {
+    const vault = indexOver()
+    const model = modelWith(vault)
     await model.openAt(ref('John 15:4'), 'web')
     expect(model.studyMaterial.chapterCrossReferences).toEqual([])
     let notified = 0
@@ -2516,11 +2537,11 @@ describe('cross-references intersecting the viewed chapter', () => {
       notified += 1
     })
 
-    entries = [vineCrossReference]
+    vault.index.indexNote('vine.md', vineNote)
     await model.refreshOccurrences()
 
-    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.id)).toEqual([
-      'xr-vine',
+    expect(model.studyMaterial.chapterCrossReferences.map((entry) => entry.path)).toEqual([
+      'vine.md',
     ])
     expect(notified).toBeGreaterThan(0)
   })
@@ -2842,16 +2863,15 @@ describe('collecting a cross-reference', () => {
   })
 
   it('surfaces the created cross-reference in the chapter list at once', async () => {
-    const stored: CrossReference[] = []
-    const model = await collectingModel({
-      intersecting: (reference) =>
-        stored.filter((entry) =>
-          entry.members.some((member) => referencesIntersect(member, reference)),
-        ),
-      create: async (members, description) => {
-        stored.push({ id: 'xr-created', members, description })
+    const vault = indexOver()
+    const model = await collectingModel(
+      {
+        create: async (members, summary) => {
+          vault.index.indexNote('created.md', noteOf(members, summary))
+        },
       },
-    })
+      vault,
+    )
     await model.selectVerse(verse4)
     model.addSelectionToCollection()
     addTyped(model, 'Psalm 80:8-16')
@@ -2862,8 +2882,9 @@ describe('collecting a cross-reference', () => {
 
     expect(model.studyMaterial.chapterCrossReferences).toEqual([
       {
-        id: 'xr-created',
-        description: null,
+        path: 'created.md',
+        summary: null,
+        hasBody: false,
         members: [
           { label: 'John 15:4', reference: ref('John 15:4'), index: 0 },
           { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
@@ -2886,9 +2907,11 @@ describe('editing an existing cross-reference in the strip', () => {
 
   const editingModel = async (
     crossReferences: Partial<CrossReferenceEditing> = {},
+    overrides: Partial<ReaderPaneDeps> = {},
   ): Promise<ReaderPaneModel> => {
     const model = modelWith({
       crossReferences: crossReferencesOf(crossReferences),
+      ...overrides,
     })
     await model.openAt(ref('John 15:1'), 'web')
     model.startEditingCrossReference(vine)
@@ -3041,17 +3064,16 @@ describe('editing an existing cross-reference in the strip', () => {
 
   it('deletes the edited cross-reference and closes the strip', async () => {
     const deleted: string[] = []
-    let entries: CrossReference[] = [vine]
-    const model = await editingModel({
-      intersecting: (reference) =>
-        entries.filter((entry) =>
-          entry.members.some((member) => referencesIntersect(member, reference)),
-        ),
-      delete: async (id) => {
-        deleted.push(id)
-        entries = entries.filter((entry) => entry.id !== id)
+    const vault = indexOver({ 'xr-vine': noteOf(vine.members, vine.description) })
+    const model = await editingModel(
+      {
+        delete: async (path) => {
+          deleted.push(path)
+          vault.index.removeNote(path)
+        },
       },
-    })
+      vault,
+    )
 
     model.confirmDeleteCrossReference()
     await model.deleteCrossReference()
@@ -3059,6 +3081,23 @@ describe('editing an existing cross-reference in the strip', () => {
     expect(deleted).toEqual(['xr-vine'])
     expect(model.studyMaterial.collection).toBe(null)
     expect(model.studyMaterial.chapterCrossReferences).toEqual([])
+  })
+
+  it('keeps the strip open with the reason when the delete is refused', async () => {
+    const model = await editingModel({
+      delete: async () => {
+        throw new Error('not supported yet')
+      },
+    })
+
+    model.confirmDeleteCrossReference()
+    await model.deleteCrossReference()
+
+    expect(model.studyMaterial.collection?.error).toBe(
+      'Could not delete: not supported yet',
+    )
+    expect(model.studyMaterial.collection?.confirmingDelete).toBe(false)
+    expect(gathered(model)).toHaveLength(3)
   })
 
   it('ignores delete while creating a new cross-reference', async () => {
@@ -3146,27 +3185,17 @@ describe('the study material contract', () => {
   })
 
   it('lists the chapter cross-references with no verse selected', async () => {
-    const vine: CrossReference = {
-      id: 'xr-vine',
-      members: [ref('John 15:1-8'), ref('Psalm 80:8-16')],
-      description: 'Vine imagery',
-    }
-    const model = modelWith({
-      crossReferences: crossReferencesOf({
-        intersecting: (reference) =>
-          [vine].filter((entry) =>
-            entry.members.some((member) =>
-              referencesIntersect(member, reference),
-            ),
-          ),
+    const model = modelWith(
+      indexOver({
+        'vine.md': noteOf([ref('John 15:1-8'), ref('Psalm 80:8-16')], 'Vine imagery'),
       }),
-    })
+    )
     await model.openAt(ref('John 15:1'), 'web')
 
     const material = sourceOf(model).studyMaterial
     expect(material.selectedVerseId).toBe(null)
-    expect(material.chapterCrossReferences.map((entry) => entry.id)).toEqual([
-      'xr-vine',
+    expect(material.chapterCrossReferences.map((entry) => entry.path)).toEqual([
+      'vine.md',
     ])
   })
 
@@ -3329,6 +3358,7 @@ describe('chapter annotations in the study material', () => {
           file: note.file,
           annotationReference:
             note.annotation === false ? null : note.reference,
+          crossReference: null,
           occurrences: [
             {
               file: note.file,
@@ -3564,6 +3594,7 @@ describe('chapter mentions in the study material', () => {
           file: note.file,
           annotationReference:
             note.annotation === true ? note.references[0] : null,
+          crossReference: null,
           occurrences: note.references
             .filter((noteReference) =>
               referencesIntersect(noteReference, reference),
@@ -4219,19 +4250,16 @@ describe('ReaderPaneModel book mode', () => {
   })
 
   it('lists a cross-reference touching the section on screen', async () => {
-    const entry = {
-      id: 'xr-pride',
-      description: 'Pride and its cure',
-      members: [ref('John 15:5'), bookRef(1, 2)],
-    }
-    const model = bookModelWith({
-      crossReferences: crossReferencesOf({ intersecting: () => [entry] }),
-    })
+    const model = bookModelWith(
+      indexOver({
+        'pride.md': noteOf([ref('John 15:5'), bookRef(1, 2)], 'Pride and its cure'),
+      }),
+    )
 
     await model.openPosition({ book: HUMILITY, chapter: 1 })
 
     const listed = model.studyMaterial.chapterCrossReferences
-    expect(listed.map((view) => view.id)).toEqual(['xr-pride'])
+    expect(listed.map((view) => view.path)).toEqual(['pride.md'])
     expect(listed[0].members.map((member) => member.label)).toEqual([
       'Humility ch. 1, par. 2',
       'John 15:5',

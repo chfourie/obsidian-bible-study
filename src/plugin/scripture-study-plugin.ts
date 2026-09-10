@@ -55,7 +55,9 @@ export default class ScriptureStudyPlugin extends Plugin {
     install: this.installSuggestedTranslation,
   }
 
-  readonly crossReferences = new CrossReferencesFeature(this)
+  readonly crossReferences = new CrossReferencesFeature(this, {
+    index: this.vaultIndex.index,
+  })
 
   readonly reader = new ReaderFeature(
     this,
@@ -115,7 +117,6 @@ export default class ScriptureStudyPlugin extends Plugin {
     },
   })
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
-    crossReferences: this.crossReferences.catalog,
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
     wordStudy: this.wordStudy,

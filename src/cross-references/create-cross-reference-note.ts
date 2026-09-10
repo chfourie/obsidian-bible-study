@@ -8,12 +8,17 @@ export type CreateCrossReferenceNoteOptions = {
   templatePath: string | null
 }
 
+export type CreatedCrossReferenceNote = {
+  path: string
+  content: string
+}
+
 export const createCrossReferenceNote = async (
   vault: NoteFileVault,
   members: readonly Reference[],
   summary: string | null,
   options: CreateCrossReferenceNoteOptions,
-): Promise<void> => {
+): Promise<CreatedCrossReferenceNote> => {
   await vault.ensureFolder(options.folder)
   const path = crossReferenceFilePath(options.folder, members, (candidate) =>
     vault.exists(candidate),
@@ -22,5 +27,7 @@ export const createCrossReferenceNote = async (
     options.templatePath === null
       ? null
       : await vault.readNote(options.templatePath)
-  await vault.createNote(path, composeCrossReferenceNote(members, summary, template))
+  const content = composeCrossReferenceNote(members, summary, template)
+  await vault.createNote(path, content)
+  return { path, content }
 }

@@ -762,6 +762,7 @@ describe('renderReference in-note intersections', () => {
     annotationReference: annotation
       ? { book: 43, ranges: [{ startId: 43015004, endId: 43015004 }] }
       : null,
+    crossReference: null,
     occurrences: [],
   })
 

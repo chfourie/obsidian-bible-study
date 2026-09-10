@@ -1,3 +1,4 @@
+export * from './cross-reference-frontmatter'
 export * from './extract-occurrences'
 export * from './note-title'
 export * from './note-vault'

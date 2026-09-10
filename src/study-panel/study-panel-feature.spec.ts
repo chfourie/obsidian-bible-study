@@ -12,6 +12,7 @@ import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
+import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
 import type { WordCloudWordView } from '../contracts'
 import {
   STUDY_PANEL_VIEW_TYPE,
@@ -1012,18 +1013,53 @@ describe('StudyPanelFeature entry points', () => {
     expect(edited).toEqual([[entry, 'web', true]])
   })
 
-  it('opens a note through the injected navigator', async () => {
+  it('opens a note through the injected navigator, new-pane request and all', async () => {
     const { feature } = harness()
-    const opened: string[] = []
+    const opened: [string, boolean | undefined][] = []
     feature.useNavigator({
       openReference: () => {},
-      openNote: (file) => opened.push(file),
+      openNote: (file, options) => opened.push([file, options?.newPane]),
       editCrossReference: () => {},
     })
 
     feature.openNote('Sermons/Vine.md')
+    feature.openNote('Cross-References/Vine.md', { newPane: true })
 
-    expect(opened).toEqual(['Sermons/Vine.md'])
+    expect(opened).toEqual([
+      ['Sermons/Vine.md', undefined],
+      ['Cross-References/Vine.md', true],
+    ])
+  })
+
+  it('surfaces cross-reference notes from the vault index and refreshes as it changes', async () => {
+    const vine = crossReferenceNote({
+      members: ['John 15:1-8', 'Psalm 80:8-16'],
+      summary: 'Vine imagery',
+      body: 'Notes.',
+    })
+    const { feature, commands, leaves, focusNote, indexNote } = harness({
+      'a.md': '{John 15:1}',
+      'Cross-References/Vine.md': vine,
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    expect(view.model.view.crossReferences).toEqual([])
+
+    indexNote('Cross-References/Vine.md')
+    await flushAsync()
+
+    expect(view.model.view.mentions).toEqual([])
+    expect(
+      view.model.view.crossReferences.map((entry) => [
+        entry.path,
+        entry.summary,
+        entry.hasBody,
+      ]),
+    ).toEqual([['Cross-References/Vine.md', 'Vine imagery', true]])
   })
 
   it('refreshes annotations and mentions when the vault index changes', async () => {

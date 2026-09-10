@@ -5,7 +5,8 @@ import {
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
 import { makeVerseId } from '../reference'
-import { extractOccurrences } from './extract-occurrences'
+import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
+import { extractNote, extractOccurrences } from './extract-occurrences'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
@@ -310,5 +311,173 @@ describe('extractOccurrences — installed books', () => {
 
     installHumilityBook()
     expect(extractOccurrences(content)).toHaveLength(2)
+  })
+})
+
+describe('extractNote for cross-reference notes', () => {
+  const psalm = (chapter: number, verse: number) => makeVerseId(19, chapter, verse)
+  const johnRange = (start: number, end: number) => ({
+    book: 43,
+    ranges: [{ startId: john(15, start), endId: john(15, end) }],
+  })
+
+  it('indexes each member as a cross-reference-frontmatter occurrence at position 0', () => {
+    const note = crossReferenceNote({
+      members: ['John 15:1-8', 'Psalm 80:8-16'],
+      summary: 'Vine imagery',
+    })
+
+    expect(extractNote(note)).toEqual({
+      occurrences: [
+        {
+          position: 0,
+          reference: johnRange(1, 8),
+          source: 'cross-reference-frontmatter',
+          translation: null,
+        },
+        {
+          position: 0,
+          reference: {
+            book: 19,
+            ranges: [{ startId: psalm(80, 8), endId: psalm(80, 16) }],
+          },
+          source: 'cross-reference-frontmatter',
+          translation: null,
+        },
+      ],
+      crossReference: { summary: 'Vine imagery', hasBody: false },
+    })
+  })
+
+  it('is no cross-reference without type: cross-reference', () => {
+    const note = crossReferenceNote({ members: ['John 15:1-8'], type: null })
+
+    expect(extractNote(note)).toEqual({ occurrences: [], crossReference: null })
+    expect(
+      extractNote(crossReferenceNote({ members: ['John 15:1-8'], type: 'sermon' }))
+        .crossReference,
+    ).toBe(null)
+  })
+
+  it('is no cross-reference without refs, its body still a mention', () => {
+    const note = '---\ntype: cross-reference\nsummary: Vine\n---\nSee {John 15:4}.'
+
+    expect(extractNote(note)).toEqual({
+      occurrences: [
+        {
+          position: note.indexOf('{John'),
+          reference: johnRange(4, 4),
+          source: 'body',
+          translation: null,
+        },
+      ],
+      crossReference: null,
+    })
+  })
+
+  it('carries a ref beside refs, annotation occurrence first', () => {
+    const note = crossReferenceNote({
+      members: ['John 15:1-8'],
+      ref: 'John 15:4',
+    })
+
+    expect(extractNote(note).occurrences.map((o) => o.source)).toEqual([
+      'annotation-frontmatter',
+      'cross-reference-frontmatter',
+    ])
+  })
+
+  it('skips a member that fails to parse and keeps the rest', () => {
+    const note = crossReferenceNote({
+      members: ['John 15:1-8', 'Jhon 15:4', 'Psalm 80:8-16'],
+    })
+
+    expect(
+      extractNote(note).occurrences.map((o) => o.reference.book),
+    ).toEqual([43, 19])
+  })
+
+  it('indexes a single parseable member', () => {
+    const note = crossReferenceNote({ members: ['John 15:1-8', 'nonsense'] })
+
+    expect(extractNote(note)).toEqual({
+      occurrences: [
+        {
+          position: 0,
+          reference: johnRange(1, 8),
+          source: 'cross-reference-frontmatter',
+          translation: null,
+        },
+      ],
+      crossReference: { summary: null, hasBody: false },
+    })
+  })
+
+  it('reads quoted members and a quoted summary', () => {
+    const note = [
+      '---',
+      'type: "cross-reference"',
+      'refs:',
+      '  - "John 15:1-8"',
+      "  - 'Psalm 80:8-16'",
+      'summary: "Vine: \\"true\\" vine"',
+      '---',
+      '',
+    ].join('\n')
+
+    const extracted = extractNote(note)
+    expect(extracted.occurrences.map((o) => o.reference.book)).toEqual([43, 19])
+    expect(extracted.crossReference).toEqual({
+      summary: 'Vine: "true" vine',
+      hasBody: false,
+    })
+  })
+
+  it('reads an empty summary as none', () => {
+    const note = crossReferenceNote({ members: ['John 15:1-8'], summary: null })
+
+    expect(extractNote(note).crossReference?.summary).toBe(null)
+  })
+
+  it('reads the members of a CRLF note', () => {
+    const note = crossReferenceNote({ members: ['John 15:1-8'] }).replace(
+      /\n/g,
+      '\r\n',
+    )
+
+    expect(extractNote(note).occurrences).toHaveLength(1)
+  })
+
+  it('has a body once anything but whitespace follows the frontmatter', () => {
+    const members = ['John 15:1-8']
+
+    expect(
+      extractNote(crossReferenceNote({ members, body: '\n  \n' })).crossReference
+        ?.hasBody,
+    ).toBe(false)
+    expect(
+      extractNote(crossReferenceNote({ members, body: '\n# Notes\n' }))
+        .crossReference?.hasBody,
+    ).toBe(true)
+  })
+
+  it('indexes the body references of a cross-reference note too', () => {
+    const note = crossReferenceNote({
+      members: ['John 15:1-8'],
+      body: 'compare {Luke 15:4}',
+    })
+
+    expect(extractNote(note).occurrences.map((o) => o.source)).toEqual([
+      'cross-reference-frontmatter',
+      'body',
+    ])
+  })
+
+  it('extractOccurrences lists the members among the occurrences', () => {
+    const note = crossReferenceNote({ members: ['John 15:1-8'] })
+
+    expect(extractOccurrences(note).map((o) => o.source)).toEqual([
+      'cross-reference-frontmatter',
+    ])
   })
 })

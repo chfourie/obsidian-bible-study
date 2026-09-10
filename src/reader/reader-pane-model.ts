@@ -20,7 +20,7 @@ import {
 } from '../reference'
 import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
-  crossReferenceView,
+  crossReferenceViews,
   orderCrossReferences,
   type CrossReference,
   type CrossReferenceEditing,
@@ -84,7 +84,7 @@ import { strongsFamily } from '../modules'
 import type { Epigraph, Figure, HeadingLevel } from '../modules'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
-import { isAnnotation, type OccurrenceGroup } from '../vault-index'
+import { isAnnotation, isMention, type OccurrenceGroup } from '../vault-index'
 
 export type ReaderToggles = {
   nav: 'tree' | 'breadcrumb'
@@ -490,6 +490,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   // re-reading any note. Their scope is always the current chapter.
   #chapterAnnotationItems: LoadedChapterAnnotation[] = []
   #chapterMentions: ChapterMentionView[] = []
+  #chapterCrossReferences: CrossReferenceView[] = []
   // The chapter's Word Cloud, counted only while a surface wants it — from
   // a Tagged Translation when one is installed beside the dictionaries, else
   // standing as the hint to enable Strong's.
@@ -530,8 +531,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
     // The half-typed reference in the basket's input: model-owned so adding
     // it can clear it on success and keep it for correction on failure.
     typed: string
-    // The id of the cross-reference this strip edits, or null when building
-    // a brand new one.
+    // The path of the cross-reference note this strip edits, or null when
+    // building a brand new one.
     editing: string | null
   } | null = null
   // The book the user expanded in the nav tree to browse, or null while the
@@ -833,7 +834,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       selectedVerseId: this.#selectedVerseId,
       selectionEndId: this.#selectionEnd,
       details: this.#details,
-      chapterCrossReferences: this.#chapterCrossReferences(),
+      chapterCrossReferences: this.#chapterCrossReferences,
       chapterAnnotations: this.#chapterAnnotations,
       chapterMentions: this.#chapterMentions,
       wordCloud: this.#wordCloudMarkingEmphasized(),
@@ -1162,8 +1163,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   // Opens the same strip pre-loaded with an existing cross-reference's members
-  // and description, so editing one reuses the creation flow; saving then
-  // writes back to this id instead of making a new entry. A strip already in
+  // and summary, so editing one reuses the creation flow; saving then writes
+  // back to that note instead of making a new one. A strip already in
   // progress wins: editing would discard it.
   startEditingCrossReference(entry: CrossReference): void {
     if (this.#collection !== null) return
@@ -1242,7 +1243,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   // Only an existing cross-reference can be deleted: a strip building a new
-  // one has nothing in the store to remove.
+  // one has no note to remove.
   confirmDeleteCrossReference(): void {
     if (this.#collection === null || this.#collection.editing === null) return
     this.#collection = { ...this.#collection, confirmingDelete: true }
@@ -1256,9 +1257,19 @@ export class ReaderPaneModel implements StudyMaterialSource {
   }
 
   async deleteCrossReference(): Promise<void> {
-    const editing = this.#collection?.editing ?? null
-    if (editing === null) return
-    await this.deps.crossReferences.delete(editing)
+    const collection = this.#collection
+    if (collection === null || collection.editing === null) return
+    try {
+      await this.deps.crossReferences.delete(collection.editing)
+    } catch (error) {
+      this.#collection = {
+        ...collection,
+        confirmingDelete: false,
+        error: `Could not delete: ${error instanceof Error ? error.message : String(error)}`,
+      }
+      this.#notify()
+      return
+    }
     this.#collection = null
     await this.refreshOccurrences()
   }
@@ -1557,21 +1568,32 @@ export class ReaderPaneModel implements StudyMaterialSource {
     const token = ++this.#chapterMaterialToken
     const chapter = chapterReference(this.#position)
     const groups = this.deps.intersecting(chapter)
+    // A cross-reference note marks no verse: its members read as a row of
+    // the chapter's cross-references, never as a mention (spec §5a).
     this.#markers = verseMarkers(
-      groups.map((group) => ({
-        file: group.file,
-        annotation: isAnnotation(group),
-        references: group.occurrences.map(
-          (occurrence) => occurrence.reference,
-        ),
-      })),
+      groups
+        .filter((group) => isAnnotation(group) || isMention(group))
+        .map((group) => ({
+          file: group.file,
+          annotation: isAnnotation(group),
+          references: group.occurrences.map(
+            (occurrence) => occurrence.reference,
+          ),
+        })),
       chapter,
+    )
+    // The chapter list keeps every member, the chapter's own included, so the
+    // reader can see which verses of it a cross-reference touches — and the
+    // ordering leads with those, so the passage on screen anchors the row.
+    this.#chapterCrossReferences = orderCrossReferences(
+      crossReferenceViews(groups, []),
+      [chapter],
     )
     this.#rows = this.#withMarkers(this.#rows)
     this.#notify()
     const mentions = chapterMentionViews(
       groups
-        .filter((group) => !isAnnotation(group))
+        .filter(isMention)
         .map((group) => ({
           file: group.file,
           references: group.occurrences.map(
@@ -1593,19 +1615,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
       this.#annotationOrdering,
     )
     this.#notify()
-  }
-
-  // The chapter list keeps every member, the chapter's own included, so the
-  // reader can see which verses of it a cross-reference touches — and the
-  // ordering leads with those, so the passage on screen anchors the row.
-  #chapterCrossReferences(): CrossReferenceView[] {
-    const reference = chapterReference(this.#position)
-    return orderCrossReferences(
-      this.deps.crossReferences
-        .intersecting(reference)
-        .map((entry) => crossReferenceView(entry, [])),
-      [reference],
-    )
   }
 
   async #loadChapter(): Promise<void> {

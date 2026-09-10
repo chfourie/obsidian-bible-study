@@ -35,7 +35,7 @@ export class StudyPanelView extends ItemView {
 
   override async onOpen(): Promise<void> {
     const host: StudyMaterialHost = {
-      openNote: (file) => this.feature.openNote(file),
+      openNote: (file, options) => this.feature.openNote(file, options),
       // A reference surfaced by the mirrored reader carries no translation of
       // its own: it opens in whichever one that reader is showing.
       openReference: (reference, options) =>

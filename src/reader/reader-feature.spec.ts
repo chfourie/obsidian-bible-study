@@ -59,6 +59,7 @@ const harness = (
   const leaves: FakeLeaf[] = []
   let factory: ((leaf: WorkspaceLeaf) => unknown) | null = null
   const revealLeaf = vi.fn(async () => {})
+  const openLinkText = vi.fn(async () => {})
   const commands: { id: string; name: string; callback: () => void }[] = []
   const ribbons: { icon: string; title: string; callback: () => void }[] = []
   const workspace = {
@@ -75,6 +76,7 @@ const harness = (
       return leaf
     },
     revealLeaf,
+    openLinkText,
   }
   const vault = {
     getFileByPath: (path: string) =>
@@ -107,7 +109,7 @@ const harness = (
     { indexRefreshDebounceMs: 0 },
   )
   feature.useSettings({ ...DEFAULT_SETTINGS, defaultTranslationId: 'web' })
-  return { feature, index, leaves, commands, ribbons, revealLeaf }
+  return { feature, index, leaves, commands, ribbons, revealLeaf, openLinkText }
 }
 
 const ref = (text: string): Reference => {
@@ -905,6 +907,24 @@ describe('ReaderFeature entry points', () => {
     } finally {
       Platform.isMobile = false
     }
+  })
+})
+
+describe('ReaderFeature opening notes', () => {
+  it('opens a note in a split beside what is on screen', () => {
+    const { feature, openLinkText } = harness()
+
+    feature.openNote('Cross-References/Vine.md')
+
+    expect(openLinkText).toHaveBeenCalledWith('Cross-References/Vine.md', '', 'split')
+  })
+
+  it('sends a note to its own tab on the new-pane modifier', () => {
+    const { feature, openLinkText } = harness()
+
+    feature.openNote('Cross-References/Vine.md', { newPane: true })
+
+    expect(openLinkText).toHaveBeenCalledWith('Cross-References/Vine.md', '', 'tab')
   })
 })
 

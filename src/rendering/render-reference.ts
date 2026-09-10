@@ -2,7 +2,12 @@ import { setIcon } from 'obsidian'
 import type { NavigationOptions } from '../contracts'
 import { bookAtomKind, type Reference } from '../reference'
 import { opensInNewPane } from '../ui'
-import { isAnnotation, noteTitle, type OccurrenceGroup } from '../vault-index'
+import {
+  isAnnotation,
+  isMention,
+  noteTitle,
+  type OccurrenceGroup,
+} from '../vault-index'
 import {
   exceedsDisplayVerseLimit,
   TOO_LONG_TO_DISPLAY,
@@ -108,10 +113,15 @@ const renderIntersections = (
   intersections: NoteIntersectionSource,
   sourcePath: string | null,
 ): void => {
+  // A cross-reference note is neither annotation nor mention here: its
+  // members surface as Study Panel rows, not as in-note counts (spec §5a).
   const intersectingGroups = (): OccurrenceGroup[] =>
     intersections
       .intersecting(model.reference)
-      .filter((group) => group.file !== sourcePath)
+      .filter(
+        (group) =>
+          group.file !== sourcePath && (isAnnotation(group) || isMention(group)),
+      )
   const groups = intersectingGroups()
   if (groups.length === 0) return
 

@@ -6,8 +6,8 @@ import type {
   StudyMaterialSource,
 } from '../contracts'
 import {
-  INERT_CROSS_REFERENCE_CATALOG,
-  type CrossReferenceCatalog,
+  INERT_CROSS_REFERENCE_EDITING,
+  type CrossReferenceEditing,
   type CrossReference,
 } from '../cross-references'
 import { readAnnotationDetails } from '../annotations'
@@ -43,7 +43,7 @@ export type ReaderFeatureOptions = {
   indexRefreshDebounceMs?: number
   strongs?: ReaderStrongsDeps
   firstRun?: ReaderFirstRunDeps
-  crossReferences?: CrossReferenceCatalog
+  crossReferences?: CrossReferenceEditing
 }
 
 const INERT_STRONGS: ReaderStrongsDeps = {
@@ -61,7 +61,6 @@ export class ReaderFeature
   readonly #indexRefreshDebounceMs: number
   #pendingRefresh: number | null = null
   #unsubscribeIndex: (() => void) | null = null
-  #unsubscribeCrossReferences: (() => void) | null = null
   #lastPosition: ReaderPosition = DEFAULT_POSITION
   // Books and scripture share one reader but not one entry point: the reader
   // entry always lands on the scripture side, so where scripture was left
@@ -69,7 +68,7 @@ export class ReaderFeature
   #lastScripturePosition: ReaderPosition = DEFAULT_POSITION
   readonly #strongs: ReaderStrongsDeps
   readonly #firstRun: ReaderFirstRunDeps | undefined
-  readonly #crossReferences: CrossReferenceCatalog
+  readonly #crossReferences: CrossReferenceEditing
 
   constructor(
     plugin: Plugin,
@@ -83,7 +82,7 @@ export class ReaderFeature
     this.#strongs = options.strongs ?? INERT_STRONGS
     this.#firstRun = options.firstRun
     this.#crossReferences =
-      options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
+      options.crossReferences ?? INERT_CROSS_REFERENCE_EDITING
     // The reader's stacked view never substitutes the fallback translation
     // (spec §6.3): unavailable translations show an unavailable row.
     // Panes pick between the two repositories per their red-letter toggle,
@@ -100,9 +99,6 @@ export class ReaderFeature
     this.#unsubscribeIndex = this.index.onChanged(() =>
       this.#scheduleOccurrenceRefresh(),
     )
-    this.#unsubscribeCrossReferences = this.#crossReferences.onChanged(() =>
-      this.#scheduleOccurrenceRefresh(),
-    )
     this.plugin.registerView(
       READER_VIEW_TYPE,
       (leaf: WorkspaceLeaf) => new ReaderView(leaf, this),
@@ -117,8 +113,6 @@ export class ReaderFeature
   override unload(): void {
     this.#unsubscribeIndex?.()
     this.#unsubscribeIndex = null
-    this.#unsubscribeCrossReferences?.()
-    this.#unsubscribeCrossReferences = null
     if (this.#pendingRefresh !== null) {
       window.clearTimeout(this.#pendingRefresh)
       this.#pendingRefresh = null
@@ -260,8 +254,14 @@ export class ReaderFeature
     return model.selectionReference() ?? model.currentChapterReference()
   }
 
-  openNote(file: string): void {
-    void this.plugin.app.workspace.openLinkText(file, '', 'split')
+  // A note opens beside what is on screen; the new-pane modifier — the same
+  // one a member reference honours — sends it to a tab of its own instead.
+  openNote(file: string, options: NavigationOptions = {}): void {
+    void this.plugin.app.workspace.openLinkText(
+      file,
+      '',
+      options.newPane ? 'tab' : 'split',
+    )
   }
 
   openReference(

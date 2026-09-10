@@ -29,9 +29,11 @@ export interface ReferenceNavigator {
     translationId: string | null,
     options?: NavigationOptions,
   ): void
-  openNote(file: string): void
-  // Edits an existing cross-reference: opens the reader at one of its members
-  // and loads the editing strip with all of them.
+  // Opens a vault note; the new-pane modifier is honoured as for references.
+  openNote(file: string, options?: NavigationOptions): void
+  // Edits an existing cross-reference note (its path as the entry's id):
+  // opens the reader at one of its members and loads the editing strip with
+  // all of them.
   editCrossReference(
     entry: CrossReference,
     translationId: string | null,

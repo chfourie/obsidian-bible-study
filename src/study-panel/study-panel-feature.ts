@@ -12,11 +12,7 @@ import {
   type WordStudyOpener,
   type WordStudyOptions,
 } from '../contracts'
-import {
-  INERT_CROSS_REFERENCE_CATALOG,
-  type CrossReference,
-  type CrossReferenceCatalog,
-} from '../cross-references'
+import type { CrossReference } from '../cross-references'
 import { readAnnotationDetails } from '../annotations'
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'
@@ -36,22 +32,21 @@ import { TabMemory, type StudyTabState } from './tab-memory'
 export { STUDY_PANEL_VIEW_TYPE } from './study-panel-view'
 
 // What the panel asks of the vault index: the intersection query its
-// annotation and mention sections read, and the change feed that refreshes
-// them. VaultReferenceIndex satisfies this as it stands.
+// annotation, mention and cross-reference sections read, and the change feed
+// that refreshes them. VaultReferenceIndex satisfies this as it stands.
 export type StudyPanelVaultIndex = {
   intersectingOccurrences: (reference: Reference) => OccurrenceGroup[]
   onChanged: (listener: () => void) => () => void
 }
 
 // Stands in when the feature runs without an index — a panel that surfaces no
-// annotations or mentions.
+// annotations, mentions or cross-references.
 const INERT_VAULT_INDEX: StudyPanelVaultIndex = {
   intersectingOccurrences: () => [],
   onChanged: () => () => {},
 }
 
 export type StudyPanelFeatureOptions = {
-  crossReferences?: CrossReferenceCatalog
   studyMaterial?: StudyMaterialProvider
   index?: StudyPanelVaultIndex
   wordStudy?: WordStudyOpener
@@ -88,7 +83,6 @@ export class StudyPanelFeature extends PluginFeature {
   #showToken = 0
   #navigator: ReferenceNavigator = NOOP_REFERENCE_NAVIGATOR
   #annotationPrompter: (prefill: Reference) => void = () => {}
-  readonly #crossReferences: CrossReferenceCatalog
   readonly #studyMaterial: StudyMaterialProvider
   // The reader tab the panel mirrors, or null while a note holds focus.
   #material: StudyMaterialSource | null = null
@@ -101,7 +95,6 @@ export class StudyPanelFeature extends PluginFeature {
   readonly #index: StudyPanelVaultIndex
   readonly #wordStudy: WordStudyOpener
   readonly #cloudExclusions: CloudExclusionEditor
-  #unsubscribeCrossReferences: (() => void) | null = null
   #unsubscribeIndex: (() => void) | null = null
   #unsubscribeSelection: (() => void) | null = null
 
@@ -117,8 +110,6 @@ export class StudyPanelFeature extends PluginFeature {
         derivedRedLetter: () => this.settings.derivedRedLetter,
       }),
     )
-    this.#crossReferences =
-      options.crossReferences ?? INERT_CROSS_REFERENCE_CATALOG
     this.#index = options.index ?? INERT_VAULT_INDEX
     this.#wordStudy = options.wordStudy ?? NO_WORD_STUDY
     this.#cloudExclusions = options.cloudExclusions ?? NO_CLOUD_EXCLUSIONS
@@ -156,14 +147,9 @@ export class StudyPanelFeature extends PluginFeature {
         this.#noteEdited(file.path, content),
       ),
     )
-    // Cross-references are not notes: occurrence indexing does not apply, so
-    // the store's own change feed is wired in explicitly (mirroring the
-    // reader feature).
-    this.#unsubscribeCrossReferences = this.#crossReferences.onChanged(() =>
-      this.#refreshCrossReferences(),
-    )
-    // The annotation and mention sections read the vault index, whose change
-    // feed is wired in the same way.
+    // The annotation, mention and cross-reference sections read the vault
+    // index, whose change feed is wired in explicitly (mirroring the reader
+    // feature).
     this.#unsubscribeIndex = this.#index.onChanged(() =>
       this.#refreshIntersectingNotes(),
     )
@@ -171,8 +157,6 @@ export class StudyPanelFeature extends PluginFeature {
   }
 
   override unload(): void {
-    this.#unsubscribeCrossReferences?.()
-    this.#unsubscribeCrossReferences = null
     this.#unsubscribeIndex?.()
     this.#unsubscribeIndex = null
     this.#followMaterial(null)
@@ -198,7 +182,6 @@ export class StudyPanelFeature extends PluginFeature {
             translationIds: renderContextFromSettings(this.settings)
               .knownTranslationIds,
           }),
-        crossReferences: this.#crossReferences,
         editCrossReference: (entry, options) =>
           this.#navigator.editCrossReference(
             entry,
@@ -240,8 +223,8 @@ export class StudyPanelFeature extends PluginFeature {
     this.#annotationPrompter(prefill)
   }
 
-  openNote(file: string): void {
-    this.#navigator.openNote(file)
+  openNote(file: string, options?: NavigationOptions): void {
+    this.#navigator.openNote(file, options)
   }
 
   editCrossReferenceInNewPane(entry: CrossReference): void {
@@ -405,10 +388,6 @@ export class StudyPanelFeature extends PluginFeature {
       model.useTabState(this.#followedState())
       void model.setActiveNote(this.#active)
     })
-  }
-
-  #refreshCrossReferences(): void {
-    this.#models.forEach((model) => model.refreshCrossReferences())
   }
 
   #refreshIntersectingNotes(): void {
