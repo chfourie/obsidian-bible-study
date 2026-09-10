@@ -1,5 +1,5 @@
 import type { Plugin } from 'obsidian'
-import { PluginFeature } from '../data-access'
+import { DEFAULT_SETTINGS, PluginFeature } from '../data-access'
 import type { Reference } from '../reference'
 import type { CrossReferenceCatalog } from './cross-reference-catalog'
 import type { CrossReferenceNoteVault } from './cross-reference-note-vault'
@@ -60,7 +60,7 @@ export class CrossReferencesFeature extends PluginFeature {
     summary: string | null,
   ): Promise<CreatedCrossReferenceNote> {
     return createCrossReferenceNote(this.#noteVault, members, summary, {
-      folder: this.settings.crossReferencesFolder,
+      folder: this.#notesFolder(),
       templatePath: this.settings.crossReferenceTemplatePath,
     })
   }
@@ -92,6 +92,12 @@ export class CrossReferencesFeature extends PluginFeature {
   override unload(): void {
     if (this.#pendingFollow !== null) window.clearTimeout(this.#pendingFollow)
     this.#pendingFollow = null
+  }
+
+  // A vault that kept the data file at the root persisted an empty folder;
+  // notes never go to the root, so that reads as the default.
+  #notesFolder(): string {
+    return this.settings.crossReferencesFolder || DEFAULT_SETTINGS.crossReferencesFolder
   }
 
   #configuredPath(): string {

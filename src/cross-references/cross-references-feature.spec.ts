@@ -231,6 +231,15 @@ describe('creating a cross-reference note from the strip', () => {
     expect(notes.has('PKM/Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(true)
   })
 
+  it('lands notes in the default folder when the persisted folder is the old empty root', async () => {
+    const { feature, notes } = noteHarness()
+    feature.useSettings({ ...DEFAULT_SETTINGS, crossReferencesFolder: '' })
+
+    await feature.catalog.create(vine, null)
+
+    expect(notes.has('Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(true)
+  })
+
   it('suffixes a second note with the same generated name', async () => {
     const { feature, notes } = noteHarness()
 
