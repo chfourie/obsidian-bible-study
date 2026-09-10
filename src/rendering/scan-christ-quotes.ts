@@ -7,14 +7,13 @@ export const CLOSING_MARK: Record<ChristQuoteMark, string> = {
   '“': '”',
 }
 
-// A lowercase c starting a word, then an optional escape backslash, then a
-// straight or curly opening mark. Matched per line, so ^ is the line start.
-// The word boundary is a captured character rather than a lookbehind, which
-// older iOS lacks; scanning resumes on the mark so it can bound the next c.
+// The word boundary before the c is a captured character rather than a
+// lookbehind, which older iOS lacks; scanning therefore resumes on a closing
+// mark, not after it, so that mark can bound the next c.
 const CHRIST_QUOTE_OPENING = /(^|[\s\p{P}])c(\\?)(["“])/gu
 
 export type ChristQuoteOpening = {
-  marker: number
+  prefix: number
   escaped: boolean
   mark: ChristQuoteMark
 }
@@ -27,49 +26,56 @@ export const nextChristQuoteOpening = (
   const match = CHRIST_QUOTE_OPENING.exec(text)
   if (!match) return null
   return {
-    marker: match.index + match[1].length,
+    prefix: match.index + match[1].length,
     escaped: match[2] !== '',
     mark: match[3] as ChristQuoteMark,
   }
 }
 
 export type ChristQuote = {
-  marker: number
-  open: number
+  prefix: number
   close: number
 }
 
 export type ChristQuoteCandidate = {
-  marker: number
+  prefix: number
   mark: ChristQuoteMark
   escaped: boolean
   lineIndex: number
-  quote: ChristQuote | null
+  close: number | null
 }
 
+const ATX_HEADING = /^ {0,3}#{1,6}(\s|$)/
+
 const isBlank = (line: BodyLine): boolean => line.text.trim() === ''
+
+const isHeading = (line: BodyLine): boolean => ATX_HEADING.test(line.text)
 
 const paragraphs = (lines: BodyLine[]): BodyLine[][] => {
   const found: BodyLine[][] = []
   let current: BodyLine[] = []
   let previousIndex = -1
+  let previousWasHeading = false
   for (const line of lines) {
-    const continues = !isBlank(line) && line.index === previousIndex + 1
+    const continues =
+      !isBlank(line) &&
+      !isHeading(line) &&
+      !previousWasHeading &&
+      line.index === previousIndex + 1
     if (!continues && current.length > 0) {
       found.push(current)
       current = []
     }
     if (!isBlank(line)) current.push(line)
     previousIndex = line.index
+    previousWasHeading = isHeading(line)
   }
   if (current.length > 0) found.push(current)
   return found
 }
 
-type MaskedLine = { start: number; index: number; text: string }
-
 const closingMarkOffset = (
-  lines: MaskedLine[],
+  lines: BodyLine[],
   lineAt: number,
   from: number,
   closing: string,
@@ -85,9 +91,8 @@ const scanParagraph = (
   paragraph: BodyLine[],
   found: ChristQuoteCandidate[],
 ): void => {
-  const lines: MaskedLine[] = paragraph.map((line) => ({
-    start: line.start,
-    index: line.index,
+  const lines = paragraph.map((line) => ({
+    ...line,
     text: maskInlineCodeSpans(line.text),
   }))
   let lineAt = 0
@@ -100,16 +105,15 @@ const scanParagraph = (
       from = 0
       continue
     }
-    const marker = line.start + opening.marker
     const candidate: ChristQuoteCandidate = {
-      marker,
+      prefix: line.start + opening.prefix,
       mark: opening.mark,
       escaped: opening.escaped,
       lineIndex: line.index,
-      quote: null,
+      close: null,
     }
     found.push(candidate)
-    const markAt = opening.marker + (opening.escaped ? 2 : 1)
+    const markAt = opening.prefix + (opening.escaped ? 2 : 1)
     from = markAt
     if (candidate.escaped) continue
     const close = closingMarkOffset(
@@ -119,16 +123,12 @@ const scanParagraph = (
       CLOSING_MARK[opening.mark],
     )
     if (close === null) continue
-    candidate.quote = { marker, open: marker + 1, close }
+    candidate.close = close
     while (lines[lineAt].start + lines[lineAt].text.length <= close) lineAt++
     from = close - lines[lineAt].start
   }
 }
 
-// Every word-start c before a double-quote mark in the note body, escaped or
-// not, in source order; the quote is set when a matching closing mark follows
-// in the same paragraph. Inline code, fenced code and frontmatter never take
-// part.
 export const scanChristQuoteCandidates = (
   noteSource: string,
 ): ChristQuoteCandidate[] => {
@@ -141,6 +141,6 @@ export const scanChristQuoteCandidates = (
 }
 
 export const scanChristQuotes = (noteSource: string): ChristQuote[] =>
-  scanChristQuoteCandidates(noteSource).flatMap((candidate) =>
-    candidate.quote ? [candidate.quote] : [],
+  scanChristQuoteCandidates(noteSource).flatMap(({ prefix, close }) =>
+    close === null ? [] : [{ prefix, close }],
   )

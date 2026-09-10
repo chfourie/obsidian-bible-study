@@ -317,6 +317,16 @@ describe('processRenderedElement', () => {
       expect(root.textContent).toBe('Isaac"laughed" and C"no" but ("yes")')
     })
 
+    it('trusts the source over a c the rendered text alone puts at a word start', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>Isa<mark>a</mark>c"laughed"</p>'
+
+      await process(root, deps, 'Isa==a==c"laughed"')
+
+      expect(redLetterTexts(root)).toEqual([])
+      expect(root.textContent).toBe('Isaac"laughed"')
+    })
+
     it('leaves an unterminated quote unchanged', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p>c"Abide in me</p>'
@@ -337,6 +347,16 @@ describe('processRenderedElement', () => {
       expect(root.textContent).toBe('c"Abide in meand I in you"')
     })
 
+    it('lets a heading end the paragraph a quote opened in', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>c"Abide</p><h1>heading c"x" more"</h1>'
+
+      await process(root, deps, 'c"Abide\n# heading c"x" more"')
+
+      expect(redLetterTexts(root)).toEqual(['"x"'])
+      expect(root.textContent).toBe('c"Abideheading "x" more"')
+    })
+
     it('never decorates inside code or pre elements', async () => {
       const { root, deps } = setup()
       root.innerHTML =
@@ -347,7 +367,9 @@ describe('processRenderedElement', () => {
       expect(redLetterTexts(root)).toEqual([])
     })
 
-    it('leaves a quote alone whose marks the source puts in a code span', async () => {
+    // Placeholder until #155 wraps across sibling nodes: the source closes
+    // this quote at the final mark, so the whole of it should then turn red.
+    it('leaves a quote alone, for now, whose close sits past an inline code span', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p>c"Abide <code>"</code> in me"</p>'
 

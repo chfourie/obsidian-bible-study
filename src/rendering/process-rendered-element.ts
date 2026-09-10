@@ -103,72 +103,82 @@ type SourceCandidate = {
   match: ReferenceMatch | null
 }
 
+class OccurrenceQueue<Key, Occurrence> {
+  readonly #byKey = new Map<Key, Occurrence[]>()
+
+  push(key: Key, occurrence: Occurrence): void {
+    const queued = this.#byKey.get(key) ?? []
+    queued.push(occurrence)
+    this.#byKey.set(key, queued)
+  }
+
+  consumeNext(key: Key): Occurrence | undefined {
+    return this.#byKey.get(key)?.shift()
+  }
+}
+
 // Source candidates per inner text, in section order. Markdown rendering
 // swallows the escape backslash, so the DOM alone cannot tell an escaped
 // occurrence from a genuine one, nor resolve a relative reference; matching
 // each rendered occurrence against the source positionally (per inner text)
 // recovers both.
-class SectionCandidates {
-  readonly #byInner = new Map<string, SourceCandidate[]>()
-
-  constructor(
-    section: RenderedSection,
-    context: RenderContext,
-    scans: NoteScanCache,
-  ) {
-    const matchesByStart = new Map(
-      scans
-        .matches(section.noteSource, context.knownTranslationIds)
-        .map((match) => [match.start, match]),
-    )
-    const sectionLines = bodyLines(section.noteSource).filter(
-      (line) => line.index >= section.lineStart && line.index <= section.lineEnd,
-    )
-    for (const line of sectionLines) {
-      for (const match of maskInlineCodeSpans(line.text).matchAll(
-        CANDIDATE_PATTERN,
-      )) {
-        const escaped = match[0].startsWith('\\')
-        const braceStart = line.start + match.index + (escaped ? 1 : 0)
-        const candidates = this.#byInner.get(match[1]) ?? []
-        candidates.push({
-          escaped,
-          match: matchesByStart.get(braceStart) ?? null,
-        })
-        this.#byInner.set(match[1], candidates)
-      }
+const sectionCandidates = (
+  section: RenderedSection,
+  context: RenderContext,
+  scans: NoteScanCache,
+): OccurrenceQueue<string, SourceCandidate> => {
+  const queue = new OccurrenceQueue<string, SourceCandidate>()
+  const matchesByStart = new Map(
+    scans
+      .matches(section.noteSource, context.knownTranslationIds)
+      .map((match) => [match.start, match]),
+  )
+  const sectionLines = bodyLines(section.noteSource).filter(
+    (line) => line.index >= section.lineStart && line.index <= section.lineEnd,
+  )
+  for (const line of sectionLines) {
+    for (const match of maskInlineCodeSpans(line.text).matchAll(
+      CANDIDATE_PATTERN,
+    )) {
+      const escaped = match[0].startsWith('\\')
+      const braceStart = line.start + match.index + (escaped ? 1 : 0)
+      queue.push(match[1], {
+        escaped,
+        match: matchesByStart.get(braceStart) ?? null,
+      })
     }
   }
-
-  consumeNextOccurrence(inner: string): SourceCandidate | undefined {
-    return this.#byInner.get(inner)?.shift()
-  }
+  return queue
 }
 
 // Source candidates per opening-mark kind, in section order; the rendered
 // text keeps the c and the mark but loses the escape backslash and every
 // paragraph edge, so the source says which occurrences are quotes at all.
+// Inline markup can split a word so that a rendered node starts mid-word,
+// which is why an occurrence the source never saw is no quote either.
 class SectionQuoteCandidates {
-  readonly #byMark = new Map<ChristQuoteMark, ChristQuoteCandidate[]>()
+  readonly #byMark = new OccurrenceQueue<
+    ChristQuoteMark,
+    ChristQuoteCandidate
+  >()
+  readonly #sourceSupplied: boolean
 
   constructor(section: RenderedSection, scans: NoteScanCache) {
+    this.#sourceSupplied = section.noteSource !== ''
     for (const candidate of scans.christQuoteCandidates(section.noteSource)) {
       if (
-        candidate.lineIndex < section.lineStart ||
-        candidate.lineIndex > section.lineEnd
+        candidate.lineIndex >= section.lineStart &&
+        candidate.lineIndex <= section.lineEnd
       ) {
-        continue
+        this.#byMark.push(candidate.mark, candidate)
       }
-      const candidates = this.#byMark.get(candidate.mark) ?? []
-      candidates.push(candidate)
-      this.#byMark.set(candidate.mark, candidates)
     }
   }
 
-  consumeNextOccurrence(
-    mark: ChristQuoteMark,
-  ): ChristQuoteCandidate | undefined {
-    return this.#byMark.get(mark)?.shift()
+  nextOccurrenceIsQuote(mark: ChristQuoteMark): boolean {
+    const candidate = this.#byMark.consumeNext(mark)
+    if (candidate === undefined) return !this.#sourceSupplied
+    return !candidate.escaped && candidate.close !== null
   }
 }
 
@@ -191,30 +201,30 @@ const decorateChristQuotes = (
 ): void => {
   let node = first
   let from = 0
-  for (
-    let opening = nextChristQuoteOpening(node.data, from);
-    opening;
-    opening = nextChristQuoteOpening(node.data, from)
-  ) {
-    const { marker, mark } = opening
-    const candidate = candidates.consumeNextOccurrence(mark)
-    if (opening.escaped) node.deleteData(marker + 1, 1)
-    const markAt = marker + 1
+  let opening = nextChristQuoteOpening(node.data, from)
+  while (opening) {
+    const { prefix, mark, escaped } = opening
+    const isQuote = candidates.nextOccurrenceIsQuote(mark) && !escaped
+    if (escaped) node.deleteData(prefix + 1, 1)
+    const markAt = prefix + 1
     from = markAt
-    if (opening.escaped || candidate?.escaped || candidate?.quote === null) {
-      continue
+    const close = isQuote
+      ? node.data.indexOf(CLOSING_MARK[mark], markAt + 1)
+      : -1
+    if (close !== -1) {
+      node.deleteData(prefix, 1)
+      const span = wrapChristQuote(
+        { node, offset: prefix },
+        { node, offset: close - 1 },
+      )
+      const rest = span.nextSibling
+      // nodeType rather than instanceof Text: a popout window's nodes are
+      // not instances of this window's constructors.
+      if (rest?.nodeType !== Node.TEXT_NODE) return
+      node = rest as Text
+      from = 0
     }
-    const close = node.data.indexOf(CLOSING_MARK[mark], markAt + 1)
-    if (close === -1) continue
-    node.deleteData(marker, 1)
-    const span = wrapChristQuote(
-      { node, offset: marker },
-      { node, offset: close - 1 },
-    )
-    const rest = span.nextSibling
-    if (rest?.nodeType !== Node.TEXT_NODE) return
-    node = rest as Text
-    from = 0
+    opening = nextChristQuoteOpening(node.data, from)
   }
 }
 
@@ -236,7 +246,7 @@ const processTextNode = (
   node: Text,
   context: RenderContext,
   deps: ReferenceRenderDeps,
-  candidates: SectionCandidates,
+  candidates: OccurrenceQueue<string, SourceCandidate>,
   sourcePath: string | null,
 ): Promise<void>[] => {
   const text = node.textContent ?? ''
@@ -245,7 +255,7 @@ const processTextNode = (
   let consumed = 0
   for (const match of text.matchAll(CANDIDATE_PATTERN)) {
     const [candidate, inner] = match
-    const sourceCandidate = candidates.consumeNextOccurrence(inner)
+    const sourceCandidate = candidates.consumeNext(inner)
     if (candidate.startsWith('\\')) {
       parts.push(text.slice(consumed, match.index), candidate.slice(1))
       consumed = match.index + candidate.length
@@ -278,7 +288,7 @@ export const processRenderedElement = async (
   for (const node of textNodesUnder(root)) {
     decorateChristQuotes(node, quoteCandidates)
   }
-  const candidates = new SectionCandidates(section, context, scans)
+  const candidates = sectionCandidates(section, context, scans)
   const renders = textNodesUnder(root).flatMap((node) =>
     processTextNode(node, context, deps, candidates, sourcePath),
   )
