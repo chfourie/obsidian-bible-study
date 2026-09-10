@@ -4,8 +4,7 @@ import {
   type FrontmatterKeyBlock,
 } from '../notes'
 import { formatReference, type Reference } from '../reference'
-
-export const CROSS_REFERENCE_NOTE_TYPE = 'cross-reference'
+import { CROSS_REFERENCE_NOTE_TYPE } from '../vault-index'
 
 // A plain YAML scalar is anything the parser could not mistake for
 // structure; everything else is written as a JSON string, which YAML reads.

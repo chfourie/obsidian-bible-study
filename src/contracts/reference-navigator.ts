@@ -1,5 +1,12 @@
-import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
+
+// A cross-reference note as the strip edits it: its path is the handle, its
+// members and summary the frontmatter it will write back (ADR 0015).
+export type CrossReference = {
+  path: string
+  members: Reference[]
+  summary: string | null
+}
 
 // Words the opened passage emphasizes, addressed as character offsets into
 // one atom's stored text in the translation the caller searched. Computed by
@@ -31,9 +38,8 @@ export interface ReferenceNavigator {
   ): void
   // Opens a vault note; the new-pane modifier is honoured as for references.
   openNote(file: string, options?: NavigationOptions): void
-  // Edits an existing cross-reference note (its path as the entry's id):
-  // opens the reader at one of its members and loads the editing strip with
-  // all of them.
+  // Edits an existing cross-reference note: opens the reader at one of its
+  // members and loads the editing strip with all of them.
   editCrossReference(
     entry: CrossReference,
     translationId: string | null,

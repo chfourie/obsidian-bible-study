@@ -4,7 +4,7 @@ import { bookAtomKind, type Reference } from '../reference'
 import { opensInNewPane } from '../ui'
 import {
   isAnnotation,
-  isMention,
+  isCrossReference,
   noteTitle,
   type OccurrenceGroup,
 } from '../vault-index'
@@ -118,10 +118,7 @@ const renderIntersections = (
   const intersectingGroups = (): OccurrenceGroup[] =>
     intersections
       .intersecting(model.reference)
-      .filter(
-        (group) =>
-          group.file !== sourcePath && (isAnnotation(group) || isMention(group)),
-      )
+      .filter((group) => group.file !== sourcePath && !isCrossReference(group))
   const groups = intersectingGroups()
   if (groups.length === 0) return
 

@@ -43,7 +43,7 @@ afterEach(uninstallHumilityBook)
 
 describe('crossReferenceView', () => {
   it('carries the note path, summary and body flag beside the members', () => {
-    const view = crossReferenceView('Cross-References/Pride.md', mixed, [])
+    const view = crossReferenceView('Cross-References/Pride.md', mixed)
 
     expect(view).toEqual({
       path: 'Cross-References/Pride.md',
@@ -57,14 +57,13 @@ describe('crossReferenceView', () => {
           index: 1,
         },
       ],
-      allMembers: mixed.members,
     })
   })
 
   it('degrades a member of an uninstalled book to its numeric label', () => {
     uninstallHumilityBook()
 
-    const view = crossReferenceView('pride.md', mixed, [])
+    const view = crossReferenceView('pride.md', mixed)
 
     expect(view.members.map((member) => member.label)).toEqual([
       'John 15:5',
@@ -72,12 +71,6 @@ describe('crossReferenceView', () => {
     ])
   })
 
-  it('drops the book members already on screen, as it does for scripture', () => {
-    const view = crossReferenceView('pride.md', mixed, [atom(HUMILITY_BOOK, 1, 2)])
-
-    expect(view.members.map((member) => member.label)).toEqual(['John 15:5'])
-    expect(view.allMembers).toHaveLength(2)
-  })
 })
 
 describe('crossReferenceViews', () => {
@@ -87,7 +80,6 @@ describe('crossReferenceViews', () => {
         group('a.md', mixed, 'cross-reference-frontmatter'),
         group('b.md', { ...mixed, summary: null }, 'body', 'cross-reference-frontmatter'),
       ],
-      [],
     )
 
     expect(views.map((view) => [view.path, view.summary])).toEqual([
@@ -99,14 +91,13 @@ describe('crossReferenceViews', () => {
   it('leaves out annotations and mentions', () => {
     const views = crossReferenceViews(
       [group('mention.md', null, 'body'), group('anno.md', null, 'annotation-frontmatter')],
-      [],
     )
 
     expect(views).toEqual([])
   })
 
   it('leaves out a cross-reference note only its body brings in', () => {
-    const views = crossReferenceViews([group('body-only.md', mixed, 'body')], [])
+    const views = crossReferenceViews([group('body-only.md', mixed, 'body')])
 
     expect(views).toEqual([])
   })

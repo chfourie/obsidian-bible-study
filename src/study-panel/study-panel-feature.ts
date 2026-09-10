@@ -11,8 +11,8 @@ import {
   type WordCloudWordView,
   type WordStudyOpener,
   type WordStudyOptions,
+  type CrossReference,
 } from '../contracts'
-import type { CrossReference } from '../cross-references'
 import { readAnnotationDetails } from '../annotations'
 import { PluginFeature } from '../data-access'
 import type { ModuleStore } from '../modules'

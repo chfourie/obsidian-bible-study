@@ -3,40 +3,30 @@ import {
   parseReference,
   scanReferenceMatches,
   type ParseOptions,
+  type Reference,
 } from '../reference'
-import { crossReferenceFrontmatter } from './cross-reference-frontmatter'
+import {
+  crossReferenceFrontmatter,
+  frontmatterScalar,
+} from './cross-reference-frontmatter'
 import type { Occurrence } from './occurrence'
 
 export type ExtractedOccurrence = Omit<Occurrence, 'file'> & {
   translation: string | null
 }
 
-// What the index keeps of a cross-reference note beyond its occurrences: the
-// summary the Study Panel row prints and whether the body holds anything.
-export type CrossReferenceNote = {
+// What a cross-reference note declares (ADR 0015): its parseable members in
+// frontmatter order, the summary the Study Panel row prints and whether the
+// body holds anything.
+export type CrossReferenceDeclaration = {
+  members: Reference[]
   summary: string | null
   hasBody: boolean
 }
 
 export type ExtractedNote = {
   occurrences: ExtractedOccurrence[]
-  crossReference: CrossReferenceNote | null
-}
-
-const FRONTMATTER_REF_PATTERN = /^ref:[ \t]*(.*?)[ \t]*$/m
-
-const unquote = (value: string): string =>
-  value.length >= 2 &&
-  (value[0] === '"' || value[0] === "'") &&
-  value.endsWith(value[0])
-    ? value.slice(1, -1)
-    : value
-
-const frontmatterRef = (frontmatter: string): string | null => {
-  const match = FRONTMATTER_REF_PATTERN.exec(frontmatter)
-  if (!match) return null
-  const value = unquote(match[1])
-  return value === '' ? null : value
+  crossReference: CrossReferenceDeclaration | null
 }
 
 const frontmatterOccurrence = (
@@ -58,11 +48,24 @@ const annotationOccurrence = (
   frontmatter: string,
   options: ParseOptions,
 ): ExtractedOccurrence | null => {
-  const ref = frontmatterRef(frontmatter)
+  const ref = frontmatterScalar(frontmatter, 'ref')
   return ref === null
     ? null
     : frontmatterOccurrence(ref, 'annotation-frontmatter', options)
 }
+
+const memberOccurrences = (
+  members: readonly string[],
+  options: ParseOptions,
+): ExtractedOccurrence[] =>
+  members.flatMap((member) => {
+    const occurrence = frontmatterOccurrence(
+      member,
+      'cross-reference-frontmatter',
+      options,
+    )
+    return occurrence ? [occurrence] : []
+  })
 
 const hasBody = (content: string, frontmatterEnd: number): boolean =>
   content.slice(frontmatterEnd).trim() !== ''
@@ -77,14 +80,8 @@ export const extractNote = (
   const annotation = annotationOccurrence(frontmatter, options)
   if (annotation) occurrences.push(annotation)
   const declared = crossReferenceFrontmatter(frontmatter)
-  for (const member of declared?.members ?? []) {
-    const occurrence = frontmatterOccurrence(
-      member,
-      'cross-reference-frontmatter',
-      options,
-    )
-    if (occurrence) occurrences.push(occurrence)
-  }
+  const members = memberOccurrences(declared?.members ?? [], options)
+  occurrences.push(...members)
   for (const match of scanReferenceMatches(content, options)) {
     occurrences.push({
       position: match.start,
@@ -98,7 +95,11 @@ export const extractNote = (
     crossReference:
       declared === null
         ? null
-        : { summary: declared.summary, hasBody: hasBody(content, frontmatterEnd) },
+        : {
+            members: members.map((member) => member.reference),
+            summary: declared.summary,
+            hasBody: hasBody(content, frontmatterEnd),
+          },
   }
 }
 

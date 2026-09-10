@@ -210,7 +210,7 @@ describe('creating a cross-reference note from the strip', () => {
   it('writes the note with the three keys into the default folder, created on demand', async () => {
     const { feature, notes, folders } = noteHarness()
 
-    await feature.catalog.create(vine, 'Vine imagery')
+    await feature.editing.create(vine, 'Vine imagery')
 
     expect(folders.has('Cross-References')).toBe(true)
     expect(notes.get('Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(
@@ -222,7 +222,7 @@ describe('creating a cross-reference note from the strip', () => {
     const { feature, notes } = noteHarness()
     feature.useSettings({ ...DEFAULT_SETTINGS, crossReferencesFolder: 'PKM/Cross-References' })
 
-    await feature.catalog.create(vine, null)
+    await feature.editing.create(vine, null)
 
     expect(notes.has('PKM/Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(true)
   })
@@ -231,7 +231,7 @@ describe('creating a cross-reference note from the strip', () => {
     const { feature, notes } = noteHarness()
     feature.useSettings({ ...DEFAULT_SETTINGS, crossReferencesFolder: '' })
 
-    await feature.catalog.create(vine, null)
+    await feature.editing.create(vine, null)
 
     expect(notes.has('Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(true)
   })
@@ -239,8 +239,8 @@ describe('creating a cross-reference note from the strip', () => {
   it('suffixes a second note with the same generated name', async () => {
     const { feature, notes } = noteHarness()
 
-    await feature.catalog.create(vine, 'first')
-    await feature.catalog.create(vine, 'second')
+    await feature.editing.create(vine, 'first')
+    await feature.editing.create(vine, 'second')
 
     expect(notes.get('Cross-References/John 15.1-8 + Psalms 80.8-16 1.md')).toContain(
       'summary: second',
@@ -256,7 +256,7 @@ describe('creating a cross-reference note from the strip', () => {
       crossReferenceTemplatePath: 'Templates/Cross-reference.md',
     })
 
-    await feature.catalog.create(vine, 'Vine imagery')
+    await feature.editing.create(vine, 'Vine imagery')
 
     expect(notes.get('Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(
       '---\ntype: cross-reference\ntags: study\nrefs:\n  - John 15:1-8\n  - Psalms 80:8-16\nsummary: Vine imagery\n---\n## Why\n',
@@ -266,7 +266,7 @@ describe('creating a cross-reference note from the strip', () => {
   it('leaves the data file untouched', async () => {
     const { feature } = noteHarness()
 
-    await feature.catalog.create(vine, 'Vine imagery')
+    await feature.editing.create(vine, 'Vine imagery')
 
     expect(feature.store.all()).toEqual([])
   })
@@ -274,7 +274,7 @@ describe('creating a cross-reference note from the strip', () => {
   it('hands the created note to the index at once', async () => {
     const { feature, notes, indexed } = noteHarness()
 
-    await feature.catalog.create(vine, 'Vine imagery')
+    await feature.editing.create(vine, 'Vine imagery')
 
     const path = 'Cross-References/John 15.1-8 + Psalms 80.8-16.md'
     expect(indexed).toEqual([[path, notes.get(path)]])
@@ -283,10 +283,10 @@ describe('creating a cross-reference note from the strip', () => {
   it('refuses to change or delete a note in place for now', async () => {
     const { feature } = noteHarness()
 
-    await expect(feature.catalog.update('vine.md', vine, null)).rejects.toThrow(
+    await expect(feature.editing.update('vine.md', vine, null)).rejects.toThrow(
       'not supported yet',
     )
-    await expect(feature.catalog.delete('vine.md')).rejects.toThrow(
+    await expect(feature.editing.delete('vine.md')).rejects.toThrow(
       'not supported yet',
     )
   })

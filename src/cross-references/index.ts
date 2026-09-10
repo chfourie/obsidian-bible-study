@@ -1,6 +1,6 @@
 export * from './compose-cross-reference-note'
 export * from './create-cross-reference-note'
-export * from './cross-reference-catalog'
+export * from './cross-reference-editing'
 export * from './cross-reference-file-path'
 export * from './cross-reference-store'
 export * from './cross-reference-vault'

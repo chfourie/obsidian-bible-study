@@ -22,7 +22,6 @@ import {
   CROSS_REFERENCE_MINIMUM_MEMBERS,
   crossReferenceViews,
   orderCrossReferences,
-  type CrossReference,
   type CrossReferenceEditing,
   type CrossReferenceView,
 } from '../cross-references'
@@ -54,6 +53,7 @@ import type {
   VerseDetailsView,
   WordCloudSourceView,
   WordCloudView,
+  CrossReference,
 } from '../contracts'
 import {
   ATOM_NUMBERS_FACTORY,
@@ -84,7 +84,12 @@ import { strongsFamily } from '../modules'
 import type { Epigraph, Figure, HeadingLevel } from '../modules'
 
 export { FONT_SCALE_MAX, FONT_SCALE_MIN, FONT_SCALE_STEP }
-import { isAnnotation, isMention, type OccurrenceGroup } from '../vault-index'
+import {
+  isAnnotation,
+  isCrossReference,
+  isMention,
+  type OccurrenceGroup,
+} from '../vault-index'
 
 export type ReaderToggles = {
   nav: 'tree' | 'breadcrumb'
@@ -1172,8 +1177,8 @@ export class ReaderPaneModel implements StudyMaterialSource {
       members: [...entry.members],
       error: null,
       confirmingDelete: false,
-      editing: entry.id,
-      description: entry.description ?? '',
+      editing: entry.path,
+      description: entry.summary ?? '',
       typed: '',
     }
     this.#notify()
@@ -1572,7 +1577,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     // the chapter's cross-references, never as a mention (spec §5a).
     this.#markers = verseMarkers(
       groups
-        .filter((group) => isAnnotation(group) || isMention(group))
+        .filter((group) => !isCrossReference(group))
         .map((group) => ({
           file: group.file,
           annotation: isAnnotation(group),
@@ -1586,7 +1591,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     // reader can see which verses of it a cross-reference touches — and the
     // ordering leads with those, so the passage on screen anchors the row.
     this.#chapterCrossReferences = orderCrossReferences(
-      crossReferenceViews(groups, []),
+      crossReferenceViews(groups),
       [chapter],
     )
     this.#rows = this.#withMarkers(this.#rows)

@@ -11,6 +11,7 @@ opens the reference in the reader with the entry's translation.
   import type { VerseSegment } from '../rendering'
   import ChapterAnnotationList from '../study-material/ChapterAnnotationList.svelte'
   import ChapterMentionList from '../study-material/ChapterMentionList.svelte'
+  import CrossReferenceRow from '../study-material/CrossReferenceRow.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
   import type { StudyMaterialHost } from '../study-material'
   import { activate, icon, opensInNewPane } from '../ui'
@@ -48,12 +49,12 @@ opens the reference in the reader with the entry's translation.
     })
   }
 
-  const editCrossReference = (path: string, event: MouseEvent): void => {
-    model.editCrossReference(path, { newPane: opensInNewPane(event) })
+  const editCrossReference = (
+    entry: CrossReferenceView,
+    event: MouseEvent,
+  ): void => {
+    model.editCrossReference(entry.path, { newPane: opensInNewPane(event) })
   }
-
-  const noteTooltip = (entry: CrossReferenceView): string =>
-    entry.hasBody ? 'Open note (has notes)' : 'Open note'
 </script>
 
 <!-- Supplied words and Editorial marks paint here as everywhere else
@@ -112,44 +113,13 @@ opens the reference in the reader with the entry's translation.
         <div class="bsp-xrefs">
           <div class="bsp-group-label">Cross-references</div>
           {#each view.crossReferences as entry, index (entry.path)}
-            {#if index > 0}
-              <hr class="bsp-xref-divider" />
-            {/if}
-            <div class="bsp-xref-block">
-              <div class="bsp-xref-actions">
-                <button
-                  type="button"
-                  class="bsp-xref-action"
-                  aria-label="Edit cross-reference in the reader"
-                  onclick={(event) => editCrossReference(entry.path, event)}
-                >✎</button>
-                <button
-                  type="button"
-                  class="bsp-xref-action bsp-xref-note"
-                  class:bsp-xref-note-filled={entry.hasBody}
-                  aria-label={noteTooltip(entry)}
-                  title={noteTooltip(entry)}
-                  use:icon={'file-text'}
-                  onclick={(event) =>
-                    host.openNote(entry.path, { newPane: opensInNewPane(event) })}
-                ></button>
-              </div>
-              {#if entry.summary !== null}
-                <div class="bsp-xref-summary">{entry.summary}</div>
-              {/if}
-              <div class="bsp-xref-members">
-                {#each entry.members as member (member.index)}
-                  <button
-                    type="button"
-                    class="bsp-xref-member"
-                    onclick={(event) =>
-                      openReference(member.reference, null, {
-                        newPane: opensInNewPane(event),
-                      })}
-                  >{member.label}</button>
-                {/each}
-              </div>
-            </div>
+            <CrossReferenceRow
+              {entry}
+              divided={index > 0}
+              edit={editCrossReference}
+              openNote={host.openNote}
+              openReference={host.openReference}
+            />
           {/each}
         </div>
       {/if}
@@ -354,107 +324,6 @@ opens the reference in the reader with the entry's translation.
     font-size: var(--font-ui-smaller);
     font-weight: 600;
     text-transform: uppercase;
-  }
-
-  /* The whole block is one hover target: anywhere over the summary or its
-     members reveals the two icons anchored to the block. */
-  .bsp-xref-block {
-    position: relative;
-    margin: 2px -4px;
-    padding: 2px 44px 2px 4px;
-    border-radius: 4px;
-    font-size: var(--font-ui-small);
-  }
-
-  .bsp-xref-block:hover {
-    background: var(--background-modifier-hover);
-  }
-
-  /* Item-level divider: the same subordinate rule the reader draws between
-     its own cross-references. */
-  .bsp-xref-divider {
-    width: 2.5rem;
-    margin: 8px 0;
-    border: none;
-    border-top: 1px solid var(--background-modifier-border);
-  }
-
-  .bsp-xref-summary {
-    color: var(--text-muted);
-  }
-
-  .bsp-xref-actions {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    opacity: 0;
-  }
-
-  .bsp-xref-block:hover .bsp-xref-actions,
-  .bsp-xref-actions:focus-within {
-    opacity: 1;
-  }
-
-  .bsp-xref-action {
-    display: flex;
-    align-items: flex-start;
-    background: none;
-    border: none;
-    box-shadow: none;
-    width: auto;
-    height: auto;
-    min-height: 0;
-    padding: 0;
-    line-height: 1;
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsp-xref-action:hover {
-    color: var(--text-accent);
-  }
-
-  .bsp-xref-note :global(svg) {
-    width: var(--icon-s);
-    height: var(--icon-s);
-  }
-
-  /* A note with something written in it shows a filled page; an empty one
-     stays an outline (spec §5a). */
-  .bsp-xref-note-filled :global(svg) {
-    fill: currentColor;
-    fill-opacity: 0.35;
-  }
-
-  .bsp-xref-members {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-    margin-top: 2px;
-  }
-
-  .bsp-xref-member {
-    display: inline;
-    padding: 0;
-    margin: 0;
-    border: none;
-    border-radius: 0;
-    background: none;
-    box-shadow: none;
-    height: auto;
-    font-size: inherit;
-    text-align: left;
-    color: var(--text-accent);
-    cursor: pointer;
-  }
-
-  .bsp-xref-member:hover {
-    text-decoration: underline;
-    background: none;
-    box-shadow: none;
   }
 
   .bsp-entry {

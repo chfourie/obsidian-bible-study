@@ -10,11 +10,11 @@ import type {
   NavigationOptions,
   StudyMaterial,
   StudyMaterialSource,
+  CrossReference,
 } from '../contracts'
 import {
   crossReferenceViews,
   orderCrossReferences,
-  type CrossReference,
   type CrossReferenceView,
 } from '../cross-references'
 import type { AnnotationOrdering } from '../data-access'
@@ -114,8 +114,7 @@ export type StudyPanelDeps = {
   passages: PassageSource
   extract: (content: string) => ExtractedOccurrence[]
   // The panel surfaces cross-references but never edits them in place: editing
-  // happens in the reader's strip, which lives outside the panel. The entry's
-  // id is the note path (ADR 0015).
+  // happens in the reader's strip, which lives outside the panel.
   editCrossReference: (
     entry: CrossReference,
     options?: NavigationOptions,
@@ -453,7 +452,7 @@ export class StudyPanelModel {
     // there is nothing to say what the others are references to. The rows
     // need no note read, so they land before the annotations do.
     this.#crossReferences = orderCrossReferences(
-      crossReferenceViews(groups, []),
+      crossReferenceViews(groups),
       references,
     )
     this.#notify()
@@ -489,9 +488,9 @@ export class StudyPanelModel {
     if (entry === undefined) return
     this.deps.editCrossReference(
       {
-        id: path,
-        members: entry.allMembers,
-        description: entry.summary,
+        path,
+        members: entry.members.map((member) => member.reference),
+        summary: entry.summary,
       },
       options,
     )

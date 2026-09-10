@@ -202,9 +202,9 @@ describe('ReaderFeature entry points', () => {
     const { feature, leaves } = harness()
     await feature.load()
     const entry = {
-      id: 'xr-vine',
+      path: 'Cross-References/Vine.md',
       members: [ref('John 15:1'), ref('Genesis 1:1')],
-      description: 'The vine',
+      summary: 'The vine',
     }
 
     feature.editCrossReference(entry, 'web')

@@ -1,13 +1,9 @@
 import { referencesIntersect, type Reference } from '../reference'
-import { extractNote, type CrossReferenceNote } from './extract-occurrences'
+import {
+  extractNote,
+  type CrossReferenceDeclaration,
+} from './extract-occurrences'
 import type { Occurrence } from './occurrence'
-
-// What a cross-reference note declares, carried whole on every group of it:
-// all its parseable members in frontmatter order — whether or not each lies
-// in the queried scope — with its summary and body flag.
-export type CrossReferenceDeclaration = CrossReferenceNote & {
-  members: Reference[]
-}
 
 export type OccurrenceGroup = {
   file: string
@@ -15,7 +11,9 @@ export type OccurrenceGroup = {
   // even when that reference itself lies outside the queried scope. Null for
   // plain mentions.
   annotationReference: Reference | null
-  // Null unless the note declares itself a cross-reference (ADR 0015).
+  // Null unless the note declares itself a cross-reference (ADR 0015),
+  // carried whole: every parseable member in frontmatter order, whether or
+  // not each lies in the queried scope.
   crossReference: CrossReferenceDeclaration | null
   occurrences: Occurrence[]
 }
@@ -41,7 +39,7 @@ export const isMention = (group: Classified): boolean =>
 
 type IndexedNote = {
   occurrences: Occurrence[]
-  crossReference: CrossReferenceNote | null
+  crossReference: CrossReferenceDeclaration | null
 }
 
 const sameReference = (a: Reference, b: Reference): boolean =>
@@ -66,15 +64,15 @@ const sameOccurrences = (a: Occurrence[], b: Occurrence[]): boolean =>
 const declaresInFrontmatter = (occurrences: Occurrence[]): boolean =>
   occurrences.some((occurrence) => occurrence.source !== 'body')
 
-const declaration = (note: IndexedNote): CrossReferenceDeclaration | null =>
-  note.crossReference === null
-    ? null
-    : {
-        ...note.crossReference,
-        members: note.occurrences
-          .filter((occurrence) => occurrence.source === 'cross-reference-frontmatter')
-          .map((occurrence) => occurrence.reference),
-      }
+// Members are compared through the occurrences; what is left to compare is
+// the summary and the body flag.
+const sameDeclaration = (
+  a: CrossReferenceDeclaration | null,
+  b: CrossReferenceDeclaration | null,
+): boolean =>
+  a === null || b === null
+    ? a === b
+    : a.summary === b.summary && a.hasBody === b.hasBody
 
 export class VaultReferenceIndex {
   readonly #notesByFile = new Map<string, IndexedNote>()
@@ -94,12 +92,16 @@ export class VaultReferenceIndex {
     const occurrences = extracted.occurrences.map(
       ({ position, reference, source }) => ({ position, reference, source, file }),
     )
-    const previous = this.#notesByFile.get(file)?.occurrences ?? []
+    const previous = this.#notesByFile.get(file)
     // Notes declaring themselves in frontmatter always notify: a body-only
     // edit leaves occurrences unchanged but the reader renders an
     // annotation's body and the panel flags a cross-reference's (spec §5,
     // §5a — modify events refresh on save).
-    if (!declaresInFrontmatter(occurrences) && sameOccurrences(previous, occurrences))
+    if (
+      !declaresInFrontmatter(occurrences) &&
+      sameOccurrences(previous?.occurrences ?? [], occurrences) &&
+      sameDeclaration(previous?.crossReference ?? null, extracted.crossReference)
+    )
       return
     if (occurrences.length > 0)
       this.#notesByFile.set(file, {
@@ -145,7 +147,7 @@ export class VaultReferenceIndex {
       groups.push({
         file: intersecting[0].file,
         annotationReference: frontmatter?.reference ?? null,
-        crossReference: declaration(note),
+        crossReference: note.crossReference,
         occurrences: intersecting,
       })
     }

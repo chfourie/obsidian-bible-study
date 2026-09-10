@@ -1,10 +1,10 @@
 import type {
+  CrossReference,
   NavigationOptions,
   StudyMaterialSource,
   WordCloudWordView,
   WordStudyOptions,
 } from '../contracts'
-import type { CrossReference } from '../cross-references'
 import type { Reference } from '../reference'
 import type { MenuItem } from '../ui'
 

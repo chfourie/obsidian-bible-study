@@ -23,13 +23,14 @@ import {
   installEnochBook,
   uninstallEnochBook,
 } from '../../tests/fixtures/enoch-book'
-import type {
-  CrossReference,
-  CrossReferenceEditing,
-} from '../cross-references'
+import type { CrossReferenceEditing } from '../cross-references'
 import { VaultReferenceIndex, type OccurrenceGroup } from '../vault-index'
 import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
-import type { StudyMaterialSource, VerseDetailsView } from '../contracts'
+import type {
+  CrossReference,
+  StudyMaterialSource,
+  VerseDetailsView,
+} from '../contracts'
 import {
   paragraphsOf,
   ReaderPaneModel,
@@ -2383,7 +2384,6 @@ describe('cross-references intersecting the viewed chapter', () => {
           { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
           { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
         ],
-        allMembers: vineMembers,
       },
     ])
   })
@@ -2522,7 +2522,6 @@ describe('cross-references intersecting the viewed chapter', () => {
           { label: 'John 16:1', reference: ref('John 16:1'), index: 0 },
           { label: 'Psalms 23:1', reference: ref('Psalm 23:1'), index: 1 },
         ],
-        allMembers: [ref('John 16:1'), ref('Psalm 23:1')],
       },
     ])
   })
@@ -2889,7 +2888,6 @@ describe('collecting a cross-reference', () => {
           { label: 'John 15:4', reference: ref('John 15:4'), index: 0 },
           { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
         ],
-        allMembers: [ref('John 15:4'), ref('Psalm 80:8-16')],
       },
     ])
   })
@@ -2897,9 +2895,9 @@ describe('collecting a cross-reference', () => {
 
 describe('editing an existing cross-reference in the strip', () => {
   const vine: CrossReference = {
-    id: 'xr-vine',
+    path: 'Cross-References/Vine.md',
     members: [ref('John 15:1-8'), ref('Psalm 80:8-16'), ref('Romans 11:17-24')],
-    description: 'Vine and vineyard imagery for Israel',
+    summary: 'Vine and vineyard imagery for Israel',
   }
 
   const gathered = (model: ReaderPaneModel): string[] =>
@@ -2953,15 +2951,15 @@ describe('editing an existing cross-reference in the strip', () => {
     ])
   })
 
-  it('saves the edited members and description back to the same id in one update', async () => {
+  it('saves the edited members and summary back to the same note in one update', async () => {
     const updates: {
-      id: string
+      path: string
       members: Reference[]
-      description: string | null
+      summary: string | null
     }[] = []
     const model = await editingModel({
-      update: async (id, members, description) => {
-        updates.push({ id, members, description })
+      update: async (path, members, summary) => {
+        updates.push({ path, members, summary })
       },
     })
     addTyped(model, 'Psalm 23:1')
@@ -2970,9 +2968,9 @@ describe('editing an existing cross-reference in the strip', () => {
 
     expect(updates).toEqual([
       {
-        id: 'xr-vine',
+        path: 'Cross-References/Vine.md',
         members: [...vine.members, ref('Psalm 23:1')],
-        description: 'Vine and vineyard imagery for Israel',
+        summary: 'Vine and vineyard imagery for Israel',
       },
     ])
     expect(model.studyMaterial.collection).toBe(null)
@@ -3064,7 +3062,7 @@ describe('editing an existing cross-reference in the strip', () => {
 
   it('deletes the edited cross-reference and closes the strip', async () => {
     const deleted: string[] = []
-    const vault = indexOver({ 'xr-vine': noteOf(vine.members, vine.description) })
+    const vault = indexOver({ 'Cross-References/Vine.md': noteOf(vine.members, vine.summary) })
     const model = await editingModel(
       {
         delete: async (path) => {
@@ -3078,7 +3076,7 @@ describe('editing an existing cross-reference in the strip', () => {
     model.confirmDeleteCrossReference()
     await model.deleteCrossReference()
 
-    expect(deleted).toEqual(['xr-vine'])
+    expect(deleted).toEqual(['Cross-References/Vine.md'])
     expect(model.studyMaterial.collection).toBe(null)
     expect(model.studyMaterial.chapterCrossReferences).toEqual([])
   })
@@ -3240,9 +3238,9 @@ describe('the study material contract', () => {
 
   it('opens the strip on an existing cross-reference and deletes it through the contract', async () => {
     const vine: CrossReference = {
-      id: 'xr-vine',
+      path: 'Cross-References/Vine.md',
       members: [ref('John 15:1'), ref('Psalm 80:8')],
-      description: 'Vine imagery',
+      summary: 'Vine imagery',
     }
     const deleted: string[] = []
     const model = modelWith({
@@ -3262,7 +3260,7 @@ describe('the study material contract', () => {
     expect(source.studyMaterial.collection?.confirmingDelete).toBe(true)
     await source.deleteCrossReference()
 
-    expect(deleted).toEqual(['xr-vine'])
+    expect(deleted).toEqual(['Cross-References/Vine.md'])
     expect(source.studyMaterial.collection).toBe(null)
   })
 

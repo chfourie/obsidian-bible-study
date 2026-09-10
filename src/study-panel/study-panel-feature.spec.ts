@@ -6,8 +6,8 @@ import type {
   StudyMaterialProvider,
   StudyMaterialSource,
   WordStudyOpener,
+  CrossReference,
 } from '../contracts'
-import type { CrossReference } from '../cross-references'
 import { DEFAULT_SETTINGS, type ScriptureStudySettings } from '../data-access'
 import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
@@ -300,6 +300,15 @@ const harness = (
     editNote,
     readGates,
     indexNote: (path: string) => index.indexNote(path, notes[path] ?? ''),
+    renameNote: (oldPath: string, newPath: string) => {
+      notes[newPath] = notes[oldPath]
+      delete notes[oldPath]
+      index.renameNote(oldPath, newPath)
+    },
+    removeNote: (path: string) => {
+      delete notes[path]
+      index.removeNote(path)
+    },
     setActiveFile: (file: TFile | null) => {
       activeFile = file
     },
@@ -1003,9 +1012,9 @@ describe('StudyPanelFeature entry points', () => {
         edited.push([entry, translationId, options?.newPane]),
     })
     const entry: CrossReference = {
-      id: 'xr-vine',
+      path: 'Cross-References/Vine.md',
       members: [ref('John 15:1')],
-      description: null,
+      summary: null,
     }
 
     feature.editCrossReferenceInNewPane(entry)
@@ -1060,6 +1069,32 @@ describe('StudyPanelFeature entry points', () => {
         entry.hasBody,
       ]),
     ).toEqual([['Cross-References/Vine.md', 'Vine imagery', true]])
+  })
+
+  it('follows a cross-reference note through a rename and drops it on delete', async () => {
+    const vine = crossReferenceNote({
+      members: ['John 15:1-8', 'Psalm 80:8-16'],
+      summary: 'Vine imagery',
+    })
+    const { feature, commands, leaves, focusNote, indexNote, renameNote, removeNote } =
+      harness({ 'a.md': '{John 15:1}', 'vine.md': vine })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    focusNote('a.md')
+    indexNote('vine.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    const paths = () => view.model.view.crossReferences.map((entry) => entry.path)
+    expect(paths()).toEqual(['vine.md'])
+
+    renameNote('vine.md', 'Cross-References/Vine.md')
+    await flushAsync()
+    expect(paths()).toEqual(['Cross-References/Vine.md'])
+
+    removeNote('Cross-References/Vine.md')
+    await flushAsync()
+    expect(paths()).toEqual([])
   })
 
   it('refreshes annotations and mentions when the vault index changes', async () => {

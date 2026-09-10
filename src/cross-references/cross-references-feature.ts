@@ -2,7 +2,7 @@ import type { Plugin } from 'obsidian'
 import { DEFAULT_SETTINGS, PluginFeature } from '../data-access'
 import { ObsidianNoteFileVault, type NoteFileVault } from '../notes'
 import type { Reference } from '../reference'
-import type { CrossReferenceEditing } from './cross-reference-catalog'
+import type { CrossReferenceEditing } from './cross-reference-editing'
 import {
   crossReferencesFilePath,
   CrossReferenceStore,
@@ -36,7 +36,7 @@ export class CrossReferencesFeature extends PluginFeature {
   // What the reader's strip works against: a new cross-reference is written
   // as a vault note (ADR 0015) and indexed at once; changing or deleting one
   // in place arrives with #151.
-  readonly catalog: CrossReferenceEditing
+  readonly editing: CrossReferenceEditing
   readonly #vault: CrossReferenceVault
   readonly #noteVault: NoteFileVault
   readonly #index: CrossReferenceNoteIndex | null
@@ -54,7 +54,7 @@ export class CrossReferencesFeature extends PluginFeature {
     this.store = new CrossReferenceStore(this.#vault, {
       filePath: () => this.#configuredPath(),
     })
-    this.catalog = {
+    this.editing = {
       create: (members, summary) => this.#createNote(members, summary),
       update: async () => {
         throw new Error(NOT_YET_EDITABLE)

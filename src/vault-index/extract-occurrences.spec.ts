@@ -345,7 +345,14 @@ describe('extractNote for cross-reference notes', () => {
           translation: null,
         },
       ],
-      crossReference: { summary: 'Vine imagery', hasBody: false },
+      crossReference: {
+        members: [
+          johnRange(1, 8),
+          { book: 19, ranges: [{ startId: psalm(80, 8), endId: psalm(80, 16) }] },
+        ],
+        summary: 'Vine imagery',
+        hasBody: false,
+      },
     })
   })
 
@@ -409,7 +416,7 @@ describe('extractNote for cross-reference notes', () => {
           translation: null,
         },
       ],
-      crossReference: { summary: null, hasBody: false },
+      crossReference: { members: [johnRange(1, 8)], summary: null, hasBody: false },
     })
   })
 
@@ -427,9 +434,61 @@ describe('extractNote for cross-reference notes', () => {
 
     const extracted = extractNote(note)
     expect(extracted.occurrences.map((o) => o.reference.book)).toEqual([43, 19])
-    expect(extracted.crossReference).toEqual({
+    expect(extracted.crossReference).toMatchObject({
       summary: 'Vine: "true" vine',
       hasBody: false,
+    })
+  })
+
+  it('reads an unindented block list, as YAML allows hand-typed', () => {
+    const note = [
+      '---',
+      'type: cross-reference',
+      'refs:',
+      '- John 15:1-8',
+      '- Psalm 80:8-16',
+      'summary: Vine',
+      '---',
+      '',
+    ].join('\n')
+
+    const extracted = extractNote(note)
+    expect(extracted.occurrences.map((o) => o.reference.book)).toEqual([43, 19])
+    expect(extracted.crossReference?.summary).toBe('Vine')
+  })
+
+  it('reads a flow list, a member keeping the verse commas of its own grammar', () => {
+    const note = [
+      '---',
+      'type: cross-reference',
+      'refs: [John 15:1,4, "Psalm 80:8-16", \'Romans 11:17\']',
+      'summary: ""',
+      '---',
+      '',
+    ].join('\n')
+
+    expect(extractNote(note).occurrences.map((o) => o.reference)).toEqual([
+      {
+        book: 43,
+        ranges: [
+          { startId: john(15, 1), endId: john(15, 1) },
+          { startId: john(15, 4), endId: john(15, 4) },
+        ],
+      },
+      { book: 19, ranges: [{ startId: psalm(80, 8), endId: psalm(80, 16) }] },
+      {
+        book: 45,
+        ranges: [{ startId: makeVerseId(45, 11, 17), endId: makeVerseId(45, 11, 17) }],
+      },
+    ])
+  })
+
+  it('reads an empty flow list as a cross-reference with no members', () => {
+    const note = '---\ntype: cross-reference\nrefs: []\n---\n'
+
+    expect(extractNote(note)).toEqual({
+      occurrences: [],
+      crossReference: { members: [], summary: null, hasBody: false },
     })
   })
 

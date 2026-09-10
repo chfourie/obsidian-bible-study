@@ -10,8 +10,11 @@ import {
   uninstallEnochBook,
 } from '../../tests/fixtures/enoch-book'
 import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
-import type { StudyMaterial, StudyMaterialSource } from '../contracts'
-import type { CrossReference } from '../cross-references'
+import type {
+  CrossReference,
+  StudyMaterial,
+  StudyMaterialSource,
+} from '../contracts'
 import {
   enumerateVerseIds,
   formatReference,
@@ -598,7 +601,6 @@ describe('cross-references in the Study Panel', () => {
           { label: 'Psalms 80:8-16', reference: psalm80Vine, index: 1 },
           { label: 'Romans 11:17-24', reference: romans11Olive, index: 2 },
         ],
-        allMembers: [john15Vine, psalm80Vine, romans11Olive],
       },
     ])
   })
@@ -775,9 +777,9 @@ describe('cross-references in the Study Panel', () => {
 
       expect(edited).toEqual([
         {
-          id: 'vine.md',
+          path: 'vine.md',
           members: [john15Vine, psalm80Vine, romans11Olive],
-          description: 'Vine and vineyard imagery for Israel',
+          summary: 'Vine and vineyard imagery for Israel',
         },
       ])
     })

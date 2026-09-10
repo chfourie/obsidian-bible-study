@@ -1,16 +1,16 @@
-import { referenceLabel, referencesIntersect, type Reference } from '../reference'
-import type { OccurrenceSource } from '../vault-index'
+import { referenceLabel, type Reference } from '../reference'
+import type { CrossReferenceDeclaration, OccurrenceSource } from '../vault-index'
 
 export type CrossReferenceMemberView = {
   label: string
   reference: Reference
-  // Position in the note's member list — the handle management actions
-  // (remove) use to identify a member the view has filtered out.
+  // Position in the note's member list.
   index: number
 }
 
-// One cross-reference note as a row surfaces it (spec §5a): the note is the
-// handle — its path opens it and, from #151, seeds the strip that edits it.
+// One cross-reference note as a row surfaces it (spec §5a): every member,
+// the summary and the body flag. The note is the handle — its path opens it
+// and seeds the strip that edits it.
 export type CrossReferenceView = {
   path: string
   summary: string | null
@@ -18,47 +18,27 @@ export type CrossReferenceView = {
   // paints filled when it does, outlined otherwise.
   hasBody: boolean
   members: CrossReferenceMemberView[]
-  // The note's complete member list — what editing the entry seeds the strip
-  // with, since the filtered view above may have dropped whichever members
-  // match the passage being viewed.
-  allMembers: Reference[]
-}
-
-export type CrossReferenceDeclarationSource = {
-  members: readonly Reference[]
-  summary: string | null
-  hasBody: boolean
 }
 
 // The slice of an intersection-query group the cross-reference rows read.
 export type CrossReferenceSource = {
   file: string
-  crossReference: CrossReferenceDeclarationSource | null
+  crossReference: CrossReferenceDeclaration | null
   occurrences: readonly { source: OccurrenceSource }[]
 }
 
-// A surfaced cross-reference lists only the jump-off points: members whose
-// verses are already part of the passage being viewed are left out.
 export const crossReferenceView = (
   path: string,
-  declared: CrossReferenceDeclarationSource,
-  viewed: readonly Reference[],
+  declared: CrossReferenceDeclaration,
 ): CrossReferenceView => ({
   path,
   summary: declared.summary,
   hasBody: declared.hasBody,
-  members: declared.members
-    .map((member, index) => ({ member, index }))
-    .filter(
-      ({ member }) =>
-        !viewed.some((reference) => referencesIntersect(member, reference)),
-    )
-    .map(({ member, index }) => ({
-      label: referenceLabel(member),
-      reference: member,
-      index,
-    })),
-  allMembers: [...declared.members],
+  members: declared.members.map((member, index) => ({
+    label: referenceLabel(member),
+    reference: member,
+    index,
+  })),
 })
 
 // A group earns a row when one of the note's members intersects the query;
@@ -71,10 +51,9 @@ const memberIntersects = (group: CrossReferenceSource): boolean =>
 
 export const crossReferenceViews = (
   groups: readonly CrossReferenceSource[],
-  viewed: readonly Reference[],
 ): CrossReferenceView[] =>
   groups.flatMap((group) =>
     group.crossReference !== null && memberIntersects(group)
-      ? [crossReferenceView(group.file, group.crossReference, viewed)]
+      ? [crossReferenceView(group.file, group.crossReference)]
       : [],
   )

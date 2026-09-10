@@ -812,6 +812,20 @@ describe('renderReference in-note intersections', () => {
     expect(toggle?.textContent).toContain('◆2')
   })
 
+  it('counts a cross-reference note as neither annotation nor mention', async () => {
+    const john15 = { book: 43, ranges: [{ startId: 43015001, endId: 43015008 }] }
+    const { parent, deps } = intersectionsSetup([
+      {
+        ...occurrenceGroup('Cross-References/Vine.md', false),
+        crossReference: { members: [john15], summary: 'Vine', hasBody: false },
+      },
+    ])
+
+    await renderReference(parent, model('John 15:4'), deps)
+
+    expect(parent.querySelector('.scripture-study-intersections')).toBeNull()
+  })
+
   it('excludes the containing note from the surface', async () => {
     const { parent, deps } = intersectionsSetup([
       occurrenceGroup('Sermons/Fruitfulness.md', false),

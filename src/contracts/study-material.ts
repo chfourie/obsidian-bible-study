@@ -1,12 +1,11 @@
 import type { View } from 'obsidian'
 import type {
-  CrossReference,
   CrossReferenceMemberView,
   CrossReferenceView,
 } from '../cross-references'
 import type { Reference } from '../reference'
 import type { VerseSegment } from '../rendering'
-import type { NavigationOptions } from './reference-navigator'
+import type { CrossReference, NavigationOptions } from './reference-navigator'
 
 export type StrongsEntryView = {
   // The Strong's Family the entry answers for — the number a tagged

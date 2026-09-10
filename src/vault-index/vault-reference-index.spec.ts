@@ -401,6 +401,30 @@ describe('VaultReferenceIndex cross-reference notes', () => {
     })
   })
 
+  it('reflects a corrected summary on a note whose members were all unparseable', () => {
+    const index = new VaultReferenceIndex()
+    const lukeRef = (): Reference => ({
+      book: 42,
+      ranges: [{ startId: makeVerseId(42, 15, 4), endId: makeVerseId(42, 15, 4) }],
+    })
+    const typo = (summary: string): string =>
+      crossReferenceNote({ members: ['Jhon 15:4'], summary, body: 'compare {Luke 15:4}' })
+    index.indexNote('vine.md', typo('Vine'))
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    // Same length, so the body occurrence sits where it did: only the
+    // declaration changed.
+    index.indexNote('vine.md', typo('Wine'))
+
+    expect(notified).toBe(1)
+    expect(index.intersectingOccurrences(lukeRef())[0].crossReference).toEqual({
+      members: [],
+      summary: 'Wine',
+      hasBody: true,
+    })
+  })
+
   it('follows a rename with its declaration', () => {
     const index = new VaultReferenceIndex()
     index.indexNote('vine.md', vine)

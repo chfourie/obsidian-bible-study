@@ -4,11 +4,11 @@ import type {
   ReferenceNavigator,
   StudyMaterialProvider,
   StudyMaterialSource,
+  CrossReference,
 } from '../contracts'
 import {
   INERT_CROSS_REFERENCE_EDITING,
   type CrossReferenceEditing,
-  type CrossReference,
 } from '../cross-references'
 import { readAnnotationDetails } from '../annotations'
 import { atomNumbersOf, PluginFeature } from '../data-access'

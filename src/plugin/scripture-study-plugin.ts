@@ -65,7 +65,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     {
       firstRun: this.#firstRun,
-      crossReferences: this.crossReferences.catalog,
+      crossReferences: this.crossReferences.editing,
       strongs: {
         dictionariesInstalled: () => this.strongsDictionaries.isInstalled(),
         entriesFor: async (numbers) =>
