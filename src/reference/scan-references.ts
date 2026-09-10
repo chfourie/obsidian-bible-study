@@ -134,6 +134,11 @@ const FRONTMATTER_PATTERN = /^---\r?\n.*?\r?\n(?:---|\.\.\.)(?:\r?\n|$)/s
 export const frontmatterLength = (content: string): number =>
   FRONTMATTER_PATTERN.exec(content)?.[0].length ?? 0
 
+export const isBlankLine = (text: string): boolean => text.trim() === ''
+
+export const isAtxHeading = (text: string): boolean =>
+  /^ {0,3}#{1,6}(\s|$)/.test(text)
+
 export type BodyLine = {
   text: string
   start: number

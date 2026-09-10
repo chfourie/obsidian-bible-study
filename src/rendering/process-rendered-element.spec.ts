@@ -841,6 +841,28 @@ describe('processRenderedElement', () => {
       expect(root.children[1].classList.contains('scripture-study-page-break-trailing')).toBe(true)
     })
 
+    it('keeps a marker right under a heading from taking the Page Break that follows it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<h1>Title</h1><p>===</p><p>real:</p><p>===</p>'
+
+      await process(root, deps, '# Title\n===\n\nreal:\n\n===\n')
+
+      expect(root.children[1].outerHTML).toBe('<p>===</p>')
+      expect(root.children[3].classList.contains('scripture-study-page-break')).toBe(true)
+      expect(root.children[3].classList.contains('scripture-study-page-break-trailing')).toBe(true)
+    })
+
+    it('keeps a marker right under a horizontal rule from taking the Page Break that follows it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<hr><p>===</p><p>===</p><p>After.</p>'
+
+      await process(root, deps, '---\n===\n\n===\n\nAfter.')
+
+      expect(root.children[1].outerHTML).toBe('<p>===</p>')
+      expect(root.children[2].classList.contains('scripture-study-page-break')).toBe(true)
+      expect(root.children[2].classList.contains('scripture-study-page-break-trailing')).toBe(false)
+    })
+
     it('keeps a marker in inline code from taking the Page Break that follows it', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p><code>===</code></p><p>===</p>'

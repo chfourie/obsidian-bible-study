@@ -1,4 +1,10 @@
-import { bodyLines, maskInlineCodeSpans, type BodyLine } from '../reference'
+import {
+  bodyLines,
+  isAtxHeading,
+  isBlankLine,
+  maskInlineCodeSpans,
+  type BodyLine,
+} from '../reference'
 
 export type ChristQuoteMark = '"' | '“'
 
@@ -45,8 +51,6 @@ export type ChristQuoteCandidate = {
   close: number | null
 }
 
-const ATX_HEADING = /^ {0,3}#{1,6}(\s|$)/
-
 // Any indent, not CommonMark's three spaces: Obsidian nests list items
 // under a tab by default.
 const LIST_ITEM = /^\s*(?:[-*+]|\d{1,9}[.)])(?:\s|$)/
@@ -67,8 +71,8 @@ const shapeOf = (line: BodyLine): LineShape => {
   const markers = BLOCKQUOTE_MARKERS.exec(line.text)?.[0] ?? ''
   const body = line.text.slice(markers.length)
   return {
-    blank: body.trim() === '',
-    heading: ATX_HEADING.test(body),
+    blank: isBlankLine(body),
+    heading: isAtxHeading(body),
     listItem: LIST_ITEM.test(body),
     tableRow: TABLE_ROW.test(body),
     quoteDepth: markers.split('>').length - 1,
@@ -133,7 +137,6 @@ const closingMarkOffset = (
   return null
 }
 
-// Each table cell is a paragraph of its own.
 const cellEnd = (
   paragraph: Paragraph,
   line: BodyLine,

@@ -170,5 +170,5 @@ A double-quoted span in a vault note that the author declares to be the words of
 _Avoid_: red quote, red-letter note (implies translation data)
 
 ### Page Break
-A note-author's instruction that the PDF export start a new page here: a line holding exactly `===`, standing as its own paragraph (blank line or note edge on both sides). On screen it is a visible marker, never a heading rule; in print it is invisible and breaks the page after itself. Consecutive Page Breaks each break; one with nothing after it in the note breaks nothing. Only notes carry Page Breaks — never the reader or the Study Panel.
+A note-author's instruction that the PDF export start a new page here: a line holding exactly `===`, standing as its own paragraph (blank line or note edge on both sides). On screen it is a visible marker, never a heading rule; in print it is invisible and breaks the page after itself. Consecutive Page Breaks each break; one with nothing after it in the note breaks nothing. Only notes carry Page Breaks — never scripture or Book text in the reader or the Study Panel; a note body rendered there (an Annotation) is still a note.
 _Avoid_: line break (a `<br>`), horizontal rule (`---`, which prints a line and breaks no page)

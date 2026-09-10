@@ -18,16 +18,16 @@ import {
   liveDecorationSpecs,
   type LiveDecorationSpec,
 } from './live-decoration-specs'
+import { renderPageBreakIndicator } from './page-break-indicator'
+import { RED_LETTER_CLASS } from './red-letter'
 import {
   sameRenderModel,
   type ReferenceRenderModel,
   type RenderContext,
 } from './reference-render-model'
-import { renderPageBreakIndicator } from './page-break-indicator'
-import { RED_LETTER_CLASS } from './red-letter'
 import { renderReference, type ReferenceRenderDeps } from './render-reference'
 
-const CHRIST_QUOTE_MARK = Decoration.mark({ class: RED_LETTER_CLASS })
+const RED_LETTER_DECORATION = Decoration.mark({ class: RED_LETTER_CLASS })
 
 const HIDDEN_PREFIX = Decoration.replace({})
 
@@ -213,7 +213,7 @@ export const createLivePreviewExtension = (
             ...(spec.prefixHidden
               ? [HIDDEN_PREFIX.range(spec.prefix, spec.prefix + 1)]
               : []),
-            CHRIST_QUOTE_MARK.range(spec.start, spec.end),
+            RED_LETTER_DECORATION.range(spec.start, spec.end),
           ]
         case 'page-break':
           return [

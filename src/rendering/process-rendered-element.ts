@@ -72,6 +72,11 @@ const textNodesUnder = (root: HTMLElement): Text[] => {
   return nodes
 }
 
+// nodeType rather than instanceof Text: a popout window's nodes are not
+// instances of this window's constructors.
+const isTextNode = (node: Node | null | undefined): node is Text =>
+  node?.nodeType === Node.TEXT_NODE
+
 const paragraphOf = (node: Text, root: Node): Node =>
   node.parentElement?.closest(PARAGRAPH_SELECTOR) ?? root
 
@@ -205,12 +210,9 @@ const atStartOf = (range: Range): boolean => range.startOffset === 0
 
 const atEndOf = (range: Range): boolean => {
   const container = range.endContainer
-  // nodeType rather than instanceof Text: a popout window's nodes are
-  // not instances of this window's constructors.
-  const length =
-    container.nodeType === Node.TEXT_NODE
-      ? (container as Text).length
-      : container.childNodes.length
+  const length = isTextNode(container)
+    ? container.length
+    : container.childNodes.length
   return range.endOffset === length
 }
 
@@ -243,7 +245,6 @@ const wrapChristQuote = (
 const nextText = (walker: TreeWalker): Text | null =>
   walker.nextNode() as Text | null
 
-// Borrows the pass's walker and hands it back where it stood.
 const findClosingMark = (
   walker: TreeWalker,
   paragraph: Node,
@@ -311,11 +312,9 @@ const decorateChristQuotes = (
   }
 }
 
-// nodeType rather than instanceof Text: a popout window's nodes are not
-// instances of this window's constructors.
 const holdsOnlyMarkerText = (paragraph: Element): boolean =>
   paragraph.childNodes.length === 1 &&
-  paragraph.firstChild?.nodeType === Node.TEXT_NODE &&
+  isTextNode(paragraph.firstChild) &&
   isPageBreakMarker(paragraph.textContent ?? '')
 
 // Only a paragraph Obsidian left at the top level can be a Page Break: a
@@ -338,9 +337,7 @@ const decoratePageBreaks = (
     const candidate = sourceOrderedCandidates.shift()
     if (!candidate) return
     if (candidate.pageBreak) {
-      paragraph.replaceWith(
-        renderPageBreakIndicator(candidate.pageBreak.trailing),
-      )
+      paragraph.replaceWith(renderPageBreakIndicator(candidate.trailing))
     }
   }
 }
