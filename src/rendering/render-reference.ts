@@ -19,6 +19,7 @@ import type {
   VerseSegment,
 } from './module-passage-source'
 import { TEXT_OFFSET_ATTRIBUTE, VERSE_TEXT_CLASS } from './passage-selection'
+import { RED_LETTER_CLASS } from './red-letter'
 import { spanSegments } from './segment-spans'
 import {
   buildPassageView,
@@ -215,7 +216,7 @@ const renderSegment = (parent: HTMLElement, segment: VerseSegment): void => {
           'scripture-study-highlight',
           `scripture-study-highlight-${segment.highlightSlot}`,
         ]),
-    ...(segment.redLetter ? ['scripture-study-red-letter'] : []),
+    ...(segment.redLetter ? [RED_LETTER_CLASS] : []),
     ...(segment.supplied ? ['scripture-study-supplied'] : []),
     ...(segment.marks ? ['scripture-study-marks'] : []),
     ...(segment.emended ? ['scripture-study-emended'] : []),

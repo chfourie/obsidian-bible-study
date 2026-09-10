@@ -23,11 +23,10 @@ import {
   type ReferenceRenderModel,
   type RenderContext,
 } from './reference-render-model'
+import { RED_LETTER_CLASS } from './red-letter'
 import { renderReference, type ReferenceRenderDeps } from './render-reference'
 
-const CHRIST_QUOTE_MARK = Decoration.mark({
-  class: 'scripture-study-red-letter',
-})
+const CHRIST_QUOTE_MARK = Decoration.mark({ class: RED_LETTER_CLASS })
 
 const HIDDEN_PREFIX = Decoration.replace({})
 
@@ -201,6 +200,8 @@ export const createLivePreviewExtension = (
       selections,
       contextProvider(),
     )
+    // Quote ranges follow the reference ranges, so the concatenation is not in
+    // offset order; let the set sort it.
     return Decoration.set(specs.flatMap(decorate), true)
   }
 

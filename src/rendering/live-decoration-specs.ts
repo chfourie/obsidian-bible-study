@@ -18,9 +18,8 @@ export type ReferenceDecorationSpec = {
   model: ReferenceRenderModel
 }
 
-// `prefix` is the c; the quote runs from the opening mark at `start` through
-// the closing mark. The prefix is shown again, not the quote, while the
-// cursor or a selection touches the quote.
+// The prefix is shown again, not the quote, while the cursor or a selection
+// touches the quote.
 export type ChristQuoteDecorationSpec = {
   kind: 'christ-quote'
   prefix: number
@@ -69,12 +68,17 @@ const christQuoteSpecs = (
   selections: readonly DocRange[],
 ): ChristQuoteDecorationSpec[] =>
   scanChristQuotes(doc)
-    .map(({ prefix, close }) => ({ prefix, start: prefix + 1, end: close + 1 }))
-    .filter((quote) => visible({ start: quote.prefix, end: quote.end }, visibleRanges))
-    .map((quote) => ({
+    .map(({ prefix, close }) => ({
+      quote: { prefix, start: prefix + 1, end: close + 1 },
+      // Visibility and touch run from the prefix, not the spec's `start`, so
+      // touching the c counts as touching the quote.
+      span: { start: prefix, end: close + 1 },
+    }))
+    .filter(({ span }) => visible(span, visibleRanges))
+    .map(({ quote, span }) => ({
       kind: 'christ-quote',
       ...quote,
-      prefixHidden: !touched({ start: quote.prefix, end: quote.end }, selections),
+      prefixHidden: !touched(span, selections),
     }))
 
 // Scans the full document so fence state, frontmatter, and escape context

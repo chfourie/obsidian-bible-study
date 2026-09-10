@@ -4,6 +4,7 @@ import {
   scanReferenceMatches,
   type ReferenceMatch,
 } from '../reference'
+import { RED_LETTER_CLASS } from './red-letter'
 import {
   buildReferenceRenderModel,
   modelFromParsed,
@@ -43,8 +44,6 @@ export const wholeNoteSection = (noteSource: string): RenderedSection => ({
 const CANDIDATE_PATTERN = /\\?\{([^{}\n]*)\}/g
 
 const EXEMPT_SELECTOR = 'code, pre'
-
-const RED_LETTER_CLASS = 'scripture-study-red-letter'
 
 // The elements Obsidian renders a paragraph into; the root stands in for
 // text it leaves outside any of them.

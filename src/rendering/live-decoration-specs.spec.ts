@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   liveDecorationSpecs,
   type ChristQuoteDecorationSpec,
-  type ReferenceDecorationSpec,
+  type DocRange,
+  type LiveDecorationSpec,
 } from './live-decoration-specs'
 import type { RenderContext } from './reference-render-model'
 
@@ -11,31 +12,27 @@ const context: RenderContext = {
   defaultTranslationId: 'web',
 }
 
-type Selection = { from: number; to: number }
-
 const allSpecsFor = (
   doc: string,
-  selections: Selection[] = [],
-  visibleRanges: Selection[] = [{ from: 0, to: doc.length }],
+  selections: DocRange[] = [],
+  visibleRanges: DocRange[] = [{ from: 0, to: doc.length }],
 ) => liveDecorationSpecs(doc, visibleRanges, selections, context)
 
-const specsFor = (
-  doc: string,
-  selections: Selection[] = [],
-  visibleRanges: Selection[] = [{ from: 0, to: doc.length }],
-): ReferenceDecorationSpec[] =>
-  allSpecsFor(doc, selections, visibleRanges).filter(
-    (spec): spec is ReferenceDecorationSpec => spec.kind === 'reference',
-  )
+const ofKind =
+  <Kind extends LiveDecorationSpec['kind']>(kind: Kind) =>
+  (
+    doc: string,
+    selections: DocRange[] = [],
+    visibleRanges: DocRange[] = [{ from: 0, to: doc.length }],
+  ): Extract<LiveDecorationSpec, { kind: Kind }>[] =>
+    allSpecsFor(doc, selections, visibleRanges).filter(
+      (spec): spec is Extract<LiveDecorationSpec, { kind: Kind }> =>
+        spec.kind === kind,
+    )
 
-const quotesFor = (
-  doc: string,
-  selections: Selection[] = [],
-  visibleRanges: Selection[] = [{ from: 0, to: doc.length }],
-): ChristQuoteDecorationSpec[] =>
-  allSpecsFor(doc, selections, visibleRanges).filter(
-    (spec): spec is ChristQuoteDecorationSpec => spec.kind === 'christ-quote',
-  )
+const specsFor = ofKind('reference')
+
+const quotesFor = ofKind('christ-quote')
 
 describe('liveDecorationSpecs', () => {
   it('decorates each valid reference with its render model', () => {
@@ -241,6 +238,10 @@ describe('liveDecorationSpecs', () => {
       expect(quotesFor('---\ntitle: c"Abide"\n---\n`c"Abide"` c\\"in me"')).toEqual(
         [],
       )
+    })
+
+    it('skips a curly quote escaped with a backslash', () => {
+      expect(quotesFor('c\\“Abide in me”')).toEqual([])
     })
 
     it('honors a code fence opened above the visible range', () => {
