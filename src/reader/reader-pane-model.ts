@@ -1139,10 +1139,9 @@ export class ReaderPaneModel implements StudyMaterialSource {
   #collectionView(): CollectionView | null {
     if (this.#collection === null) return null
     return {
-      members: this.#collection.members.map((member, index) => ({
+      members: this.#collection.members.map((member) => ({
         label: referenceLabel(member),
         reference: member,
-        index,
       })),
       canAddSelection: this.selectionReference() !== null,
       canSave:
@@ -1309,8 +1308,6 @@ export class ReaderPaneModel implements StudyMaterialSource {
       return
     }
     this.#collection = null
-    // Details already on screen re-read the store so the cross-reference
-    // surfaces beside its members without reopening them.
     await this.refreshOccurrences()
   }
 
@@ -1574,10 +1571,11 @@ export class ReaderPaneModel implements StudyMaterialSource {
     const chapter = chapterReference(this.#position)
     const groups = this.deps.intersecting(chapter)
     // A cross-reference note marks no verse: its members read as a row of
-    // the chapter's cross-references, never as a mention (spec §5a).
+    // the chapter's cross-references, never as a mention (spec §5a) — unless
+    // it declares `ref` too, when it marks that verse as the annotation it is.
     this.#markers = verseMarkers(
       groups
-        .filter((group) => !isCrossReference(group))
+        .filter((group) => isAnnotation(group) || !isCrossReference(group))
         .map((group) => ({
           file: group.file,
           annotation: isAnnotation(group),

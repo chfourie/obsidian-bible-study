@@ -1,16 +1,17 @@
 import { withFrontmatterKeys } from '../notes'
 import { frontmatterLength, type Reference } from '../reference'
-import { membersAsWritten, type MemberAsWritten } from '../vault-index'
 import { crossReferenceMemberKeys } from './compose-cross-reference-note'
+import {
+  isParsedMember,
+  membersAsWritten,
+  type MemberAsWritten,
+} from './members-as-written'
 
 export type RewrittenCrossReferenceNote = {
   content: string
   membersBefore: MemberAsWritten[]
   membersAfter: MemberAsWritten[]
 }
-
-const isVerbatim = (member: MemberAsWritten): member is string =>
-  typeof member === 'string'
 
 // A member the plugin could not read stays at its index in the list, or
 // trails it once the list is shorter than that; several keep their order.
@@ -20,7 +21,7 @@ const withVerbatimMembers = (
 ): MemberAsWritten[] => {
   const merged: MemberAsWritten[] = [...members]
   written.forEach((member, position) => {
-    if (isVerbatim(member)) merged.splice(Math.min(position, merged.length), 0, member)
+    if (!isParsedMember(member)) merged.splice(Math.min(position, merged.length), 0, member)
   })
   return merged
 }

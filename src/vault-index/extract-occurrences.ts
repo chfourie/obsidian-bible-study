@@ -55,16 +55,13 @@ const annotationOccurrence = (
     : frontmatterOccurrence(ref, 'annotation-frontmatter', options)
 }
 
-// A `refs` item as the note holds it: the Reference it parses to, or its
-// text when the plugin cannot read it — kept verbatim through every rewrite
-// (spec §5a).
-export type MemberAsWritten = Reference | string
+// A `refs` item beside what the grammar makes of it — null for one the
+// plugin cannot read, which the note keeps verbatim (spec §5a).
+export type ParsedMember = { text: string; parsed: ParsedReference | null }
 
-type ParsedMember = { text: string; parsed: ParsedReference | null }
-
-const parseMembers = (
+export const parseCrossReferenceMembers = (
   members: readonly string[],
-  options: ParseOptions,
+  options: ParseOptions = {},
 ): ParsedMember[] =>
   members.map((text) => ({ text, parsed: parseReference(text, options) }))
 
@@ -82,17 +79,6 @@ const memberOccurrences = (members: readonly ParsedMember[]): ExtractedOccurrenc
       : [],
   )
 
-export const membersAsWritten = (
-  content: string,
-  options: ParseOptions = {},
-): MemberAsWritten[] => {
-  const frontmatter = content.slice(0, frontmatterLength(content))
-  const declared = crossReferenceFrontmatter(frontmatter)
-  return parseMembers(declared?.members ?? [], options).map(
-    ({ text, parsed }) => parsed?.reference ?? text,
-  )
-}
-
 const hasBody = (content: string, frontmatterEnd: number): boolean =>
   content.slice(frontmatterEnd).trim() !== ''
 
@@ -106,7 +92,9 @@ export const extractNote = (
   const annotation = annotationOccurrence(frontmatter, options)
   if (annotation) occurrences.push(annotation)
   const declared = crossReferenceFrontmatter(frontmatter)
-  const members = memberOccurrences(parseMembers(declared?.members ?? [], options))
+  const members = memberOccurrences(
+    parseCrossReferenceMembers(declared?.members ?? [], options),
+  )
   occurrences.push(...members)
   for (const match of scanReferenceMatches(content, options)) {
     occurrences.push({

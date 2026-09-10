@@ -24,13 +24,11 @@ type Classified = {
 }
 
 // What makes a group an annotation is exactly that it declares a subject.
-export const isAnnotation = (group: {
-  annotationReference: Reference | null
-}): boolean => group.annotationReference !== null
+export const isAnnotation = (group: Classified): boolean =>
+  group.annotationReference !== null
 
-export const isCrossReference = (group: {
-  crossReference: CrossReferenceDeclaration | null
-}): boolean => group.crossReference !== null
+export const isCrossReference = (group: Classified): boolean =>
+  group.crossReference !== null
 
 // A mention is derived, never declared: whatever a note declares in its
 // frontmatter takes it out of the mentions (CONTEXT.md — Mention).
@@ -103,7 +101,9 @@ export class VaultReferenceIndex {
       sameDeclaration(previous?.crossReference ?? null, extracted.crossReference)
     )
       return
-    if (occurrences.length > 0)
+    // A declared cross-reference stays indexed even with no member it can
+    // parse (spec §5a), so a later edit finds it and reports the change.
+    if (occurrences.length > 0 || extracted.crossReference !== null)
       this.#notesByFile.set(file, {
         occurrences,
         crossReference: extracted.crossReference,

@@ -41,6 +41,28 @@ describe('SettingsStore', () => {
     })
   })
 
+  it('reads a persisted empty cross-references folder as the default', async () => {
+    const { store } = setup({ crossReferencesFolder: '' })
+
+    expect((await store.loadSettings()).crossReferencesFolder).toBe(
+      DEFAULT_SETTINGS.crossReferencesFolder,
+    )
+  })
+
+  it('persists the default when an update blanks the cross-references folder', async () => {
+    const { store, data } = setup()
+
+    const updated = await store.updateSettings((settings) => ({
+      ...settings,
+      crossReferencesFolder: '',
+    }))
+
+    expect(updated.crossReferencesFolder).toBe(DEFAULT_SETTINGS.crossReferencesFolder)
+    expect((data() as { crossReferencesFolder: string }).crossReferencesFolder).toBe(
+      DEFAULT_SETTINGS.crossReferencesFolder,
+    )
+  })
+
   it('silently drops the removed online-tier fields on load', async () => {
     const { store } = setup({
       installedModuleIds: ['web'],

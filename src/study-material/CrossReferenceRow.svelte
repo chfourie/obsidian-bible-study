@@ -58,7 +58,7 @@ body, outlined otherwise.
     <div class="bsm-xref-summary">{entry.summary}</div>
   {/if}
   <div class="bsm-xref-members">
-    {#each entry.members as member (member.index)}
+    {#each entry.members as member, position (position)}
       <button
         type="button"
         class="bsm-xref-member"

@@ -597,9 +597,9 @@ describe('cross-references in the Study Panel', () => {
         summary: 'Vine and vineyard imagery for Israel',
         hasBody: false,
         members: [
-          { label: 'John 15:1-8', reference: john15Vine, index: 0 },
-          { label: 'Psalms 80:8-16', reference: psalm80Vine, index: 1 },
-          { label: 'Romans 11:17-24', reference: romans11Olive, index: 2 },
+          { label: 'John 15:1-8', reference: john15Vine },
+          { label: 'Psalms 80:8-16', reference: psalm80Vine },
+          { label: 'Romans 11:17-24', reference: romans11Olive },
         ],
       },
     ])

@@ -6,11 +6,7 @@ import {
 } from '../../tests/fixtures/humility-book'
 import { makeVerseId, type Reference } from '../reference'
 import type { OccurrenceSource } from '../vault-index'
-import {
-  crossReferenceView,
-  crossReferenceViews,
-  type CrossReferenceSource,
-} from './cross-reference-view'
+import { crossReferenceViews, type CrossReferenceSource } from './cross-reference-view'
 
 const atom = (book: number, chapter: number, verse: number): Reference => ({
   book,
@@ -41,39 +37,36 @@ const group = (
 beforeEach(installHumilityBook)
 afterEach(uninstallHumilityBook)
 
-describe('crossReferenceView', () => {
+describe('crossReferenceViews', () => {
   it('carries the note path, summary and body flag beside the members', () => {
-    const view = crossReferenceView('Cross-References/Pride.md', mixed)
+    const views = crossReferenceViews([
+      group('Cross-References/Pride.md', mixed, 'cross-reference-frontmatter'),
+    ])
 
-    expect(view).toEqual({
-      path: 'Cross-References/Pride.md',
-      summary: 'Pride and its cure',
-      hasBody: true,
-      members: [
-        { label: 'John 15:5', reference: atom(43, 15, 5), index: 0 },
-        {
-          label: 'Humility ch. 1, par. 2',
-          reference: atom(HUMILITY_BOOK, 1, 2),
-          index: 1,
-        },
-      ],
-    })
+    expect(views).toEqual([
+      {
+        path: 'Cross-References/Pride.md',
+        summary: 'Pride and its cure',
+        hasBody: true,
+        members: [
+          { label: 'John 15:5', reference: atom(43, 15, 5) },
+          { label: 'Humility ch. 1, par. 2', reference: atom(HUMILITY_BOOK, 1, 2) },
+        ],
+      },
+    ])
   })
 
   it('degrades a member of an uninstalled book to its numeric label', () => {
     uninstallHumilityBook()
 
-    const view = crossReferenceView('pride.md', mixed)
+    const views = crossReferenceViews([group('pride.md', mixed, 'cross-reference-frontmatter')])
 
-    expect(view.members.map((member) => member.label)).toEqual([
+    expect(views[0].members.map((member) => member.label)).toEqual([
       'John 15:5',
       'Book 101 1:2',
     ])
   })
 
-})
-
-describe('crossReferenceViews', () => {
   it('rows every group a member of which intersects', () => {
     const views = crossReferenceViews(
       [

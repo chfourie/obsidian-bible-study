@@ -425,6 +425,21 @@ describe('VaultReferenceIndex cross-reference notes', () => {
     })
   })
 
+  it('keeps a declared cross-reference none of whose members it can parse', () => {
+    const index = new VaultReferenceIndex()
+    const typo = (summary: string): string =>
+      crossReferenceNote({ members: ['Jhon 15:4'], summary })
+    index.indexNote('vine.md', typo('Vine'))
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.indexNote('vine.md', typo('Vine'))
+    expect(notified).toBe(0)
+
+    index.removeNote('vine.md')
+    expect(notified).toBe(1)
+  })
+
   it('follows a rename with its declaration', () => {
     const index = new VaultReferenceIndex()
     index.indexNote('vine.md', vine)

@@ -12,11 +12,13 @@ const noteHarness = (seedNotes: Record<string, string> = {}) => {
   const noteVault = fakeNoteFileVault({ notes: seedNotes })
   const indexed: [string, string][] = []
   const indexRenames: [string, string][] = []
+  const indexRemovals: string[] = []
   const feature = new CrossReferencesFeature(inertPlugin(), {
     noteVault,
     index: {
       indexNote: (path, content) => indexed.push([path, content]),
       renameNote: (path, newPath) => indexRenames.push([path, newPath]),
+      removeNote: (path) => indexRemovals.push(path),
     },
   })
   feature.useSettings({ ...DEFAULT_SETTINGS })
@@ -27,6 +29,7 @@ const noteHarness = (seedNotes: Record<string, string> = {}) => {
     folders: noteVault.folders,
     indexed,
     indexRenames,
+    indexRemovals,
   }
 }
 
@@ -51,15 +54,6 @@ describe('creating a cross-reference note from the strip', () => {
     await feature.editing.create(vine, null)
 
     expect(notes.has('PKM/Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(true)
-  })
-
-  it('lands notes in the default folder when the persisted folder is the old empty root', async () => {
-    const { feature, notes } = noteHarness()
-    feature.useSettings({ ...DEFAULT_SETTINGS, crossReferencesFolder: '' })
-
-    await feature.editing.create(vine, null)
-
-    expect(notes.has('Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(true)
   })
 
   it('suffixes a second note with the same generated name', async () => {
@@ -230,11 +224,22 @@ describe('changing a cross-reference note from the strip', () => {
   })
 
   it('refuses to delete a note that is not in the vault', async () => {
-    const { feature } = noteHarness({})
+    const { feature, indexRemovals } = noteHarness({})
 
     await expect(feature.editing.delete('gone.md')).rejects.toThrow(
       'gone.md is not in the vault.',
     )
+    expect(indexRemovals).toEqual([])
+  })
+
+  it('hands the deleted note to the index at once', async () => {
+    const { feature, indexRemovals } = noteHarness({
+      'Cross-References/Vine.md': crossReferenceNote({ members: ['John 15:1-8', 'Psalm 80:8-16'] }),
+    })
+
+    await feature.editing.delete('Cross-References/Vine.md')
+
+    expect(indexRemovals).toEqual(['Cross-References/Vine.md'])
   })
 })
 

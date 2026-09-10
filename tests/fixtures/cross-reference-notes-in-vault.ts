@@ -11,29 +11,15 @@ export type CrossReferenceNotesInVault = {
 }
 
 // The real cross-references feature and vault index over an in-memory vault
-// of notes, wired as they are live: a rename or trash reaches the index the
-// way the vault indexer relays Obsidian's own events.
+// of notes. The vault fires no events here, so whatever the index knows it
+// learnt from the feature alone.
 export const crossReferenceNotesInVault = (
   notes: Record<string, string>,
 ): CrossReferenceNotesInVault => {
   const index = new VaultReferenceIndex()
   for (const [path, content] of Object.entries(notes)) index.indexNote(path, content)
   const noteVault = fakeNoteFileVault({ notes })
-  const relaying: FakeNoteFileVault = {
-    ...noteVault,
-    renameNote: async (path, newPath) => {
-      await noteVault.renameNote(path, newPath)
-      index.renameNote(path, newPath)
-    },
-    trashNote: async (path) => {
-      await noteVault.trashNote(path)
-      index.removeNote(path)
-    },
-  }
-  const feature = new CrossReferencesFeature(inertPlugin(), {
-    noteVault: relaying,
-    index,
-  })
+  const feature = new CrossReferencesFeature(inertPlugin(), { noteVault, index })
   feature.useSettings({ ...DEFAULT_SETTINGS })
   return { index, noteVault, feature }
 }

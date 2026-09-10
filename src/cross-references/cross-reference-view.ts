@@ -4,8 +4,6 @@ import type { CrossReferenceDeclaration, OccurrenceSource } from '../vault-index
 export type CrossReferenceMemberView = {
   label: string
   reference: Reference
-  // Position in the note's member list.
-  index: number
 }
 
 // One cross-reference note as a row surfaces it (spec §5a): every member,
@@ -27,17 +25,16 @@ export type CrossReferenceSource = {
   occurrences: readonly { source: OccurrenceSource }[]
 }
 
-export const crossReferenceView = (
+const crossReferenceView = (
   path: string,
   declared: CrossReferenceDeclaration,
 ): CrossReferenceView => ({
   path,
   summary: declared.summary,
   hasBody: declared.hasBody,
-  members: declared.members.map((member, index) => ({
+  members: declared.members.map((member) => ({
     label: referenceLabel(member),
     reference: member,
-    index,
   })),
 })
 

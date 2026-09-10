@@ -21,6 +21,17 @@ const REMOVED_SETTINGS_KEYS = [
 
 export type SettingsListener = (settings: ScriptureStudySettings) => void
 
+// Cross-reference notes never go to the vault root, so an empty folder — what
+// a vault that predates the notes folder persisted, or a blanked field —
+// reads as the default.
+const withCrossReferencesFolder = (
+  settings: ScriptureStudySettings,
+): ScriptureStudySettings => ({
+  ...settings,
+  crossReferencesFolder:
+    settings.crossReferencesFolder || DEFAULT_SETTINGS.crossReferencesFolder,
+})
+
 export class SettingsStore {
   readonly #listeners: SettingsListener[] = []
 
@@ -42,14 +53,16 @@ export class SettingsStore {
     } as ScriptureStudySettings &
       Partial<Record<(typeof REMOVED_SETTINGS_KEYS)[number], unknown>>
     for (const key of REMOVED_SETTINGS_KEYS) delete settings[key]
-    return applyTranslationBootstrap(applyReaderDefaultMigration(settings))
+    return withCrossReferencesFolder(
+      applyTranslationBootstrap(applyReaderDefaultMigration(settings)),
+    )
   }
 
   async updateSettings(
     update: (settings: ScriptureStudySettings) => ScriptureStudySettings,
   ): Promise<ScriptureStudySettings> {
-    const settings = applyTranslationBootstrap(
-      update(await this.loadSettings()),
+    const settings = withCrossReferencesFolder(
+      applyTranslationBootstrap(update(await this.loadSettings())),
     )
     await this.plugin.saveData(settings)
     this.#listeners.forEach((listener) => listener(settings))

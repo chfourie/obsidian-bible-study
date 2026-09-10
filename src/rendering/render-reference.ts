@@ -115,10 +115,15 @@ const renderIntersections = (
 ): void => {
   // A cross-reference note is neither annotation nor mention here: its
   // members surface as Study Panel rows, not as in-note counts (spec §5a).
+  // One declaring `ref` as well counts as the annotation it also is.
   const intersectingGroups = (): OccurrenceGroup[] =>
     intersections
       .intersecting(model.reference)
-      .filter((group) => group.file !== sourcePath && !isCrossReference(group))
+      .filter(
+        (group) =>
+          group.file !== sourcePath &&
+          (isAnnotation(group) || !isCrossReference(group)),
+      )
   const groups = intersectingGroups()
   if (groups.length === 0) return
 

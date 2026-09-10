@@ -1,5 +1,5 @@
 import type { Plugin } from 'obsidian'
-import { DEFAULT_SETTINGS, PluginFeature } from '../data-access'
+import { PluginFeature } from '../data-access'
 import { ObsidianNoteFileVault, type NoteFileVault } from '../notes'
 import type { Reference } from '../reference'
 import type { CrossReferenceEditing } from './cross-reference-editing'
@@ -13,6 +13,7 @@ import { rewriteCrossReferenceNote } from './rewrite-cross-reference-note'
 export type CrossReferenceNoteIndex = {
   indexNote: (path: string, content: string) => void
   renameNote: (path: string, newPath: string) => void
+  removeNote: (path: string) => void
 }
 
 export type CrossReferencesFeatureOptions = {
@@ -35,8 +36,13 @@ export class CrossReferencesFeature extends PluginFeature {
     this.editing = {
       create: (members, summary) => this.#createNote(members, summary),
       update: (path, members, summary) => this.#updateNote(path, members, summary),
-      delete: (path) => this.#noteVault.trashNote(path),
+      delete: (path) => this.#deleteNote(path),
     }
+  }
+
+  async #deleteNote(path: string): Promise<void> {
+    await this.#noteVault.trashNote(path)
+    this.#index?.removeNote(path)
   }
 
   // The rewrite touches `refs` and `summary` alone; the note then follows its
@@ -73,16 +79,10 @@ export class CrossReferencesFeature extends PluginFeature {
       members,
       summary,
       {
-        folder: this.#notesFolder(),
+        folder: this.settings.crossReferencesFolder,
         templatePath: this.settings.crossReferenceTemplatePath,
       },
     )
     this.#index?.indexNote(created.path, created.content)
-  }
-
-  // Notes never go to the vault root, so an empty setting — what a vault that
-  // predates the notes folder persisted — reads as the default folder.
-  #notesFolder(): string {
-    return this.settings.crossReferencesFolder || DEFAULT_SETTINGS.crossReferencesFolder
   }
 }

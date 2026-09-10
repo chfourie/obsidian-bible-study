@@ -7,7 +7,7 @@ export type CrossReferenceFrontmatter = {
   summary: string | null
 }
 
-const keyLine = (key: string): RegExp => new RegExp(`^${key}:[ \\t]*(.*?)[ \\t]*$`, 'm')
+const keyLinePattern = (key: string): RegExp => new RegExp(`^${key}:[ \\t]*(.*?)[ \\t]*$`, 'm')
 
 const LIST_ITEM = /^[ \t]*-[ \t]+(.*?)[ \t]*$/
 const TOP_LEVEL_LINE = /^[^ \t]/
@@ -39,7 +39,7 @@ const yamlScalarText = (value: string): string => {
 }
 
 const keyValue = (frontmatter: string, key: string): string | null => {
-  const match = keyLine(key).exec(frontmatter)
+  const match = keyLinePattern(key).exec(frontmatter)
   return match === null ? null : match[1]
 }
 
@@ -96,9 +96,9 @@ const blockItems = (lines: readonly string[]): string[] => {
 
 const refsItems = (frontmatter: string): string[] | null => {
   const lines = frontmatter.split(/\r?\n/)
-  const start = lines.findIndex((line) => keyLine('refs').test(line))
+  const start = lines.findIndex((line) => keyLinePattern('refs').test(line))
   if (start === -1) return null
-  const inline = keyLine('refs').exec(lines[start])?.[1] ?? ''
+  const inline = keyLinePattern('refs').exec(lines[start])?.[1] ?? ''
   const flow = FLOW_LIST.exec(inline)
   return flow ? splitFlowItems(flow[1]) : blockItems(lines.slice(start + 1))
 }

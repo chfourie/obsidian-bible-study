@@ -4,7 +4,8 @@ import {
   type FrontmatterKeyBlock,
 } from '../notes'
 import { formatReference, type Reference } from '../reference'
-import { CROSS_REFERENCE_NOTE_TYPE, type MemberAsWritten } from '../vault-index'
+import { CROSS_REFERENCE_NOTE_TYPE } from '../vault-index'
+import { isParsedMember, type MemberAsWritten } from './members-as-written'
 
 // A plain YAML scalar is anything the parser could not mistake for
 // structure; everything else is written as a JSON string, which YAML reads.
@@ -22,7 +23,7 @@ const yamlScalar = (value: string): string =>
 const keyLine = (key: string, value: string): string => `${key}: ${yamlScalar(value)}`
 
 const memberText = (member: MemberAsWritten): string =>
-  typeof member === 'string' ? member : formatReference(member)
+  isParsedMember(member) ? formatReference(member) : member
 
 const refsBlock = (members: readonly MemberAsWritten[]): string[] => [
   'refs:',

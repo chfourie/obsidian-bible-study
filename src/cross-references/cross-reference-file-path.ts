@@ -1,6 +1,6 @@
 import { splitNotePath, uniqueNotePath } from '../notes'
 import { referenceLabel, type Reference } from '../reference'
-import type { MemberAsWritten } from '../vault-index'
+import { isParsedMember, type MemberAsWritten } from './members-as-written'
 
 const NAMED_MEMBERS = 2
 
@@ -14,17 +14,14 @@ const noteName = (named: readonly Reference[], memberCount: number): string => {
 // The note's name is for recognising it in the quick switcher, nothing more
 // (ADR 0015): the first two members' labels, a count for the rest, and the
 // colons Obsidian refuses in a filename turned into periods.
-export const crossReferenceNoteName = (members: readonly Reference[]): string =>
+const crossReferenceNoteName = (members: readonly Reference[]): string =>
   noteName(members.slice(0, NAMED_MEMBERS), members.length)
-
-const isParsed = (member: MemberAsWritten): member is Reference =>
-  typeof member !== 'string'
 
 // The name the plugin would generate for the members as the note holds
 // them, or null when a named member is one it cannot read.
 const generatedName = (members: readonly MemberAsWritten[]): string | null => {
   const named = members.slice(0, NAMED_MEMBERS)
-  return named.every(isParsed) ? noteName(named, members.length) : null
+  return named.every(isParsedMember) ? noteName(named, members.length) : null
 }
 
 export const crossReferenceFilePath = (

@@ -364,9 +364,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       case 'crossReferencesFolder':
         return this.#update((settings) => ({
           ...settings,
-          crossReferencesFolder:
-            (value as string).trim().replace(/^\/+|\/+$/g, '') ||
-            DEFAULT_SETTINGS.crossReferencesFolder,
+          crossReferencesFolder: (value as string).trim().replace(/^\/+|\/+$/g, ''),
         }))
       case 'crossReferenceTemplatePath':
         return this.#update((settings) => ({

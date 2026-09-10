@@ -2381,9 +2381,9 @@ describe('cross-references intersecting the viewed chapter', () => {
         summary: 'Vine and vineyard imagery for Israel',
         hasBody: false,
         members: [
-          { label: 'John 15:1-8', reference: ref('John 15:1-8'), index: 0 },
-          { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
-          { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
+          { label: 'John 15:1-8', reference: ref('John 15:1-8') },
+          { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16') },
+          { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24') },
         ],
       },
     ])
@@ -2399,6 +2399,25 @@ describe('cross-references intersecting the viewed chapter', () => {
     expect(
       model.studyMaterial.chapterCrossReferences.map((entry) => entry.hasBody),
     ).toEqual([true])
+  })
+
+  it('marks the annotation verse of a note that is an annotation and a cross-reference at once', async () => {
+    const model = modelWith(
+      indexOver({
+        'both.md': crossReferenceNote({
+          members: vineMembers.map(formatReference),
+          ref: 'John 15:4',
+        }),
+      }),
+    )
+
+    await model.openAt(ref('John 15:4'), 'web')
+
+    expect(model.view.rows[3].annotations).toBe(1)
+    expect(model.view.rows.every((row) => row.mentions === 0)).toBe(true)
+    expect(
+      model.studyMaterial.chapterCrossReferences.map((entry) => entry.path),
+    ).toEqual(['both.md'])
   })
 
   it('never lists a cross-reference note as a mention or marks its verses', async () => {
@@ -2441,15 +2460,8 @@ describe('cross-references intersecting the viewed chapter', () => {
     await model.openAt(ref('John 15:4'), 'web')
 
     expect(
-      model.studyMaterial.chapterCrossReferences[0].members.map((member) => ({
-        label: member.label,
-        index: member.index,
-      })),
-    ).toEqual([
-      { label: 'John 15:1-2', index: 1 },
-      { label: 'John 15:7-8', index: 2 },
-      { label: 'Psalms 80:8-16', index: 0 },
-    ])
+      model.studyMaterial.chapterCrossReferences[0].members.map((member) => member.label),
+    ).toEqual(['John 15:1-2', 'John 15:7-8', 'Psalms 80:8-16'])
   })
 
   it('orders members elsewhere by book and start verse', async () => {
@@ -2520,8 +2532,8 @@ describe('cross-references intersecting the viewed chapter', () => {
         summary: null,
         hasBody: false,
         members: [
-          { label: 'John 16:1', reference: ref('John 16:1'), index: 0 },
-          { label: 'Psalms 23:1', reference: ref('Psalm 23:1'), index: 1 },
+          { label: 'John 16:1', reference: ref('John 16:1') },
+          { label: 'Psalms 23:1', reference: ref('Psalm 23:1') },
         ],
       },
     ])
@@ -2648,7 +2660,7 @@ describe('collecting a cross-reference', () => {
     model.addSelectionToCollection()
 
     expect(model.studyMaterial.collection?.members).toEqual([
-      { label: 'John 15:4', reference: ref('John 15:4'), index: 0 },
+      { label: 'John 15:4', reference: ref('John 15:4') },
     ])
     expect(model.studyMaterial.selectedVerseId).toBe(null)
     expect(model.selectionReference()).toBe(null)
@@ -2679,7 +2691,7 @@ describe('collecting a cross-reference', () => {
     addTyped(model, 'Psalm 80:8-16')
 
     expect(model.studyMaterial.collection?.members).toEqual([
-      { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 0 },
+      { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16') },
     ])
     expect(model.studyMaterial.collection?.error).toBe(null)
   })
@@ -2886,8 +2898,8 @@ describe('collecting a cross-reference', () => {
         summary: null,
         hasBody: false,
         members: [
-          { label: 'John 15:4', reference: ref('John 15:4'), index: 0 },
-          { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
+          { label: 'John 15:4', reference: ref('John 15:4') },
+          { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16') },
         ],
       },
     ])
@@ -2922,9 +2934,9 @@ describe('editing an existing cross-reference in the strip', () => {
 
     expect(model.studyMaterial.collection).toEqual({
       members: [
-        { label: 'John 15:1-8', reference: ref('John 15:1-8'), index: 0 },
-        { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16'), index: 1 },
-        { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24'), index: 2 },
+        { label: 'John 15:1-8', reference: ref('John 15:1-8') },
+        { label: 'Psalms 80:8-16', reference: ref('Psalm 80:8-16') },
+        { label: 'Romans 11:17-24', reference: ref('Romans 11:17-24') },
       ],
       canAddSelection: false,
       canSave: true,
@@ -2978,17 +2990,17 @@ describe('editing an existing cross-reference in the strip', () => {
   })
 
   it('saves an edited summary over the existing one', async () => {
-    const descriptions: (string | null)[] = []
+    const summaries: (string | null)[] = []
     const model = await editingModel({
       update: async (_id, _members, summary) => {
-        descriptions.push(summary)
+        summaries.push(summary)
       },
     })
 
     model.summariseCollection('Grafted branches')
     await model.saveCrossReference()
 
-    expect(descriptions).toEqual(['Grafted branches'])
+    expect(summaries).toEqual(['Grafted branches'])
   })
 
   it('refuses to edit while another basket is in progress', async () => {
