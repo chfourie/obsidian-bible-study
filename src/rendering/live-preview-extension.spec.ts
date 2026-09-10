@@ -40,6 +40,34 @@ const webDefault: RenderContext = {
   pageBreaks: true,
 }
 
+let view: EditorView
+let plugin: ViewPlugin<{ decorations: DecorationSet }>
+
+afterEach(() => {
+  view?.destroy()
+  document.body.replaceChildren()
+})
+
+const editorOver = (
+  doc: string,
+  context: RenderContext = webDefault,
+): HTMLElement => {
+  plugin = createLivePreviewExtension(() => context, deps) as ViewPlugin<{
+    decorations: DecorationSet
+  }>
+  view = new EditorView({
+    state: EditorState.create({
+      doc,
+      extensions: [editorLivePreviewField, plugin],
+    }),
+    parent: document.body,
+  })
+  return view.contentDOM
+}
+
+const decorationCount = (): number | undefined =>
+  view.plugin(plugin)?.decorations.size
+
 describe('ReferenceWidget equality', () => {
   it('treats widgets over the same source and context as equal', () => {
     expect(
@@ -89,26 +117,8 @@ describe('ReferenceWidget equality', () => {
 })
 
 describe('editor mode switching', () => {
-  let view: EditorView
-
-  afterEach(() => view.destroy())
-
-  const editorOver = (doc: string) => {
-    const extension = createLivePreviewExtension(
-      () => webDefault,
-      deps,
-    ) as ViewPlugin<{ decorations: DecorationSet }>
-    view = new EditorView({
-      state: EditorState.create({
-        doc,
-        extensions: [editorLivePreviewField, extension],
-      }),
-    })
-    return () => view.plugin(extension)?.decorations.size
-  }
-
   it('removes widgets on switch to Source and restores them on return', () => {
-    const decorationCount = editorOver('before {John 15:4} after')
+    editorOver('before {John 15:4} after')
     expect(decorationCount()).toBe(1)
 
     view.dispatch({ effects: setLivePreview.of(false) })
@@ -120,27 +130,6 @@ describe('editor mode switching', () => {
 })
 
 describe('Christ Quote in Live Preview', () => {
-  let view: EditorView
-
-  afterEach(() => {
-    view.destroy()
-    document.body.replaceChildren()
-  })
-
-  const editorOver = (doc: string): HTMLElement => {
-    view = new EditorView({
-      state: EditorState.create({
-        doc,
-        extensions: [
-          editorLivePreviewField,
-          createLivePreviewExtension(() => webDefault, deps),
-        ],
-      }),
-      parent: document.body,
-    })
-    return view.contentDOM
-  }
-
   const redLetter = (content: HTMLElement): string[] =>
     [...content.querySelectorAll('.scripture-study-red-letter')].map(
       (span) => span.textContent ?? '',
@@ -191,30 +180,6 @@ describe('Christ Quote in Live Preview', () => {
 })
 
 describe('Page Break in Live Preview', () => {
-  let view: EditorView
-
-  afterEach(() => {
-    view.destroy()
-    document.body.replaceChildren()
-  })
-
-  const editorOver = (
-    doc: string,
-    context: RenderContext = webDefault,
-  ): HTMLElement => {
-    view = new EditorView({
-      state: EditorState.create({
-        doc,
-        extensions: [
-          editorLivePreviewField,
-          createLivePreviewExtension(() => context, deps),
-        ],
-      }),
-      parent: document.body,
-    })
-    return view.contentDOM
-  }
-
   const indicators = (content: HTMLElement): HTMLElement[] => [
     ...content.querySelectorAll<HTMLElement>('.scripture-study-page-break'),
   ]
@@ -284,13 +249,6 @@ describe('Page Break in Live Preview', () => {
 })
 
 describe('highlight editing in Live Preview', () => {
-  let view: EditorView
-
-  afterEach(() => {
-    view.destroy()
-    document.body.replaceChildren()
-  })
-
   const renderingDeps: ReferenceRenderDeps = {
     passages: {
       passage: async () => ({
@@ -304,7 +262,7 @@ describe('highlight editing in Live Preview', () => {
     openReference: vi.fn(),
   }
 
-  const editorOverAll = async (doc: string): Promise<HTMLElement[]> => {
+  const verseTextsOver = async (doc: string): Promise<HTMLElement[]> => {
     view = new EditorView({
       state: EditorState.create({
         doc,
@@ -329,8 +287,8 @@ describe('highlight editing in Live Preview', () => {
     })
   }
 
-  const editorOver = async (doc: string): Promise<HTMLElement> =>
-    (await editorOverAll(doc))[0]
+  const verseTextOver = async (doc: string): Promise<HTMLElement> =>
+    (await verseTextsOver(doc))[0]
 
   const paint = (verseText: HTMLElement, swatch: number): void => {
     const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
@@ -349,7 +307,7 @@ describe('highlight editing in Live Preview', () => {
   }
 
   it('writes the cue and pins the effective translation on the first stroke', async () => {
-    const verseText = await editorOver('before {John 15:4 inline} after')
+    const verseText = await verseTextOver('before {John 15:4 inline} after')
 
     paint(verseText, 0)
 
@@ -359,7 +317,7 @@ describe('highlight editing in Live Preview', () => {
   })
 
   it('leaves an already-explicit translation alone', async () => {
-    const verseText = await editorOver('note {John 15:4 web inline}')
+    const verseText = await verseTextOver('note {John 15:4 web inline}')
 
     paint(verseText, 1)
 
@@ -367,7 +325,7 @@ describe('highlight editing in Live Preview', () => {
   })
 
   it('erases a cue back out of the token, keeping the pin', async () => {
-    const verseText = await editorOver('note {John 15:4 web inline h1/4.0-4.6}')
+    const verseText = await verseTextOver('note {John 15:4 web inline h1/4.0-4.6}')
 
     paint(verseText, 5)
 
@@ -375,7 +333,7 @@ describe('highlight editing in Live Preview', () => {
   })
 
   it('offers no highlight popover on a relative reference', async () => {
-    const hosts = await editorOverAll('note {John 15:4-9 web inline} and {:4 inline}')
+    const hosts = await verseTextsOver('note {John 15:4-9 web inline} and {:4 inline}')
     const verseText = hosts[hosts.length - 1]
     const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
       .nextNode() as Text
@@ -393,7 +351,7 @@ describe('highlight editing in Live Preview', () => {
   })
 
   it('rewrites the occurrence the stroke was made in, not its twin', async () => {
-    const hosts = await editorOverAll(
+    const hosts = await verseTextsOver(
       'note {John 15:4 web inline} and {John 15:4 web inline}',
     )
 

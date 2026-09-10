@@ -14,8 +14,11 @@ export type PageBreakCandidate = {
   pageBreak: PageBreak | null
 }
 
-const PAGE_BREAK_MARKER = /^\s*===\s*$/
-const ESCAPED_MARKER = /^\s*\\===\s*$/
+// Up to three leading spaces are the tolerated surround; four or more, or a
+// tab, make the line an indented code block, which reading view never shows
+// as a paragraph.
+const PAGE_BREAK_MARKER = /^ {0,3}===\s*$/
+const ESCAPED_MARKER = /^ {0,3}\\===\s*$/
 
 // Holds for the source line as well as for the text reading view renders.
 export const isPageBreakMarker = (text: string): boolean =>

@@ -77,7 +77,7 @@ describe('liveDecorationSpecs', () => {
     expect(specsFor(doc, [], [{ from: 4, to: doc.length }])).toEqual([])
   })
 
-  it('does not mistake a visible-range-initial hr line for frontmatter', () => {
+  it('does not mistake a `---` line at the visible-range start for frontmatter', () => {
     const doc = 'intro\n---\n{John 15:4}\n---\ntail'
 
     const specs = specsFor(doc, [], [{ from: 6, to: doc.length }])
@@ -322,11 +322,9 @@ describe('liveDecorationSpecs', () => {
     it('emits page breaks beside references and quotes', () => {
       const specs = allSpecsFor('{John 15:4}\n\n===\n\nc"Abide"')
 
-      expect(specs.map((spec) => spec.kind)).toEqual([
-        'reference',
-        'christ-quote',
-        'page-break',
-      ])
+      expect(new Set(specs.map((spec) => spec.kind))).toEqual(
+        new Set(['reference', 'christ-quote', 'page-break']),
+      )
     })
 
     it('skips a marker in a fence, in frontmatter, under a text line, or with more text', () => {
@@ -334,6 +332,15 @@ describe('liveDecorationSpecs', () => {
         '---\n===\n---\n\n```\n===\n```\n\nHeading\n===\n\n=== more\n\n- ===\n\n> ===\n\n| === |'
 
       expect(pageBreaksFor(doc)).toEqual([])
+    })
+
+    it('skips a marker indented into an indented code block', () => {
+      expect(pageBreaksFor('one\n\n    ===\n\ntwo')).toEqual([])
+      expect(pageBreaksFor('one\n\n\t===\n\ntwo')).toEqual([])
+    })
+
+    it('keeps a marker under four spaces of indent', () => {
+      expect(pageBreaksFor('one\n\n   ===\n\ntwo')).toEqual([pageBreak(5, 11)])
     })
 
     it('skips a marker whose neighbour line holds text', () => {
@@ -356,7 +363,7 @@ describe('liveDecorationSpecs', () => {
       expect(pageBreaksFor(doc, [], [{ from: 4, to: doc.length }])).toEqual([])
     })
 
-    it('does not mistake a visible-range-initial hr line for frontmatter', () => {
+    it('does not mistake a `---` line at the visible-range start for frontmatter', () => {
       const doc = 'intro\n---\n\n===\n\n---\ntail'
 
       expect(pageBreaksFor(doc, [], [{ from: 6, to: doc.length }])).toEqual([

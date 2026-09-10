@@ -830,6 +830,17 @@ describe('processRenderedElement', () => {
       expect(root.children[2].classList.contains('scripture-study-page-break-trailing')).toBe(false)
     })
 
+    it('keeps an indented code block from taking the Page Break that follows it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<pre><code>===\n</code></pre><p>===</p>'
+
+      await process(root, deps, '    ===\n\n===\n')
+
+      expect(root.children[0].outerHTML).toBe('<pre><code>===\n</code></pre>')
+      expect(root.children[1].classList.contains('scripture-study-page-break')).toBe(true)
+      expect(root.children[1].classList.contains('scripture-study-page-break-trailing')).toBe(true)
+    })
+
     it('keeps a marker in inline code from taking the Page Break that follows it', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p><code>===</code></p><p>===</p>'

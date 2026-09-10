@@ -53,21 +53,31 @@ const visible = (span: Span, visibleRanges: readonly DocRange[]): boolean =>
 const touched = (span: Span, selections: readonly DocRange[]): boolean =>
   selections.some((selection) => touches(span, selection))
 
+const visibleUntouched = <T extends Span>(
+  spans: readonly T[],
+  visibleRanges: readonly DocRange[],
+  selections: readonly DocRange[],
+): T[] =>
+  spans.filter(
+    (span) => visible(span, visibleRanges) && !touched(span, selections),
+  )
+
 const referenceSpecs = (
   doc: string,
   visibleRanges: readonly DocRange[],
   selections: readonly DocRange[],
   context: RenderContext,
 ): ReferenceDecorationSpec[] =>
-  scanReferenceMatches(doc, { translationIds: context.knownTranslationIds })
-    .filter((match) => visible(match, visibleRanges))
-    .filter((match) => !touched(match, selections))
-    .map((match) => ({
-      kind: 'reference',
-      start: match.start,
-      end: match.end,
-      model: modelFromParsed(match.parsed, context, match.relativeSpec),
-    }))
+  visibleUntouched(
+    scanReferenceMatches(doc, { translationIds: context.knownTranslationIds }),
+    visibleRanges,
+    selections,
+  ).map((match) => ({
+    kind: 'reference',
+    start: match.start,
+    end: match.end,
+    model: modelFromParsed(match.parsed, context, match.relativeSpec),
+  }))
 
 const christQuoteSpecs = (
   doc: string,
@@ -95,15 +105,14 @@ const pageBreakSpecs = (
   context: RenderContext,
 ): PageBreakDecorationSpec[] =>
   context.pageBreaks
-    ? scanPageBreaks(doc)
-        .filter((pageBreak) => visible(pageBreak, visibleRanges))
-        .filter((pageBreak) => !touched(pageBreak, selections))
-        .map(({ start, end, trailing }) => ({
+    ? visibleUntouched(scanPageBreaks(doc), visibleRanges, selections).map(
+        ({ start, end, trailing }) => ({
           kind: 'page-break',
           start,
           end,
           trailing,
-        }))
+        }),
+      )
     : []
 
 // Scans the full document so fence state, frontmatter, and escape context
