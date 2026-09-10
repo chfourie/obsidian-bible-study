@@ -25,8 +25,8 @@ import {
 } from './scan-christ-quotes'
 import {
   isPageBreakMarker,
-  scanPageBreaks,
-  type PageBreak,
+  scanPageBreakCandidates,
+  type PageBreakCandidate,
 } from './scan-page-breaks'
 
 export type RenderedSection = {
@@ -75,59 +75,46 @@ const textNodesUnder = (root: HTMLElement): Text[] => {
 const paragraphOf = (node: Text, root: Node): Node =>
   node.parentElement?.closest(PARAGRAPH_SELECTOR) ?? root
 
-export class NoteScanCache {
-  #last: {
-    noteSource: string
-    translationKey: string
-    matches: ReferenceMatch[]
-  } | null = null
+const lineWithin = (section: RenderedSection, lineIndex: number): boolean =>
+  lineIndex >= section.lineStart && lineIndex <= section.lineEnd
 
-  #lastQuotes: {
-    noteSource: string
-    candidates: ChristQuoteCandidate[]
-  } | null = null
+class ScanMemo<Scan> {
+  #last: { noteSource: string; key: string; scan: Scan } | null = null
 
-  #lastPageBreaks: {
-    noteSource: string
-    pageBreaks: PageBreak[]
-  } | null = null
-
-  pageBreaks(noteSource: string): PageBreak[] {
-    if (this.#lastPageBreaks?.noteSource !== noteSource) {
-      this.#lastPageBreaks = {
-        noteSource,
-        pageBreaks: scanPageBreaks(noteSource),
-      }
+  scan(noteSource: string, compute: () => Scan, key = ''): Scan {
+    if (this.#last?.noteSource !== noteSource || this.#last.key !== key) {
+      this.#last = { noteSource, key, scan: compute() }
     }
-    return this.#lastPageBreaks.pageBreaks
+    return this.#last.scan
+  }
+}
+
+export class NoteScanCache {
+  readonly #matches = new ScanMemo<ReferenceMatch[]>()
+  readonly #quotes = new ScanMemo<ChristQuoteCandidate[]>()
+  readonly #pageBreaks = new ScanMemo<PageBreakCandidate[]>()
+
+  pageBreakCandidates(noteSource: string): PageBreakCandidate[] {
+    return this.#pageBreaks.scan(noteSource, () =>
+      scanPageBreakCandidates(noteSource),
+    )
   }
 
   christQuoteCandidates(noteSource: string): ChristQuoteCandidate[] {
-    if (this.#lastQuotes?.noteSource !== noteSource) {
-      this.#lastQuotes = {
-        noteSource,
-        candidates: scanChristQuoteCandidates(noteSource),
-      }
-    }
-    return this.#lastQuotes.candidates
+    return this.#quotes.scan(noteSource, () =>
+      scanChristQuoteCandidates(noteSource),
+    )
   }
 
   matches(
     noteSource: string,
     translationIds: readonly string[],
   ): ReferenceMatch[] {
-    const translationKey = translationIds.join(' ')
-    if (
-      this.#last?.noteSource !== noteSource ||
-      this.#last.translationKey !== translationKey
-    ) {
-      this.#last = {
-        noteSource,
-        translationKey,
-        matches: scanReferenceMatches(noteSource, { translationIds }),
-      }
-    }
-    return this.#last.matches
+    return this.#matches.scan(
+      noteSource,
+      () => scanReferenceMatches(noteSource, { translationIds }),
+      translationIds.join(' '),
+    )
   }
 }
 
@@ -166,8 +153,8 @@ const sectionCandidates = (
       .matches(section.noteSource, context.knownTranslationIds)
       .map((match) => [match.start, match]),
   )
-  const sectionLines = bodyLines(section.noteSource).filter(
-    (line) => line.index >= section.lineStart && line.index <= section.lineEnd,
+  const sectionLines = bodyLines(section.noteSource).filter((line) =>
+    lineWithin(section, line.index),
   )
   for (const line of sectionLines) {
     for (const match of maskInlineCodeSpans(line.text).matchAll(
@@ -199,10 +186,7 @@ class SectionQuoteCandidates {
   constructor(section: RenderedSection, scans: NoteScanCache) {
     this.#sourceSupplied = section.noteSource !== ''
     for (const candidate of scans.christQuoteCandidates(section.noteSource)) {
-      if (
-        candidate.lineIndex >= section.lineStart &&
-        candidate.lineIndex <= section.lineEnd
-      ) {
+      if (lineWithin(section, candidate.lineIndex)) {
         this.#byMark.push(candidate.mark, candidate)
       }
     }
@@ -327,28 +311,37 @@ const decorateChristQuotes = (
   }
 }
 
+// nodeType rather than instanceof Text: a popout window's nodes are not
+// instances of this window's constructors.
+const holdsOnlyMarkerText = (paragraph: Element): boolean =>
+  paragraph.childNodes.length === 1 &&
+  paragraph.firstChild?.nodeType === Node.TEXT_NODE &&
+  isPageBreakMarker(paragraph.textContent ?? '')
+
 // Only a paragraph Obsidian left at the top level can be a Page Break: a
 // marker in a list, table, quote or callout renders inside those. Whether
 // the paragraph is one at all, and whether anything follows it, only the
-// source knows, so each rendered marker takes the section's next Page Break.
+// source knows, so each rendered marker takes the section's next candidate
+// in source order; a candidate that is no Page Break keeps the ones after
+// it aligned with their paragraphs.
 const decoratePageBreaks = (
   root: HTMLElement,
   section: RenderedSection,
   scans: NoteScanCache,
 ): void => {
   if (section.noteSource === '') return
-  const pending = scans
-    .pageBreaks(section.noteSource)
-    .filter(
-      (pageBreak) =>
-        pageBreak.lineIndex >= section.lineStart &&
-        pageBreak.lineIndex <= section.lineEnd,
-    )
+  const sourceOrderedCandidates = scans
+    .pageBreakCandidates(section.noteSource)
+    .filter((candidate) => lineWithin(section, candidate.lineIndex))
   for (const paragraph of root.querySelectorAll(':scope > p')) {
-    if (!isPageBreakMarker(paragraph.textContent ?? '')) continue
-    const pageBreak = pending.shift()
-    if (!pageBreak) return
-    paragraph.replaceWith(renderPageBreakIndicator(pageBreak.trailing))
+    if (!holdsOnlyMarkerText(paragraph)) continue
+    const candidate = sourceOrderedCandidates.shift()
+    if (!candidate) return
+    if (candidate.pageBreak) {
+      paragraph.replaceWith(
+        renderPageBreakIndicator(candidate.pageBreak.trailing),
+      )
+    }
   }
 }
 

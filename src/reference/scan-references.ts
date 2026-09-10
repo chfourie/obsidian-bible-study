@@ -140,13 +140,13 @@ export type BodyLine = {
   index: number
 }
 
-const lineCount = (text: string): number => text.split('\n').length - 1
+export const frontmatterLineCount = (content: string): number =>
+  content.slice(0, frontmatterLength(content)).split('\n').length - 1
 
 export const bodyLines = (content: string): BodyLine[] => {
   const lines: BodyLine[] = []
-  const frontmatter = content.slice(0, frontmatterLength(content))
-  let start = frontmatter.length
-  let index = lineCount(frontmatter)
+  let start = frontmatterLength(content)
+  let index = frontmatterLineCount(content)
   let openFence: Fence | null = null
   for (const rawLine of content.slice(start).split('\n')) {
     const text = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine

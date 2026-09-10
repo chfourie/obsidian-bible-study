@@ -1,12 +1,14 @@
 import { splitTemplate, withFrontmatterKeys } from '../notes'
-import { formatReference, type Reference } from '../reference'
+import {
+  formatReference,
+  frontmatterLineCount,
+  type Reference,
+} from '../reference'
 
 export type ComposedAnnotationNote = {
   content: string
   cursorLine: number
 }
-
-const lineCount = (text: string): number => text.split('\n').length - 1
 
 export const composeAnnotationNote = (
   reference: Reference,
@@ -16,8 +18,6 @@ export const composeAnnotationNote = (
   const frontmatter = withFrontmatterKeys(split.frontmatter, [
     ['ref', [`ref: ${formatReference(reference)}`]],
   ])
-  return {
-    content: `${frontmatter}${split.body}`,
-    cursorLine: lineCount(frontmatter),
-  }
+  const content = `${frontmatter}${split.body}`
+  return { content, cursorLine: frontmatterLineCount(content) }
 }

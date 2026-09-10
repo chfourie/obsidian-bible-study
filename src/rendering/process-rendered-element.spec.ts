@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Passage } from './module-passage-source'
 import {
   processRenderedElement,
+  wholeNoteSection,
   type RenderedSection,
 } from './process-rendered-element'
 import type { ReferenceRenderDeps } from './render-reference'
@@ -793,6 +794,77 @@ describe('processRenderedElement', () => {
       await process(root, deps, '===', null, { ...context, pageBreaks: false })
 
       expect(root.innerHTML).toBe('<p>===</p>')
+    })
+
+    it('breaks right after the frontmatter, the note edge there', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p><p>After.</p>'
+
+      await process(root, deps, '---\nk: v\n---\n===\n\nAfter.')
+
+      const [element] = pageBreaks(root)
+      expect(pageBreaks(root)).toHaveLength(1)
+      expect(element.classList.contains('scripture-study-page-break-trailing')).toBe(false)
+    })
+
+    it('keeps an escaped marker from taking the Page Break that follows it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p><p>===</p>'
+
+      await process(root, deps, '\\===\n\n===\n')
+
+      expect(root.children).toHaveLength(2)
+      expect(root.children[0].outerHTML).toBe('<p>===</p>')
+      expect(root.children[1].classList.contains('scripture-study-page-break')).toBe(true)
+      expect(root.children[1].classList.contains('scripture-study-page-break-trailing')).toBe(true)
+    })
+
+    it('keeps a marker right under a fence close from taking the Page Break that follows it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<pre><code>code</code></pre><p>===</p><p>===</p><p>After.</p>'
+
+      await process(root, deps, '```\ncode\n```\n===\n\n===\n\nAfter.')
+
+      expect(root.children[1].outerHTML).toBe('<p>===</p>')
+      expect(root.children[2].classList.contains('scripture-study-page-break')).toBe(true)
+      expect(root.children[2].classList.contains('scripture-study-page-break-trailing')).toBe(false)
+    })
+
+    it('keeps a marker in inline code from taking the Page Break that follows it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p><code>===</code></p><p>===</p>'
+
+      await process(root, deps, '`===`\n\n===\n')
+
+      expect(root.children[0].outerHTML).toBe('<p><code>===</code></p>')
+      expect(root.children[1].classList.contains('scripture-study-page-break')).toBe(true)
+      expect(root.children[1].classList.contains('scripture-study-page-break-trailing')).toBe(true)
+    })
+
+    it('decorates a whole note in document order across other blocks', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<h2>Head</h2><p>===</p><ul><li>item</li></ul><p>===</p><p>Tail.</p><p>===</p>'
+
+      await processRenderedElement(
+        root,
+        context,
+        deps,
+        wholeNoteSection('## Head\n\n===\n\n- item\n\n===\n\nTail.\n\n===\n'),
+      )
+
+      const trailing = pageBreaks(root).map((element) =>
+        element.classList.contains('scripture-study-page-break-trailing'),
+      )
+      expect(trailing).toEqual([false, false, true])
+      expect([...root.children].map((child) => child.tagName)).toEqual([
+        'H2',
+        'DIV',
+        'UL',
+        'DIV',
+        'P',
+        'DIV',
+      ])
     })
 
     it('still renders references beside a Page Break', async () => {
