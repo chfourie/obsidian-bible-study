@@ -5,6 +5,7 @@ import {
   type RenderContext,
 } from './reference-render-model'
 import { scanChristQuotes } from './scan-christ-quotes'
+import { scanPageBreaks } from './scan-page-breaks'
 
 export type DocRange = {
   from: number
@@ -28,9 +29,15 @@ export type ChristQuoteDecorationSpec = {
   prefixHidden: boolean
 }
 
+export type PageBreakDecorationSpec = {
+  kind: 'page-break'
+  start: number
+  end: number
+  trailing: boolean
+}
+
 export type LiveDecorationSpec =
-  | ReferenceDecorationSpec
-  | ChristQuoteDecorationSpec
+  ReferenceDecorationSpec | ChristQuoteDecorationSpec | PageBreakDecorationSpec
 
 type Span = { start: number; end: number }
 
@@ -81,6 +88,24 @@ const christQuoteSpecs = (
       prefixHidden: !touched(span, selections),
     }))
 
+const pageBreakSpecs = (
+  doc: string,
+  visibleRanges: readonly DocRange[],
+  selections: readonly DocRange[],
+  context: RenderContext,
+): PageBreakDecorationSpec[] =>
+  context.pageBreaks
+    ? scanPageBreaks(doc)
+        .filter((pageBreak) => visible(pageBreak, visibleRanges))
+        .filter((pageBreak) => !touched(pageBreak, selections))
+        .map(({ start, end, trailing }) => ({
+          kind: 'page-break',
+          start,
+          end,
+          trailing,
+        }))
+    : []
+
 // Scans the full document so fence state, frontmatter, and escape context
 // carry into the visible ranges, then keeps only the visible matches.
 export const liveDecorationSpecs = (
@@ -91,4 +116,5 @@ export const liveDecorationSpecs = (
 ): LiveDecorationSpec[] => [
   ...referenceSpecs(doc, visibleRanges, selections, context),
   ...christQuoteSpecs(doc, visibleRanges, selections),
+  ...pageBreakSpecs(doc, visibleRanges, selections, context),
 ]

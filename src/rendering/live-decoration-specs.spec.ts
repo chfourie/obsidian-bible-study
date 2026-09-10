@@ -4,6 +4,7 @@ import {
   type ChristQuoteDecorationSpec,
   type DocRange,
   type LiveDecorationSpec,
+  type PageBreakDecorationSpec,
 } from './live-decoration-specs'
 import type { RenderContext } from './reference-render-model'
 
@@ -34,6 +35,8 @@ const ofKind =
 const specsFor = ofKind('reference')
 
 const quotesFor = ofKind('christ-quote')
+
+const pageBreaksFor = ofKind('page-break')
 
 describe('liveDecorationSpecs', () => {
   it('decorates each valid reference with its render model', () => {
@@ -295,6 +298,103 @@ describe('liveDecorationSpecs', () => {
       it('across a lazy continuation line of a list item', () => {
         expect(quotesFor('- c"Abide\n  in me"')).toEqual([hiddenQuote(2, 18)])
       })
+    })
+  })
+
+  describe('Page Break', () => {
+    const pageBreak = (
+      start: number,
+      end: number,
+      trailing = false,
+    ): PageBreakDecorationSpec => ({ kind: 'page-break', start, end, trailing })
+
+    it('emits a spec over the marker line, spaces included, at document offsets', () => {
+      expect(pageBreaksFor('one\n\n  ===  \n\ntwo')).toEqual([pageBreak(5, 12)])
+    })
+
+    it('marks a break nothing follows as trailing and one at the note start as a break', () => {
+      expect(pageBreaksFor('===\n\none\n\n===\n')).toEqual([
+        pageBreak(0, 3),
+        pageBreak(10, 13, true),
+      ])
+    })
+
+    it('emits page breaks beside references and quotes', () => {
+      const specs = allSpecsFor('{John 15:4}\n\n===\n\nc"Abide"')
+
+      expect(specs.map((spec) => spec.kind)).toEqual([
+        'reference',
+        'christ-quote',
+        'page-break',
+      ])
+    })
+
+    it('skips a marker in a fence, in frontmatter, under a text line, or with more text', () => {
+      const doc =
+        '---\n===\n---\n\n```\n===\n```\n\nHeading\n===\n\n=== more\n\n- ===\n\n> ===\n\n| === |'
+
+      expect(pageBreaksFor(doc)).toEqual([])
+    })
+
+    it('skips a marker whose neighbour line holds text', () => {
+      expect(pageBreaksFor('===\ntext')).toEqual([])
+      expect(pageBreaksFor('text\n\n===\ntext')).toEqual([])
+    })
+
+    it('emits nothing with page breaks off', () => {
+      const specs = liveDecorationSpecs('===', [{ from: 0, to: 3 }], [], {
+        ...context,
+        pageBreaks: false,
+      })
+
+      expect(specs).toEqual([])
+    })
+
+    it('honors a code fence opened above the visible range', () => {
+      const doc = '```\n\n===\n\n```\n'
+
+      expect(pageBreaksFor(doc, [], [{ from: 4, to: doc.length }])).toEqual([])
+    })
+
+    it('does not mistake a visible-range-initial hr line for frontmatter', () => {
+      const doc = 'intro\n---\n\n===\n\n---\ntail'
+
+      expect(pageBreaksFor(doc, [], [{ from: 6, to: doc.length }])).toEqual([
+        pageBreak(11, 14),
+      ])
+    })
+
+    it('skips frontmatter even when the visible range starts inside it', () => {
+      const doc = '---\ntitle: x\n---\n===\n\ntail'
+
+      expect(pageBreaksFor(doc, [], [{ from: 4, to: doc.length }])).toEqual([
+        pageBreak(17, 20),
+      ])
+    })
+
+    it('keeps only breaks inside the visible ranges', () => {
+      const doc = '===\n\n===\n\n==='
+
+      expect(pageBreaksFor(doc, [], [{ from: 5, to: 8 }])).toEqual([
+        pageBreak(5, 8),
+      ])
+      expect(pageBreaksFor(doc, [], [])).toEqual([])
+    })
+
+    it('yields to the raw text while the cursor or a selection touches the line', () => {
+      const doc = 'one\n\n===\n\ntwo'
+
+      expect(pageBreaksFor(doc, [{ from: 5, to: 5 }])).toEqual([])
+      expect(pageBreaksFor(doc, [{ from: 7, to: 7 }])).toEqual([])
+      expect(pageBreaksFor(doc, [{ from: 8, to: 8 }])).toEqual([])
+      expect(pageBreaksFor(doc, [{ from: 1, to: 12 }])).toEqual([])
+    })
+
+    it('keeps the widget while the cursor sits on another line', () => {
+      const doc = 'one\n\n===\n\ntwo'
+
+      expect(pageBreaksFor(doc, [{ from: 4, to: 4 }])).toHaveLength(1)
+      expect(pageBreaksFor(doc, [{ from: 9, to: 9 }])).toHaveLength(1)
     })
   })
 })

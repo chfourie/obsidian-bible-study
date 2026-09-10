@@ -190,6 +190,99 @@ describe('Christ Quote in Live Preview', () => {
   })
 })
 
+describe('Page Break in Live Preview', () => {
+  let view: EditorView
+
+  afterEach(() => {
+    view.destroy()
+    document.body.replaceChildren()
+  })
+
+  const editorOver = (
+    doc: string,
+    context: RenderContext = webDefault,
+  ): HTMLElement => {
+    view = new EditorView({
+      state: EditorState.create({
+        doc,
+        extensions: [
+          editorLivePreviewField,
+          createLivePreviewExtension(() => context, deps),
+        ],
+      }),
+      parent: document.body,
+    })
+    return view.contentDOM
+  }
+
+  const indicators = (content: HTMLElement): HTMLElement[] => [
+    ...content.querySelectorAll<HTMLElement>('.scripture-study-page-break'),
+  ]
+
+  const trailing = (indicator: HTMLElement): boolean =>
+    indicator.classList.contains('scripture-study-page-break-trailing')
+
+  it('replaces the marker line with the reading-view indicator', () => {
+    const content = editorOver('one\n\n===\n\ntwo')
+
+    const [indicator] = indicators(content)
+    expect(indicators(content)).toHaveLength(1)
+    expect(trailing(indicator)).toBe(false)
+    expect(
+      indicator
+        .querySelector('.scripture-study-page-break-icon')
+        ?.getAttribute('data-icon'),
+    ).toBe('separator-horizontal')
+    expect(
+      indicator.querySelector('.scripture-study-page-break-label')?.textContent,
+    ).toBe('page break')
+    expect(content.textContent).toBe('onepage breaktwo')
+  })
+
+  it('shows the indicator for a trailing break too, carrying the trailing class', () => {
+    const content = editorOver('one\n\n===\n')
+
+    const [indicator] = indicators(content)
+    expect(trailing(indicator)).toBe(true)
+  })
+
+  it('shows the raw marker while the cursor is on its line and the indicator once it leaves', () => {
+    const content = editorOver('one\n\n===\n\ntwo')
+
+    view.dispatch({ selection: { anchor: 6 } })
+
+    expect(indicators(content)).toHaveLength(0)
+    expect(content.textContent).toBe('one===two')
+
+    view.dispatch({ selection: { anchor: 0 } })
+
+    expect(indicators(content)).toHaveLength(1)
+  })
+
+  it('shows raw text in Source mode and the indicator again on return', () => {
+    const content = editorOver('one\n\n===\n\ntwo')
+
+    view.dispatch({ effects: setLivePreview.of(false) })
+
+    expect(indicators(content)).toHaveLength(0)
+    expect(content.textContent).toBe('one===two')
+
+    view.dispatch({ effects: setLivePreview.of(true) })
+
+    expect(indicators(content)).toHaveLength(1)
+  })
+
+  it('leaves the marker as text with page breaks off', () => {
+    const content = editorOver('one\n\n===\n\ntwo', {
+      ...webDefault,
+      pageBreaks: false,
+    })
+
+    expect(indicators(content)).toHaveLength(0)
+    expect(content.textContent).toBe('one===two')
+  })
+})
+
 describe('highlight editing in Live Preview', () => {
   let view: EditorView
 

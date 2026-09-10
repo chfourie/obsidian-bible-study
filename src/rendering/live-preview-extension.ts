@@ -23,6 +23,7 @@ import {
   type ReferenceRenderModel,
   type RenderContext,
 } from './reference-render-model'
+import { renderPageBreakIndicator } from './page-break-indicator'
 import { RED_LETTER_CLASS } from './red-letter'
 import { renderReference, type ReferenceRenderDeps } from './render-reference'
 
@@ -140,6 +141,28 @@ export class ReferenceWidget extends WidgetType {
   }
 }
 
+// CodeMirror lets no view plugin add block decorations, so the indicator
+// replaces the marker line's text as an inline widget; the cursor can still
+// land at either end of the line, and the raw text returns while it does. A
+// click on the indicator is left to the editor for the same reason.
+export class PageBreakWidget extends WidgetType {
+  constructor(private readonly trailing: boolean) {
+    super()
+  }
+
+  override eq(other: PageBreakWidget): boolean {
+    return other.trailing === this.trailing
+  }
+
+  override toDOM(): HTMLElement {
+    return renderPageBreakIndicator(this.trailing)
+  }
+
+  override ignoreEvent(): boolean {
+    return false
+  }
+}
+
 const hasRenderContextChange = (update: ViewUpdate): boolean =>
   update.transactions.some((transaction) =>
     transaction.effects.some((effect) =>
@@ -192,6 +215,12 @@ export const createLivePreviewExtension = (
               : []),
             CHRIST_QUOTE_MARK.range(spec.start, spec.end),
           ]
+        case 'page-break':
+          return [
+            Decoration.replace({
+              widget: new PageBreakWidget(spec.trailing),
+            }).range(spec.start, spec.end),
+          ]
       }
     }
     const specs = liveDecorationSpecs(
@@ -200,8 +229,8 @@ export const createLivePreviewExtension = (
       selections,
       contextProvider(),
     )
-    // Quote ranges follow the reference ranges, so the concatenation is not in
-    // offset order; let the set sort it.
+    // Quote and Page Break ranges follow the reference ranges, so the
+    // concatenation is not in offset order; let the set sort it.
     return Decoration.set(specs.flatMap(decorate), true)
   }
 
