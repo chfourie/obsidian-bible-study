@@ -214,6 +214,7 @@ describe('ScriptureStudySettingTab declarative definitions', () => {
         'Default translation',
         'Offline fallback translation',
         'Derived red letter',
+        'Page breaks',
         'Reveal Study Panel on selection',
         'Language',
         "Enable Strong's",
@@ -695,6 +696,20 @@ describe('ScriptureStudySettingTab derived red letter', () => {
     await flushAsync()
 
     expect((await settingsStore.loadSettings()).derivedRedLetter).toBe(true)
+  })
+})
+
+describe('ScriptureStudySettingTab page breaks', () => {
+  it('persists the page breaks toggle, default on', async () => {
+    const { container, settingsStore } = await setup()
+
+    const setting = settingNamed(container, 'Page breaks')
+    expect(toggleOf(setting).checked).toBe(true)
+
+    changeToggle(setting, false)
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).pageBreaks).toBe(false)
   })
 })
 

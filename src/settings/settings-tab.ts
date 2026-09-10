@@ -99,6 +99,7 @@ type SettingsControlKey =
   | 'fallbackTranslationId'
   | 'languageFilter'
   | 'derivedRedLetter'
+  | 'pageBreaks'
   | 'revealPanelOnSelection'
   | 'strongsEnabled'
   | 'lsjEnabled'
@@ -192,6 +193,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         control: { type: 'toggle', key: 'derivedRedLetter' },
       },
       {
+        name: 'Page breaks',
+        desc: 'Renders a line holding only `===` as a page break in notes and PDF export. Turn off if another plugin uses the same marker.',
+        control: { type: 'toggle', key: 'pageBreaks' },
+      },
+      {
         name: 'Reveal Study Panel on selection',
         desc: 'Opens the Study Panel when a verse or a tagged word is clicked in a reader. With this off, only an already-open panel follows the selection.',
         control: { type: 'toggle', key: 'revealPanelOnSelection' },
@@ -263,6 +269,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.languageFilter
       case 'derivedRedLetter':
         return settings.derivedRedLetter
+      case 'pageBreaks':
+        return settings.pageBreaks
       case 'revealPanelOnSelection':
         return settings.revealPanelOnSelection
       case 'strongsEnabled':
@@ -321,6 +329,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return this.#update((settings) => ({
           ...settings,
           derivedRedLetter: value === true,
+        }))
+      case 'pageBreaks':
+        return this.#update((settings) => ({
+          ...settings,
+          pageBreaks: value === true,
         }))
       case 'revealPanelOnSelection':
         return this.#update((settings) => ({
