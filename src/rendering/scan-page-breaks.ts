@@ -25,6 +25,7 @@ const PAGE_BREAK_MARKER = /^ {0,3}===\s*$/
 const ESCAPED_MARKER = /^ {0,3}\\===\s*$/
 
 const THEMATIC_BREAK = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/
+const SETEXT_UNDERLINE = /^ {0,3}(?:=+|-+)[ \t]*$/
 
 // Holds for the source line as well as for the text reading view renders.
 export const isPageBreakMarker = (text: string): boolean =>
@@ -35,8 +36,8 @@ export const isPageBreakMarker = (text: string): boolean =>
 // right under a fence close, a heading or a thematic break still render as a
 // paragraph of their own, so they count as candidates that are no Page Break;
 // a marker under a line of text is its setext underline, one under a table
-// row is folded into the table, and one with text on the next line shares a
-// paragraph with it.
+// row is folded into the table, and one that an underline follows is itself
+// a heading. Text on the next line may follow a Page Break directly.
 export const scanPageBreakCandidates = (
   noteSource: string,
 ): PageBreakCandidate[] => {
@@ -54,22 +55,21 @@ export const scanPageBreakCandidates = (
     THEMATIC_BREAK.test(lines[index])
   const nothingAfter = (index: number): boolean =>
     lines.slice(index + 1).every(isBlankLine)
+  const underlined = (index: number): boolean =>
+    bodyIndexes.has(index + 1) && SETEXT_UNDERLINE.test(lines[index + 1])
   return body
     .filter(
       (line) =>
         (isPageBreakMarker(line.text) || ESCAPED_MARKER.test(line.text)) &&
         closesParagraphAbove(line.index - 1) &&
-        paragraphEdge(line.index + 1),
+        !underlined(line.index),
     )
     .map((line) => ({
       start: line.start,
       end: line.start + line.text.length,
       trailing: nothingAfter(line.index),
       lineIndex: line.index,
-      pageBreak:
-        isPageBreakMarker(line.text) &&
-        edgeOrBlank(line.index - 1) &&
-        edgeOrBlank(line.index + 1),
+      pageBreak: isPageBreakMarker(line.text) && edgeOrBlank(line.index - 1),
     }))
 }
 

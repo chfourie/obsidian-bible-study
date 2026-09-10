@@ -319,6 +319,14 @@ describe('liveDecorationSpecs', () => {
       ])
     })
 
+    it('emits a spec when text follows the marker on the next line', () => {
+      expect(pageBreaksFor('one\n\n===\ntwo')).toEqual([pageBreak(5, 8)])
+    })
+
+    it('skips a marker another marker underlines, a heading', () => {
+      expect(pageBreaksFor('===\n===\n\n===\n')).toEqual([pageBreak(9, 12, true)])
+    })
+
     it('emits page breaks beside references and quotes', () => {
       const specs = allSpecsFor('{John 15:4}\n\n===\n\nc"Abide"')
 
@@ -343,9 +351,9 @@ describe('liveDecorationSpecs', () => {
       expect(pageBreaksFor('one\n\n   ===\n\ntwo')).toEqual([pageBreak(5, 11)])
     })
 
-    it('skips a marker whose neighbour line holds text', () => {
-      expect(pageBreaksFor('===\ntext')).toEqual([])
-      expect(pageBreaksFor('text\n\n===\ntext')).toEqual([])
+    it('skips a marker under a line of text, the setext underline', () => {
+      expect(pageBreaksFor('text\n===')).toEqual([])
+      expect(pageBreaksFor('text\n===\ntext')).toEqual([])
     })
 
     it('emits nothing with page breaks off', () => {

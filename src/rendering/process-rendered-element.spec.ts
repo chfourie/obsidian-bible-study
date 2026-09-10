@@ -787,6 +787,39 @@ describe('processRenderedElement', () => {
       expect(root.innerHTML).toBe('<p>===</p>')
     })
 
+    it('breaks before text that follows the marker on the next line', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===<br>After.</p>'
+
+      await process(root, deps, 'Before.\n\n===\nAfter.\n')
+
+      expect(pageBreaks(root)).toHaveLength(1)
+      expect(root.innerHTML).toMatch(
+        /^<div class="scripture-study-page-break">.*<\/div><p>After\.<\/p>$/,
+      )
+    })
+
+    it('breaks before text that follows the marker under strict line breaks', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===\nAfter.</p>'
+
+      await process(root, deps, 'Before.\n\n===\nAfter.\n')
+
+      expect(pageBreaks(root)).toHaveLength(1)
+      expect(root.querySelector('p')?.textContent).toBe('After.')
+    })
+
+    it('leaves a marker that underlines a marker as the heading it is', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<h1>===</h1><p>===</p>'
+
+      await process(root, deps, '===\n===\n\n===\n')
+
+      expect(pageBreaks(root)).toHaveLength(1)
+      expect(root.querySelector('h1')?.textContent).toBe('===')
+      expect(pageBreaks(root)[0].classList.contains('scripture-study-page-break-trailing')).toBe(true)
+    })
+
     it('never breaks inside frontmatter', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p>===</p>'

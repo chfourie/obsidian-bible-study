@@ -241,6 +241,15 @@ body {
   height: 0.85em;
 }
 
+/* Live Preview places the indicator inside a line as an inline widget; a
+   block there gets empty line boxes above and below it. */
+.cm-line .scripture-study-page-break {
+  display: inline-flex;
+  width: 100%;
+  margin: 0;
+  vertical-align: middle;
+}
+
 /* In print the marker is invisible and the page turns after it; a trailing
    one turns nothing, so a PDF never ends on an empty page. */
 @media print {

@@ -312,10 +312,33 @@ const decorateChristQuotes = (
   }
 }
 
+// Obsidian renders the marker's line break as <br>, or keeps the newline in
+// the text under strict line breaks; either way the marker is the first line.
+const MARKER_LINE = /^ {0,3}===[ \t]*\n/
+
 const holdsOnlyMarkerText = (paragraph: Element): boolean =>
   paragraph.childNodes.length === 1 &&
   isTextNode(paragraph.firstChild) &&
   isPageBreakMarker(paragraph.textContent ?? '')
+
+const opensWithMarkerLine = (paragraph: Element): boolean => {
+  const first = paragraph.firstChild
+  if (!isTextNode(first)) return false
+  if (MARKER_LINE.test(first.data)) return true
+  return (
+    isPageBreakMarker(first.data) && first.nextSibling?.nodeName === 'BR'
+  )
+}
+
+const removeMarkerLine = (paragraph: Element): void => {
+  const first = paragraph.firstChild as Text
+  if (MARKER_LINE.test(first.data)) {
+    first.data = first.data.replace(MARKER_LINE, '')
+    return
+  }
+  first.nextSibling?.remove()
+  first.remove()
+}
 
 const NESTING_SELECTOR = 'li, table, blockquote, .callout, pre'
 
@@ -344,11 +367,17 @@ const decoratePageBreaks = (
     .pageBreakCandidates(section.noteSource)
     .filter((candidate) => lineWithin(section, candidate.lineIndex))
   for (const paragraph of topLevelParagraphs(root)) {
-    if (!holdsOnlyMarkerText(paragraph)) continue
+    const whole = holdsOnlyMarkerText(paragraph)
+    if (!whole && !opensWithMarkerLine(paragraph)) continue
     const candidate = sourceOrderedCandidates.shift()
     if (!candidate) return
-    if (candidate.pageBreak) {
-      paragraph.replaceWith(renderPageBreakIndicator(candidate.trailing))
+    if (!candidate.pageBreak) continue
+    const indicator = renderPageBreakIndicator(candidate.trailing)
+    if (whole) {
+      paragraph.replaceWith(indicator)
+    } else {
+      removeMarkerLine(paragraph)
+      paragraph.before(indicator)
     }
   }
 }
