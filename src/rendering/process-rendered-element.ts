@@ -317,6 +317,17 @@ const holdsOnlyMarkerText = (paragraph: Element): boolean =>
   isTextNode(paragraph.firstChild) &&
   isPageBreakMarker(paragraph.textContent ?? '')
 
+const NESTING_SELECTOR = 'li, table, blockquote, .callout, pre'
+
+// Reading view hands over one section with the paragraph as a direct child;
+// a whole-note render (PDF export) wraps each section in its own div, so the
+// paragraph is sought at any depth and only its enclosing containers matter.
+const topLevelParagraphs = (root: HTMLElement): Element[] =>
+  [...root.querySelectorAll('p')].filter((paragraph) => {
+    const nesting = paragraph.closest(NESTING_SELECTOR)
+    return nesting === null || !root.contains(nesting)
+  })
+
 // Only a paragraph Obsidian left at the top level can be a Page Break: a
 // marker in a list, table, quote or callout renders inside those. Whether
 // the paragraph is one at all, and whether anything follows it, only the
@@ -332,7 +343,7 @@ const decoratePageBreaks = (
   const sourceOrderedCandidates = scans
     .pageBreakCandidates(section.noteSource)
     .filter((candidate) => lineWithin(section, candidate.lineIndex))
-  for (const paragraph of root.querySelectorAll(':scope > p')) {
+  for (const paragraph of topLevelParagraphs(root)) {
     if (!holdsOnlyMarkerText(paragraph)) continue
     const candidate = sourceOrderedCandidates.shift()
     if (!candidate) return

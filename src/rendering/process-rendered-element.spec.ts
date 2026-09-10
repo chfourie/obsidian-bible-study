@@ -671,6 +671,24 @@ describe('processRenderedElement', () => {
       expect(element.classList.contains('scripture-study-page-break-trailing')).toBe(false)
     })
 
+    it('finds the paragraph through wrapper divs, as a whole-note export renders it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<div><div class="el-p"><p>Before.</p></div>' +
+        '<div class="el-p"><p>===</p></div>' +
+        '<div class="el-p"><p>After.</p></div></div>'
+
+      await processRenderedElement(
+        root,
+        context,
+        deps,
+        wholeNoteSection('Before.\n\n===\n\nAfter.\n'),
+      )
+
+      expect(pageBreaks(root)).toHaveLength(1)
+      expect(root.querySelectorAll('p')).toHaveLength(2)
+    })
+
     it('tolerates spaces around the marker', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p>  ===  </p>'
