@@ -164,3 +164,11 @@ The Strong's Families the Word Cloud never shows because their repetition carrie
 
 ### Occurrence Emphasis
 The reader emphasizing every word in the chapter tagged with one Strong's Family, entered by tapping a Word Cloud word (or from its menu) and left by tapping it again, entering it for another word, or leaving the chapter. One family at a time.
+
+### Christ Quote
+A double-quoted span in a vault note that the author declares to be the words of Christ by prefixing the opening mark with a lowercase `c` at a word start: `c"Abide in me"`. Straight or curly double quotes, closing mark matching the opening, closed within the same paragraph; unterminated or mid-word (`Isaac"…"`) is plain text. Renders with the `c` hidden and the quote, marks included, in the same red-letter colour as a Translation's own words of Christ; markdown inside the quote renders as usual. Escaped by a backslash before the opening mark (`c\"…"`). Decoration only — never an Occurrence, never indexed. Distinct from derived red-letter, which comes from translation data, not the author.
+_Avoid_: red quote, red-letter note (implies translation data)
+
+### Page Break
+A note-author's instruction that the PDF export start a new page here: a line holding exactly `===`, standing as its own paragraph (blank line or note edge on both sides). On screen it is a visible marker, never a heading rule; in print it is invisible and breaks the page after itself. Consecutive Page Breaks each break; one with nothing after it in the note breaks nothing. Only notes carry Page Breaks — never the reader or the Study Panel.
+_Avoid_: line break (a `<br>`), horizontal rule (`---`, which prints a line and breaks no page)

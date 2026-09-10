@@ -56,6 +56,14 @@ The same tinted block, with the chip on its own line above the passage. Body = o
 
 Words of Christ styled red (theme-adjustable CSS variable) wherever verse text renders — inline, block, reader — when the translation data marks them; silently absent otherwise.
 
+### 3.4a Christ Quote
+
+A note author's own quotation of Christ, written `c"Abide in me"` or `c“Abide in me”`. Grammar: a lowercase `c` at a word start (line start, or after whitespace or punctuation), immediately followed by a straight `"` or curly `“` opening mark; the quote ends at the first closing mark of the same kind (`"` or `”`) within the same paragraph. Anything else — mid-word `c` (`Isaac"…"`), capital `C"`, a closing mark of the other kind, an unterminated quote, or one closing only in a later paragraph — is plain text. Single quotes never take part.
+
+Rendering: the `c` is hidden and the quote, marks included, is wrapped in the red-letter class of §3.4, so it uses the same CSS variable as translation red-letter; no setting, reader option or new CSS. Inline markdown inside the quote renders as usual and stays red; a reference chip inside it renders as its usual chip. Several Christ Quotes in one paragraph each render independently. Same in Reading mode, Live Preview (the `c` reappears only while the cursor or selection touches the quote; the colour stays) and the Study Panel's rendered Annotation bodies; Source mode shows the raw text.
+
+Exclusions: inline code, fenced code blocks and frontmatter are never scanned, as for references. Escape: a backslash before the opening mark (`c\"…"`) keeps the text literal, `c"…"` with no backslash and no colour, detected from note source as reference escapes are. Christ Quotes are decoration only — never an Occurrence, never indexed, no effect on Mentions, Annotations or Cross-References. The reader's Red letter option and the Derived red letter setting govern translation text only and never hide a Christ Quote.
+
 ### 3.5 Async states
 
 Chip renders immediately in all modes. Loading → subtle shimmer/placeholder ("Loading John 15:4…"), text swaps in. Unavailable (offline/error) → muted one-liner ("John 15:4 (NKJV) unavailable offline") with retry icon — degraded state, never an error box. Cache refresh after expiry swaps silently.
