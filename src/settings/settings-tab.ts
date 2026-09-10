@@ -194,7 +194,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       },
       {
         name: 'Page breaks',
-        desc: 'Renders a line holding only `===` as a page break in notes and PDF export. Turn off if another plugin uses the same marker.',
+        desc: 'Renders a line holding only === as a page break in notes and PDF export. Turn off if another plugin uses the same marker.',
         control: { type: 'toggle', key: 'pageBreaks' },
       },
       {
