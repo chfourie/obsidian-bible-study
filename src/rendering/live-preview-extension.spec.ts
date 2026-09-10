@@ -37,6 +37,7 @@ const widget = (
 const webDefault: RenderContext = {
   knownTranslationIds: ['web'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 describe('ReferenceWidget equality', () => {
@@ -52,6 +53,7 @@ describe('ReferenceWidget equality', () => {
     const kjvDefault: RenderContext = {
       knownTranslationIds: ['web', 'kjv'],
       defaultTranslationId: 'kjv',
+      pageBreaks: true,
     }
 
     expect(
@@ -63,6 +65,7 @@ describe('ReferenceWidget equality', () => {
     const withKjv: RenderContext = {
       knownTranslationIds: ['web', 'kjv'],
       defaultTranslationId: 'web',
+      pageBreaks: true,
     }
 
     expect(

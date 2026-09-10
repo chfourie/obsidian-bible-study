@@ -29,6 +29,7 @@ import { renderReference, type ReferenceRenderDeps } from './render-reference'
 const context = {
   knownTranslationIds: ['web', 'nkjv'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 const model = (text: string): ReferenceRenderModel => {
@@ -664,6 +665,7 @@ describe('renderReference first-run install nudge', () => {
     const built = buildReferenceRenderModel(text, {
       knownTranslationIds: ['web', 'nkjv'],
       defaultTranslationId: null,
+      pageBreaks: true,
     })
     if (!built) throw new Error(`unparseable: ${text}`)
     return built

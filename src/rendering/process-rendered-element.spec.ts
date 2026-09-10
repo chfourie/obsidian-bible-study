@@ -10,6 +10,7 @@ import type { RenderContext } from './reference-render-model'
 const context: RenderContext = {
   knownTranslationIds: ['web'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 const passage: Passage = {
@@ -38,10 +39,11 @@ const process = (
   deps: ReferenceRenderDeps,
   sectionSource = '',
   sourcePath: string | null = null,
+  renderContext: RenderContext = context,
 ) =>
   processRenderedElement(
     root,
-    context,
+    renderContext,
     deps,
     wholeNote(sectionSource),
     sourcePath,
@@ -642,6 +644,165 @@ describe('processRenderedElement', () => {
 
       expect(redLetterTexts(root)).toEqual(['"Abide in me"'])
       expect(chipLabels(root)).toEqual(['John 15:4'])
+    })
+  })
+
+  describe('Page Break', () => {
+    const pageBreaks = (root: HTMLElement): HTMLElement[] => [
+      ...root.querySelectorAll<HTMLElement>('.scripture-study-page-break'),
+    ]
+
+    it('turns a paragraph holding only the marker into one block element with icon and label', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps, 'Before.\n\n===\n\nAfter.')
+
+      const [element] = pageBreaks(root)
+      expect(pageBreaks(root)).toHaveLength(1)
+      expect(element.tagName).toBe('DIV')
+      expect(element.parentElement).toBe(root)
+      expect(root.querySelector('p')).toBeNull()
+      expect(
+        element.querySelector('[data-icon="separator-horizontal"]'),
+      ).not.toBeNull()
+      expect(element.textContent).toBe('page break')
+      expect(element.classList.contains('scripture-study-page-break-trailing')).toBe(false)
+    })
+
+    it('tolerates spaces around the marker', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>  ===  </p>'
+
+      await process(root, deps, 'Before.\n\n  ===  \n\nAfter.')
+
+      expect(pageBreaks(root)).toHaveLength(1)
+    })
+
+    it('marks the Page Break trailing when no non-blank line follows it', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps, 'Before.\n\n===\n\n  \n')
+
+      const [element] = pageBreaks(root)
+      expect(element.classList.contains('scripture-study-page-break-trailing')).toBe(true)
+    })
+
+    it('does not mark it trailing when a fenced block follows', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps, '===\n\n```\ncode\n```\n')
+
+      const [element] = pageBreaks(root)
+      expect(element.classList.contains('scripture-study-page-break-trailing')).toBe(false)
+    })
+
+    it('breaks at the note edges', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps, '===')
+
+      expect(pageBreaks(root)).toHaveLength(1)
+    })
+
+    it('renders each of two consecutive Page Breaks', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p><p>===</p><p>After.</p>'
+
+      await process(root, deps, '===\n\n===\n\nAfter.')
+
+      expect(pageBreaks(root)).toHaveLength(2)
+      expect(root.querySelectorAll('p')).toHaveLength(1)
+    })
+
+    it('leaves the marker alone inside code, list items, tables, blockquotes and callouts', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<pre><code>===</code></pre>' +
+        '<p><code>===</code></p>' +
+        '<ul><li>===</li></ul>' +
+        '<table><tbody><tr><td>===</td></tr></tbody></table>' +
+        '<blockquote><p>===</p></blockquote>' +
+        '<div class="callout"><div class="callout-content"><p>===</p></div></div>'
+
+      await process(
+        root,
+        deps,
+        '```\n===\n```\n\n`===`\n\n- ===\n\n| a |\n|---|\n| === |\n\n> ===\n\n> [!note]\n> ===\n',
+      )
+
+      expect(pageBreaks(root)).toEqual([])
+      expect(root.querySelectorAll('p')).toHaveLength(3)
+    })
+
+    it('leaves a paragraph that merely begins with the marker alone', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>=== more</p>'
+
+      await process(root, deps, '=== more')
+
+      expect(pageBreaks(root)).toEqual([])
+      expect(root.textContent).toBe('=== more')
+    })
+
+    it('leaves a setext heading as the heading Obsidian rendered', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<h1>Title</h1>'
+
+      await process(root, deps, 'Title\n===')
+
+      expect(pageBreaks(root)).toEqual([])
+      expect(root.innerHTML).toBe('<h1>Title</h1>')
+    })
+
+    it('needs a blank line or note edge on both sides in the source', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps, '```\ncode\n```\n===\n\nAfter.')
+
+      expect(pageBreaks(root)).toEqual([])
+      expect(root.innerHTML).toBe('<p>===</p>')
+    })
+
+    it('never breaks inside frontmatter', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps, '---\ntitle: x\n===\n---\n')
+
+      expect(pageBreaks(root)).toEqual([])
+    })
+
+    it('does nothing when the source is not supplied', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps)
+
+      expect(root.innerHTML).toBe('<p>===</p>')
+    })
+
+    it('does nothing with page breaks off', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>===</p>'
+
+      await process(root, deps, '===', null, { ...context, pageBreaks: false })
+
+      expect(root.innerHTML).toBe('<p>===</p>')
+    })
+
+    it('still renders references beside a Page Break', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>{John 15:4}</p><p>===</p>'
+
+      await process(root, deps, '{John 15:4}\n\n===')
+
+      expect(chipLabels(root)).toEqual(['John 15:4'])
+      expect(pageBreaks(root)).toHaveLength(1)
     })
   })
 })

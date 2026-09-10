@@ -26,5 +26,6 @@ export const renderContextFromSettings = (
     ],
     defaultTranslationId:
       settings.defaultTranslationId ?? installedTranslationIds[0] ?? null,
+    pageBreaks: settings.pageBreaks,
   }
 }

@@ -72,6 +72,14 @@ Chip renders immediately in all modes. Loading → subtle shimmer/placeholder ("
 
 Rendered verse text is normal selectable/copyable DOM text. Attribution rule: if the translation's stored metadata carries a copyright string, show it; if absent (public domain), show nothing. Block: bottom attribution line. Inline: none. No manual curation, no popovers. Page-footer aggregation rejected for v1.
 
+### 3.7 Page break
+
+A **Page Break** (CONTEXT.md) is a body line whose trimmed text is exactly `===`, with a blank line or the note edge on both sides; frontmatter counts as the edge, so the body's first line can be one. Lines in frontmatter, fenced code, list items, tables, blockquotes and callouts are never Page Breaks; `=== more` is a paragraph; `===` under a line of text stays the setext heading underline it always was; `---` stays a horizontal rule.
+
+Reading view: the post-processor replaces a top-level paragraph holding only the marker with one block element carrying a plugin class, the Lucide `separator-horizontal` icon and the label "page break". On screen it shows as a dashed rule in the theme's rule colour with a centered pill in the reference-chip family, muted text, not selectable. The element carries a trailing modifier when no non-blank line follows it in the note source. Obsidian's PDF export renders through reading view, so a print media rule is the whole export form: the element's visuals vanish (no height, rule or pill) and `break-after: page` turns the page; the trailing form breaks nothing, so two consecutive Page Breaks yield a blank page and one at the end of the note never adds an empty trailing page.
+
+Live Preview shows the same indicator as a widget over the marker line when no cursor or selection touches it, raw text when one does, trailing or not. The `pageBreaks` setting (§8 General, "Page breaks", default on) carried in the shared render context switches every surface off at once, leaving `===` ordinary text. Only notes carry Page Breaks — the reader and Study Panel surfaces are untouched by the term, though an Annotation body rendered in the Study Panel goes through the same post-processor.
+
 ## 4. Reader pane
 
 An Obsidian workspace leaf. Prototype (visual reference until implementation): [prototypes/reader-pane-prototype](../prototypes/reader-pane-prototype).

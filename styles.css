@@ -193,6 +193,78 @@ body {
   color: var(--text-muted);
 }
 
+/* ---- Page Break (spec §3.7) -------------------------------------------- */
+
+/* On screen: a dashed rule in the theme's rule colour with a centered pill
+   in the chip family. Chrome, not prose, so never selectable. */
+.scripture-study-page-break {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1em 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.scripture-study-page-break::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed var(--hr-color);
+}
+
+.scripture-study-page-break-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.05em 0.5em;
+  border: 1px dashed var(--hr-color);
+  border-radius: var(--radius-s);
+  background-color: var(--background-primary);
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.scripture-study-page-break-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.scripture-study-page-break-icon svg {
+  width: 0.85em;
+  height: 0.85em;
+}
+
+/* In print the marker is invisible and the page turns after it; a trailing
+   one turns nothing, so a PDF never ends on an empty page. */
+@media print {
+  .scripture-study-page-break {
+    display: block;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .scripture-study-page-break::before,
+  .scripture-study-page-break-pill {
+    display: none;
+  }
+
+  .scripture-study-page-break-trailing {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}
+
 /* ---- Highlights (highlights spec) -------------------------------------- */
 
 /* Palette for the five Highlight Slots. Settings publishes the configured

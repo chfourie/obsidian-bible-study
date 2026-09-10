@@ -58,4 +58,12 @@ describe('renderContextFromSettings', () => {
     expect(context.defaultTranslationId).toBe('web')
     expect(context.knownTranslationIds).not.toContain('strongs-dictionaries')
   })
+
+  it('carries the page breaks setting', () => {
+    expect(renderContextFromSettings(DEFAULT_SETTINGS).pageBreaks).toBe(true)
+    expect(
+      renderContextFromSettings({ ...DEFAULT_SETTINGS, pageBreaks: false })
+        .pageBreaks,
+    ).toBe(false)
+  })
 })

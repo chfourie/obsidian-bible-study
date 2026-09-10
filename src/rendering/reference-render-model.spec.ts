@@ -14,6 +14,7 @@ import {
 const context = {
   knownTranslationIds: ['web', 'nkjv'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 describe('modelFromParsed', () => {
@@ -91,6 +92,7 @@ describe('buildReferenceRenderModel', () => {
     const model = buildReferenceRenderModel('John 15:4', {
       knownTranslationIds: [],
       defaultTranslationId: null,
+      pageBreaks: true,
     })
 
     expect(model?.translationId).toBeNull()
@@ -178,6 +180,7 @@ describe('sameRenderModel', () => {
     const other = build('John 15:4', {
       knownTranslationIds: ['web', 'nkjv'],
       defaultTranslationId: 'nkjv',
+      pageBreaks: true,
     })
 
     expect(sameRenderModel(build('John 15:4'), other)).toBe(false)
@@ -187,6 +190,7 @@ describe('sameRenderModel', () => {
     const other = build('John 15:4 kjv', {
       knownTranslationIds: ['kjv'],
       defaultTranslationId: 'kjv',
+      pageBreaks: true,
     })
 
     expect(sameRenderModel(build('John 15:4 kjv'), other)).toBe(false)

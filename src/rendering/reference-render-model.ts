@@ -14,6 +14,7 @@ export type RenderDisplay = 'chip' | 'inline' | 'block'
 export type RenderContext = {
   knownTranslationIds: readonly string[]
   defaultTranslationId: string | null
+  pageBreaks: boolean
 }
 
 export type ReferenceRenderModel = {

@@ -72,6 +72,9 @@ export type ScriptureStudySettings = {
   fallbackTranslationId: string | null
   languageFilter: string
   derivedRedLetter: boolean
+  // A line holding only `===` renders as a Page Break (CONTEXT.md); off
+  // surrenders the marker to whatever else claims it.
+  pageBreaks: boolean
   readerNavDefault: PerDeviceDefault<'tree' | 'breadcrumb'>
   readerLayoutDefault: PerDeviceDefault<'verse-per-line' | 'continuous'>
   readerStrongsDefault: PerDeviceDefault<'off' | 'on'>
@@ -104,6 +107,7 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   fallbackTranslationId: null,
   languageFilter: 'English',
   derivedRedLetter: false,
+  pageBreaks: true,
   readerNavDefault: perDeviceDefault('tree'),
   readerLayoutDefault: perDeviceDefault('verse-per-line'),
   readerStrongsDefault: perDeviceDefault('off'),

@@ -10,6 +10,7 @@ import type { RenderContext } from './reference-render-model'
 const context: RenderContext = {
   knownTranslationIds: ['web', 'nkjv'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 const allSpecsFor = (

@@ -8,6 +8,7 @@ import {
 const context = {
   knownTranslationIds: ['nkjv', 'web'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 const suggestOver = (line: string) => {

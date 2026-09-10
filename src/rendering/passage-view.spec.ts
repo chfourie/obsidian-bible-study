@@ -24,6 +24,7 @@ import {
 const context = {
   knownTranslationIds: ['web', 'nkjv'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 const model = (text: string) => {
@@ -269,6 +270,7 @@ describe('async state text', () => {
     const bare = buildReferenceRenderModel('John 15:4', {
       knownTranslationIds: [],
       defaultTranslationId: null,
+      pageBreaks: true,
     })
     if (!bare) throw new Error('unparseable')
 

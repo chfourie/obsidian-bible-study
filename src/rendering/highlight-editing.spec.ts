@@ -8,6 +8,7 @@ import { renderReference, type ReferenceRenderDeps } from './render-reference'
 const context = {
   knownTranslationIds: ['web', 'nkjv'],
   defaultTranslationId: 'web',
+  pageBreaks: true,
 }
 
 const passageOf = (...texts: string[]): Passage => ({

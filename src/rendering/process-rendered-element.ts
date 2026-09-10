@@ -4,6 +4,7 @@ import {
   scanReferenceMatches,
   type ReferenceMatch,
 } from '../reference'
+import { renderPageBreakIndicator } from './page-break-indicator'
 import { RED_LETTER_CLASS } from './red-letter'
 import {
   buildReferenceRenderModel,
@@ -22,6 +23,11 @@ import {
   type ChristQuoteCandidate,
   type ChristQuoteMark,
 } from './scan-christ-quotes'
+import {
+  isPageBreakMarker,
+  scanPageBreaks,
+  type PageBreak,
+} from './scan-page-breaks'
 
 export type RenderedSection = {
   noteSource: string
@@ -80,6 +86,21 @@ export class NoteScanCache {
     noteSource: string
     candidates: ChristQuoteCandidate[]
   } | null = null
+
+  #lastPageBreaks: {
+    noteSource: string
+    pageBreaks: PageBreak[]
+  } | null = null
+
+  pageBreaks(noteSource: string): PageBreak[] {
+    if (this.#lastPageBreaks?.noteSource !== noteSource) {
+      this.#lastPageBreaks = {
+        noteSource,
+        pageBreaks: scanPageBreaks(noteSource),
+      }
+    }
+    return this.#lastPageBreaks.pageBreaks
+  }
 
   christQuoteCandidates(noteSource: string): ChristQuoteCandidate[] {
     if (this.#lastQuotes?.noteSource !== noteSource) {
@@ -306,6 +327,31 @@ const decorateChristQuotes = (
   }
 }
 
+// Only a paragraph Obsidian left at the top level can be a Page Break: a
+// marker in a list, table, quote or callout renders inside those. Whether
+// the paragraph is one at all, and whether anything follows it, only the
+// source knows, so each rendered marker takes the section's next Page Break.
+const decoratePageBreaks = (
+  root: HTMLElement,
+  section: RenderedSection,
+  scans: NoteScanCache,
+): void => {
+  if (section.noteSource === '') return
+  const pending = scans
+    .pageBreaks(section.noteSource)
+    .filter(
+      (pageBreak) =>
+        pageBreak.lineIndex >= section.lineStart &&
+        pageBreak.lineIndex <= section.lineEnd,
+    )
+  for (const paragraph of root.querySelectorAll(':scope > p')) {
+    if (!isPageBreakMarker(paragraph.textContent ?? '')) continue
+    const pageBreak = pending.shift()
+    if (!pageBreak) return
+    paragraph.replaceWith(renderPageBreakIndicator(pageBreak.trailing))
+  }
+}
+
 const modelFor = (
   inner: string,
   candidate: SourceCandidate | undefined,
@@ -362,6 +408,7 @@ export const processRenderedElement = async (
   sourcePath: string | null = null,
   scans: NoteScanCache = new NoteScanCache(),
 ): Promise<void> => {
+  if (context.pageBreaks) decoratePageBreaks(root, section, scans)
   decorateChristQuotes(root, new SectionQuoteCandidates(section, scans))
   const candidates = sectionCandidates(section, context, scans)
   const renders = textNodesUnder(root).flatMap((node) =>
