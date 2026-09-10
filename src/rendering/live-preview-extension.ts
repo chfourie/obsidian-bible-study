@@ -1,4 +1,4 @@
-import { StateEffect, type Extension } from '@codemirror/state'
+import { StateEffect, type Extension, type Range } from '@codemirror/state'
 import {
   Decoration,
   EditorView,
@@ -14,13 +14,22 @@ import type {
   HighlightCueWriter,
   HighlightEditContext,
 } from './highlight-editing'
-import { liveDecorationSpecs } from './live-decoration-specs'
+import {
+  liveDecorationSpecs,
+  type LiveDecorationSpec,
+} from './live-decoration-specs'
 import {
   sameRenderModel,
   type ReferenceRenderModel,
   type RenderContext,
 } from './reference-render-model'
 import { renderReference, type ReferenceRenderDeps } from './render-reference'
+
+const CHRIST_QUOTE_MARK = Decoration.mark({
+  class: 'scripture-study-red-letter',
+})
+
+const HIDDEN_PREFIX = Decoration.replace({})
 
 export const renderContextChangedEffect = StateEffect.define<null>()
 
@@ -163,25 +172,36 @@ export const createLivePreviewExtension = (
     }))
     const sourcePath =
       view.state.field(editorInfoField, false)?.file?.path ?? null
+    const decorate = (spec: LiveDecorationSpec): Range<Decoration>[] => {
+      switch (spec.kind) {
+        case 'reference':
+          return [
+            Decoration.replace({
+              widget: new ReferenceWidget(
+                view.state.sliceDoc(spec.start, spec.end),
+                spec.model,
+                deps,
+                sourcePath,
+                editing,
+              ),
+            }).range(spec.start, spec.end),
+          ]
+        case 'christ-quote':
+          return [
+            ...(spec.prefixHidden
+              ? [HIDDEN_PREFIX.range(spec.prefix, spec.prefix + 1)]
+              : []),
+            CHRIST_QUOTE_MARK.range(spec.start, spec.end),
+          ]
+      }
+    }
     const specs = liveDecorationSpecs(
       view.state.doc.toString(),
       view.visibleRanges,
       selections,
       contextProvider(),
     )
-    return Decoration.set(
-      specs.map((spec) =>
-        Decoration.replace({
-          widget: new ReferenceWidget(
-            view.state.sliceDoc(spec.start, spec.end),
-            spec.model,
-            deps,
-            sourcePath,
-            editing,
-          ),
-        }).range(spec.start, spec.end),
-      ),
-    )
+    return Decoration.set(specs.flatMap(decorate), true)
   }
 
   return ViewPlugin.fromClass(

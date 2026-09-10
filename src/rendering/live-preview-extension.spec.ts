@@ -116,6 +116,77 @@ describe('editor mode switching', () => {
   })
 })
 
+describe('Christ Quote in Live Preview', () => {
+  let view: EditorView
+
+  afterEach(() => {
+    view.destroy()
+    document.body.replaceChildren()
+  })
+
+  const editorOver = (doc: string): HTMLElement => {
+    view = new EditorView({
+      state: EditorState.create({
+        doc,
+        extensions: [
+          editorLivePreviewField,
+          createLivePreviewExtension(() => webDefault, deps),
+        ],
+      }),
+      parent: document.body,
+    })
+    return view.contentDOM
+  }
+
+  const redLetter = (content: HTMLElement): string[] =>
+    [...content.querySelectorAll('.scripture-study-red-letter')].map(
+      (span) => span.textContent ?? '',
+    )
+
+  it('hides the c and paints the quote, marks included, red', () => {
+    const content = editorOver('He said c"Abide in me" then')
+
+    expect(content.textContent).toBe('He said "Abide in me" then')
+    expect(redLetter(content)).toEqual(['"Abide in me"'])
+  })
+
+  it('shows the c again, still red, while the cursor is in the quote', () => {
+    const content = editorOver('He said c"Abide in me" then')
+
+    view.dispatch({ selection: { anchor: 12 } })
+
+    expect(content.textContent).toBe('He said c"Abide in me" then')
+    expect(redLetter(content)).toEqual(['"Abide in me"'])
+
+    view.dispatch({ selection: { anchor: 2 } })
+
+    expect(content.textContent).toBe('He said "Abide in me" then')
+  })
+
+  it('shows raw text in Source mode and decorates again on return', () => {
+    const content = editorOver('He said c"Abide in me" then')
+
+    view.dispatch({ effects: setLivePreview.of(false) })
+
+    expect(content.textContent).toBe('He said c"Abide in me" then')
+    expect(redLetter(content)).toEqual([])
+
+    view.dispatch({ effects: setLivePreview.of(true) })
+
+    expect(content.textContent).toBe('He said "Abide in me" then')
+    expect(redLetter(content)).toEqual(['"Abide in me"'])
+  })
+
+  it('paints a quote holding a reference chip and keeps the chip', () => {
+    const content = editorOver('c"Abide {John 15:4} in me"')
+
+    expect(redLetter(content)).toHaveLength(1)
+    expect(
+      content.querySelector('.scripture-study-red-letter .scripture-study-reference'),
+    ).not.toBeNull()
+  })
+})
+
 describe('highlight editing in Live Preview', () => {
   let view: EditorView
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { liveDecorationSpecs } from './live-decoration-specs'
+import {
+  liveDecorationSpecs,
+  type ChristQuoteDecorationSpec,
+  type ReferenceDecorationSpec,
+} from './live-decoration-specs'
 import type { RenderContext } from './reference-render-model'
 
 const context: RenderContext = {
@@ -7,13 +11,31 @@ const context: RenderContext = {
   defaultTranslationId: 'web',
 }
 
+type Selection = { from: number; to: number }
+
+const allSpecsFor = (
+  doc: string,
+  selections: Selection[] = [],
+  visibleRanges: Selection[] = [{ from: 0, to: doc.length }],
+) => liveDecorationSpecs(doc, visibleRanges, selections, context)
+
 const specsFor = (
   doc: string,
-  selections: { from: number; to: number }[] = [],
-  visibleRanges: { from: number; to: number }[] = [
-    { from: 0, to: doc.length },
-  ],
-) => liveDecorationSpecs(doc, visibleRanges, selections, context)
+  selections: Selection[] = [],
+  visibleRanges: Selection[] = [{ from: 0, to: doc.length }],
+): ReferenceDecorationSpec[] =>
+  allSpecsFor(doc, selections, visibleRanges).filter(
+    (spec): spec is ReferenceDecorationSpec => spec.kind === 'reference',
+  )
+
+const quotesFor = (
+  doc: string,
+  selections: Selection[] = [],
+  visibleRanges: Selection[] = [{ from: 0, to: doc.length }],
+): ChristQuoteDecorationSpec[] =>
+  allSpecsFor(doc, selections, visibleRanges).filter(
+    (spec): spec is ChristQuoteDecorationSpec => spec.kind === 'christ-quote',
+  )
 
 describe('liveDecorationSpecs', () => {
   it('decorates each valid reference with its render model', () => {
@@ -21,9 +43,9 @@ describe('liveDecorationSpecs', () => {
 
     const specs = specsFor(doc)
 
-    expect(specs.map((spec) => [spec.start, spec.end])).toEqual([
-      [7, 18],
-      [23, 40],
+    expect(specs.map((spec) => [spec.kind, spec.start, spec.end])).toEqual([
+      ['reference', 7, 18],
+      ['reference', 23, 40],
     ])
     expect(specs[0].model.referenceText).toBe('John 15:4')
     expect(specs[1].model.display).toBe('inline')
@@ -147,5 +169,130 @@ describe('liveDecorationSpecs', () => {
         endChar: 6,
       },
     ])
+  })
+
+  describe('Christ Quote', () => {
+    const hiddenQuote = (
+      prefix: number,
+      end: number,
+    ): ChristQuoteDecorationSpec => ({
+      kind: 'christ-quote',
+      prefix,
+      start: prefix + 1,
+      end,
+      prefixHidden: true,
+    })
+
+    it('hides the c and marks the quote from opening mark through closing mark', () => {
+      expect(quotesFor('He said c"Abide in me" then')).toEqual([
+        hiddenQuote(8, 22),
+      ])
+    })
+
+    it('recognises curly marks', () => {
+      expect(quotesFor('c“Abide in me”')).toEqual([hiddenQuote(0, 14)])
+    })
+
+    it('leaves a mid-word c, a capital C, a mismatched close and an unterminated quote alone', () => {
+      expect(quotesFor('Isaac"laughed" C"no" c"open\n\nc"mixed” here')).toEqual(
+        [],
+      )
+    })
+
+    it('shows the c again but keeps the mark while the cursor touches the quote', () => {
+      const doc = 'He said c"Abide in me" then'
+      const touched: ChristQuoteDecorationSpec = {
+        ...hiddenQuote(8, 22),
+        prefixHidden: false,
+      }
+
+      expect(quotesFor(doc, [{ from: 8, to: 8 }])).toEqual([touched])
+      expect(quotesFor(doc, [{ from: 12, to: 12 }])).toEqual([touched])
+      expect(quotesFor(doc, [{ from: 22, to: 22 }])).toEqual([touched])
+      expect(quotesFor(doc, [{ from: 2, to: 25 }])).toEqual([touched])
+    })
+
+    it('keeps both decorations while the cursor sits elsewhere', () => {
+      const doc = 'He said c"Abide in me" then'
+
+      expect(quotesFor(doc, [{ from: 3, to: 3 }])).toEqual([hiddenQuote(8, 22)])
+      expect(quotesFor(doc, [{ from: 24, to: 27 }])).toEqual([
+        hiddenQuote(8, 22),
+      ])
+    })
+
+    it('emits each quote of a paragraph on its own', () => {
+      expect(quotesFor('c"Abide" and c"in me"')).toEqual([
+        hiddenQuote(0, 8),
+        hiddenQuote(13, 21),
+      ])
+    })
+
+    it('decorates a reference inside a quote alongside it', () => {
+      const specs = allSpecsFor('c"Abide {John 15:4} in me"')
+
+      expect(specs.map((spec) => [spec.kind, spec.start, spec.end])).toEqual([
+        ['reference', 8, 19],
+        ['christ-quote', 1, 26],
+      ])
+    })
+
+    it('skips a quote in a code span, one escaped with a backslash, and one in frontmatter', () => {
+      expect(quotesFor('---\ntitle: c"Abide"\n---\n`c"Abide"` c\\"in me"')).toEqual(
+        [],
+      )
+    })
+
+    it('honors a code fence opened above the visible range', () => {
+      const doc = '```\nc"Abide"\n```\n'
+
+      expect(quotesFor(doc, [], [{ from: 4, to: doc.length }])).toEqual([])
+    })
+
+    it('keeps only quotes inside the visible ranges, at document offsets', () => {
+      const doc = 'c"Abide"\n\nc"in me"\n\nc"always"'
+
+      expect(quotesFor(doc, [], [{ from: 12, to: 18 }])).toEqual([
+        hiddenQuote(10, 18),
+      ])
+    })
+
+    it('scans nothing when no range is visible', () => {
+      expect(quotesFor('c"Abide"', [], [])).toEqual([])
+    })
+
+    describe('a quote closes only within its paragraph', () => {
+      it('not past a blank line', () => {
+        expect(quotesFor('c"Abide\n\nin me"')).toEqual([])
+      })
+
+      it('not into a heading, which opens quotes of its own', () => {
+        expect(quotesFor('c"Abide\n# heading c"x" more"')).toEqual([
+          hiddenQuote(18, 22),
+        ])
+      })
+
+      it('not into a list item', () => {
+        expect(quotesFor('c"Abide\n- in me"')).toEqual([])
+      })
+
+      it('not past a table cell edge', () => {
+        expect(quotesFor('| c"Abide | in me" |\n| c"Abide in me" |')).toEqual([
+          hiddenQuote(23, 37),
+        ])
+      })
+
+      it('not into a deeper blockquote line', () => {
+        expect(quotesFor('c"Then\n> he left"')).toEqual([])
+      })
+
+      it('across a blockquote continuation line', () => {
+        expect(quotesFor('> c"Abide\n> in me"')).toEqual([hiddenQuote(2, 18)])
+      })
+
+      it('across a lazy continuation line of a list item', () => {
+        expect(quotesFor('- c"Abide\n  in me"')).toEqual([hiddenQuote(2, 18)])
+      })
+    })
   })
 })
