@@ -113,7 +113,7 @@ export type VerseDetailsView = {
   strongsTranslationId: string | null
 }
 
-// The strip that builds a cross-reference: members, description and the
+// The strip that builds a cross-reference: members, summary and the
 // actions over them, whether it is creating one or editing one that exists.
 export type CollectionView = {
   members: CrossReferenceMemberView[]
@@ -126,8 +126,8 @@ export type CollectionView = {
   // Deleting the edited cross-reference takes a second press to go through.
   confirmingDelete: boolean
   // Seeded from the cross-reference being edited, so saving an untouched
-  // strip keeps the description it already had.
-  description: string
+  // strip keeps the summary it already had.
+  summary: string
   typedMember: string
 }
 
@@ -211,7 +211,7 @@ export interface StudyMaterialSource {
   typeMember(text: string): void
   addTypedReferenceToCollection(): void
   removeCollectionMember(index: number): void
-  describeCollection(description: string): void
+  summariseCollection(summary: string): void
   saveCrossReference(): Promise<void>
   confirmDeleteCrossReference(): void
   cancelDeleteCrossReference(): void

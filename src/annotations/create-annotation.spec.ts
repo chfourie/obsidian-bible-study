@@ -1,35 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { ref } from '../../tests/fixtures/reference'
-import type { NoteFileVault } from '../notes'
+import { fakeNoteFileVault } from '../../tests/fixtures/note-file-vault'
 import { createAnnotation } from './create-annotation'
-
-type FakeVault = NoteFileVault & {
-  notes: Map<string, string>
-  folders: Set<string>
-}
-
-const fakeVault = (
-  seed: { notes?: Record<string, string>; folders?: string[] } = {},
-): FakeVault => {
-  const notes = new Map(Object.entries(seed.notes ?? {}))
-  const folders = new Set(seed.folders ?? [])
-  return {
-    notes,
-    folders,
-    exists: (path) => notes.has(path),
-    ensureFolder: async (path) => {
-      folders.add(path)
-    },
-    createNote: async (path, content) => {
-      notes.set(path, content)
-    },
-    readNote: async (path) => notes.get(path) ?? null,
-  }
-}
 
 describe('createAnnotation', () => {
   it('creates a ref-frontmattered note in the annotations folder', async () => {
-    const vault = fakeVault()
+    const vault = fakeNoteFileVault()
 
     const created = await createAnnotation(vault, ref('John 15:4-6,9'), {
       folder: 'Annotations',
@@ -48,7 +24,7 @@ describe('createAnnotation', () => {
   })
 
   it('suffixes the filename when the canonical name is taken', async () => {
-    const vault = fakeVault({
+    const vault = fakeNoteFileVault({
       notes: { 'Annotations/John 15.4.md': 'existing' },
     })
 
@@ -61,7 +37,7 @@ describe('createAnnotation', () => {
   })
 
   it('copies the configured template body into the new note', async () => {
-    const vault = fakeVault({
+    const vault = fakeNoteFileVault({
       notes: { 'Templates/Annotation.md': '## Observations\n' },
     })
 
@@ -74,7 +50,7 @@ describe('createAnnotation', () => {
   })
 
   it('falls back to the bare note when the template file is missing', async () => {
-    const vault = fakeVault()
+    const vault = fakeNoteFileVault()
 
     const created = await createAnnotation(vault, ref('John 15:4'), {
       folder: 'Annotations',

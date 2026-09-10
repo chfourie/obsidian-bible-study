@@ -26,6 +26,7 @@ import {
 import type { CrossReferenceEditing } from '../cross-references'
 import { VaultReferenceIndex, type OccurrenceGroup } from '../vault-index'
 import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
+import { crossReferenceNotesInVault } from '../../tests/fixtures/cross-reference-notes-in-vault'
 import type {
   CrossReference,
   StudyMaterialSource,
@@ -2634,7 +2635,7 @@ describe('collecting a cross-reference', () => {
       error: null,
       editing: false,
       confirmingDelete: false,
-      description: '',
+      summary: '',
       typedMember: '',
     })
   })
@@ -2790,40 +2791,40 @@ describe('collecting a cross-reference', () => {
     expect(model.studyMaterial.collection?.canSave).toBe(true)
   })
 
-  it('persists the gathered members with the description in one step', async () => {
-    const created: { members: Reference[]; description: string | null }[] = []
+  it('persists the gathered members with the summary in one step', async () => {
+    const created: { members: Reference[]; summary: string | null }[] = []
     const model = await collectingModel({
-      create: async (members, description) => {
-        created.push({ members, description })
+      create: async (members, summary) => {
+        created.push({ members, summary })
       },
     })
     await model.selectVerse(verse4)
     model.addSelectionToCollection()
     addTyped(model, 'Psalm 80:8-16')
 
-    model.describeCollection('Vine imagery')
+    model.summariseCollection('Vine imagery')
     await model.saveCrossReference()
 
     expect(created).toEqual([
       {
         members: [ref('John 15:4'), ref('Psalm 80:8-16')],
-        description: 'Vine imagery',
+        summary: 'Vine imagery',
       },
     ])
     expect(model.studyMaterial.collection).toBe(null)
   })
 
-  it('persists a blank description as none', async () => {
+  it('persists a blank summary as none', async () => {
     const created: (string | null)[] = []
     const model = await collectingModel({
-      create: async (_members, description) => {
-        created.push(description)
+      create: async (_members, summary) => {
+        created.push(summary)
       },
     })
     addTyped(model, 'Psalm 80:8-16')
     addTyped(model, 'Romans 11:17-24')
 
-    model.describeCollection('   ')
+    model.summariseCollection('   ')
     await model.saveCrossReference()
 
     expect(created).toEqual([null])
@@ -2916,7 +2917,7 @@ describe('editing an existing cross-reference in the strip', () => {
     return model
   }
 
-  it('opens the strip pre-loaded with the entry\'s members and description', async () => {
+  it('opens the strip pre-loaded with the entry\'s members and summary', async () => {
     const model = await editingModel()
 
     expect(model.studyMaterial.collection).toEqual({
@@ -2930,7 +2931,7 @@ describe('editing an existing cross-reference in the strip', () => {
       error: null,
       editing: true,
       confirmingDelete: false,
-      description: 'Vine and vineyard imagery for Israel',
+      summary: 'Vine and vineyard imagery for Israel',
       typedMember: '',
     })
   })
@@ -2976,15 +2977,15 @@ describe('editing an existing cross-reference in the strip', () => {
     expect(model.studyMaterial.collection).toBe(null)
   })
 
-  it('saves an edited description over the existing one', async () => {
+  it('saves an edited summary over the existing one', async () => {
     const descriptions: (string | null)[] = []
     const model = await editingModel({
-      update: async (_id, _members, description) => {
-        descriptions.push(description)
+      update: async (_id, _members, summary) => {
+        descriptions.push(summary)
       },
     })
 
-    model.describeCollection('Grafted branches')
+    model.summariseCollection('Grafted branches')
     await model.saveCrossReference()
 
     expect(descriptions).toEqual(['Grafted branches'])
@@ -3118,6 +3119,107 @@ describe('editing an existing cross-reference in the strip', () => {
   })
 })
 
+describe('the strip against cross-reference notes in the vault', () => {
+  const handAuthored =
+    "---\ntags: study\ntype: cross-reference\nrefs:\n- John 15:1-8\n- Jonh 3:16\n- 'Psalm 80:8-16'\nsummary: 'Vine imagery'\naliases: [Vine]\n---\n\n## Why\n\nThe vine is Israel.\n"
+  const generated = 'Cross-References/John 15.1-8 + Psalms 80.8-16.md'
+
+  const stripOver = async (notes: Record<string, string>) => {
+    const vault = crossReferenceNotesInVault(notes)
+    const model = modelWith({
+      intersecting: (reference) => vault.index.intersectingOccurrences(reference),
+      crossReferences: vault.feature.editing,
+    })
+    await model.openAt(ref('John 15:1'), 'web')
+    const rows = () =>
+      model.studyMaterial.chapterCrossReferences.map((entry) => ({
+        path: entry.path,
+        summary: entry.summary,
+        members: entry.members.map((member) => member.label),
+      }))
+    const edit = (path: string) => {
+      const entry = model.studyMaterial.chapterCrossReferences.find(
+        (candidate) => candidate.path === path,
+      )
+      if (entry === undefined) throw new Error(`${path} is not on screen`)
+      model.startEditingCrossReference({
+        path,
+        members: entry.members.map((member) => member.reference),
+        summary: entry.summary,
+      })
+    }
+    return { model, rows, edit, ...vault }
+  }
+
+  it('edits a note the plugin wrote, renaming it with its members', async () => {
+    const { model, rows, edit, noteVault } = await stripOver({
+      [generated]: noteOf([ref('John 15:1-8'), ref('Psalm 80:8-16')], 'Vine'),
+    })
+
+    edit(generated)
+    addTyped(model, 'Romans 11:17-24')
+    model.removeCollectionMember(1)
+    model.summariseCollection('Grafted branches')
+    await model.saveCrossReference()
+
+    const renamed = 'Cross-References/John 15.1-8 + Romans 11.17-24.md'
+    expect(model.studyMaterial.collection).toBe(null)
+    expect(noteVault.notes.get(renamed)).toBe(
+      noteOf([ref('John 15:1-8'), ref('Romans 11:17-24')], 'Grafted branches'),
+    )
+    expect(rows()).toEqual([
+      {
+        path: renamed,
+        summary: 'Grafted branches',
+        members: ['John 15:1-8', 'Romans 11:17-24'],
+      },
+    ])
+  })
+
+  it('edits a hand-authored note in place, its own keys, body and typo intact', async () => {
+    const { model, rows, edit, noteVault } = await stripOver({
+      'Study/Vine.md': handAuthored,
+    })
+    expect(rows()).toEqual([
+      { path: 'Study/Vine.md', summary: 'Vine imagery', members: ['John 15:1-8', 'Psalms 80:8-16'] },
+    ])
+
+    edit('Study/Vine.md')
+    addTyped(model, 'Romans 11:17-24')
+    await model.saveCrossReference()
+
+    expect(noteVault.notes.get('Study/Vine.md')).toBe(
+      "---\ntags: study\ntype: cross-reference\nrefs:\n  - John 15:1-8\n  - Jonh 3:16\n  - Psalms 80:8-16\n  - Romans 11:17-24\nsummary: Vine imagery\naliases: [Vine]\n---\n\n## Why\n\nThe vine is Israel.\n",
+    )
+    expect(rows()).toEqual([
+      {
+        path: 'Study/Vine.md',
+        summary: 'Vine imagery',
+        members: ['John 15:1-8', 'Psalms 80:8-16', 'Romans 11:17-24'],
+      },
+    ])
+  })
+
+  it('deletes either kind of note to the trash and drops its row', async () => {
+    const { model, rows, edit, noteVault } = await stripOver({
+      [generated]: noteOf([ref('John 15:1-8'), ref('Psalm 80:8-16')]),
+      'Study/Vine.md': handAuthored,
+    })
+    expect(rows()).toHaveLength(2)
+
+    edit('Study/Vine.md')
+    model.confirmDeleteCrossReference()
+    await model.deleteCrossReference()
+    edit(generated)
+    model.confirmDeleteCrossReference()
+    await model.deleteCrossReference()
+
+    expect(noteVault.trashed).toEqual(['Study/Vine.md', generated])
+    expect(rows()).toEqual([])
+    expect(model.studyMaterial.collection).toBe(null)
+  })
+})
+
 describe('the study material contract', () => {
   const verse2 = makeVerseId(43, 15, 2)
   const verse4 = makeVerseId(43, 15, 4)
@@ -3198,11 +3300,11 @@ describe('the study material contract', () => {
   })
 
   it('collects and saves a cross-reference through the contract, notifying observers', async () => {
-    const created: { members: Reference[]; description: string | null }[] = []
+    const created: { members: Reference[]; summary: string | null }[] = []
     const model = modelWith({
       crossReferences: crossReferencesOf({
-        create: async (members, description) => {
-          created.push({ members, description })
+        create: async (members, summary) => {
+          created.push({ members, summary })
         },
       }),
     })
@@ -3218,7 +3320,7 @@ describe('the study material contract', () => {
     source.addSelectionToCollection()
     source.typeMember('Psalm 80:8')
     source.addTypedReferenceToCollection()
-    source.describeCollection('Vine imagery')
+    source.summariseCollection('Vine imagery')
     expect(
       source.studyMaterial.collection?.members.map((member) => member.label),
     ).toEqual(['John 15:5', 'Psalms 80:8'])
@@ -3228,7 +3330,7 @@ describe('the study material contract', () => {
     expect(created).toEqual([
       {
         members: [ref('John 15:5'), ref('Psalm 80:8')],
-        description: 'Vine imagery',
+        summary: 'Vine imagery',
       },
     ])
     expect(source.studyMaterial.collection).toBe(null)
@@ -3255,7 +3357,7 @@ describe('the study material contract', () => {
 
     source.startEditingCrossReference(vine)
     expect(source.studyMaterial.collection?.editing).toBe(true)
-    expect(source.studyMaterial.collection?.description).toBe('Vine imagery')
+    expect(source.studyMaterial.collection?.summary).toBe('Vine imagery')
     source.confirmDeleteCrossReference()
     expect(source.studyMaterial.collection?.confirmingDelete).toBe(true)
     await source.deleteCrossReference()

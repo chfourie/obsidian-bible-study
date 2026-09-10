@@ -532,7 +532,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
     members: Reference[]
     error: string | null
     confirmingDelete: boolean
-    description: string
+    summary: string
     // The half-typed reference in the basket's input: model-owned so adding
     // it can clear it on success and keep it for correction on failure.
     typed: string
@@ -1150,7 +1150,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       error: this.#collection.error,
       editing: this.#collection.editing !== null,
       confirmingDelete: this.#collection.confirmingDelete,
-      description: this.#collection.description,
+      summary: this.#collection.summary,
       typedMember: this.#collection.typed,
     }
   }
@@ -1161,7 +1161,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       error: null,
       confirmingDelete: false,
       editing: null,
-      description: '',
+      summary: '',
       typed: '',
     }
     this.#notify()
@@ -1178,15 +1178,15 @@ export class ReaderPaneModel implements StudyMaterialSource {
       error: null,
       confirmingDelete: false,
       editing: entry.path,
-      description: entry.summary ?? '',
+      summary: entry.summary ?? '',
       typed: '',
     }
     this.#notify()
   }
 
-  describeCollection(description: string): void {
+  summariseCollection(summary: string): void {
     if (this.#collection === null) return
-    this.#collection = { ...this.#collection, description }
+    this.#collection = { ...this.#collection, summary }
     this.#notify()
   }
 
@@ -1286,7 +1286,7 @@ export class ReaderPaneModel implements StudyMaterialSource {
       collection.members.length < CROSS_REFERENCE_MINIMUM_MEMBERS
     )
       return
-    const trimmed = collection.description.trim()
+    const trimmed = collection.summary.trim()
     const summary = trimmed === '' ? null : trimmed
     try {
       if (collection.editing !== null) {

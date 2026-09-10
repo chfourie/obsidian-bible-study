@@ -13,6 +13,7 @@ import type { ModuleManifest, ModuleStore } from '../modules'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { VaultReferenceIndex } from '../vault-index'
 import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
+import { crossReferenceNotesInVault } from '../../tests/fixtures/cross-reference-notes-in-vault'
 import type { WordCloudWordView } from '../contracts'
 import {
   STUDY_PANEL_VIEW_TYPE,
@@ -117,7 +118,7 @@ const fakeStudyMaterial = () => {
           error: null,
           editing: false,
           confirmingDelete: false,
-          description: '',
+          summary: '',
           typedMember: '',
         },
       }
@@ -132,6 +133,7 @@ const harness = (
   options: {
     wordStudy?: WordStudyOpener
     cloudExclusions?: CloudExclusionEditor
+    index?: VaultReferenceIndex
   } = {},
 ) => {
   const readGates: Record<string, Promise<void>> = {}
@@ -200,7 +202,7 @@ const harness = (
   const studyMaterial: StudyMaterialProvider = {
     studyMaterialFor: (view) => (view === null ? null : readers.get(view) ?? null),
   }
-  const index = new VaultReferenceIndex()
+  const index = options.index ?? new VaultReferenceIndex()
   const feature = new StudyPanelFeature(plugin, fakeStore(), {
     studyMaterial,
     index,
@@ -1095,6 +1097,54 @@ describe('StudyPanelFeature entry points', () => {
     removeNote('Cross-References/Vine.md')
     await flushAsync()
     expect(paths()).toEqual([])
+  })
+
+  it('seeds the strip from a hand-authored note and follows its edit and delete', async () => {
+    const handAuthored =
+      "---\ntype: cross-reference\nrefs:\n- John 15:1-8\n- Jonh 3:16\n- 'Psalm 80:8-16'\nsummary: 'Vine imagery'\n---\n"
+    const vault = crossReferenceNotesInVault({ 'Study/Vine.md': handAuthored })
+    const { feature, commands, leaves, focusNote } = harness(
+      { 'a.md': '{John 15:1}' },
+      {},
+      { index: vault.index },
+    )
+    const seeds: CrossReference[] = []
+    feature.useNavigator({
+      openReference: () => {},
+      openNote: () => {},
+      editCrossReference: (entry) => seeds.push(entry),
+    })
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    const rows = () =>
+      view.model.view.crossReferences.map((entry) => [entry.path, entry.summary])
+
+    view.model.editCrossReference('Study/Vine.md')
+    expect(seeds).toEqual([
+      {
+        path: 'Study/Vine.md',
+        members: [ref('John 15:1-8'), ref('Psalm 80:8-16')],
+        summary: 'Vine imagery',
+      },
+    ])
+
+    await vault.feature.editing.update(
+      'Study/Vine.md',
+      [...seeds[0].members, ref('Romans 11:17-24')],
+      'Grafted branches',
+    )
+    await flushAsync()
+    expect(rows()).toEqual([['Study/Vine.md', 'Grafted branches']])
+    expect(vault.noteVault.notes.get('Study/Vine.md')).toContain('  - Jonh 3:16\n')
+
+    await vault.feature.editing.delete('Study/Vine.md')
+    await flushAsync()
+    expect(rows()).toEqual([])
+    expect(vault.noteVault.trashed).toEqual(['Study/Vine.md'])
   })
 
   it('refreshes annotations and mentions when the vault index changes', async () => {

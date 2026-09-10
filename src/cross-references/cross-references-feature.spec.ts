@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Plugin } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
 import { ref } from '../../tests/fixtures/reference'
-import type { NoteFileVault } from '../notes'
+import { fakeNoteFileVault } from '../../tests/fixtures/note-file-vault'
 import {
   CROSS_REFERENCES_FILE_NAME,
   crossReferencesFilePath,
@@ -12,6 +12,7 @@ import {
 } from './cross-reference-store'
 import type { CrossReferenceVault } from './cross-reference-vault'
 import { CrossReferencesFeature } from './cross-references-feature'
+import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
 
 const vineCrossReference: CrossReference = {
   id: 'xr-vine',
@@ -175,24 +176,12 @@ describe('creating a cross-reference note from the strip', () => {
   const vine = [ref('John 15:1-8'), ref('Psalm 80:8-16')]
 
   const noteHarness = (seedNotes: Record<string, string> = {}) => {
-    const notes = new Map(Object.entries(seedNotes))
-    const folders = new Set<string>()
+    const noteVault = fakeNoteFileVault({ notes: seedNotes })
     const indexed: [string, string][] = []
     const plugin = {
       app: { vault: { on: () => ({}) } },
       registerEvent: () => {},
     } as unknown as Plugin
-    const noteVault: NoteFileVault = {
-      exists: (path) => notes.has(path) || folders.has(path),
-      ensureFolder: async (path) => {
-        folders.add(path)
-      },
-      createNote: async (path, content) => {
-        if (notes.has(path)) throw new Error(`${path} already exists`)
-        notes.set(path, content)
-      },
-      readNote: async (path) => notes.get(path) ?? null,
-    }
     const dataVault: CrossReferenceVault = {
       read: async () => null,
       write: async () => {},
@@ -204,7 +193,7 @@ describe('creating a cross-reference note from the strip', () => {
       index: { indexNote: (path, content) => indexed.push([path, content]) },
     })
     feature.useSettings({ ...DEFAULT_SETTINGS })
-    return { feature, notes, folders, indexed }
+    return { feature, notes: noteVault.notes, folders: noteVault.folders, indexed, noteVault }
   }
 
   it('writes the note with the three keys into the default folder, created on demand', async () => {
@@ -280,14 +269,144 @@ describe('creating a cross-reference note from the strip', () => {
     expect(indexed).toEqual([[path, notes.get(path)]])
   })
 
-  it('refuses to change or delete a note in place for now', async () => {
-    const { feature } = noteHarness()
+})
 
-    await expect(feature.editing.update('vine.md', vine, null)).rejects.toThrow(
-      'not supported yet',
+describe('changing a cross-reference note from the strip', () => {
+  const vine = [ref('John 15:1-8'), ref('Psalm 80:8-16')]
+  const grafted = [ref('John 15:1-8'), ref('Romans 11:17-24')]
+  const generated = 'Cross-References/John 15.1-8 + Psalms 80.8-16.md'
+
+  const harness = (seedNotes: Record<string, string>) => {
+    const noteVault = fakeNoteFileVault({ notes: seedNotes })
+    const indexed: [string, string][] = []
+    const plugin = {
+      app: { vault: { on: () => ({}) } },
+      registerEvent: () => {},
+    } as unknown as Plugin
+    const feature = new CrossReferencesFeature(plugin, {
+      vault: { read: async () => null, write: async () => {}, rename: async () => {} },
+      noteVault,
+      index: { indexNote: (path, content) => indexed.push([path, content]) },
+    })
+    feature.useSettings({ ...DEFAULT_SETTINGS })
+    return { feature, noteVault, indexed }
+  }
+
+  it('rewrites refs and summary only, the rest of the note byte for byte', async () => {
+    const { feature, noteVault } = harness({
+      'Cross-References/Vine.md':
+        '---\ntags: study\ntype: cross-reference\nrefs:\n  - John 15:1-8\n  - Psalm 80:8-16\nsummary: Vine\naliases: [Vine]\n---\n\n## Why\n\nThe vine is Israel.\n',
+    })
+
+    await feature.editing.update('Cross-References/Vine.md', grafted, 'Grafted branches')
+
+    expect(noteVault.notes.get('Cross-References/Vine.md')).toBe(
+      '---\ntags: study\ntype: cross-reference\nrefs:\n  - John 15:1-8\n  - Romans 11:17-24\nsummary: Grafted branches\naliases: [Vine]\n---\n\n## Why\n\nThe vine is Israel.\n',
     )
-    await expect(feature.editing.delete('vine.md')).rejects.toThrow(
-      'not supported yet',
+  })
+
+  it('keeps a member it could not parse verbatim through the rewrite', async () => {
+    const { feature, noteVault } = harness({
+      'Cross-References/Vine.md': crossReferenceNote({
+        members: ['John 15:1-8', 'Jonh 3:16', 'Psalm 80:8-16'],
+        summary: 'Vine',
+      }),
+    })
+
+    await feature.editing.update('Cross-References/Vine.md', grafted, null)
+
+    expect(noteVault.notes.get('Cross-References/Vine.md')).toBe(
+      '---\ntype: cross-reference\nrefs:\n  - John 15:1-8\n  - Jonh 3:16\n  - Romans 11:17-24\nsummary: ""\n---\n',
+    )
+  })
+
+  it('renames a note still carrying its generated name after a member edit', async () => {
+    const { feature, noteVault, indexed } = harness({
+      [generated]: crossReferenceNote({ members: ['John 15:1-8', 'Psalm 80:8-16'] }),
+    })
+
+    await feature.editing.update(generated, grafted, 'Grafted')
+
+    const renamed = 'Cross-References/John 15.1-8 + Romans 11.17-24.md'
+    expect(noteVault.renames).toEqual([[generated, renamed]])
+    expect(noteVault.notes.has(generated)).toBe(false)
+    expect(noteVault.notes.get(renamed)).toContain('summary: Grafted')
+    expect(indexed).toEqual([[renamed, noteVault.notes.get(renamed)]])
+  })
+
+  it('leaves a hand-chosen name alone', async () => {
+    const { feature, noteVault, indexed } = harness({
+      'Cross-References/Vine.md': crossReferenceNote({
+        members: ['John 15:1-8', 'Psalm 80:8-16'],
+      }),
+    })
+
+    await feature.editing.update('Cross-References/Vine.md', grafted, null)
+
+    expect(noteVault.renames).toEqual([])
+    expect(indexed.map(([path]) => path)).toEqual(['Cross-References/Vine.md'])
+  })
+
+  it('judges the generated name by the members in the note at save time', async () => {
+    const { feature, noteVault } = harness({
+      [generated]: crossReferenceNote({ members: ['John 15:1-8', 'Romans 11:17-24'] }),
+    })
+
+    await feature.editing.update(generated, vine, null)
+
+    expect(noteVault.renames).toEqual([])
+  })
+
+  it('keeps a summary-only edit where it is', async () => {
+    const { feature, noteVault } = harness({
+      [generated]: crossReferenceNote({ members: ['John 15:1-8', 'Psalm 80:8-16'] }),
+    })
+
+    await feature.editing.update(generated, vine, 'Vine imagery')
+
+    expect(noteVault.renames).toEqual([])
+    expect(noteVault.notes.get(generated)).toContain('summary: Vine imagery')
+  })
+
+  it('suffixes the new name when a note already holds it', async () => {
+    const taken = 'Cross-References/John 15.1-8 + Romans 11.17-24.md'
+    const { feature, noteVault } = harness({
+      [generated]: crossReferenceNote({ members: ['John 15:1-8', 'Psalm 80:8-16'] }),
+      [taken]: 'other',
+    })
+
+    await feature.editing.update(generated, grafted, null)
+
+    expect(noteVault.notes.get(taken)).toBe('other')
+    expect(noteVault.notes.has('Cross-References/John 15.1-8 + Romans 11.17-24 1.md')).toBe(true)
+  })
+
+  it('refuses to update a note that is not in the vault', async () => {
+    const { feature, noteVault, indexed } = harness({})
+
+    await expect(feature.editing.update('gone.md', vine, null)).rejects.toThrow(
+      'gone.md is not in the vault.',
+    )
+    expect(noteVault.notes.size).toBe(0)
+    expect(indexed).toEqual([])
+  })
+
+  it('moves a deleted note to the trash', async () => {
+    const { feature, noteVault } = harness({
+      'Cross-References/Vine.md': crossReferenceNote({ members: ['John 15:1-8', 'Psalm 80:8-16'] }),
+    })
+
+    await feature.editing.delete('Cross-References/Vine.md')
+
+    expect(noteVault.trashed).toEqual(['Cross-References/Vine.md'])
+    expect(noteVault.notes.has('Cross-References/Vine.md')).toBe(false)
+  })
+
+  it('refuses to delete a note that is not in the vault', async () => {
+    const { feature } = harness({})
+
+    await expect(feature.editing.delete('gone.md')).rejects.toThrow(
+      'gone.md is not in the vault.',
     )
   })
 })

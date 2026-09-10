@@ -1,6 +1,6 @@
 <!--
 The strip that builds a cross-reference: the members gathered so far, the ways
-to add more, and the description they are saved with. Shown while the reader
+to add more, and the summary they are saved with. Shown while the reader
 tab is collecting, whether the collecting started here or in another surface
 onto the same tab.
 -->
@@ -58,11 +58,11 @@ onto the same tab.
     onclick={() => source.addTypedReferenceToCollection()}
   >Add</button>
   <input
-    class="bsm-basket-input bsm-basket-description"
+    class="bsm-basket-input bsm-basket-summary"
     type="text"
     placeholder="Why do these belong together? (optional)"
-    value={collection.description}
-    oninput={(event) => source.describeCollection(event.currentTarget.value)}
+    value={collection.summary}
+    oninput={(event) => source.summariseCollection(event.currentTarget.value)}
     onkeydown={(event) => {
       if (event.key === 'Enter') {
         event.preventDefault()
@@ -170,7 +170,7 @@ onto the same tab.
     font-size: var(--font-ui-smaller);
   }
 
-  .bsm-basket-description {
+  .bsm-basket-summary {
     flex: 1;
     min-width: 160px;
   }

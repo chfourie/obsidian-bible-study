@@ -2,8 +2,7 @@ import type { Reference } from '../reference'
 
 // Everything the reader's editing strip asks of cross-references: the
 // whole-note changes it commits. Reading is the vault index's (ADR 0015).
-// The handle is the note path; until #151 lands editing in place, changing
-// or deleting a note through here is refused.
+// The handle is the note path.
 export type CrossReferenceEditing = {
   create: (members: Reference[], summary: string | null) => Promise<void>
   update: (

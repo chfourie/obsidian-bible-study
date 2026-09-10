@@ -21,9 +21,26 @@ const yamlScalar = (value: string): string =>
 
 const keyLine = (key: string, value: string): string => `${key}: ${yamlScalar(value)}`
 
-const refsBlock = (members: readonly Reference[]): string[] => [
+// A member is written in grammar form; one kept as text (unparseable, so
+// preserved as the user typed it) is written back as it was.
+export type WrittenMember = Reference | string
+
+const memberText = (member: WrittenMember): string =>
+  typeof member === 'string' ? member : formatReference(member)
+
+const refsBlock = (members: readonly WrittenMember[]): string[] => [
   'refs:',
-  ...members.map((member) => `  - ${yamlScalar(formatReference(member))}`),
+  ...members.map((member) => `  - ${yamlScalar(memberText(member))}`),
+]
+
+// The two keys every plugin write touches (spec §5a): the members and the
+// summary line.
+export const crossReferenceMemberKeys = (
+  members: readonly WrittenMember[],
+  summary: string | null,
+): FrontmatterKeyBlock[] => [
+  ['refs', refsBlock(members)],
+  ['summary', [keyLine('summary', summary ?? '')]],
 ]
 
 const crossReferenceKeys = (
@@ -31,8 +48,7 @@ const crossReferenceKeys = (
   summary: string | null,
 ): FrontmatterKeyBlock[] => [
   ['type', [keyLine('type', CROSS_REFERENCE_NOTE_TYPE)]],
-  ['refs', refsBlock(members)],
-  ['summary', [keyLine('summary', summary ?? '')]],
+  ...crossReferenceMemberKeys(members, summary),
 ]
 
 export const composeCrossReferenceNote = (

@@ -2,6 +2,7 @@ import type { Plugin } from 'obsidian'
 import { DEFAULT_SETTINGS, PluginFeature } from '../data-access'
 import { ObsidianNoteFileVault, type NoteFileVault } from '../notes'
 import type { Reference } from '../reference'
+import { extractNote } from '../vault-index'
 import type { CrossReferenceEditing } from './cross-reference-editing'
 import {
   crossReferencesFilePath,
@@ -9,8 +10,10 @@ import {
   LEGACY_CROSS_REFERENCES_FILE_PATH,
 } from './cross-reference-store'
 import type { CrossReferenceVault } from './cross-reference-vault'
+import { renamedCrossReferencePath } from './cross-reference-file-path'
 import { createCrossReferenceNote } from './create-cross-reference-note'
 import { ObsidianCrossReferenceVault } from './obsidian-cross-reference-vault'
+import { rewriteCrossReferenceNote } from './rewrite-cross-reference-note'
 
 const DEFAULT_FOLLOW_DELAY_MS = 800
 
@@ -27,15 +30,12 @@ export type CrossReferencesFeatureOptions = {
   followDelayMs?: number
 }
 
-const NOT_YET_EDITABLE = 'Editing a cross-reference note in place is not supported yet.'
-
 export class CrossReferencesFeature extends PluginFeature {
   // The data-file store, kept only until #152 migrates its entries into
   // notes: nothing reads it any more.
   readonly store: CrossReferenceStore
-  // What the reader's strip works against: a new cross-reference is written
-  // as a vault note (ADR 0015) and indexed at once; changing or deleting one
-  // in place arrives with #151.
+  // What the reader's strip works against: every change is a change to the
+  // cross-reference's note (ADR 0015), handed to the index at once.
   readonly editing: CrossReferenceEditing
   readonly #vault: CrossReferenceVault
   readonly #noteVault: NoteFileVault
@@ -56,13 +56,29 @@ export class CrossReferencesFeature extends PluginFeature {
     })
     this.editing = {
       create: (members, summary) => this.#createNote(members, summary),
-      update: async () => {
-        throw new Error(NOT_YET_EDITABLE)
-      },
-      delete: async () => {
-        throw new Error(NOT_YET_EDITABLE)
-      },
+      update: (path, members, summary) => this.#updateNote(path, members, summary),
+      delete: (path) => this.#noteVault.trashNote(path),
     }
+  }
+
+  // The rewrite touches `refs` and `summary` alone; the note then follows its
+  // members to a new name only while it still bears the name generated from
+  // the members it held (spec §5a).
+  async #updateNote(
+    path: string,
+    members: readonly Reference[],
+    summary: string | null,
+  ): Promise<void> {
+    const content = await this.#noteVault.readNote(path)
+    if (content === null) throw new Error(`${path} is not in the vault.`)
+    const rewritten = rewriteCrossReferenceNote(content, members, summary)
+    await this.#noteVault.modifyNote(path, rewritten)
+    const membersBefore = extractNote(content).crossReference?.members ?? []
+    const renamed = renamedCrossReferencePath(path, membersBefore, members, (candidate) =>
+      this.#noteVault.exists(candidate),
+    )
+    if (renamed !== null) await this.#noteVault.renameNote(path, renamed)
+    this.#index?.indexNote(renamed ?? path, rewritten)
   }
 
   async #createNote(
