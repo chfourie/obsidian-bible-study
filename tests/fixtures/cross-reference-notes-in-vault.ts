@@ -31,7 +31,6 @@ export const crossReferenceNotesInVault = (
     },
   }
   const feature = new CrossReferencesFeature(inertPlugin(), {
-    vault: { read: async () => null, write: async () => {}, rename: async () => {} },
     noteVault: relaying,
     index,
   })

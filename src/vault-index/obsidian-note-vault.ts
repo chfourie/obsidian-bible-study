@@ -1,27 +1,16 @@
 import { TFile, type Plugin, type TAbstractFile } from 'obsidian'
-import { CROSS_REFERENCES_FILE_NAME } from '../cross-references/cross-reference-store'
 import type { NoteVault } from './note-vault'
 
-// The cross-references data file is markdown only so vault sync carries it;
-// it is not a note and must never enter the reference index.
-const isDataFilePath = (path: string): boolean =>
-  path === CROSS_REFERENCES_FILE_NAME ||
-  path.endsWith(`/${CROSS_REFERENCES_FILE_NAME}`)
-
 const isMarkdownFile = (file: TAbstractFile): file is TFile =>
-  file instanceof TFile && file.extension === 'md' && !isDataFilePath(file.path)
+  file instanceof TFile && file.extension === 'md'
 
-const isMarkdownPath = (path: string): boolean =>
-  path.endsWith('.md') && !isDataFilePath(path)
+const isMarkdownPath = (path: string): boolean => path.endsWith('.md')
 
 export class ObsidianNoteVault implements NoteVault {
   constructor(private readonly plugin: Plugin) {}
 
   markdownFilePaths(): string[] {
-    return this.plugin.app.vault
-      .getMarkdownFiles()
-      .map((file) => file.path)
-      .filter((path) => !isDataFilePath(path))
+    return this.plugin.app.vault.getMarkdownFiles().map((file) => file.path)
   }
 
   async readNote(path: string): Promise<string> {

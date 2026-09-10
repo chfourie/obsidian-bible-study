@@ -1,5 +1,9 @@
 import type { Reference } from '../reference'
 
+// A cross-reference always connects at least two references; the editing
+// strip refuses to save below that floor rather than let one degenerate.
+export const CROSS_REFERENCE_MINIMUM_MEMBERS = 2
+
 // Everything the reader's editing strip asks of cross-references: the
 // whole-note changes it commits. Reading is the vault index's (ADR 0015).
 // The handle is the note path.
