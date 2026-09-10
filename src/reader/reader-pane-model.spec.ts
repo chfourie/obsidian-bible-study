@@ -2809,6 +2809,23 @@ describe('collecting a cross-reference', () => {
     expect(created).toEqual([null])
   })
 
+  it('keeps the strip open with the reason when the save fails', async () => {
+    const model = await collectingModel({
+      create: async () => {
+        throw new Error('folder is a file')
+      },
+    })
+    addTyped(model, 'Psalm 80:8-16')
+    addTyped(model, 'Romans 11:17-24')
+
+    await model.saveCrossReference()
+
+    expect(model.studyMaterial.collection?.members).toHaveLength(2)
+    expect(model.studyMaterial.collection?.error).toBe(
+      'Could not save: folder is a file',
+    )
+  })
+
   it('refuses to save below two members and keeps the strip open', async () => {
     let creates = 0
     const model = await collectingModel({

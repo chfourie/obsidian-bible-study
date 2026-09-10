@@ -88,6 +88,7 @@ export type ScriptureStudySettings = {
   revealPanelOnSelection: boolean
   annotationsFolder: string
   crossReferencesFolder: string
+  crossReferenceTemplatePath: string | null
   annotationTemplatePath: string | null
   annotationOrdering: AnnotationOrdering
   highlightPalette: HighlightPalette
@@ -116,7 +117,8 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   },
   revealPanelOnSelection: true,
   annotationsFolder: 'Annotations',
-  crossReferencesFolder: '',
+  crossReferencesFolder: 'Cross-References',
+  crossReferenceTemplatePath: null,
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',
   highlightPalette: defaultHighlightPalette(),

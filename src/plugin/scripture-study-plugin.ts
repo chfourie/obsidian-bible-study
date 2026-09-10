@@ -63,7 +63,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     this.vaultIndex.index,
     {
       firstRun: this.#firstRun,
-      crossReferences: this.crossReferences.store,
+      crossReferences: this.crossReferences.catalog,
       strongs: {
         dictionariesInstalled: () => this.strongsDictionaries.isInstalled(),
         entriesFor: async (numbers) =>
@@ -115,7 +115,7 @@ export default class ScriptureStudyPlugin extends Plugin {
     },
   })
   readonly studyPanel = new StudyPanelFeature(this, this.modules.store, {
-    crossReferences: this.crossReferences.store,
+    crossReferences: this.crossReferences.catalog,
     studyMaterial: this.reader,
     index: this.vaultIndex.index,
     wordStudy: this.wordStudy,

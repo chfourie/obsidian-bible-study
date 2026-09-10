@@ -1,23 +1,37 @@
 import type { Plugin } from 'obsidian'
 import { PluginFeature } from '../data-access'
+import type { Reference } from '../reference'
+import type { CrossReferenceCatalog } from './cross-reference-catalog'
+import type { CrossReferenceNoteVault } from './cross-reference-note-vault'
 import {
   crossReferencesFilePath,
   CrossReferenceStore,
   LEGACY_CROSS_REFERENCES_FILE_PATH,
 } from './cross-reference-store'
 import type { CrossReferenceVault } from './cross-reference-vault'
+import {
+  createCrossReferenceNote,
+  type CreatedCrossReferenceNote,
+} from './create-cross-reference-note'
+import { ObsidianCrossReferenceNoteVault } from './obsidian-cross-reference-note-vault'
 import { ObsidianCrossReferenceVault } from './obsidian-cross-reference-vault'
 
 const DEFAULT_FOLLOW_DELAY_MS = 800
 
 export type CrossReferencesFeatureOptions = {
   vault?: CrossReferenceVault
+  noteVault?: CrossReferenceNoteVault
   followDelayMs?: number
 }
 
 export class CrossReferencesFeature extends PluginFeature {
   readonly store: CrossReferenceStore
+  // What the reader and Study Panel work against: a new cross-reference is
+  // written as a vault note (ADR 0015), while reading, editing and deleting
+  // still go through the data-file store until the index takes over.
+  readonly catalog: CrossReferenceCatalog
   readonly #vault: CrossReferenceVault
+  readonly #noteVault: CrossReferenceNoteVault
   readonly #followDelayMs: number
   #activePath: string | null = null
   #pendingFollow: number | null = null
@@ -27,8 +41,27 @@ export class CrossReferencesFeature extends PluginFeature {
     super(plugin)
     this.#vault = options.vault ?? new ObsidianCrossReferenceVault(plugin)
     this.#followDelayMs = options.followDelayMs ?? DEFAULT_FOLLOW_DELAY_MS
+    this.#noteVault = options.noteVault ?? new ObsidianCrossReferenceNoteVault(plugin)
     this.store = new CrossReferenceStore(this.#vault, {
       filePath: () => this.#configuredPath(),
+    })
+    this.catalog = {
+      intersecting: (reference) => this.store.intersecting(reference),
+      create: (members, summary) => this.createNote(members, summary),
+      update: (id, members, description) =>
+        this.store.update(id, members, description),
+      delete: (id) => this.store.delete(id),
+      onChanged: (listener) => this.store.onChanged(listener),
+    }
+  }
+
+  async createNote(
+    members: readonly Reference[],
+    summary: string | null,
+  ): Promise<CreatedCrossReferenceNote> {
+    return createCrossReferenceNote(this.#noteVault, members, summary, {
+      folder: this.settings.crossReferencesFolder,
+      templatePath: this.settings.crossReferenceTemplatePath,
     })
   }
 

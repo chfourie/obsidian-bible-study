@@ -127,6 +127,27 @@ const settingNamed = (container: HTMLElement, name: string): HTMLElement => {
   return found
 }
 
+// The setting of that name under the given group heading — "Folder" and
+// "Template file" appear under more than one heading.
+const settingNamedUnder = (
+  container: HTMLElement,
+  heading: string,
+  name: string,
+): HTMLElement => {
+  const items = settingItems(container)
+  const start = items.findIndex(
+    (item) =>
+      item.classList.contains('setting-item-heading') &&
+      settingName(item) === heading,
+  )
+  if (start < 0) throw new Error(`no heading named ${heading}`)
+  const found = items
+    .slice(start + 1)
+    .find((item) => settingName(item).startsWith(name))
+  if (!found) throw new Error(`no setting named ${name} under ${heading}`)
+  return found
+}
+
 const hasSettingNamed = (container: HTMLElement, name: string): boolean =>
   settingItems(container).some((item) => settingName(item).startsWith(name))
 
@@ -847,18 +868,49 @@ describe('ScriptureStudySettingTab annotations section', () => {
 })
 
 describe('ScriptureStudySettingTab cross-references section', () => {
-  it('persists a trimmed folder, falling back to the vault root when blanked', async () => {
+  const folderSetting = (container: HTMLElement): HTMLElement =>
+    settingNamedUnder(container, 'Cross-references', 'Folder')
+  const templateSetting = (container: HTMLElement): HTMLElement =>
+    settingNamedUnder(container, 'Cross-references', 'Template file')
+
+  it('describes the folder as where new cross-reference notes are created', async () => {
+    const { container } = await setup()
+
+    expect(folderSetting(container).textContent).toContain(
+      'Where new cross-reference notes are created.',
+    )
+  })
+
+  it('persists a trimmed folder, falling back to the default when blanked', async () => {
     const { container, settingsStore } = await setup()
 
-    changeInput(settingNamed(container, 'Data file folder'), ' /Study/Data/ ')
+    changeInput(folderSetting(container), ' /PKM/Cross-References/ ')
     await flushAsync()
     expect((await settingsStore.loadSettings()).crossReferencesFolder).toBe(
-      'Study/Data',
+      'PKM/Cross-References',
     )
 
-    changeInput(settingNamed(container, 'Data file folder'), '   ')
+    changeInput(folderSetting(container), '   ')
     await flushAsync()
-    expect((await settingsStore.loadSettings()).crossReferencesFolder).toBe('')
+    expect((await settingsStore.loadSettings()).crossReferencesFolder).toBe(
+      'Cross-References',
+    )
+  })
+
+  it('persists the template file, clearing it when blanked', async () => {
+    const { container, settingsStore } = await setup()
+
+    changeInput(templateSetting(container), 'Templates/Cross-reference.md')
+    await flushAsync()
+    expect(
+      (await settingsStore.loadSettings()).crossReferenceTemplatePath,
+    ).toBe('Templates/Cross-reference.md')
+
+    changeInput(templateSetting(container), '')
+    await flushAsync()
+    expect(
+      (await settingsStore.loadSettings()).crossReferenceTemplatePath,
+    ).toBeNull()
   })
 })
 

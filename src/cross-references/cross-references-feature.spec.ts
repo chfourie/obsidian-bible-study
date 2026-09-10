@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Plugin } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
+import { parseReference, type Reference } from '../reference'
 import {
   CROSS_REFERENCES_FILE_NAME,
   crossReferencesFilePath,
@@ -8,6 +9,7 @@ import {
   serializeCrossReference,
   type CrossReference,
 } from './cross-reference-store'
+import type { CrossReferenceNoteVault } from './cross-reference-note-vault'
 import type { CrossReferenceVault } from './cross-reference-vault'
 import { CrossReferencesFeature } from './cross-references-feature'
 
@@ -164,6 +166,102 @@ describe('changing the configured folder', () => {
     files[path] = ''
     announce('modify', path)
     await flush()
+
+    expect(feature.store.all()).toEqual([])
+  })
+})
+
+describe('creating a cross-reference note from the strip', () => {
+  const ref = (text: string): Reference => {
+    const parsed = parseReference(text)
+    if (parsed === null) throw new Error(`unparseable reference: ${text}`)
+    return parsed.reference
+  }
+
+  const vine = [ref('John 15:1-8'), ref('Psalm 80:8-16')]
+
+  const noteHarness = (seedNotes: Record<string, string> = {}) => {
+    const notes = new Map(Object.entries(seedNotes))
+    const folders = new Set<string>()
+    const plugin = {
+      app: { vault: { on: () => ({}) } },
+      registerEvent: () => {},
+    } as unknown as Plugin
+    const noteVault: CrossReferenceNoteVault = {
+      exists: (path) => notes.has(path) || folders.has(path),
+      ensureFolder: async (path) => {
+        folders.add(path)
+      },
+      createNote: async (path, content) => {
+        if (notes.has(path)) throw new Error(`${path} already exists`)
+        notes.set(path, content)
+      },
+      readNote: async (path) => notes.get(path) ?? null,
+    }
+    const dataVault: CrossReferenceVault = {
+      read: async () => null,
+      write: async () => {},
+      rename: async () => {},
+    }
+    const feature = new CrossReferencesFeature(plugin, {
+      vault: dataVault,
+      noteVault,
+    })
+    feature.useSettings({ ...DEFAULT_SETTINGS })
+    return { feature, notes, folders }
+  }
+
+  it('writes the note with the three keys into the default folder, created on demand', async () => {
+    const { feature, notes, folders } = noteHarness()
+
+    await feature.catalog.create(vine, 'Vine imagery')
+
+    expect(folders.has('Cross-References')).toBe(true)
+    expect(notes.get('Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(
+      '---\ntype: cross-reference\nrefs:\n  - John 15:1-8\n  - Psalms 80:8-16\nsummary: Vine imagery\n---\n\n',
+    )
+  })
+
+  it('writes into the configured folder', async () => {
+    const { feature, notes } = noteHarness()
+    feature.useSettings({ ...DEFAULT_SETTINGS, crossReferencesFolder: 'PKM/Cross-References' })
+
+    await feature.catalog.create(vine, null)
+
+    expect(notes.has('PKM/Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(true)
+  })
+
+  it('suffixes a second note with the same generated name', async () => {
+    const { feature, notes } = noteHarness()
+
+    await feature.catalog.create(vine, 'first')
+    await feature.catalog.create(vine, 'second')
+
+    expect(notes.get('Cross-References/John 15.1-8 + Psalms 80.8-16 1.md')).toContain(
+      'summary: second',
+    )
+  })
+
+  it('copies the configured template and overwrites the keys it carries', async () => {
+    const { feature, notes } = noteHarness({
+      'Templates/Cross-reference.md': '---\ntype: draft\ntags: study\n---\n## Why\n',
+    })
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      crossReferenceTemplatePath: 'Templates/Cross-reference.md',
+    })
+
+    await feature.catalog.create(vine, 'Vine imagery')
+
+    expect(notes.get('Cross-References/John 15.1-8 + Psalms 80.8-16.md')).toBe(
+      '---\ntype: cross-reference\ntags: study\nrefs:\n  - John 15:1-8\n  - Psalms 80:8-16\nsummary: Vine imagery\n---\n## Why\n',
+    )
+  })
+
+  it('leaves the data file untouched', async () => {
+    const { feature } = noteHarness()
+
+    await feature.catalog.create(vine, 'Vine imagery')
 
     expect(feature.store.all()).toEqual([])
   })

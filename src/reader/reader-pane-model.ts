@@ -1272,17 +1272,28 @@ export class ReaderPaneModel implements StudyMaterialSource {
       return
     const trimmed = collection.description.trim()
     const nextDescription = trimmed === '' ? null : trimmed
-    if (collection.editing !== null) {
-      await this.deps.crossReferences.update(
-        collection.editing,
-        collection.members,
-        nextDescription,
-      )
-    } else {
-      await this.deps.crossReferences.create(
-        collection.members,
-        nextDescription,
-      )
+    try {
+      if (collection.editing !== null) {
+        await this.deps.crossReferences.update(
+          collection.editing,
+          collection.members,
+          nextDescription,
+        )
+      } else {
+        await this.deps.crossReferences.create(
+          collection.members,
+          nextDescription,
+        )
+      }
+    } catch (error) {
+      // A save the vault refused keeps the strip open with what was gathered,
+      // so nothing typed is lost to a folder that turned out to be a file.
+      this.#collection = {
+        ...collection,
+        error: `Could not save: ${error instanceof Error ? error.message : String(error)}`,
+      }
+      this.#notify()
+      return
     }
     this.#collection = null
     // Details already on screen re-read the store so the cross-reference

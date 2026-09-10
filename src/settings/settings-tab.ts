@@ -23,6 +23,7 @@ import {
   HIGHLIGHT_WASH_MIN,
   HIGHLIGHT_WASH_STEP,
   type AnnotationOrdering,
+  DEFAULT_SETTINGS,
   type HighlightPalette,
   type HighlightSlot,
   type HighlightThemeMode,
@@ -110,6 +111,7 @@ type SettingsControlKey =
   | 'annotationTemplatePath'
   | 'annotationOrdering'
   | 'crossReferencesFolder'
+  | 'crossReferenceTemplatePath'
 
 // Maps each per-device settings control back to the field it reads/writes
 // and which device slot within it — the settings tab shows both slots of
@@ -281,6 +283,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.annotationOrdering
       case 'crossReferencesFolder':
         return settings.crossReferencesFolder
+      case 'crossReferenceTemplatePath':
+        return settings.crossReferenceTemplatePath ?? ''
     }
   }
 
@@ -360,9 +364,14 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       case 'crossReferencesFolder':
         return this.#update((settings) => ({
           ...settings,
-          crossReferencesFolder: (value as string)
-            .trim()
-            .replace(/^\/+|\/+$/g, ''),
+          crossReferencesFolder:
+            (value as string).trim().replace(/^\/+|\/+$/g, '') ||
+            DEFAULT_SETTINGS.crossReferencesFolder,
+        }))
+      case 'crossReferenceTemplatePath':
+        return this.#update((settings) => ({
+          ...settings,
+          crossReferenceTemplatePath: (value as string).trim() || null,
         }))
     }
   }
@@ -966,12 +975,22 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       heading: 'Cross-references',
       items: [
         {
-          name: 'Data file folder',
-          desc: 'Where the cross-references data file lives; the file moves when this changes. Empty keeps it in the vault root.',
+          name: 'Folder',
+          desc: 'Where new cross-reference notes are created.',
           control: {
             type: 'folder',
             key: 'crossReferencesFolder',
-            placeholder: 'Vault root',
+            placeholder: DEFAULT_SETTINGS.crossReferencesFolder,
+          },
+        },
+        {
+          name: 'Template file',
+          desc: 'Copied into new cross-reference notes; leave empty for none.',
+          control: {
+            type: 'file',
+            key: 'crossReferenceTemplatePath',
+            placeholder: 'None',
+            filter: (file: TFile) => file.extension === 'md',
           },
         },
       ],
