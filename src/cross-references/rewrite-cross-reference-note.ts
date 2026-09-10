@@ -1,23 +1,26 @@
 import { withFrontmatterKeys } from '../notes'
-import { frontmatterLength, parseReference, type Reference } from '../reference'
-import { crossReferenceFrontmatter } from '../vault-index'
-import {
-  crossReferenceMemberKeys,
-  type WrittenMember,
-} from './compose-cross-reference-note'
+import { frontmatterLength, type Reference } from '../reference'
+import { membersAsWritten, type MemberAsWritten } from '../vault-index'
+import { crossReferenceMemberKeys } from './compose-cross-reference-note'
 
-const isUnparseable = (member: string): boolean =>
-  parseReference(member, { translationIds: [] }) === null
+export type RewrittenCrossReferenceNote = {
+  content: string
+  membersBefore: MemberAsWritten[]
+  membersAfter: MemberAsWritten[]
+}
 
-// A member the plugin could not read stays where the user put it, so a typo
-// or a Book not installed here is never lost to a rewrite (spec §5a).
+const isVerbatim = (member: MemberAsWritten): member is string =>
+  typeof member === 'string'
+
+// A member the plugin could not read stays at its index in the list, or
+// trails it once the list is shorter than that; several keep their order.
 const withVerbatimMembers = (
-  written: readonly string[],
+  written: readonly MemberAsWritten[],
   members: readonly Reference[],
-): WrittenMember[] => {
-  const merged: WrittenMember[] = [...members]
+): MemberAsWritten[] => {
+  const merged: MemberAsWritten[] = [...members]
   written.forEach((member, position) => {
-    if (isUnparseable(member)) merged.splice(Math.min(position, merged.length), 0, member)
+    if (isVerbatim(member)) merged.splice(Math.min(position, merged.length), 0, member)
   })
   return merged
 }
@@ -28,13 +31,15 @@ export const rewriteCrossReferenceNote = (
   content: string,
   members: readonly Reference[],
   summary: string | null,
-): string => {
+): RewrittenCrossReferenceNote => {
   const end = frontmatterLength(content)
   const frontmatter = content.slice(0, end)
-  const written = crossReferenceFrontmatter(frontmatter)?.members ?? []
-  const keys = crossReferenceMemberKeys(
-    withVerbatimMembers(written, members),
-    summary,
-  )
-  return `${withFrontmatterKeys(frontmatter, keys)}${content.slice(end)}`
+  const membersBefore = membersAsWritten(content)
+  const membersAfter = withVerbatimMembers(membersBefore, members)
+  const keys = crossReferenceMemberKeys(membersAfter, summary)
+  return {
+    content: `${withFrontmatterKeys(frontmatter, keys)}${content.slice(end)}`,
+    membersBefore,
+    membersAfter,
+  }
 }

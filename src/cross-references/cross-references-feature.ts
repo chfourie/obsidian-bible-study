@@ -2,7 +2,6 @@ import type { Plugin } from 'obsidian'
 import { DEFAULT_SETTINGS, PluginFeature } from '../data-access'
 import { ObsidianNoteFileVault, type NoteFileVault } from '../notes'
 import type { Reference } from '../reference'
-import { extractNote } from '../vault-index'
 import type { CrossReferenceEditing } from './cross-reference-editing'
 import {
   crossReferencesFilePath,
@@ -17,10 +16,12 @@ import { rewriteCrossReferenceNote } from './rewrite-cross-reference-note'
 
 const DEFAULT_FOLLOW_DELAY_MS = 800
 
-// The index a created note is handed to at once, so its row surfaces without
-// waiting on the vault's own change event (as annotations do).
+// The index a written note is handed to at once, so its row surfaces without
+// waiting on the vault's own events (as annotations do); those events then
+// find the index already in step.
 export type CrossReferenceNoteIndex = {
   indexNote: (path: string, content: string) => void
+  renameNote: (path: string, newPath: string) => void
 }
 
 export type CrossReferencesFeatureOptions = {
@@ -63,7 +64,8 @@ export class CrossReferencesFeature extends PluginFeature {
 
   // The rewrite touches `refs` and `summary` alone; the note then follows its
   // members to a new name only while it still bears the name generated from
-  // the members it held (spec §5a).
+  // the members it held (spec §5a). The index learns of each step before the
+  // vault reports it, so a rename event finds nothing stale to carry over.
   async #updateNote(
     path: string,
     members: readonly Reference[],
@@ -72,13 +74,17 @@ export class CrossReferencesFeature extends PluginFeature {
     const content = await this.#noteVault.readNote(path)
     if (content === null) throw new Error(`${path} is not in the vault.`)
     const rewritten = rewriteCrossReferenceNote(content, members, summary)
-    await this.#noteVault.modifyNote(path, rewritten)
-    const membersBefore = extractNote(content).crossReference?.members ?? []
-    const renamed = renamedCrossReferencePath(path, membersBefore, members, (candidate) =>
-      this.#noteVault.exists(candidate),
+    await this.#noteVault.modifyNote(path, rewritten.content)
+    this.#index?.indexNote(path, rewritten.content)
+    const renamed = renamedCrossReferencePath(
+      path,
+      rewritten.membersBefore,
+      rewritten.membersAfter,
+      (candidate) => this.#noteVault.exists(candidate),
     )
-    if (renamed !== null) await this.#noteVault.renameNote(path, renamed)
-    this.#index?.indexNote(renamed ?? path, rewritten)
+    if (renamed === null) return
+    await this.#noteVault.renameNote(path, renamed)
+    this.#index?.renameNote(path, renamed)
   }
 
   async #createNote(

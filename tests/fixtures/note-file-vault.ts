@@ -16,7 +16,7 @@ export const fakeNoteFileVault = (
   const folders = new Set(seed.folders ?? [])
   const renames: [string, string][] = []
   const trashed: string[] = []
-  const held = (path: string): string => {
+  const existing = (path: string): string => {
     const content = notes.get(path)
     if (content === undefined) throw new Error(`${path} is not in the vault.`)
     return content
@@ -36,17 +36,17 @@ export const fakeNoteFileVault = (
     },
     readNote: async (path) => notes.get(path) ?? null,
     modifyNote: async (path, content) => {
-      held(path)
+      existing(path)
       notes.set(path, content)
     },
     renameNote: async (path, newPath) => {
       if (notes.has(newPath)) throw new Error(`${newPath} already exists`)
-      notes.set(newPath, held(path))
+      notes.set(newPath, existing(path))
       notes.delete(path)
       renames.push([path, newPath])
     },
     trashNote: async (path) => {
-      held(path)
+      existing(path)
       notes.delete(path)
       trashed.push(path)
     },

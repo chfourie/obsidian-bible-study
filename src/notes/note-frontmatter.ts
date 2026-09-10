@@ -20,17 +20,27 @@ export const splitTemplate = (template: string | null): SplitTemplate => {
   }
 }
 
-const isListItem = (line: string): boolean => /^\s+-(\s|$)|^-(\s|$)/.test(line)
+// A line YAML reads as part of the key above it: indented (a block scalar's
+// text, a nested mapping, an indented list item) or an unindented list item.
+const isContinuation = (line: string): boolean => /^[ \t]|^-(\s|$)/.test(line)
 
-// Replaces the key's block (its line plus any indented list items) in place,
-// or appends the block when the key is absent — a template's own key order
-// survives, and a key it carried is never left beside the plugin's.
+// A blank line belongs to the block only while more of it follows.
+const blockEnd = (lines: readonly string[], keyIndex: number): number => {
+  let end = keyIndex + 1
+  for (let i = end; i < lines.length; i++) {
+    if (isContinuation(lines[i])) end = i + 1
+    else if (lines[i].trim() !== '') break
+  }
+  return end
+}
+
+// Replaces the key's whole block in place, or appends the block when the key
+// is absent — a template's own key order survives, and a key it carried is
+// never left beside the plugin's.
 const withKeyBlock = (lines: string[], key: string, block: string[]): string[] => {
   const keyIndex = lines.findIndex((line) => line.startsWith(`${key}:`))
   if (keyIndex < 0) return [...lines, ...block]
-  let end = keyIndex + 1
-  while (end < lines.length && isListItem(lines[end])) end++
-  return [...lines.slice(0, keyIndex), ...block, ...lines.slice(end)]
+  return [...lines.slice(0, keyIndex), ...block, ...lines.slice(blockEnd(lines, keyIndex))]
 }
 
 export const withFrontmatterKeys = (

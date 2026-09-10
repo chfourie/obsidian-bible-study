@@ -2,6 +2,7 @@ import {
   frontmatterLength,
   parseReference,
   scanReferenceMatches,
+  type ParsedReference,
   type ParseOptions,
   type Reference,
 } from '../reference'
@@ -54,18 +55,43 @@ const annotationOccurrence = (
     : frontmatterOccurrence(ref, 'annotation-frontmatter', options)
 }
 
-const memberOccurrences = (
+// A `refs` item as the note holds it: the Reference it parses to, or its
+// text when the plugin cannot read it — kept verbatim through every rewrite
+// (spec §5a).
+export type MemberAsWritten = Reference | string
+
+type ParsedMember = { text: string; parsed: ParsedReference | null }
+
+const parseMembers = (
   members: readonly string[],
   options: ParseOptions,
-): ExtractedOccurrence[] =>
-  members.flatMap((member) => {
-    const occurrence = frontmatterOccurrence(
-      member,
-      'cross-reference-frontmatter',
-      options,
-    )
-    return occurrence ? [occurrence] : []
-  })
+): ParsedMember[] =>
+  members.map((text) => ({ text, parsed: parseReference(text, options) }))
+
+const memberOccurrences = (members: readonly ParsedMember[]): ExtractedOccurrence[] =>
+  members.flatMap(({ parsed }) =>
+    parsed
+      ? [
+          {
+            position: 0,
+            reference: parsed.reference,
+            source: 'cross-reference-frontmatter' as const,
+            translation: parsed.translation,
+          },
+        ]
+      : [],
+  )
+
+export const membersAsWritten = (
+  content: string,
+  options: ParseOptions = {},
+): MemberAsWritten[] => {
+  const frontmatter = content.slice(0, frontmatterLength(content))
+  const declared = crossReferenceFrontmatter(frontmatter)
+  return parseMembers(declared?.members ?? [], options).map(
+    ({ text, parsed }) => parsed?.reference ?? text,
+  )
+}
 
 const hasBody = (content: string, frontmatterEnd: number): boolean =>
   content.slice(frontmatterEnd).trim() !== ''
@@ -80,7 +106,7 @@ export const extractNote = (
   const annotation = annotationOccurrence(frontmatter, options)
   if (annotation) occurrences.push(annotation)
   const declared = crossReferenceFrontmatter(frontmatter)
-  const members = memberOccurrences(declared?.members ?? [], options)
+  const members = memberOccurrences(parseMembers(declared?.members ?? [], options))
   occurrences.push(...members)
   for (const match of scanReferenceMatches(content, options)) {
     occurrences.push({

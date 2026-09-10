@@ -101,6 +101,28 @@ describe('renamedCrossReferencePath', () => {
     ).toBe('Cross-References/John 15.1-8 + Romans 11.17-24.md')
   })
 
+  it('counts a member it cannot parse toward the generated name', () => {
+    expect(
+      renamedCrossReferencePath(
+        'Cross-References/John 15.1-8 + Psalms 80.8-16 (+1).md',
+        [...vine, 'Jonh 3:16'],
+        [...grafted, 'Jonh 3:16'],
+        never,
+      ),
+    ).toBe('Cross-References/John 15.1-8 + Romans 11.17-24 (+1).md')
+  })
+
+  it('cannot vouch for a name whose named members it cannot parse', () => {
+    expect(
+      renamedCrossReferencePath(
+        'Cross-References/Jonh 15.1-8 + Psalms 80.8-16.md',
+        ['Jonh 15:1-8', ref('Psalm 80:8-16')],
+        grafted,
+        never,
+      ),
+    ).toBe(null)
+  })
+
   it('leaves a hand-chosen name alone', () => {
     expect(
       renamedCrossReferencePath('Cross-References/Vine.md', vine, grafted, never),
@@ -133,5 +155,16 @@ describe('renamedCrossReferencePath', () => {
     expect(
       renamedCrossReferencePath('John 15.1-8 + Psalms 80.8-16.md', vine, grafted, never),
     ).toBe('John 15.1-8 + Romans 11.17-24.md')
+  })
+
+  it('dodges a taken name at the vault root', () => {
+    expect(
+      renamedCrossReferencePath(
+        'John 15.1-8 + Psalms 80.8-16.md',
+        vine,
+        grafted,
+        (path) => path === 'John 15.1-8 + Romans 11.17-24.md',
+      ),
+    ).toBe('John 15.1-8 + Romans 11.17-24 1.md')
   })
 })

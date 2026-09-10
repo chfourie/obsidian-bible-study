@@ -1,8 +1,8 @@
-import type { Plugin } from 'obsidian'
 import { CrossReferencesFeature } from '../../src/cross-references'
 import { DEFAULT_SETTINGS } from '../../src/data-access'
 import { VaultReferenceIndex } from '../../src/vault-index'
 import { fakeNoteFileVault, type FakeNoteFileVault } from './note-file-vault'
+import { inertPlugin } from './plugin-stub'
 
 export type CrossReferenceNotesInVault = {
   index: VaultReferenceIndex
@@ -30,11 +30,7 @@ export const crossReferenceNotesInVault = (
       index.removeNote(path)
     },
   }
-  const plugin = {
-    app: { vault: { on: () => ({}) } },
-    registerEvent: () => {},
-  } as unknown as Plugin
-  const feature = new CrossReferencesFeature(plugin, {
+  const feature = new CrossReferencesFeature(inertPlugin(), {
     vault: { read: async () => null, write: async () => {}, rename: async () => {} },
     noteVault: relaying,
     index,
