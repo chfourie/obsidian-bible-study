@@ -1271,19 +1271,16 @@ export class ReaderPaneModel implements StudyMaterialSource {
     )
       return
     const trimmed = collection.description.trim()
-    const nextDescription = trimmed === '' ? null : trimmed
+    const summary = trimmed === '' ? null : trimmed
     try {
       if (collection.editing !== null) {
         await this.deps.crossReferences.update(
           collection.editing,
           collection.members,
-          nextDescription,
+          summary,
         )
       } else {
-        await this.deps.crossReferences.create(
-          collection.members,
-          nextDescription,
-        )
+        await this.deps.crossReferences.create(collection.members, summary)
       }
     } catch (error) {
       // A save the vault refused keeps the strip open with what was gathered,

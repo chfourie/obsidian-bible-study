@@ -1,15 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { parseReference, type Reference } from '../reference'
-import type { AnnotationVault } from './annotation-vault'
+import { ref } from '../../tests/fixtures/reference'
+import type { NoteFileVault } from '../notes'
 import { createAnnotation } from './create-annotation'
 
-const ref = (text: string): Reference => {
-  const parsed = parseReference(text)
-  if (parsed === null) throw new Error(`unparseable reference: ${text}`)
-  return parsed.reference
-}
-
-type FakeVault = AnnotationVault & {
+type FakeVault = NoteFileVault & {
   notes: Map<string, string>
   folders: Set<string>
 }

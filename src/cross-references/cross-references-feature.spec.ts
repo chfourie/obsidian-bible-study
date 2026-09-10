@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Plugin } from 'obsidian'
 import { DEFAULT_SETTINGS } from '../data-access'
-import { parseReference, type Reference } from '../reference'
+import { ref } from '../../tests/fixtures/reference'
+import type { NoteFileVault } from '../notes'
 import {
   CROSS_REFERENCES_FILE_NAME,
   crossReferencesFilePath,
@@ -9,7 +10,6 @@ import {
   serializeCrossReference,
   type CrossReference,
 } from './cross-reference-store'
-import type { CrossReferenceNoteVault } from './cross-reference-note-vault'
 import type { CrossReferenceVault } from './cross-reference-vault'
 import { CrossReferencesFeature } from './cross-references-feature'
 
@@ -172,12 +172,6 @@ describe('changing the configured folder', () => {
 })
 
 describe('creating a cross-reference note from the strip', () => {
-  const ref = (text: string): Reference => {
-    const parsed = parseReference(text)
-    if (parsed === null) throw new Error(`unparseable reference: ${text}`)
-    return parsed.reference
-  }
-
   const vine = [ref('John 15:1-8'), ref('Psalm 80:8-16')]
 
   const noteHarness = (seedNotes: Record<string, string> = {}) => {
@@ -187,7 +181,7 @@ describe('creating a cross-reference note from the strip', () => {
       app: { vault: { on: () => ({}) } },
       registerEvent: () => {},
     } as unknown as Plugin
-    const noteVault: CrossReferenceNoteVault = {
+    const noteVault: NoteFileVault = {
       exists: (path) => notes.has(path) || folders.has(path),
       ensureFolder: async (path) => {
         folders.add(path)

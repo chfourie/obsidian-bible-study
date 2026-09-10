@@ -1,7 +1,7 @@
 import type { Plugin } from 'obsidian'
-import type { AnnotationVault } from './annotation-vault'
+import type { NoteFileVault } from './note-file-vault'
 
-export class ObsidianAnnotationVault implements AnnotationVault {
+export class ObsidianNoteFileVault implements NoteFileVault {
   constructor(private readonly plugin: Plugin) {}
 
   exists(path: string): boolean {

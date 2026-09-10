@@ -9,14 +9,9 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
+import { ref } from '../../tests/fixtures/reference'
 import { makeVerseId, parseReference, type Reference } from '../reference'
 import { composeCrossReferenceNote } from './compose-cross-reference-note'
-
-const ref = (text: string): Reference => {
-  const parsed = parseReference(text)
-  if (parsed === null) throw new Error(`unparseable reference: ${text}`)
-  return parsed.reference
-}
 
 const span = (
   book: number,
@@ -62,6 +57,15 @@ describe('composeCrossReferenceNote', () => {
   it('quotes a summary YAML would read as a number or boolean', () => {
     expect(composeCrossReferenceNote(vine, '1912', null)).toContain('summary: "1912"\n')
     expect(composeCrossReferenceNote(vine, 'yes', null)).toContain('summary: "yes"\n')
+    expect(composeCrossReferenceNote(vine, '0x1A', null)).toContain('summary: "0x1A"\n')
+    expect(composeCrossReferenceNote(vine, '0o17', null)).toContain('summary: "0o17"\n')
+    expect(composeCrossReferenceNote(vine, '12:30', null)).toContain('summary: "12:30"\n')
+  })
+
+  it('quotes a summary that spans lines so the frontmatter stays one key per line', () => {
+    expect(composeCrossReferenceNote(vine, 'Vine\nimagery', null)).toContain(
+      'summary: "Vine\\nimagery"\n',
+    )
   })
 
   it('copies a frontmatter-less template as the body', () => {

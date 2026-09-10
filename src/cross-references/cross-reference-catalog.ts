@@ -1,27 +1,23 @@
 import type { Reference } from '../reference'
 import type { CrossReference } from './cross-reference-store'
 
-// Everything the reader's editing strip asks of the cross-reference store: the
-// entries intersecting what it shows, and the whole-entry changes it commits.
-// Creating hands back the new entry, which no surfacing model has a use for.
+// Everything the reader's editing strip asks of cross-references: the entries
+// intersecting what it shows, and the whole-entry changes it commits.
 export type CrossReferenceEditing = {
   intersecting: (reference: Reference) => CrossReference[]
-  create: (
-    members: Reference[],
-    description: string | null,
-  ) => Promise<unknown>
+  create: (members: Reference[], summary: string | null) => Promise<void>
   update: (
     id: string,
     members: Reference[],
-    description: string | null,
+    summary: string | null,
   ) => Promise<void>
   delete: (id: string) => Promise<void>
 }
 
-// What a feature needs on top: the store's change feed, so panes re-read it
-// when a cross-reference changes elsewhere. CrossReferenceStore satisfies this
-// as it stands, so features take the store itself rather than a hand-built
-// bundle of delegating adapters over it.
+// What a feature needs on top: a change feed, so panes re-read when a
+// cross-reference changes elsewhere. While notes and the data-file store
+// coexist (ADR 0015), CrossReferencesFeature.catalog is the one place that
+// joins them; once the index takes over reading, it satisfies this alone.
 export type CrossReferenceCatalog = CrossReferenceEditing & {
   onChanged: (listener: () => void) => () => void
 }

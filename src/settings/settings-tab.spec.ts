@@ -119,13 +119,18 @@ const settingItems = (container: HTMLElement): HTMLElement[] => [
 const settingName = (item: HTMLElement): string =>
   item.querySelector('.setting-item-name')?.textContent ?? ''
 
-const settingNamed = (container: HTMLElement, name: string): HTMLElement => {
-  const found = settingItems(container).find((item) =>
-    settingName(item).startsWith(name),
-  )
-  if (!found) throw new Error(`no setting named ${name}`)
+const firstSettingNamed = (
+  items: HTMLElement[],
+  name: string,
+  where: string,
+): HTMLElement => {
+  const found = items.find((item) => settingName(item).startsWith(name))
+  if (!found) throw new Error(`no setting named ${name}${where}`)
   return found
 }
+
+const settingNamed = (container: HTMLElement, name: string): HTMLElement =>
+  firstSettingNamed(settingItems(container), name, '')
 
 // The setting of that name under the given group heading — "Folder" and
 // "Template file" appear under more than one heading.
@@ -141,11 +146,7 @@ const settingNamedUnder = (
       settingName(item) === heading,
   )
   if (start < 0) throw new Error(`no heading named ${heading}`)
-  const found = items
-    .slice(start + 1)
-    .find((item) => settingName(item).startsWith(name))
-  if (!found) throw new Error(`no setting named ${name} under ${heading}`)
-  return found
+  return firstSettingNamed(items.slice(start + 1), name, ` under ${heading}`)
 }
 
 const hasSettingNamed = (container: HTMLElement, name: string): boolean =>

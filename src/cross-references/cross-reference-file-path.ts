@@ -1,3 +1,4 @@
+import { uniqueNotePath } from '../notes'
 import { referenceLabel, type Reference } from '../reference'
 
 const NAMED_MEMBERS = 2
@@ -16,11 +17,4 @@ export const crossReferenceFilePath = (
   folder: string,
   members: readonly Reference[],
   exists: (path: string) => boolean,
-): string => {
-  const base = `${folder}/${crossReferenceNoteName(members)}`
-  let candidate = `${base}.md`
-  for (let suffix = 1; exists(candidate); suffix++) {
-    candidate = `${base} ${suffix}.md`
-  }
-  return candidate
-}
+): string => uniqueNotePath(folder, crossReferenceNoteName(members), exists)

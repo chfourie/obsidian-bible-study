@@ -1,6 +1,6 @@
+import type { NoteFileVault } from '../notes'
 import type { Reference } from '../reference'
 import { annotationFilePath } from './annotation-file-path'
-import type { AnnotationVault } from './annotation-vault'
 import { composeAnnotationNote } from './compose-annotation-note'
 
 export type CreateAnnotationOptions = {
@@ -15,7 +15,7 @@ export type CreatedAnnotation = {
 }
 
 export const createAnnotation = async (
-  vault: AnnotationVault,
+  vault: NoteFileVault,
   reference: Reference,
   options: CreateAnnotationOptions,
 ): Promise<CreatedAnnotation> => {

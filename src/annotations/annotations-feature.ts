@@ -1,9 +1,9 @@
 import { MarkdownView, Notice, type Plugin } from 'obsidian'
 import { PluginFeature } from '../data-access'
+import { ObsidianNoteFileVault } from '../notes'
 import { formatReference, parseReference, type Reference } from '../reference'
 import type { VaultReferenceIndex } from '../vault-index'
 import { createAnnotation } from './create-annotation'
-import { ObsidianAnnotationVault } from './obsidian-annotation-vault'
 import { RefPromptModal } from './ref-prompt-modal'
 
 export class AnnotationsFeature extends PluginFeature {
@@ -57,7 +57,7 @@ export class AnnotationsFeature extends PluginFeature {
   async annotate(reference: Reference): Promise<void> {
     try {
       const created = await createAnnotation(
-        new ObsidianAnnotationVault(this.plugin),
+        new ObsidianNoteFileVault(this.plugin),
         reference,
         {
           folder: this.settings.annotationsFolder,

@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseReference, type Reference } from '../reference'
+import { ref } from '../../tests/fixtures/reference'
 import { annotationFilePath } from './annotation-file-path'
-
-const ref = (text: string): Reference => {
-  const parsed = parseReference(text)
-  if (parsed === null) throw new Error(`unparseable reference: ${text}`)
-  return parsed.reference
-}
 
 describe('annotationFilePath', () => {
   it('names the note after the canonical ref with colons as periods', () => {

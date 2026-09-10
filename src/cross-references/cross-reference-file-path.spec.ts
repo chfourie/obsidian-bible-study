@@ -4,14 +4,9 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
-import { makeVerseId, parseReference, type Reference } from '../reference'
+import { ref } from '../../tests/fixtures/reference'
+import { makeVerseId, type Reference } from '../reference'
 import { crossReferenceFilePath } from './cross-reference-file-path'
-
-const ref = (text: string): Reference => {
-  const parsed = parseReference(text)
-  if (parsed === null) throw new Error(`unparseable reference: ${text}`)
-  return parsed.reference
-}
 
 const atom = (book: number, chapter: number, verse: number): Reference => ({
   book,
