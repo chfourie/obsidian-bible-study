@@ -367,15 +367,127 @@ describe('processRenderedElement', () => {
       expect(redLetterTexts(root)).toEqual([])
     })
 
-    // Placeholder until #155 wraps across sibling nodes: the source closes
-    // this quote at the final mark, so the whole of it should then turn red.
-    it('leaves a quote alone, for now, whose close sits past an inline code span', async () => {
+    it('lets a mark inside inline code neither end nor escape the quote', async () => {
       const { root, deps } = setup()
-      root.innerHTML = '<p>c"Abide <code>"</code> in me"</p>'
+      root.innerHTML = '<p>c"Abide <code>"</code> in me" and c"more"</p>'
 
-      await process(root, deps, 'c"Abide `"` in me"')
+      await process(root, deps, 'c"Abide `"` in me" and c"more"')
+
+      expect(redLetterTexts(root)).toEqual(['"Abide " in me"', '"more"'])
+      expect(root.querySelectorAll('.scripture-study-red-letter code')).toHaveLength(1)
+      expect(root.textContent).toBe('"Abide " in me" and "more"')
+    })
+
+    it('spans bold, italic, links and inline code inside the quote in one red range', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<p>He said c"<strong>Abide</strong> in <em>me</em>, see <a href="x">here</a> and <code>x</code>" then left.</p>'
+
+      await process(
+        root,
+        deps,
+        'He said c"**Abide** in *me*, see [here](x) and `x`" then left.',
+      )
+
+      const span = root.querySelector('.scripture-study-red-letter')
+      expect(span?.textContent).toBe('"Abide in me, see here and x"')
+      expect(
+        [...(span?.children ?? [])].map((child) => child.tagName),
+      ).toEqual(['STRONG', 'EM', 'A', 'CODE'])
+      expect(root.querySelector('p')?.textContent).toBe(
+        'He said "Abide in me, see here and x" then left.',
+      )
+    })
+
+    it('spans a soft line break inside the quote', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>c"Abide<br>in me" now</p>'
+
+      await process(root, deps, 'c"Abide\nin me" now')
+
+      const span = root.querySelector('.scripture-study-red-letter')
+      expect(span?.innerHTML).toBe('"Abide<br>in me"')
+      expect(root.querySelector('p')?.textContent).toBe('"Abidein me" now')
+    })
+
+    it('ends the quote at a closing mark nested inside an inline element', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<p>c"Abide <strong>in me"</strong> and c"I <em>in you" more</em> text</p>'
+
+      await process(
+        root,
+        deps,
+        'c"Abide **in me"** and c"I *in you" more* text',
+      )
+
+      expect(redLetterTexts(root)).toEqual(['"Abide in me"', '"I in you"'])
+      expect(root.querySelector('p')?.innerHTML).toBe(
+        '<span class="scripture-study-red-letter">"Abide <strong>in me"</strong></span> and ' +
+          '<span class="scripture-study-red-letter">"I <em>in you"</em></span><em> more</em> text',
+      )
+    })
+
+    it('starts the quote from an opening mark nested inside an inline element', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p><em>He said c"Abide</em> in me" now</p>'
+
+      await process(root, deps, '*He said c"Abide* in me" now')
+
+      expect(root.querySelector('p')?.innerHTML).toBe(
+        '<em>He said </em><span class="scripture-study-red-letter"><em>"Abide</em> in me"</span> now',
+      )
+    })
+
+    it('leaves no empty shell when the quote fills an inline element edge', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p><em>c"Abide</em> in me" and c"I <strong>in you"</strong></p>'
+
+      await process(root, deps, '*c"Abide* in me" and c"I **in you"**')
+
+      expect(root.querySelector('p')?.innerHTML).toBe(
+        '<span class="scripture-study-red-letter"><em>"Abide</em> in me"</span> and ' +
+          '<span class="scripture-study-red-letter">"I <strong>in you"</strong></span>',
+      )
+    })
+
+    it('keeps the close search inside the quote\'s own block', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>c"Abide in me</p><p>and I in you"</p>'
+
+      await process(root, deps)
 
       expect(redLetterTexts(root)).toEqual([])
+      expect(root.textContent).toBe('c"Abide in meand I in you"')
+    })
+
+    it('renders a reference chip inside the quote as its usual chip within the red range', async () => {
+      const { root, deps } = setup()
+      root.innerHTML =
+        '<p>c"<strong>Abide</strong> in me, {John 15:4} and I in you" then {John 15:5}</p>'
+
+      await process(
+        root,
+        deps,
+        'c"**Abide** in me, {John 15:4} and I in you" then {John 15:5}',
+      )
+
+      const span = root.querySelector('.scripture-study-red-letter')
+      expect(span?.textContent).toBe('"Abide in me, John 15:4 and I in you"')
+      expect(chipLabels(span as HTMLElement)).toEqual(['John 15:4'])
+      expect(chipLabels(root)).toEqual(['John 15:4', 'John 15:5'])
+    })
+
+    it('matches an escaped reference inside the quote to its source occurrence', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>c"see {John 15:4}" and {John 15:4}</p>'
+
+      await process(root, deps, 'c"see \\{John 15:4}" and {John 15:4}')
+
+      expect(chipLabels(root)).toEqual(['John 15:4'])
+      expect(root.querySelector('.scripture-study-red-letter')?.textContent).toBe(
+        '"see {John 15:4}"',
+      )
     })
 
     it('renders a frontmatter c-quote as plain text only in the body', async () => {

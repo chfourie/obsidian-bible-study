@@ -46,16 +46,28 @@ const EXEMPT_SELECTOR = 'code, pre'
 
 const RED_LETTER_CLASS = 'scripture-study-red-letter'
 
+const BLOCK_SELECTOR =
+  'p, li, h1, h2, h3, h4, h5, h6, td, th, dt, dd, blockquote, div'
+
+const textWalker = (root: HTMLElement): TreeWalker =>
+  root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) =>
+      node.parentElement?.closest(EXEMPT_SELECTOR)
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT,
+  })
+
 const textNodesUnder = (root: HTMLElement): Text[] => {
-  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  const walker = textWalker(root)
   const nodes: Text[] = []
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const parent = node.parentElement
-    if (parent && parent.closest(EXEMPT_SELECTOR)) continue
     nodes.push(node as Text)
   }
   return nodes
 }
+
+const blockOf = (root: HTMLElement, node: Text): HTMLElement =>
+  node.parentElement?.closest<HTMLElement>(BLOCK_SELECTOR) ?? root
 
 export class NoteScanCache {
   #last: {
@@ -184,47 +196,108 @@ class SectionQuoteCandidates {
 
 type TextPoint = { node: Text; offset: number }
 
-// The wrap is a DOM range so a quote whose marks sit in different sibling
-// nodes can be wrapped the same way.
-const wrapChristQuote = (open: TextPoint, close: TextPoint): HTMLElement => {
+const atStartOf = (range: Range): boolean => range.startOffset === 0
+
+const atEndOf = (range: Range): boolean => {
+  const container = range.endContainer
+  const length =
+    container.nodeType === Node.TEXT_NODE
+      ? (container as Text).length
+      : container.childNodes.length
+  return range.endOffset === length
+}
+
+// A boundary at the very edge of an inline element moves outside it, so
+// extracting the range never leaves an emptied shell of that element
+// behind; an element the quote genuinely straddles is split, its outer
+// part staying where it was.
+const widenToElementEdges = (range: Range, block: HTMLElement): void => {
+  while (range.startContainer !== block && atStartOf(range)) {
+    range.setStartBefore(range.startContainer)
+  }
+  while (range.endContainer !== block && atEndOf(range)) {
+    range.setEndAfter(range.endContainer)
+  }
+}
+
+const wrapChristQuote = (
+  open: TextPoint,
+  close: TextPoint,
+  block: HTMLElement,
+): HTMLElement => {
   const range = open.node.ownerDocument.createRange()
   range.setStart(open.node, open.offset)
   range.setEnd(close.node, close.offset + 1)
+  widenToElementEdges(range, block)
   const span = createSpan({ cls: RED_LETTER_CLASS })
-  range.surroundContents(span)
+  span.append(range.extractContents())
+  range.insertNode(span)
   return span
 }
 
+const nextText = (walker: TreeWalker): Text | null =>
+  walker.nextNode() as Text | null
+
+const findClosingMark = (
+  root: HTMLElement,
+  block: HTMLElement,
+  open: TextPoint,
+  closing: string,
+): TextPoint | null => {
+  const walker = textWalker(root)
+  walker.currentNode = open.node
+  let node: Text | null = open.node
+  let from = open.offset
+  while (node && block.contains(node)) {
+    const offset = node.data.indexOf(closing, from)
+    if (offset !== -1) return { node, offset }
+    node = nextText(walker)
+    from = 0
+  }
+  return null
+}
+
+const nextTextAfter = (walker: TreeWalker, span: HTMLElement): Text | null => {
+  walker.currentNode = span
+  let node = nextText(walker)
+  while (node && span.contains(node)) node = nextText(walker)
+  return node
+}
+
 const decorateChristQuotes = (
-  first: Text,
+  root: HTMLElement,
   candidates: SectionQuoteCandidates,
 ): void => {
-  let node = first
+  const walker = textWalker(root)
+  let node = nextText(walker)
   let from = 0
-  let opening = nextChristQuoteOpening(node.data, from)
-  while (opening) {
+  while (node) {
+    const opening = nextChristQuoteOpening(node.data, from)
+    if (!opening) {
+      node = nextText(walker)
+      from = 0
+      continue
+    }
     const { prefix, mark, escaped } = opening
     const isQuote = candidates.nextOccurrenceIsQuote(mark) && !escaped
     if (escaped) node.deleteData(prefix + 1, 1)
     const markAt = prefix + 1
     from = markAt
+    const block = blockOf(root, node)
     const close = isQuote
-      ? node.data.indexOf(CLOSING_MARK[mark], markAt + 1)
-      : -1
-    if (close !== -1) {
-      node.deleteData(prefix, 1)
-      const span = wrapChristQuote(
-        { node, offset: prefix },
-        { node, offset: close - 1 },
-      )
-      const rest = span.nextSibling
-      // nodeType rather than instanceof Text: a popout window's nodes are
-      // not instances of this window's constructors.
-      if (rest?.nodeType !== Node.TEXT_NODE) return
-      node = rest as Text
-      from = 0
-    }
-    opening = nextChristQuoteOpening(node.data, from)
+      ? findClosingMark(
+          root,
+          block,
+          { node, offset: markAt + 1 },
+          CLOSING_MARK[mark],
+        )
+      : null
+    if (!close) continue
+    node.deleteData(prefix, 1)
+    if (close.node === node) close.offset -= 1
+    const span = wrapChristQuote({ node, offset: prefix }, close, block)
+    node = nextTextAfter(walker, span)
+    from = 0
   }
 }
 
@@ -284,10 +357,7 @@ export const processRenderedElement = async (
   sourcePath: string | null = null,
   scans: NoteScanCache = new NoteScanCache(),
 ): Promise<void> => {
-  const quoteCandidates = new SectionQuoteCandidates(section, scans)
-  for (const node of textNodesUnder(root)) {
-    decorateChristQuotes(node, quoteCandidates)
-  }
+  decorateChristQuotes(root, new SectionQuoteCandidates(section, scans))
   const candidates = sectionCandidates(section, context, scans)
   const renders = textNodesUnder(root).flatMap((node) =>
     processTextNode(node, context, deps, candidates, sourcePath),
