@@ -12,6 +12,7 @@ import { rewriteCueTokens, type CueLists } from '../highlights'
 import type {
   HighlightCueWriter,
   HighlightEditContext,
+  PassageEditingOptions,
 } from './highlight-editing'
 import {
   liveDecorationSpecs,
@@ -42,6 +43,7 @@ export type HighlightEditingSupport = (
   host: HTMLElement,
   context: HighlightEditContext,
   write: HighlightCueWriter,
+  passageEditing: PassageEditingOptions,
 ) => () => void
 
 type WidgetHighlightEditing = {
@@ -108,10 +110,13 @@ export class ReferenceWidget extends WidgetType {
     if (editing === null) return this.deps
     return {
       ...this.deps,
-      editHighlights: (host, context) => {
+      editHighlights: (host, context, surface) => {
         this.#detachEditing?.()
-        this.#detachEditing = editing.attach(host, context, (cues) =>
-          this.#writeCues(view, holder, cues, editing.translationIds()),
+        this.#detachEditing = editing.attach(
+          host,
+          context,
+          (cues) => this.#writeCues(view, holder, cues, editing.translationIds()),
+          { surface },
         )
       },
     }

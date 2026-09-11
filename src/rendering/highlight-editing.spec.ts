@@ -29,14 +29,14 @@ const render = async (
   const deps: ReferenceRenderDeps = {
     passages,
     openReference: vi.fn(),
-    editHighlights: (host, editContext) =>
-      attachHighlightEditing(host, editContext, write),
+    editHighlights: (host, editContext, surface) =>
+      attachHighlightEditing(host, editContext, write, { surface }),
   }
   const model = buildReferenceRenderModel(source, context)
   if (!model) throw new Error(`unparseable: ${source}`)
   const parent = document.body.createDiv()
   await renderReference(parent, model, deps)
-  return { parent, write }
+  return { parent, write, deps }
 }
 
 const verseTextOf = (parent: HTMLElement, index = 0): Text => {
@@ -447,6 +447,373 @@ describe('attachHighlightEditing show only this', () => {
       highlights: [],
       underlines: [],
       excerpt: [part(43015004, 0, 43015004, 6), part(43015004, 18, 43015004, 26)],
+    })
+  })
+})
+
+describe('Passage Editing', () => {
+  const SHOW = 11
+  const IN_MODE = { passageEditing: true }
+  const HIDE = 12
+  const CONTROL = '.scripture-study-passage-edit'
+  const TOOLBAR = '.scripture-study-passage-editing-toolbar'
+  const ELIDED = '.scripture-study-elided'
+  const ELLIPSIS = '.scripture-study-passage-ellipsis'
+
+  const controlOf = (parent: HTMLElement): HTMLElement | null =>
+    parent.querySelector<HTMLElement>(CONTROL)
+
+  const toolbarOf = (parent: HTMLElement): HTMLElement | null =>
+    parent.querySelector<HTMLElement>(TOOLBAR)
+
+  const click = (target: Element): void => {
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+
+  const pointerDown = (target: Node): void => {
+    target.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+  }
+
+  const enter = (parent: HTMLElement): void => {
+    const control = controlOf(parent)
+    if (control === null) throw new Error('no passage editing control')
+    click(control)
+  }
+
+  const toolbarButton = (parent: HTMLElement, label: string): HTMLElement => {
+    const button = [...toolbarOf(parent)!.querySelectorAll<HTMLElement>('[role=button]')]
+      .find((candidate) => candidate.textContent === label)
+    if (button === undefined) throw new Error(`no ${label} in the toolbar`)
+    return button
+  }
+
+  const part = (
+    startVerseId: number,
+    startChar: number,
+    endVerseId: number,
+    endChar: number,
+  ) => ({ startVerseId, startChar, endVerseId, endChar })
+
+  const twoVerses = (): Passage => ({
+    status: 'ok',
+    attribution: 'World English Bible',
+    verses: [
+      { verseId: 43015004, segments: [{ text: 'Remain in me', redLetter: false }] },
+      { verseId: 43015005, segments: [{ text: 'I am the vine', redLetter: false }] },
+    ],
+  })
+
+  describe('hover control', () => {
+    it('stands at the chip’s end of an editable inline passage and a block one', async () => {
+      const inline = await render('John 15:4 nkjv inline')
+      const block = await render('John 15:4 nkjv block')
+
+      for (const { parent } of [inline, block]) {
+        const control = controlOf(parent)
+        expect(control).not.toBeNull()
+        expect(control!.closest('.scripture-study-chip')).not.toBeNull()
+        expect(control!.parentElement!.lastElementChild).toBe(control)
+        expect(control!.getAttribute('aria-label')).toBe('Edit passage')
+      }
+    })
+
+    it('is absent on a bare chip', async () => {
+      const { parent } = await render('John 15:4 nkjv')
+
+      expect(controlOf(parent)).toBeNull()
+    })
+
+    it('is absent on a fallback-served passage', async () => {
+      const { parent } = await render('John 15:4 nkjv inline', {
+        ...(passageOf('Remain in me') as Extract<Passage, { status: 'ok' }>),
+        fallback: { requested: 'nkjv', served: 'web' },
+      })
+
+      expect(controlOf(parent)).toBeNull()
+    })
+
+    it('is absent on a passage over the display cap', async () => {
+      const { parent } = await render('John 1-21 nkjv block')
+
+      expect(parent.textContent).toContain('Reference too long to display')
+      expect(controlOf(parent)).toBeNull()
+    })
+
+    it('is absent on an unavailable passage', async () => {
+      const { parent } = await render('John 15:4 nkjv inline', {
+        status: 'unavailable',
+      })
+
+      expect(controlOf(parent)).toBeNull()
+    })
+
+    it('enters the mode without opening the reader', async () => {
+      const { parent, deps } = await render('John 15:4 nkjv inline')
+
+      enter(parent)
+
+      expect(deps.openReference).not.toHaveBeenCalled()
+      expect(controlOf(parent)!.getAttribute('aria-pressed')).toBe('true')
+      expect(toolbarOf(parent)).not.toBeNull()
+    })
+
+    it('enters the mode from the keyboard, the chip staying closed', async () => {
+      const { parent, deps } = await render('John 15:4 nkjv inline')
+
+      press(controlOf(parent)!, 'Enter')
+
+      expect(deps.openReference).not.toHaveBeenCalled()
+      expect(toolbarOf(parent)).not.toBeNull()
+    })
+  })
+
+  describe('the whole passage, elided text faded', () => {
+    it('shows the elided text faded with no ellipsis while in the mode', async () => {
+      const { parent } = await render('John 15:4 nkjv inline x/4.7-4.9')
+      expect(parent.querySelectorAll(ELLIPSIS)).toHaveLength(2)
+
+      enter(parent)
+
+      const passage = parent.querySelector('.scripture-study-passage')!
+      expect(passage.querySelectorAll(ELLIPSIS)).toHaveLength(0)
+      expect(
+        [...passage.querySelectorAll(ELIDED)].map((span) => span.textContent),
+      ).toEqual(['Remain ', ' me'])
+      expect(passage.querySelector('[data-verse-id]')!.textContent).toBe('Remain in me')
+    })
+
+    it('renders trimmed again after Done', async () => {
+      const { parent } = await render('John 15:4 nkjv inline x/4.7-4.9')
+
+      enter(parent)
+      click(toolbarButton(parent, 'Done'))
+
+      expect(parent.querySelectorAll(ELLIPSIS)).toHaveLength(2)
+      expect(parent.querySelectorAll(ELIDED)).toHaveLength(0)
+      expect(toolbarOf(parent)).toBeNull()
+      expect(controlOf(parent)!.getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('lets a highlight stroke target text that is elided outside the mode', async () => {
+      const { parent, write } = await render('John 15:4 nkjv inline x/4.7-4.9')
+
+      enter(parent)
+      const verse = verseTextOf(parent)
+      select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+      choose(0)
+
+      expect(write).toHaveBeenCalledWith({
+        highlights: [cueAt(1, 0, 6)],
+        underlines: [],
+        excerpt: [part(43015004, 7, 43015004, 9)],
+      }, IN_MODE)
+    })
+  })
+
+  describe('popover', () => {
+    it('offers Show and Hide on a third row and no "show only this"', async () => {
+      const { parent } = await render('John 15:4 nkjv inline')
+
+      enter(parent)
+      const verse = verseTextOf(parent)
+      select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+
+      const choices = swatches()
+      expect(choices).toHaveLength(13)
+      expect(choices[10].classList).toContain('scripture-study-highlight-eraser')
+      expect([...choices].slice(11).map((choice) => choice.textContent)).toEqual([
+        'Show',
+        'Hide',
+      ])
+      expect(popover()!.textContent).not.toContain('Show only this')
+      const rows = popover()!.querySelectorAll('.scripture-study-highlight-popover-row')
+      expect(rows).toHaveLength(3)
+      expect(rows[2].querySelectorAll('.scripture-study-highlight-swatch')).toHaveLength(2)
+    })
+
+    it('offers "show only this" again once the mode is left', async () => {
+      const { parent } = await render('John 15:4 nkjv inline')
+
+      enter(parent)
+      click(toolbarButton(parent, 'Done'))
+      const verse = verseTextOf(parent)
+      select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+
+      expect(swatches()).toHaveLength(12)
+      expect(swatches()[11].textContent).toBe('Show only this')
+    })
+
+    it('Show adds the selection to the kept parts', async () => {
+      const { parent, write } = await render(
+        'John 15:4-5 nkjv inline x/4.0-4.6',
+        twoVerses(),
+      )
+
+      enter(parent)
+      const second = verseTextOf(parent, 1)
+      select({ node: second, offset: 0 }, { node: second, offset: 4 })
+      choose(SHOW)
+
+      expect(write).toHaveBeenCalledWith({
+        highlights: [],
+        underlines: [],
+        excerpt: [part(43015004, 0, 43015004, 6), part(43015005, 0, 43015005, 4)],
+      }, IN_MODE)
+    })
+
+    it('Hide splits the part the selection lands inside', async () => {
+      const { parent, write } = await render('John 15:4 nkjv inline x/4.0-4.12')
+
+      enter(parent)
+      const verse = verseTextOf(parent)
+      select({ node: verse, offset: 7 }, { node: verse, offset: 9 })
+      choose(HIDE)
+
+      expect(write).toHaveBeenCalledWith({
+        highlights: [],
+        underlines: [],
+        excerpt: [part(43015004, 0, 43015004, 7), part(43015004, 9, 43015004, 12)],
+      }, IN_MODE)
+    })
+
+    it('Hide on a passage with no excerpt keeps everything but the selection', async () => {
+      const { parent, write } = await render('John 15:4-5 nkjv inline', twoVerses())
+
+      enter(parent)
+      const first = verseTextOf(parent, 0)
+      select({ node: first, offset: 7 }, { node: first, offset: 9 })
+      choose(HIDE)
+
+      expect(write).toHaveBeenCalledWith({
+        highlights: [],
+        underlines: [],
+        excerpt: [part(43015004, 0, 43015004, 7), part(43015004, 9, 43015005, 13)],
+      }, IN_MODE)
+    })
+
+    it('Hide from a clean start keeps one part per contiguous run across a Verse Gap', () => {
+      expect(
+        strokedCues(
+          {
+            highlights: [],
+            underlines: [],
+            excerpt: [],
+            verses: [
+              { verseId: 43015004, text: 'Remain in me' },
+              { verseId: 43015009, text: 'Abide here now' },
+            ],
+          },
+          part(43015009, 0, 43015009, 5),
+          { kind: 'hide' },
+        ).excerpt,
+      ).toEqual([part(43015004, 0, 43015004, 12), part(43015009, 5, 43015009, 14)])
+    })
+  })
+
+  describe('toolbar', () => {
+    it('Clear excerpt removes every part, leaving the other channels alone', async () => {
+      const { parent, write } = await render(
+        'John 15:4 nkjv inline h1/4.0-4.6 x/4.0-4.6 x/4.10-4.12',
+      )
+
+      enter(parent)
+      click(toolbarButton(parent, 'Clear excerpt'))
+
+      expect(write).toHaveBeenCalledWith({
+        highlights: [cueAt(1, 0, 6)],
+        underlines: [],
+        excerpt: [],
+      }, IN_MODE)
+    })
+
+    it('Clear excerpt writes nothing when there is no excerpt', async () => {
+      const { parent, write } = await render('John 15:4 nkjv inline')
+
+      enter(parent)
+      click(toolbarButton(parent, 'Clear excerpt'))
+
+      expect(write).not.toHaveBeenCalled()
+      expect(toolbarButton(parent, 'Clear excerpt').getAttribute('aria-disabled')).toBe('true')
+    })
+
+    it('Done leaves the mode without writing', async () => {
+      const { parent, write } = await render('John 15:4 nkjv inline x/4.0-4.6')
+
+      enter(parent)
+      click(toolbarButton(parent, 'Done'))
+
+      expect(write).not.toHaveBeenCalled()
+      expect(toolbarOf(parent)).toBeNull()
+    })
+  })
+
+  describe('leaving', () => {
+    it('leaves on Escape', async () => {
+      const { parent } = await render('John 15:4 nkjv inline x/4.0-4.6')
+
+      enter(parent)
+      press(document.body, 'Escape')
+
+      expect(toolbarOf(parent)).toBeNull()
+      expect(parent.querySelectorAll(ELLIPSIS)).toHaveLength(1)
+    })
+
+    it('closes an open popover on Escape first and leaves on the next', async () => {
+      const { parent } = await render('John 15:4 nkjv inline')
+
+      enter(parent)
+      const verse = verseTextOf(parent)
+      select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+      press(document.body, 'Escape')
+
+      expect(popover()).toBeNull()
+      expect(toolbarOf(parent)).not.toBeNull()
+      press(document.body, 'Escape')
+      expect(toolbarOf(parent)).toBeNull()
+    })
+
+    it('leaves on a pointer-down outside the widget', async () => {
+      const { parent } = await render('John 15:4 nkjv inline x/4.0-4.6')
+      const elsewhere = document.body.createDiv()
+
+      enter(parent)
+      pointerDown(elsewhere)
+
+      expect(toolbarOf(parent)).toBeNull()
+    })
+
+    it('stays for a pointer-down inside the passage, the toolbar or the popover', async () => {
+      const { parent } = await render('John 15:4 nkjv inline')
+
+      enter(parent)
+      const verse = verseTextOf(parent)
+      pointerDown(verse)
+      pointerDown(toolbarOf(parent)!)
+      select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+      pointerDown(popover()!)
+
+      expect(toolbarOf(parent)).not.toBeNull()
+    })
+
+    it('ends on the first occurrence when a second one enters', async () => {
+      const first = await render('John 15:4 nkjv inline')
+      const second = await render('John 15:5 nkjv inline')
+
+      enter(first.parent)
+      enter(second.parent)
+
+      expect(toolbarOf(first.parent)).toBeNull()
+      expect(toolbarOf(second.parent)).not.toBeNull()
+      expect(controlOf(first.parent)!.getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('leaves the mode with a second press of the control', async () => {
+      const { parent } = await render('John 15:4 nkjv inline')
+
+      enter(parent)
+      click(controlOf(parent)!)
+
+      expect(toolbarOf(parent)).toBeNull()
     })
   })
 })

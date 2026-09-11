@@ -10,13 +10,22 @@ import { activate, computeMenuPanelPosition, type AnchorRect } from '../ui'
 // The excerpt row's choices. Outside Passage Editing it is "show only this"
 // alone; Passage Editing swaps it for Show and Hide, so the caller names the
 // set and this module holds only how each one reads.
-export type ExcerptChoiceKind = 'showOnly'
+export type ExcerptChoiceKind = 'showOnly' | 'show' | 'hide'
 
 const EXCERPT_CHOICE_LABELS: Record<ExcerptChoiceKind, string> = {
   showOnly: 'Show only this',
+  show: 'Show',
+  hide: 'Hide',
 }
 
-const QUICK_PATH_EXCERPT_CHOICES: readonly ExcerptChoiceKind[] = ['showOnly']
+export const QUICK_PATH_EXCERPT_CHOICES: readonly ExcerptChoiceKind[] = [
+  'showOnly',
+]
+
+export const PASSAGE_EDITING_EXCERPT_CHOICES: readonly ExcerptChoiceKind[] = [
+  'show',
+  'hide',
+]
 
 // What the popover offers: a slot on one channel, the eraser that clears both,
 // or an excerpt choice.

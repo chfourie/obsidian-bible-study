@@ -12,7 +12,10 @@ import {
   exceedsDisplayVerseLimit,
   TOO_LONG_TO_DISPLAY,
 } from './display-limit'
-import type { HighlightEditContext } from './highlight-editing'
+import type {
+  HighlightEditContext,
+  PassageEditingSurface,
+} from './highlight-editing'
 import type {
   Passage,
   PassageSource,
@@ -26,6 +29,7 @@ import {
   loadingText,
   unavailableText,
   type PassageView,
+  type PassageViewOptions,
   type VerseBlock,
 } from './passage-view'
 import type { ReferenceRenderModel } from './reference-render-model'
@@ -42,10 +46,12 @@ export type FirstRunInstallDeps = {
 }
 
 // Present only where highlights are editable (Live Preview on desktop);
-// Reading mode, embeds, and mobile render the same passage without it.
+// Reading mode, embeds, and mobile render the same passage without it. The
+// surface lends Passage Editing its control and a way to redraw the passage.
 export type HighlightEditAttach = (
   host: HTMLElement,
   context: HighlightEditContext,
+  surface: PassageEditingSurface,
 ) => void
 
 export type ReferenceRenderDeps = {
@@ -75,7 +81,7 @@ const renderChip = (
   parent: HTMLElement,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
-): void => {
+): HTMLElement => {
   const chip = parent.createSpan({
     cls:
       model.book === null
@@ -104,7 +110,26 @@ const renderChip = (
   activateAsButton(chip, (event) =>
     deps.openReference(model, { newPane: opensInNewPane(event) }),
   )
+  return chip
 }
+
+// The Passage Editing control (CONTEXT.md): an icon at the chip's end, shown
+// while the passage is hovered, that the editing surface wires. It is drawn
+// once and moved to the slot again whenever the passage is redrawn, since a
+// Book block's slot — its citation line — is redrawn with the passage.
+const createPassageEditingControl = (doc: Document): HTMLElement => {
+  const control = doc.createElement('span')
+  control.addClass('scripture-study-passage-edit')
+  control.setAttribute('role', 'button')
+  control.setAttribute('tabindex', '0')
+  control.setAttribute('aria-label', 'Edit passage')
+  setIcon(control, 'highlighter')
+  return control
+}
+
+// Where the Passage Editing control stands: the chip's end, or for a Book
+// block, which has no chip (ticket #79), the end of its citation line.
+type ControlSlot = () => HTMLElement | null
 
 // The in-note intersection surface (spec §5): a count indicator beside the
 // rendered reference that expands to the intersecting notes, annotations
@@ -212,6 +237,7 @@ const renderInvalidTokens = (
 const renderSegment = (parent: HTMLElement, segment: VerseSegment): void => {
   const indented = segment.lineStart === true && segment.indent !== undefined
   const classes = [
+    ...(segment.elided === true ? ['scripture-study-elided'] : []),
     ...(segment.highlightSlot === undefined
       ? []
       : [
@@ -404,6 +430,7 @@ const mountPassage = async (
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
   renderPassage: (host: HTMLElement, view: PassageView) => void,
+  controlSlot: ControlSlot,
 ): Promise<void> => {
   if (exceedsDisplayVerseLimit(model.reference)) {
     host.empty()
@@ -433,13 +460,22 @@ const mountPassage = async (
   host.removeClass('scripture-study-loading')
   if (passage.status !== 'ok' || passage.verses.length === 0) {
     renderUnavailable(host, model, deps, () => {
-      void mountPassage(host, model, deps, renderPassage)
+      void mountPassage(host, model, deps, renderPassage, controlSlot)
     })
     return
   }
   renderPassage(host, buildPassageView(model, passage))
-  if (deps.editHighlights && highlightsEditable(passage)) {
-    deps.editHighlights(host, {
+  if (!deps.editHighlights || !highlightsEditable(passage)) return
+  const control = createPassageEditingControl(host.ownerDocument)
+  const render = (options: PassageViewOptions): void => {
+    host.empty()
+    renderPassage(host, buildPassageView(model, passage, options))
+    controlSlot()?.appendChild(control)
+  }
+  controlSlot()?.appendChild(control)
+  deps.editHighlights(
+    host,
+    {
       highlights: model.highlights,
       underlines: model.underlines,
       excerpt: model.excerpt,
@@ -447,8 +483,9 @@ const mountPassage = async (
         verseId: verse.verseId,
         text: verse.segments.map((segment) => segment.text).join(''),
       })),
-    })
-  }
+    },
+    { control, render },
+  )
 }
 
 const renderAttribution = (host: HTMLElement, view: PassageView): void => {
@@ -574,15 +611,18 @@ const renderBlock = (
       ? 'scripture-study-block scripture-study-inline-block'
       : 'scripture-study-block',
   })
-  if (!isBookBlock) {
-    const chipHolder = inline
-      ? block
-      : block.createDiv({ cls: 'scripture-study-block-ref' })
-    renderChip(chipHolder, model, deps)
-  }
+  const chip = isBookBlock
+    ? null
+    : renderChip(
+        inline ? block : block.createDiv({ cls: 'scripture-study-block-ref' }),
+        model,
+        deps,
+      )
   const host = inline
     ? block.createSpan({ cls: 'scripture-study-passage' })
     : block.createDiv({ cls: 'scripture-study-passage' })
+  const controlSlot: ControlSlot = () =>
+    chip ?? host.querySelector<HTMLElement>('.scripture-study-attribution-nav')
   const renderPassage = inline
     ? renderVerseRun
     : model.book === null
@@ -590,7 +630,7 @@ const renderBlock = (
       : bookAtomKind(model.book) === 'verse'
         ? renderBookProse(model, deps)
         : renderBookParagraphs(model, deps)
-  const mounted = mountPassage(host, model, deps, renderPassage)
+  const mounted = mountPassage(host, model, deps, renderPassage, controlSlot)
   if (deps.intersections) {
     renderIntersections(block, model, deps.intersections, sourcePath)
   }
