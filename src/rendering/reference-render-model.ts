@@ -2,11 +2,15 @@ import {
   bookCitation,
   formatReference,
   parseReference,
+  sameExcerptPart,
   sameHighlightCue,
+  sameUnderlineCue,
   type BookCitation,
+  type ExcerptPart,
   type HighlightCue,
   type ParsedReference,
   type Reference,
+  type UnderlineCue,
 } from '../reference'
 
 export type RenderDisplay = 'chip' | 'inline' | 'block'
@@ -25,6 +29,8 @@ export type ReferenceRenderModel = {
   display: RenderDisplay
   invalidTokens: string[]
   highlights: HighlightCue[]
+  underlines: UnderlineCue[]
+  excerpt: ExcerptPart[]
   relativeSpec: string | null
   // Present for a non-biblical book: MLA locators and the full citation the
   // chip and block attribution line render from (spec-books §4).
@@ -49,10 +55,19 @@ export const modelFromParsed = (
     display: parsed.display ?? 'chip',
     invalidTokens: parsed.invalidTokens.map((token) => token.text),
     highlights: parsed.highlights,
+    underlines: parsed.underlines,
+    excerpt: parsed.excerpt,
     relativeSpec,
     book,
   }
 }
+
+const sameList = <T>(
+  a: readonly T[],
+  b: readonly T[],
+  same: (x: T, y: T) => boolean,
+): boolean =>
+  a.length === b.length && a.every((item, index) => same(item, b[index]))
 
 export const sameRenderModel = (
   a: ReferenceRenderModel,
@@ -63,10 +78,10 @@ export const sameRenderModel = (
   a.chipLabel === b.chipLabel &&
   a.display === b.display &&
   a.relativeSpec === b.relativeSpec &&
-  a.invalidTokens.length === b.invalidTokens.length &&
-  a.invalidTokens.every((token, index) => token === b.invalidTokens[index]) &&
-  a.highlights.length === b.highlights.length &&
-  a.highlights.every((cue, index) => sameHighlightCue(cue, b.highlights[index]))
+  sameList(a.invalidTokens, b.invalidTokens, (x, y) => x === y) &&
+  sameList(a.highlights, b.highlights, sameHighlightCue) &&
+  sameList(a.underlines, b.underlines, sameUnderlineCue) &&
+  sameList(a.excerpt, b.excerpt, sameExcerptPart)
 
 export const buildReferenceRenderModel = (
   text: string,

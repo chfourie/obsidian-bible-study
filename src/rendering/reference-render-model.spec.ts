@@ -3,7 +3,7 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
-import { parseReference } from '../reference'
+import { makeVerseId, parseReference } from '../reference'
 import {
   buildReferenceRenderModel,
   modelFromParsed,
@@ -38,6 +38,44 @@ describe('modelFromParsed', () => {
       chipLabel: 'NKJV',
       display: 'chip',
     })
+  })
+})
+
+describe('buildReferenceRenderModel — cue families', () => {
+  const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
+
+  it('carries the underline cues and excerpt parts beside the highlights', () => {
+    const model = buildReferenceRenderModel(
+      'John 15:1-16 inline h1/5.4-25 u2/7.0-7.9 x/9.0-9.8',
+      context,
+    )
+
+    expect(model?.highlights).toEqual([
+      {
+        slot: 1,
+        startVerseId: john(15, 5),
+        startChar: 4,
+        endVerseId: john(15, 5),
+        endChar: 25,
+      },
+    ])
+    expect(model?.underlines).toEqual([
+      {
+        slot: 2,
+        startVerseId: john(15, 7),
+        startChar: 0,
+        endVerseId: john(15, 7),
+        endChar: 9,
+      },
+    ])
+    expect(model?.excerpt).toEqual([
+      {
+        startVerseId: john(15, 9),
+        startChar: 0,
+        endVerseId: john(15, 9),
+        endChar: 8,
+      },
+    ])
   })
 })
 
@@ -194,6 +232,30 @@ describe('sameRenderModel', () => {
     })
 
     expect(sameRenderModel(build('John 15:4 kjv'), other)).toBe(false)
+  })
+
+  it('differs when a highlight, underline or excerpt part changes', () => {
+    expect(
+      sameRenderModel(build('John 15:4 h1/4.0-4.5'), build('John 15:4 h1/4.0-4.5')),
+    ).toBe(true)
+    expect(
+      sameRenderModel(build('John 15:4 h1/4.0-4.5'), build('John 15:4 h2/4.0-4.5')),
+    ).toBe(false)
+    expect(
+      sameRenderModel(build('John 15:4 u1/4.0-4.5'), build('John 15:4 u1/4.0-4.5')),
+    ).toBe(true)
+    expect(
+      sameRenderModel(build('John 15:4 u1/4.0-4.5'), build('John 15:4 u1/4.0-4.6')),
+    ).toBe(false)
+    expect(
+      sameRenderModel(build('John 15:4 x/4.0-4.5'), build('John 15:4 x/4.0-4.5')),
+    ).toBe(true)
+    expect(
+      sameRenderModel(build('John 15:4 x/4.0-4.5'), build('John 15:4')),
+    ).toBe(false)
+    expect(
+      sameRenderModel(build('John 15:4 h1/4.0-4.5'), build('John 15:4 u1/4.0-4.5')),
+    ).toBe(false)
   })
 
   it('differs across references and display modes', () => {
