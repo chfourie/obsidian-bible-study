@@ -182,6 +182,17 @@ describe('liveDecorationSpecs', () => {
       start: prefix + 1,
       end,
       prefixHidden: true,
+      elisions: [],
+    })
+
+    it('lists each ellipsis inside the quote, three or more dots or the one-character mark', () => {
+      expect(quotesFor('c"...teaching .... observe … all"')).toEqual([
+        { ...hiddenQuote(0, 33), elisions: [
+          { from: 2, to: 5 },
+          { from: 14, to: 18 },
+          { from: 27, to: 28 },
+        ] },
+      ])
     })
 
     it('hides the c and marks the quote from opening mark through closing mark', () => {

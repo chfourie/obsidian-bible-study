@@ -5,7 +5,7 @@ import {
   type ReferenceMatch,
 } from '../reference'
 import { renderPageBreakIndicator } from './page-break-indicator'
-import { RED_LETTER_CLASS } from './red-letter'
+import { ELISION_CLASS, RED_LETTER_CLASS, elisionsIn } from './red-letter'
 import {
   buildReferenceRenderModel,
   modelFromParsed,
@@ -239,7 +239,26 @@ const wrapChristQuote = (
   const span = createSpan({ cls: RED_LETTER_CLASS })
   span.append(range.extractContents())
   range.insertNode(span)
+  wrapElisions(span)
   return span
+}
+
+// Each ellipsis of the quote gets its own span, so the stylesheet can hand it
+// the normal text colour back; the text nodes are gathered first since
+// wrapping splits them under the walker.
+const wrapElisions = (quote: HTMLElement): void => {
+  for (const text of textNodesUnder(quote)) {
+    let node = text
+    let shift = 0
+    for (const { from, to } of elisionsIn(text.data, 0, text.data.length)) {
+      const elision = node.splitText(from - shift)
+      node = elision.splitText(to - from)
+      shift = to
+      const span = createSpan({ cls: ELISION_CLASS })
+      elision.replaceWith(span)
+      span.append(elision)
+    }
+  }
 }
 
 const nextText = (walker: TreeWalker): Text | null =>

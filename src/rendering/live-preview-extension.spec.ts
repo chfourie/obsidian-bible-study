@@ -142,6 +142,17 @@ describe('Christ Quote in Live Preview', () => {
     expect(redLetter(content)).toEqual(['"Abide in me"'])
   })
 
+  it('paints an ellipsis inside the quote in the normal text colour', () => {
+    const content = editorOver('c"...teaching … all"')
+
+    expect(redLetter(content).join('')).toBe('"...teaching … all"')
+    expect(
+      [...content.querySelectorAll('.scripture-study-elision')].map(
+        (span) => span.textContent,
+      ),
+    ).toEqual(['...', '…'])
+  })
+
   it('shows the c again, still red, while the cursor is in the quote', () => {
     const content = editorOver('He said c"Abide in me" then')
 

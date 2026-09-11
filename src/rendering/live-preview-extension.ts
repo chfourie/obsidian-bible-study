@@ -20,7 +20,7 @@ import {
   type LiveDecorationSpec,
 } from './live-decoration-specs'
 import { renderPageBreakIndicator } from './page-break-indicator'
-import { RED_LETTER_CLASS } from './red-letter'
+import { ELISION_CLASS, RED_LETTER_CLASS } from './red-letter'
 import {
   sameRenderModel,
   type ReferenceRenderModel,
@@ -29,6 +29,7 @@ import {
 import { renderReference, type ReferenceRenderDeps } from './render-reference'
 
 const RED_LETTER_DECORATION = Decoration.mark({ class: RED_LETTER_CLASS })
+const ELISION_DECORATION = Decoration.mark({ class: ELISION_CLASS })
 
 const HIDDEN_PREFIX = Decoration.replace({})
 
@@ -260,6 +261,9 @@ export const createLivePreviewExtension = (
               ? [HIDDEN_PREFIX.range(spec.prefix, spec.prefix + 1)]
               : []),
             RED_LETTER_DECORATION.range(spec.start, spec.end),
+            ...spec.elisions.map(({ from, to }) =>
+              ELISION_DECORATION.range(from, to),
+            ),
           ]
         case 'page-break':
           return [

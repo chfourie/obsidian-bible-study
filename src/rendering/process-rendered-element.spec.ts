@@ -304,6 +304,20 @@ describe('processRenderedElement', () => {
       )
     })
 
+    it('leaves each ellipsis in the quote, three dots or the one-character mark, in the normal text colour', async () => {
+      const { root, deps } = setup()
+      root.innerHTML = '<p>c"...teaching them ... observe … all" now</p>'
+
+      await process(root, deps, 'c"...teaching them ... observe … all" now')
+
+      expect(redLetterTexts(root)).toEqual(['"...teaching them ... observe … all"'])
+      expect(
+        [...root.querySelectorAll('.scripture-study-red-letter .scripture-study-elision')].map(
+          (span) => span.textContent,
+        ),
+      ).toEqual(['...', '...', '…'])
+    })
+
     it('accepts curly marks', async () => {
       const { root, deps } = setup()
       root.innerHTML = '<p>c“Abide in me”</p>'

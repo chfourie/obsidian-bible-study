@@ -155,6 +155,13 @@ body {
   color: var(--scripture-study-red-letter-color);
 }
 
+/* An ellipsis inside a Christ Quote is the author's elision, not a word of
+   Christ. Declared after the red-letter rule so the class wins on a Live
+   Preview span carrying both. */
+.scripture-study-elision {
+  color: var(--text-normal);
+}
+
 .scripture-study-verse-line + .scripture-study-verse-line {
   margin-top: 0.25em;
 }

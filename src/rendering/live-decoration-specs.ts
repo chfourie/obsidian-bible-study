@@ -4,6 +4,7 @@ import {
   type ReferenceRenderModel,
   type RenderContext,
 } from './reference-render-model'
+import { elisionsIn, type ElisionRange } from './red-letter'
 import { scanChristQuotes } from './scan-christ-quotes'
 import { scanPageBreaks } from './scan-page-breaks'
 
@@ -27,6 +28,7 @@ export type ChristQuoteDecorationSpec = {
   start: number
   end: number
   prefixHidden: boolean
+  elisions: ElisionRange[]
 }
 
 export type PageBreakDecorationSpec = {
@@ -96,6 +98,7 @@ const christQuoteSpecs = (
       kind: 'christ-quote',
       ...quote,
       prefixHidden: !touched(span, selections),
+      elisions: elisionsIn(doc, quote.start, quote.end),
     }))
 
 const pageBreakSpecs = (
