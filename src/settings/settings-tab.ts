@@ -36,7 +36,6 @@ import {
   type ScriptureStudySettings,
   UNDERLINE_SLOTS,
   type UnderlinePalette,
-  type UnderlineSlot,
 } from '../data-access'
 import { LSJ_ATTRIBUTION, STRONGS_ATTRIBUTION } from '../strongs'
 import {
@@ -58,6 +57,9 @@ import type {
 
 // The Download / progress / Update / Delete button set shared by translation
 // and book rows.
+type SlotPaletteField = 'highlightPalette' | 'underlinePalette'
+type SlotPalette = HighlightPalette | UnderlinePalette
+
 type ModuleRowActions = {
   id: string
   busy: 'downloading' | 'removing' | null
@@ -866,7 +868,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           name: `Slot ${slot}`,
           desc: 'Light mode color, then dark mode color.',
           render: (setting: Setting) =>
-            this.#renderHighlightSlot(setting, palette, slot),
+            this.#renderPaletteSlot(setting, 'highlightPalette', palette, slot),
         })),
         ...HIGHLIGHT_THEME_MODES.map((mode) => ({
           name: `Opacity (${mode} mode)`,
@@ -882,7 +884,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           name: `Underline slot ${slot}`,
           desc: 'Light mode color, then dark mode color. Never washed.',
           render: (setting: Setting) =>
-            this.#renderUnderlineSlot(setting, underlines, slot),
+            this.#renderPaletteSlot(setting, 'underlinePalette', underlines, slot),
         })),
         {
           name: 'Reset highlights',
@@ -903,19 +905,40 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     }
   }
 
-  #renderHighlightSlot(
+  // The highlight and underline palettes are the same shape — five slot
+  // colours per theme mode — kept under two settings fields.
+  #renderPaletteSlot(
     setting: Setting,
-    palette: HighlightPalette,
+    field: SlotPaletteField,
+    palette: SlotPalette,
     slot: HighlightSlot,
   ): void {
     for (const mode of HIGHLIGHT_THEME_MODES) {
       setting.addColorPicker((picker) => {
         picker.setValue(palette[mode][slot - 1] ?? '')
         picker.onChange((color) => {
-          this.#setHighlightColor(palette, mode, slot, color)
+          this.#setSlotColor(field, palette, mode, slot, color)
         })
       })
     }
+  }
+
+  #setSlotColor(
+    field: SlotPaletteField,
+    palette: SlotPalette,
+    mode: HighlightThemeMode,
+    slot: HighlightSlot,
+    color: string,
+  ): void {
+    this.#update((settings) => ({
+      ...settings,
+      [field]: {
+        ...palette,
+        [mode]: palette[mode].map((current, index) =>
+          index === slot - 1 ? color : current,
+        ),
+      },
+    }))
   }
 
   // The wash persists when the slider is released, not on every movement;
@@ -940,54 +963,6 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
     )
   }
 
-  #renderUnderlineSlot(
-    setting: Setting,
-    palette: UnderlinePalette,
-    slot: UnderlineSlot,
-  ): void {
-    for (const mode of HIGHLIGHT_THEME_MODES) {
-      setting.addColorPicker((picker) => {
-        picker.setValue(palette[mode][slot - 1] ?? '')
-        picker.onChange((color) => {
-          this.#setUnderlineColor(palette, mode, slot, color)
-        })
-      })
-    }
-  }
-
-  #setUnderlineColor(
-    palette: UnderlinePalette,
-    mode: HighlightThemeMode,
-    slot: UnderlineSlot,
-    color: string,
-  ): void {
-    this.#update((settings) => ({
-      ...settings,
-      underlinePalette: {
-        ...palette,
-        [mode]: palette[mode].map((current, index) =>
-          index === slot - 1 ? color : current,
-        ),
-      },
-    }))
-  }
-
-  #setHighlightColor(
-    palette: HighlightPalette,
-    mode: HighlightThemeMode,
-    slot: HighlightSlot,
-    color: string,
-  ): void {
-    this.#update((settings) => ({
-      ...settings,
-      highlightPalette: {
-        ...palette,
-        [mode]: palette[mode].map((current, index) =>
-          index === slot - 1 ? color : current,
-        ),
-      },
-    }))
-  }
 
   #annotationsGroup(): SettingDefinitionGroup<SettingsControlKey> {
     return {
