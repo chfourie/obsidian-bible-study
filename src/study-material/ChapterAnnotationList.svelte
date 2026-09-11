@@ -4,8 +4,8 @@ the Study Panel's row grammar: the chevron and the reference heading both
 toggle the row, the note's own name stands muted beside the address so two
 annotations on one address are told apart, and an open row renders the
 note's whole body beneath in the panel's own scroll. The pencil opening the
-note stands in the trailing slot, always visible, taking a new pane with the
-modifier. Which rows stand open is the followed tab's memory, handed in as
+note stands in the trailing slot, shown while the row's head is hovered or
+the pencil focused, taking a new pane with the modifier. Which rows stand open is the followed tab's memory, handed in as
 `folds`, which the heading's fold-all pair acts on whole once there is a row
 to fold. The reader's chapter section carries an add action opening the
 annotation prompt prefilled from its selection; a surface passing no add
@@ -132,6 +132,12 @@ section hides itself when empty.
     line-height: 1;
     color: var(--text-muted);
     cursor: pointer;
+    opacity: 0;
+  }
+
+  :global(.bsm-fold-row-head:hover) .bsm-chapter-anno-open,
+  .bsm-chapter-anno-open:focus-visible {
+    opacity: 1;
   }
 
   .bsm-chapter-anno-open:hover {
