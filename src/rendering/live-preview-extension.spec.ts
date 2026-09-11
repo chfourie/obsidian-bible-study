@@ -332,6 +332,18 @@ describe('highlight editing in Live Preview', () => {
     expect(view.state.doc.toString()).toBe('note {John 15:4 web inline}')
   })
 
+  it('keeps hand-typed underline and excerpt tokens beside a highlight edit', async () => {
+    const verseText = await verseTextOver(
+      'note {John 15:4 web inline x/4.0-20 u1/4.2-4.5}',
+    )
+
+    paint(verseText, 0)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4 web inline h1/4.0-4.6 u1/4.2-4.5 x/4.0-4.20}',
+    )
+  })
+
   it('offers no highlight popover on a relative reference', async () => {
     const hosts = await verseTextsOver('note {John 15:4-9 web inline} and {:4 inline}')
     const verseText = hosts[hosts.length - 1]

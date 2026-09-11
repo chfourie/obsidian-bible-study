@@ -94,6 +94,19 @@ describe('suggestReference — option tokens', () => {
     expect(labels('John 15:4 nkjv ')).toEqual(['inline', 'block'])
   })
 
+  it('offers no cue token for any cue family prefix', () => {
+    expect(labels('John 15:4 h')).toEqual([])
+    expect(labels('John 15:4 u')).toEqual([])
+    expect(labels('John 15:4 x')).toEqual([])
+    expect(labels('John 15:4 h1/4.0-4.6 ')).toEqual([
+      'inline',
+      'block',
+      'nkjv',
+      'web',
+      'kjv',
+    ])
+  })
+
   it('suggests no translations when none are known', () => {
     expect(labels('John 15:4 ', {})).toEqual(['inline', 'block'])
   })

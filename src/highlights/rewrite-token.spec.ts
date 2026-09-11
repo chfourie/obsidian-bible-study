@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   makeVerseId,
   parseReference,
+  type ExcerptPart,
   type HighlightCue,
   type HighlightSlot,
 } from '../reference'
@@ -9,7 +10,11 @@ import {
   installHumilityBook,
   uninstallHumilityBook,
 } from '../../tests/fixtures/humility-book'
-import { rewriteHighlightToken } from './rewrite-token'
+import {
+  rewriteCueTokens,
+  type CueLists,
+  type CueTokenRewriteOptions,
+} from './rewrite-token'
 
 const john = (chapter: number, verse: number) => makeVerseId(43, chapter, verse)
 
@@ -28,10 +33,42 @@ const cue = (
   endChar,
 })
 
+const part = (
+  startVerse: number,
+  startChar: number,
+  endVerse: number,
+  endChar: number,
+  chapter = 15,
+): ExcerptPart => ({
+  startVerseId: john(chapter, startVerse),
+  startChar,
+  endVerseId: john(chapter, endVerse),
+  endChar,
+})
+
 const options = { translation: 'nkjv', translationIds: ['nkjv', 'kjv'] }
 
+const highlightsOnly = (cues: readonly HighlightCue[]): CueLists => ({
+  highlights: cues,
+  underlines: [],
+  excerpt: [],
+})
+
+const rewriteHighlightToken = (
+  text: string,
+  cues: readonly HighlightCue[],
+  rewriteOptions: CueTokenRewriteOptions = options,
+) => rewriteCueTokens(text, highlightsOnly(cues), rewriteOptions)
+
 const rewrite = (text: string, cues: readonly HighlightCue[]) =>
-  rewriteHighlightToken(text, cues, options)
+  rewriteHighlightToken(text, cues)
+
+const rewriteAll = (text: string, cues: Partial<CueLists>) =>
+  rewriteCueTokens(
+    text,
+    { highlights: [], underlines: [], excerpt: [], ...cues },
+    options,
+  )
 
 describe('rewriteHighlightToken — pinning', () => {
   it('pins the effective translation on the first highlight', () => {
@@ -120,6 +157,112 @@ describe('rewriteHighlightToken — canonical cue tail', () => {
         options,
       ),
     ).toBe('John 15:26-16:4 nkjv h3/16:2.10-16:2.20')
+  })
+})
+
+describe('rewriteCueTokens — cue families', () => {
+  it('appends the tails in the order highlights, underlines, excerpt', () => {
+    expect(
+      rewriteAll('John 15:1-16 nkjv', {
+        excerpt: [part(9, 0, 9, 8)],
+        underlines: [cue(2, 7, 0, 7, 9)],
+        highlights: [cue(1, 5, 4, 5, 25)],
+      }),
+    ).toBe('John 15:1-16 nkjv h1/5.4-5.25 u2/7.0-7.9 x/9.0-9.8')
+  })
+
+  it('sorts each family by verse, start offset and slot', () => {
+    expect(
+      rewriteAll('John 15:1-16 nkjv', {
+        underlines: [cue(3, 9, 20, 9, 25), cue(2, 5, 4, 5, 9), cue(1, 5, 4, 5, 9)],
+        excerpt: [part(9, 0, 9, 8), part(5, 0, 5, 3)],
+      }),
+    ).toBe(
+      'John 15:1-16 nkjv u1/5.4-5.9 u2/5.4-5.9 u3/9.20-9.25 x/5.0-5.3 x/9.0-9.8',
+    )
+  })
+
+  it('lifts hand-typed underline and excerpt tokens out from among the user tokens', () => {
+    expect(
+      rewriteAll('John 15:1-16 x/9.0-8 block u1/5.4-25 kjv', {
+        underlines: [cue(1, 5, 4, 5, 25)],
+        excerpt: [part(9, 0, 9, 8)],
+      }),
+    ).toBe('John 15:1-16 block kjv u1/5.4-5.25 x/9.0-9.8')
+  })
+
+  it('sweeps away malformed underline and excerpt tokens', () => {
+    expect(
+      rewriteAll('John 15:1-16 kjv u0/5.4-25 x1/5.4-25 u/nonsense', {
+        highlights: [cue(1, 5, 4, 5, 25)],
+      }),
+    ).toBe('John 15:1-16 kjv h1/5.4-5.25')
+  })
+
+  it('rewrites the untouched families canonically beside a highlight edit', () => {
+    const parsed = parseReference('John 15:1-16 kjv u1/5.4-25 x/9.0-8', {
+      translationIds: options.translationIds,
+    })!
+
+    expect(
+      rewriteAll('John 15:1-16 kjv u1/5.4-25 x/9.0-8', {
+        highlights: [cue(2, 7, 0, 7, 9)],
+        underlines: parsed.underlines,
+        excerpt: parsed.excerpt,
+      }),
+    ).toBe('John 15:1-16 kjv h2/7.0-7.9 u1/5.4-5.25 x/9.0-9.8')
+  })
+
+  it('pins the effective translation on the first underline', () => {
+    expect(
+      rewriteAll('John 15:1-16', { underlines: [cue(1, 5, 4, 5, 25)] }),
+    ).toBe('John 15:1-16 nkjv u1/5.4-5.25')
+  })
+
+  it('pins the effective translation on the first excerpt part', () => {
+    expect(rewriteAll('John 15:1-16', { excerpt: [part(5, 4, 5, 25)] })).toBe(
+      'John 15:1-16 nkjv x/5.4-5.25',
+    )
+  })
+
+  it('keeps the pinned translation when only an underline remains', () => {
+    expect(
+      rewriteAll('John 15:1-16 nkjv h1/5.4-5.25 u1/5.4-5.25', {
+        underlines: [cue(1, 5, 4, 5, 25)],
+      }),
+    ).toBe('John 15:1-16 nkjv u1/5.4-5.25')
+  })
+
+  it('pins nothing when every family is empty', () => {
+    expect(rewriteAll('John 15:1-16 u1/5.4-25 x/5.4-25', {})).toBe(
+      'John 15:1-16',
+    )
+  })
+
+  it('qualifies underline and excerpt endpoints outside the inherited chapter', () => {
+    expect(
+      rewriteAll('John 15:26-16:4 nkjv', {
+        underlines: [cue(3, 2, 10, 2, 20, 16)],
+        excerpt: [part(2, 0, 2, 5, 16)],
+      }),
+    ).toBe('John 15:26-16:4 nkjv u3/16:2.10-16:2.20 x/16:2.0-16:2.5')
+  })
+
+  it('round-trips all three families through parseReference', () => {
+    const lists: CueLists = {
+      highlights: [cue(1, 5, 4, 5, 25)],
+      underlines: [cue(2, 7, 0, 7, 9)],
+      excerpt: [part(9, 0, 9, 8)],
+    }
+
+    const parsed = parseReference(rewriteAll('John 15:1-16', lists), {
+      translationIds: options.translationIds,
+    })
+
+    expect(parsed?.highlights).toEqual(lists.highlights)
+    expect(parsed?.underlines).toEqual(lists.underlines)
+    expect(parsed?.excerpt).toEqual(lists.excerpt)
+    expect(parsed?.invalidTokens).toEqual([])
   })
 })
 
