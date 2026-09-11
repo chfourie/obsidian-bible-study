@@ -19,7 +19,10 @@ import {
   type Passage,
   type PassageSource,
 } from './module-passage-source'
-import { VERSE_TEXT_CLASS } from './passage-selection'
+import {
+  passageSelectionRange,
+  VERSE_TEXT_CLASS,
+} from './passage-selection'
 import {
   buildReferenceRenderModel,
   type ReferenceRenderModel,
@@ -1686,5 +1689,122 @@ describe('renderReference walks a verse-atom Book’s page', () => {
     expect(parent.querySelector('.scripture-study-book-paragraph')?.textContent).toBe(
       '4:1And ye shall find no peace. 5:1Observe how the trees bear fruit. 2And all His works go on from year to year.',
     )
+  })
+})
+
+describe('renderReference verse gaps', () => {
+  const ELLIPSIS_CLASS = '.scripture-study-passage-ellipsis'
+
+  const gapped = (...verses: [number, number, string][]): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: verses.map(([chapter, verse, text]) => ({
+      verseId: makeVerseId(43, chapter, verse),
+      segments: [{ text, redLetter: false }],
+    })),
+  })
+
+  const john15 = gapped(
+    [15, 4, 'Remain in me.'],
+    [15, 5, 'I am the vine.'],
+    [15, 6, 'He is thrown away.'],
+    [15, 9, 'Remain in my love.'],
+  )
+
+  it('stands a muted ellipsis after the skipped verse inline', async () => {
+    const { parent, deps } = setup(john15)
+
+    await renderReference(parent, model('John 15:4-6,9 inline'), deps)
+
+    const passage = parent.querySelector('.scripture-study-passage')
+    expect(passage?.textContent).toBe(
+      '4Remain in me. 5I am the vine. 6He is thrown away.… 9Remain in my love.',
+    )
+    const ellipsis = passage?.querySelector(ELLIPSIS_CLASS)
+    expect(ellipsis?.textContent).toBe('…')
+    expect(ellipsis?.closest('[data-verse-id]')).toBeNull()
+  })
+
+  it('gives the ellipsis its own line in a block', async () => {
+    const { parent, deps } = setup(john15)
+
+    await renderReference(parent, model('John 15:4-6,9 block'), deps)
+
+    const lines = [...parent.querySelectorAll('.scripture-study-verse-line')]
+    expect(lines.map((line) => line.textContent)).toEqual([
+      '4Remain in me.',
+      '5I am the vine.',
+      '6He is thrown away.',
+      '…',
+      '9Remain in my love.',
+    ])
+    expect(lines[3].querySelector(ELLIPSIS_CLASS)).not.toBeNull()
+    expect(lines[3].querySelector('[data-verse-id]')).toBeNull()
+  })
+
+  it('leaves the ellipsis out of a selection dragged across the gap', async () => {
+    const { parent, deps } = setup(john15)
+
+    await renderReference(parent, model('John 15:4-6,9 inline'), deps)
+
+    const host = parent.querySelector<HTMLElement>('.scripture-study-passage')
+    if (host === null) throw new Error('no passage')
+    const range = host.ownerDocument.createRange()
+    range.selectNodeContents(host)
+    expect(passageSelectionRange(host, range)).toEqual({
+      startVerseId: makeVerseId(43, 15, 4),
+      startChar: 0,
+      endVerseId: makeVerseId(43, 15, 9),
+      endChar: 'Remain in my love.'.length,
+    })
+    expect(
+      [...host.querySelectorAll('[data-verse-id]')]
+        .map((holder) => holder.textContent)
+        .join(''),
+    ).not.toContain('…')
+  })
+
+  it('stands no ellipsis between verses adjacent across a chapter boundary', async () => {
+    const { parent, deps } = setup(
+      gapped([15, 27, 'You will also testify.'], [16, 1, 'I have told you.']),
+    )
+
+    await renderReference(parent, model('John 15:27,16:1 inline'), deps)
+
+    expect(parent.querySelector(ELLIPSIS_CLASS)).toBeNull()
+  })
+
+  it('stands no ellipsis where the translation does not serve a verse the reference asks for', async () => {
+    const { parent, deps } = setup(
+      gapped([15, 4, 'Remain in me.'], [15, 6, 'He is thrown away.']),
+    )
+
+    await renderReference(parent, model('John 15:4-6 inline'), deps)
+
+    expect(parent.querySelector(ELLIPSIS_CLASS)).toBeNull()
+  })
+
+  it('stands an ellipsis between a Book’s skipped paragraphs', async () => {
+    installHumilityBook()
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [2, 5].map((atom) => ({
+        verseId: makeVerseId(HUMILITY_BOOK, 1, atom),
+        segments: [{ text: `Paragraph ${atom}.`, redLetter: false }],
+      })),
+    })
+
+    await renderReference(parent, model('Humility 1:2,1:5 block'), deps)
+
+    const paragraphs = [
+      ...parent.querySelectorAll('.scripture-study-book-paragraph'),
+    ]
+    expect(paragraphs.map((paragraph) => paragraph.textContent)).toEqual([
+      '2Paragraph 2.',
+      '…',
+      '5Paragraph 5.',
+    ])
+    uninstallHumilityBook()
   })
 })

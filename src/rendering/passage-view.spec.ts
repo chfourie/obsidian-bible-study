@@ -7,6 +7,11 @@ import {
   installEnochBook,
   uninstallEnochBook,
 } from '../../tests/fixtures/enoch-book'
+import {
+  HUMILITY_BOOK,
+  installHumilityBook,
+  uninstallHumilityBook,
+} from '../../tests/fixtures/humility-book'
 import { makeVerseId } from '../reference'
 import {
   ModulePassageSource,
@@ -19,6 +24,7 @@ import {
   isPoetryVerse,
   loadingText,
   unavailableText,
+  verseBlocks,
 } from './passage-view'
 
 const context = {
@@ -58,7 +64,7 @@ describe('buildPassageView', () => {
       passage([verse(15, 4, 'Remain in me.')]),
     )
 
-    expect(view.verses).toEqual([
+    expect(verseBlocks(view)).toEqual([
       {
         verseId: makeVerseId(43, 15, 4),
         label: null,
@@ -78,7 +84,7 @@ describe('buildPassageView', () => {
       passage([verse(15, 4, 'Remain.'), verse(15, 5, 'I am the vine.')]),
     )
 
-    expect(view.verses.map((block) => block.label)).toEqual(['4', '5'])
+    expect(verseBlocks(view).map((block) => block.label)).toEqual(['4', '5'])
   })
 
   it('numbers block verses even for a single verse', () => {
@@ -87,7 +93,7 @@ describe('buildPassageView', () => {
       passage([verse(15, 4, 'Remain in me.')]),
     )
 
-    expect(view.verses.map((block) => block.label)).toEqual(['4'])
+    expect(verseBlocks(view).map((block) => block.label)).toEqual(['4'])
   })
 
   it('labels chapter starts with chapter and verse in multi-chapter passages', () => {
@@ -101,7 +107,7 @@ describe('buildPassageView', () => {
       ]),
     )
 
-    expect(view.verses.map((block) => block.label)).toEqual([
+    expect(verseBlocks(view).map((block) => block.label)).toEqual([
       '15:26',
       '27',
       '16:1',
@@ -154,7 +160,7 @@ describe('buildPassageView', () => {
       ]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'Remain in me, and I in you.', redLetter: true },
     ])
   })
@@ -168,7 +174,7 @@ describe('buildPassageView', () => {
       ]),
     )
 
-    expect(view.verses.map((block) => block.startsNewLine)).toEqual([
+    expect(verseBlocks(view).map((block) => block.startsNewLine)).toEqual([
       false,
       true,
     ])
@@ -185,7 +191,7 @@ describe('buildPassageView', () => {
       passage([psalmVerse]),
     )
 
-    expect(view.verses[0].startsNewLine).toBe(true)
+    expect(verseBlocks(view)[0].startsNewLine).toBe(true)
   })
 })
 
@@ -287,7 +293,7 @@ describe('buildPassageView — highlights', () => {
       passage([verse(15, 4, 'Remain in me.')]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'Remain', redLetter: false, highlightSlot: 1 },
       { text: ' in me.', redLetter: false },
     ])
@@ -304,7 +310,7 @@ describe('buildPassageView — highlights', () => {
       ]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'Remain', redLetter: true, highlightSlot: 2 },
       { text: ' in me.', redLetter: true },
     ])
@@ -324,7 +330,7 @@ describe('buildPassageView — highlights', () => {
       ]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'Rem', redLetter: false },
       { text: 'ain ', redLetter: false, highlightSlot: 3 },
       { text: 'in ', redLetter: false, supplied: true, highlightSlot: 3 },
@@ -353,7 +359,7 @@ describe('buildPassageView — highlights', () => {
       ]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'tread upon the earth, ', redLetter: false },
       { text: 'even', redLetter: false, supplied: true, highlightSlot: 1 },
       { text: ' on Mount Sinai, ', redLetter: false, highlightSlot: 1 },
@@ -379,7 +385,7 @@ describe('buildPassageView — highlights', () => {
       ]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'But ye have not ', redLetter: false },
       { text: 'been steadfast.', redLetter: false, highlightSlot: 1 },
     ])
@@ -392,7 +398,7 @@ describe('buildPassageView — highlights', () => {
       passage([verse(15, 4, 'Remain in me.')]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'Remain ', redLetter: false },
       { text: 'in me.', redLetter: false, highlightSlot: 1 },
     ])
@@ -404,7 +410,7 @@ describe('buildPassageView — highlights', () => {
       passage([verse(15, 4, 'Remain in me.'), verse(15, 9, 'Remain in my love.')]),
     )
 
-    expect(view.verses.map((block) => block.segments)).toEqual([
+    expect(verseBlocks(view).map((block) => block.segments)).toEqual([
       [
         { text: 'Remain ', redLetter: false },
         { text: 'in me.', redLetter: false, highlightSlot: 1 },
@@ -422,7 +428,7 @@ describe('buildPassageView — highlights', () => {
       passage([verse(15, 4, 'Remain in me.')]),
     )
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'Remain in me.', redLetter: false },
     ])
   })
@@ -433,7 +439,7 @@ describe('buildPassageView — highlights', () => {
       fallback: { requested: 'nkjv', served: 'web' },
     })
 
-    expect(view.verses[0].segments).toEqual([
+    expect(verseBlocks(view)[0].segments).toEqual([
       { text: 'Remain in me.', redLetter: false },
     ])
   })
@@ -445,7 +451,85 @@ describe('buildPassageView — highlights', () => {
       passage([{ verseId: makeVerseId(43, 15, 4), segments }]),
     )
 
-    expect(view.verses[0].segments).toBe(segments)
+    expect(verseBlocks(view)[0].segments).toBe(segments)
+  })
+})
+
+describe('buildPassageView — verse gaps', () => {
+  const kinds = (view: ReturnType<typeof buildPassageView>) =>
+    view.entries.map((entry) =>
+      entry.kind === 'verse' ? entry.verse.label : entry.kind,
+    )
+
+  it('stands an ellipsis where the reference skips verses', () => {
+    const view = buildPassageView(
+      model('John 15:4-6,9 inline'),
+      passage([
+        verse(15, 4, 'Remain in me.'),
+        verse(15, 5, 'I am the vine.'),
+        verse(15, 6, 'He is thrown away.'),
+        verse(15, 9, 'Remain in my love.'),
+      ]),
+    )
+
+    expect(kinds(view)).toEqual(['4', '5', '6', 'ellipsis', '9'])
+    expect(view.entries[3]).toEqual({ kind: 'ellipsis', reason: 'gap' })
+  })
+
+  it('stands no ellipsis between verses adjacent across a chapter boundary', () => {
+    const view = buildPassageView(
+      model('John 15:27,16:1 inline'),
+      passage([
+        verse(15, 27, 'You will also testify.'),
+        verse(16, 1, 'I have told you these things.'),
+      ]),
+    )
+
+    expect(kinds(view)).toEqual(['15:27', '16:1'])
+  })
+
+  it('stands no ellipsis where the translation does not serve a verse the reference asks for', () => {
+    const view = buildPassageView(
+      model('John 15:4-6 inline'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 6, 'He is thrown away.')]),
+    )
+
+    expect(kinds(view)).toEqual(['4', '6'])
+  })
+
+  it('stands an ellipsis for each separate skip', () => {
+    const view = buildPassageView(
+      model('John 15:4,6,9 block'),
+      passage([
+        verse(15, 4, 'Remain in me.'),
+        verse(15, 6, 'He is thrown away.'),
+        verse(15, 9, 'Remain in my love.'),
+      ]),
+    )
+
+    expect(kinds(view)).toEqual(['4', 'ellipsis', '6', 'ellipsis', '9'])
+  })
+})
+
+describe('buildPassageView — verse gaps in a Book', () => {
+  beforeEach(installHumilityBook)
+  afterEach(uninstallHumilityBook)
+
+  it('stands an ellipsis between skipped paragraphs', () => {
+    const paragraph = (atom: number, text: string): PassageVerse => ({
+      verseId: makeVerseId(HUMILITY_BOOK, 1, atom),
+      segments: [{ text, redLetter: false }],
+    })
+    const view = buildPassageView(
+      model('Humility 1:2,1:5 block'),
+      passage([paragraph(2, 'The second.'), paragraph(5, 'The fifth.')]),
+    )
+
+    expect(view.entries.map((entry) => entry.kind)).toEqual([
+      'verse',
+      'ellipsis',
+      'verse',
+    ])
   })
 })
 
@@ -467,10 +551,10 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
   it('numbers a block at every entry into a different atom and letters every lettered line', async () => {
     const view = await walked('1 Enoch 5:6-7 block')
 
-    expect(view.verses.map((block) => block.label)).toEqual([
+    expect(verseBlocks(view).map((block) => block.label)).toEqual([
       '6', null, null, '7', '6', null, null, null, null, null, '7', null,
     ])
-    expect(view.verses.map((block) => block.letterLabel)).toEqual([
+    expect(verseBlocks(view).map((block) => block.letterLabel)).toEqual([
       '6a', '6b', '6c', '7c', '6d', '6e', '6f', '6g', '6i', '6j', '7a', '7b',
     ])
   })
@@ -478,17 +562,17 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
   it('walks inline the same way with the letters omitted', async () => {
     const view = await walked('1 Enoch 5:6-7 inline')
 
-    expect(view.verses.map((block) => block.label)).toEqual([
+    expect(verseBlocks(view).map((block) => block.label)).toEqual([
       '6', null, null, '7', '6', null, null, null, null, null, '7', null,
     ])
-    expect(view.verses.every((block) => block.letterLabel === null)).toBe(true)
+    expect(verseBlocks(view).every((block) => block.letterLabel === null)).toBe(true)
   })
 
   it('gives each step its own line’s text, with the break the step boundary owns dropped', async () => {
     const view = await walked('1 Enoch 5:6-7 block')
     const lines = ENOCH_CHAPTER_5[7].lines ?? []
 
-    const sevenC = view.verses[3]
+    const sevenC = verseBlocks(view)[3]
     expect(sevenC.segments.map((segment) => segment.text).join('')).toBe(
       'And for you, the godless, there shall be a curse.',
     )
@@ -500,16 +584,16 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
   it('paints a highlight over 5:7 on every step of 7 and on no step of 6', async () => {
     const view = await walked('1 Enoch 5:6-7 block h1/7.0-140')
 
-    const painted = view.verses.map((block) =>
+    const painted = verseBlocks(view).map((block) =>
       block.segments.some((segment) => segment.highlightSlot === 1),
     )
-    expect(view.verses.map((block) => block.verseId === seven)).toEqual(painted)
+    expect(verseBlocks(view).map((block) => block.verseId === seven)).toEqual(painted)
   })
 
   it('opens a new run at a stanza blank inside an atom, never at an atom’s first line', async () => {
     const view = await walked('1 Enoch 5:9 block')
 
-    expect(view.verses.map((block) => block.startsParagraph)).toEqual([
+    expect(verseBlocks(view).map((block) => block.startsParagraph)).toEqual([
       false, false, true, false,
     ])
   })
@@ -517,13 +601,13 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
   it('numbers a single-atom inline walk not at all', async () => {
     const view = await walked('1 Enoch 5:7 inline')
 
-    expect(view.verses.map((block) => block.label)).toEqual([null, null, null])
+    expect(verseBlocks(view).map((block) => block.label)).toEqual([null, null, null])
   })
 
   it('a single-atom note reads 7a 7b 7c — the traditional verse, not the page', async () => {
     const view = await walked('1 Enoch 5:7 block')
 
-    expect(view.verses.map((block) => block.letterLabel)).toEqual(['7a', '7b', '7c'])
-    expect(view.verses.map((block) => block.label)).toEqual(['7', null, null])
+    expect(verseBlocks(view).map((block) => block.letterLabel)).toEqual(['7a', '7b', '7c'])
+    expect(verseBlocks(view).map((block) => block.label)).toEqual(['7', null, null])
   })
 })

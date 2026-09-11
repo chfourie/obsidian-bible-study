@@ -1,5 +1,5 @@
 import { highlightSpans } from '../highlights'
-import { decodeVerseId, type HighlightCue } from '../reference'
+import { decodeVerseId, type HighlightCue, type Reference } from '../reference'
 import {
   lineLetterLabel,
   walkSteps,
@@ -11,6 +11,7 @@ import {
 } from './module-passage-source'
 import type { ReferenceRenderModel } from './reference-render-model'
 import { markSpanChannel, stepSegments } from './segment-spans'
+import { isVerseGap } from './verse-gap'
 
 export type VerseBlock = {
   verseId: number
@@ -43,10 +44,48 @@ export const isPoetryVerse = (
       segment.indent !== undefined || segment.psalmHeading === true,
   )
 
+// Why the passage stands an ellipsis in place of text. A Verse Gap is the
+// only reason today; an Excerpt's cut is the next one, and two reasons meeting
+// at one place still print one ellipsis.
+export type PassageEllipsisReason = 'gap'
+
+// One thing the passage prints, in reading order: a verse block, or an
+// ellipsis standing between two of them. The ellipsis is an entry of its own
+// rather than a flag on a block so that a renderer prints it once, however
+// many reasons put it there.
+export type PassageEntry =
+  | { kind: 'verse'; verse: VerseBlock }
+  | { kind: 'ellipsis'; reason: PassageEllipsisReason }
+
 export type PassageView = {
-  verses: VerseBlock[]
+  entries: PassageEntry[]
   attribution: string | null
   fallbackNotice: string | null
+}
+
+export const verseBlocks = (view: PassageView): VerseBlock[] =>
+  view.entries.flatMap((entry) => (entry.kind === 'verse' ? [entry.verse] : []))
+
+// Reading order with a Verse Gap ellipsis wherever the author skipped verses
+// (spec §Verse Gap). Steps of one atom share a verse id, so a page walk's
+// blocks never stand an ellipsis between the lines of one paragraph.
+const withVerseGaps = (
+  blocks: VerseBlock[],
+  reference: Reference,
+): PassageEntry[] => {
+  const entries: PassageEntry[] = []
+  let previousVerseId: number | null = null
+  for (const verse of blocks) {
+    if (
+      previousVerseId !== null &&
+      isVerseGap(previousVerseId, verse.verseId, reference)
+    ) {
+      entries.push({ kind: 'ellipsis', reason: 'gap' })
+    }
+    entries.push({ kind: 'verse', verse })
+    previousVerseId = verse.verseId
+  }
+  return entries
 }
 
 const spansMultipleChapters = (verses: PassageVerse[]): boolean => {
@@ -146,11 +185,12 @@ export const buildPassageView = (
   const numbered =
     model.display === 'block' || passage.verses.length > 1
   const cues = passage.fallback === undefined ? model.highlights : []
+  const blocks =
+    passage.steps === undefined
+      ? atomBlocks(model, passage.verses, cues, numbered)
+      : stepBlocks(model, passage.verses, passage.steps, cues, numbered)
   return {
-    verses:
-      passage.steps === undefined
-        ? atomBlocks(model, passage.verses, cues, numbered)
-        : stepBlocks(model, passage.verses, passage.steps, cues, numbered),
+    entries: withVerseGaps(blocks, model.reference),
     attribution:
       model.display === 'block'
         ? (model.book?.attribution ?? passage.attribution)
