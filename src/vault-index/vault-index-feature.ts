@@ -14,7 +14,16 @@ export class VaultIndexFeature extends PluginFeature {
   }
 
   override async load(): Promise<void> {
+    this.#applyExcludedFolders()
     this.#indexer.start()
+  }
+
+  override onSettingsChanged(): void {
+    this.#applyExcludedFolders()
+  }
+
+  #applyExcludedFolders(): void {
+    this.index.setExcludedFolders(this.settings.mentionExcludedFolders)
   }
 
   override unload(): void {

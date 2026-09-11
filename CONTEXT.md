@@ -60,7 +60,7 @@ One appearance of a reference at a position in a vault note (in the body, or dec
 A vault note dedicated to commenting on a reference, with the reference in its frontmatter as source of truth. Indexed like any note but surfaced in the Study Panel for any chapter or note whose references intersect it.
 
 ### Mention
-An intersecting note that is neither an Annotation nor a Cross-Reference: a vault note whose body references overlap the scripture in view. Derived, not declared — a note declaring a reference in its frontmatter is always an Annotation or a Cross-Reference, never a Mention, even if its body also references the same verses.
+An intersecting note that is neither an Annotation nor a Cross-Reference: a vault note whose body references overlap the scripture in view. Derived, not declared — a note declaring a reference in its frontmatter is always an Annotation or a Cross-Reference, never a Mention, even if its body also references the same verses. A note under one of the settings' excluded folders (the folder itself or any folder below it) is never a Mention either, though what it declares still counts.
 
 ### Tagged Translation
 A translation whose module carries word-level Strong's tag spans beside each verse's text, recorded as a capability flag in its manifest. Tags are inert everywhere except the reader's Strong's Mode. Currently BSB (built from the public-domain Berean word-level tables) and KJV (built from bolls.life's `<S>`-tagged dump); the capability is per-translation.

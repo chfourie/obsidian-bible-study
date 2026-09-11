@@ -116,6 +116,9 @@ export type ScriptureStudySettings = {
   // The user's own Cloud Exclusions, as Strong's Families, on top of the
   // built-in list (CONTEXT.md — Cloud Exclusions).
   wordCloudExclusions: string[]
+  // Vault folders whose notes, and the notes of every folder below them,
+  // never surface as Mentions (CONTEXT.md — Mention).
+  mentionExcludedFolders: string[]
 }
 
 export const DEFAULT_SETTINGS: ScriptureStudySettings = {
@@ -147,4 +150,5 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   highlightWash: defaultHighlightWash(),
   underlinePalette: defaultUnderlinePalette(),
   wordCloudExclusions: [],
+  mentionExcludedFolders: [],
 }

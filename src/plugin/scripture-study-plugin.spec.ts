@@ -69,6 +69,23 @@ describe('ScriptureStudyPlugin same-device settings changes', () => {
     )
   })
 
+  it('hands the vault index the excluded mention folders as they change', async () => {
+    const plugin = pluginWithStorage()
+    const index = plugin.vaultIndex.index
+    index.indexNote('Journal/Monday.md', 'see {John 15:4}')
+    const john = {
+      book: 43,
+      ranges: [{ startId: makeVerseId(43, 15, 4), endId: makeVerseId(43, 15, 4) }],
+    }
+
+    await plugin.settingsStore.updateSettings((settings) => ({
+      ...settings,
+      mentionExcludedFolders: ['Journal'],
+    }))
+
+    expect(index.intersectingOccurrences(john)).toEqual([])
+  })
+
   it('routes rendered-reference navigation to the reader feature', () => {
     const plugin = pluginWithStorage()
 

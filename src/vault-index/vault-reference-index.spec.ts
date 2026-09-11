@@ -469,3 +469,68 @@ describe('VaultReferenceIndex cross-reference notes', () => {
     )
   })
 })
+
+describe('VaultReferenceIndex excluded folders', () => {
+  const filesIntersecting = (index: VaultReferenceIndex): string[] =>
+    index.intersectingOccurrences(johnRef(15, 4)).map((group) => group.file)
+
+  it('drops a mention under an excluded folder or any folder below it', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('Journal/2026/Monday.md', 'see {John 15:4}')
+    index.indexNote('Journal/Tuesday.md', 'see {John 15:4}')
+    index.indexNote('Sermons/Vine.md', 'see {John 15:4}')
+
+    index.setExcludedFolders(['Journal'])
+
+    expect(filesIntersecting(index)).toEqual(['Sermons/Vine.md'])
+  })
+
+  it('matches whole path segments, so a sibling sharing the name prefix stays', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('Journal Notes/Vine.md', 'see {John 15:4}')
+    index.indexNote('Journal/Vine.md', 'see {John 15:4}')
+
+    index.setExcludedFolders(['Journal'])
+
+    expect(filesIntersecting(index)).toEqual(['Journal Notes/Vine.md'])
+  })
+
+  it('keeps an annotation and a cross-reference under an excluded folder', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('Journal/Annotation.md', '---\nref: John 15:4\n---\n')
+    index.indexNote(
+      'Journal/Vine.md',
+      crossReferenceNote({ members: ['John 15:1-8'] }),
+    )
+    index.indexNote('Journal/Mention.md', 'see {John 15:4}')
+
+    index.setExcludedFolders(['Journal'])
+
+    expect(filesIntersecting(index)).toEqual([
+      'Journal/Annotation.md',
+      'Journal/Vine.md',
+    ])
+  })
+
+  it('restores the mentions once the folder is no longer excluded', () => {
+    const index = new VaultReferenceIndex()
+    index.indexNote('Journal/Mention.md', 'see {John 15:4}')
+    index.setExcludedFolders(['Journal'])
+
+    index.setExcludedFolders([])
+
+    expect(filesIntersecting(index)).toEqual(['Journal/Mention.md'])
+  })
+
+  it('notifies subscribers when the excluded folders change, not when they stay', () => {
+    const index = new VaultReferenceIndex()
+    let notified = 0
+    index.onChanged(() => notified++)
+
+    index.setExcludedFolders(['Journal'])
+    index.setExcludedFolders(['Journal'])
+    index.setExcludedFolders(['Journal', 'Drafts'])
+
+    expect(notified).toBe(2)
+  })
+})

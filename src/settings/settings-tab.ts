@@ -54,6 +54,7 @@ import type {
   TranslationOption,
   TranslationRowView,
 } from './settings-tab-model'
+import { normalizeFolderPath } from './settings-tab-model'
 
 // The Download / progress / Update / Delete button set shared by translation
 // and book rows.
@@ -121,6 +122,7 @@ type SettingsControlKey =
   | 'annotationsStartExpanded'
   | 'crossReferencesFolder'
   | 'crossReferenceTemplatePath'
+  | 'mentionExcludedFolder'
 
 // Maps each per-device settings control back to the field it reads/writes
 // and which device slot within it — the settings tab shows both slots of
@@ -218,6 +220,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       this.#highlightsGroup(view),
       this.#annotationsGroup(),
       this.#crossReferencesGroup(),
+      this.#mentionsGroup(view),
     ]
   }
 
@@ -303,6 +306,9 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.crossReferencesFolder
       case 'crossReferenceTemplatePath':
         return settings.crossReferenceTemplatePath ?? ''
+      // An entry field, not a stored value: what is typed joins the list.
+      case 'mentionExcludedFolder':
+        return ''
     }
   }
 
@@ -392,13 +398,15 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
       case 'crossReferencesFolder':
         return this.#update((settings) => ({
           ...settings,
-          crossReferencesFolder: (value as string).trim().replace(/^\/+|\/+$/g, ''),
+          crossReferencesFolder: normalizeFolderPath(value as string),
         }))
       case 'crossReferenceTemplatePath':
         return this.#update((settings) => ({
           ...settings,
           crossReferenceTemplatePath: (value as string).trim() || null,
         }))
+      case 'mentionExcludedFolder':
+        return this.model.addMentionExcludedFolder(value as string)
     }
   }
 
@@ -1041,6 +1049,50 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
             filter: (file: TFile) => file.extension === 'md',
           },
         },
+      ],
+    }
+  }
+
+  // Notes under an excluded folder, or any folder below it, never surface as
+  // Mentions (CONTEXT.md — Mention); what a note declares is unaffected.
+  #mentionsGroup(
+    view: SettingsTabView,
+  ): SettingDefinitionGroup<SettingsControlKey> {
+    const listed: SettingGroupItem<SettingsControlKey>[] =
+      view.mentionExcludedFolders.length === 0
+        ? [
+            {
+              name: 'No folders excluded',
+              desc: 'Every note in the vault can be a mention.',
+              render: () => {},
+            },
+          ]
+        : view.mentionExcludedFolders.map((folder) => ({
+            name: folder,
+            desc: 'Notes here and in its subfolders are never mentions.',
+            render: (setting: Setting) =>
+              void setting.addButton((button) =>
+                button
+                  .setButtonText('Remove')
+                  .onClick(
+                    () => void this.model.removeMentionExcludedFolder(folder),
+                  ),
+              ),
+          }))
+    return {
+      type: 'group',
+      heading: 'Mentions',
+      items: [
+        {
+          name: 'Exclude a folder',
+          desc: 'Notes in this folder and its subfolders are left out of the mentions. Annotations and cross-references there still show.',
+          control: {
+            type: 'folder',
+            key: 'mentionExcludedFolder',
+            placeholder: 'Folder to exclude',
+          },
+        },
+        ...listed,
       ],
     }
   }

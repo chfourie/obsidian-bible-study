@@ -72,9 +72,36 @@ const sameDeclaration = (
     ? a === b
     : a.summary === b.summary && a.hasBody === b.hasBody
 
+// A folder excludes the notes directly in it and in every folder below it;
+// the match is on whole path segments, so `Journal` never reaches
+// `Journal Notes/`.
+const isUnderFolder = (file: string, folder: string): boolean =>
+  file.startsWith(`${folder}/`)
+
 export class VaultReferenceIndex {
   readonly #notesByFile = new Map<string, IndexedNote>()
   readonly #changeListeners = new Set<() => void>()
+  #excludedFolders: readonly string[] = []
+
+  // Mentions under these folders never surface (CONTEXT.md — Mention). The
+  // notes stay indexed, so a note moved out, or a folder struck from the
+  // list, reappears at once; what the notes declare is never hidden.
+  setExcludedFolders(folders: readonly string[]): void {
+    if (
+      folders.length === this.#excludedFolders.length &&
+      folders.every((folder, index) => folder === this.#excludedFolders[index])
+    )
+      return
+    this.#excludedFolders = [...folders]
+    this.#notifyChanged()
+  }
+
+  #isExcludedMention(group: OccurrenceGroup): boolean {
+    return (
+      isMention(group) &&
+      this.#excludedFolders.some((folder) => isUnderFolder(group.file, folder))
+    )
+  }
 
   onChanged(listener: () => void): () => void {
     this.#changeListeners.add(listener)
@@ -144,12 +171,13 @@ export class VaultReferenceIndex {
       const frontmatter = note.occurrences.find(
         (occurrence) => occurrence.source === 'annotation-frontmatter',
       )
-      groups.push({
+      const group: OccurrenceGroup = {
         file: intersecting[0].file,
         annotationReference: frontmatter?.reference ?? null,
         crossReference: note.crossReference,
         occurrences: intersecting,
-      })
+      }
+      if (!this.#isExcludedMention(group)) groups.push(group)
     }
     return groups.sort(
       (a, b) =>

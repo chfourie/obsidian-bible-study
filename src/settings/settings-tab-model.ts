@@ -76,9 +76,16 @@ export type BookRowView = {
 // that family with its gloss where the dictionaries know one.
 export type WordCloudExclusionView = { family: string; label: string }
 
+// A typed folder path, without the blanks and slashes a hand-typed one may
+// carry, so it compares to a vault path as the folder suggester hands one out.
+export const normalizeFolderPath = (folder: string): string =>
+  folder.trim().replace(/^\/+|\/+$/g, '')
+
 export type SettingsTabView = {
   settings: ScriptureStudySettings
   wordCloudExclusions: WordCloudExclusionView[]
+  // Listed outside `settings` so a change rebuilds the tab's rows.
+  mentionExcludedFolders: string[]
   defaultTranslationOptions: TranslationOption[]
   fallbackTranslationOptions: TranslationOption[]
   noTranslationsAvailable: boolean
@@ -220,6 +227,27 @@ export class SettingsTabModel {
     }))
   }
 
+  // A folder is stored once; nothing, or a folder already listed, leaves the
+  // list as it is.
+  async addMentionExcludedFolder(folder: string): Promise<void> {
+    const path = normalizeFolderPath(folder)
+    if (path === '' || this.#settings.mentionExcludedFolders.includes(path))
+      return
+    await this.updateSettings((settings) => ({
+      ...settings,
+      mentionExcludedFolders: [...settings.mentionExcludedFolders, path],
+    }))
+  }
+
+  async removeMentionExcludedFolder(folder: string): Promise<void> {
+    await this.updateSettings((settings) => ({
+      ...settings,
+      mentionExcludedFolders: settings.mentionExcludedFolders.filter(
+        (excluded) => excluded !== folder,
+      ),
+    }))
+  }
+
   #wordCloudExclusionViews(): WordCloudExclusionView[] {
     return this.#settings.wordCloudExclusions.map((family) => {
       const gloss = this.#exclusionGlosses.get(family)
@@ -293,6 +321,7 @@ export class SettingsTabModel {
     return {
       settings: this.#settings,
       wordCloudExclusions: this.#wordCloudExclusionViews(),
+      mentionExcludedFolders: this.#settings.mentionExcludedFolders,
       defaultTranslationOptions,
       fallbackTranslationOptions: this.#installedTranslationOptions(),
       noTranslationsAvailable: defaultTranslationOptions.length === 0,

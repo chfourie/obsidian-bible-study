@@ -792,6 +792,72 @@ describe('ScriptureStudySettingTab reader defaults', () => {
   })
 })
 
+describe('ScriptureStudySettingTab mentions section', () => {
+  const excludeRow = (container: HTMLElement): HTMLElement =>
+    settingNamedUnder(container, 'Mentions', 'Exclude a folder')
+
+  it('says so while no folder is excluded', async () => {
+    const { container } = await setup()
+
+    expect(hasSettingNamed(container, 'No folders excluded')).toBe(true)
+  })
+
+  it('adds a typed folder, trimmed of blanks and slashes, ignoring blank and repeat entries', async () => {
+    const { container, settingsStore } = await setup({
+      storedSettings: { mentionExcludedFolders: ['Journal'] },
+    })
+
+    changeInput(excludeRow(container), ' /Drafts/2026/ ')
+    await flushAsync()
+    expect(inputOf(excludeRow(container)).value).toBe('')
+    changeInput(excludeRow(container), '   ')
+    await flushAsync()
+    changeInput(excludeRow(container), 'Journal')
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).mentionExcludedFolders).toEqual([
+      'Journal',
+      'Drafts/2026',
+    ])
+  })
+
+  it('adds a folder-suggester pick', async () => {
+    const { container, settingsStore, app } = await setup()
+    const folder = Object.assign(new TFolder(), { path: 'Journal/2026' })
+    app.vault.getAllFolders = () => [folder]
+
+    const suggest = AbstractInputSuggest.created.find(
+      (candidate) =>
+        (candidate as unknown as { textInputEl: HTMLInputElement })
+          .textInputEl === inputOf(excludeRow(container)),
+    )
+    suggest?.selectSuggestion(folder, new MouseEvent('click'))
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).mentionExcludedFolders).toEqual([
+      'Journal/2026',
+    ])
+  })
+
+  it('lists each excluded folder with a Remove that drops it', async () => {
+    const { container, settingsStore } = await setup({
+      storedSettings: { mentionExcludedFolders: ['Journal', 'Drafts'] },
+    })
+    const journal = settingNamedUnder(container, 'Mentions', 'Journal')
+    expect(hasSettingNamed(container, 'Drafts')).toBe(true)
+    const remove = journal.querySelector('button')
+    expect(remove?.textContent).toBe('Remove')
+
+    remove?.click()
+    await flushAsync()
+
+    expect((await settingsStore.loadSettings()).mentionExcludedFolders).toEqual([
+      'Drafts',
+    ])
+    expect(hasSettingNamed(container, 'Journal')).toBe(false)
+  })
+})
+
 describe('ScriptureStudySettingTab annotations section', () => {
   it('persists a trimmed folder, falling back to the default when blanked', async () => {
     const { container, settingsStore } = await setup()
