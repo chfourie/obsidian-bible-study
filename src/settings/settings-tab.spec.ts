@@ -10,6 +10,7 @@ import {
 import {
   defaultHighlightPalette,
   defaultHighlightWash,
+  defaultUnderlinePalette,
   SettingsStore,
   type ScriptureStudySettings,
 } from '../data-access'
@@ -1540,5 +1541,125 @@ describe('ScriptureStudySettingTab supplied and Editorial-mark opacity', () => {
 
     expect(sliderOf(settingNamed(container, 'Supplied words opacity')).value).toBe('50')
     expect(sliderOf(settingNamed(container, 'Editorial marks opacity')).value).toBe('30')
+  })
+})
+
+describe('ScriptureStudySettingTab underline palette', () => {
+  const colorPickersOf = (setting: HTMLElement): HTMLInputElement[] => [
+    ...setting.querySelectorAll<HTMLInputElement>('input[type="color"]'),
+  ]
+
+  const underlineRow = (container: HTMLElement, slot: number): HTMLElement =>
+    settingNamed(container, `Underline slot ${slot}`)
+
+  const resetButton = (container: HTMLElement): HTMLButtonElement => {
+    const reset = settingNamed(container, 'Reset highlights').querySelector(
+      'button',
+    )
+    if (!(reset instanceof HTMLButtonElement)) throw new Error('no reset button')
+    return reset
+  }
+
+  it('renders an Underline sub-heading after the wash sliders and before the reset', async () => {
+    const { container } = await setup()
+
+    const names = settingItems(container).map(settingName)
+    expect(names.indexOf('Opacity (dark mode)')).toBeLessThan(
+      names.indexOf('Underline'),
+    )
+    expect(names.indexOf('Underline')).toBeLessThan(
+      names.indexOf('Underline slot 1'),
+    )
+    expect(names.indexOf('Underline slot 5')).toBeLessThan(
+      names.indexOf('Reset highlights'),
+    )
+  })
+
+  it('shows a row per Underline Slot with a light and a dark picker on the shipped hues', async () => {
+    const { container } = await setup()
+
+    for (const slot of [1, 2, 3, 4, 5]) {
+      const pickers = colorPickersOf(underlineRow(container, slot))
+      expect(pickers).toHaveLength(2)
+      expect(pickers[0]?.value).toBe(defaultUnderlinePalette().light[slot - 1])
+      expect(pickers[1]?.value).toBe(defaultUnderlinePalette().dark[slot - 1])
+    }
+    expect(hasSettingNamed(container, 'Underline slot 6')).toBe(false)
+  })
+
+  it('offers no opacity slider of its own — an underline is never washed', async () => {
+    const { container } = await setup()
+
+    expect(hasSettingNamed(container, 'Underline opacity')).toBe(false)
+    expect(
+      underlineRow(container, 1).querySelector('input[type="range"]'),
+    ).toBeNull()
+  })
+
+  it('persists a light-mode underline colour without touching the highlight palette', async () => {
+    const { container, settingsStore } = await setup()
+
+    const picker = colorPickersOf(underlineRow(container, 2))[0]
+    if (picker === undefined) throw new Error('no light picker')
+    picker.value = '#123456'
+    picker.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.underlinePalette.light[1]).toBe('#123456')
+    expect(settings.underlinePalette.dark).toEqual(
+      defaultUnderlinePalette().dark,
+    )
+    expect(settings.highlightPalette).toEqual(defaultHighlightPalette())
+  })
+
+  it('persists a dark-mode underline colour', async () => {
+    const { container, settingsStore } = await setup()
+
+    const picker = colorPickersOf(underlineRow(container, 5))[1]
+    if (picker === undefined) throw new Error('no dark picker')
+    picker.value = '#654321'
+    picker.dispatchEvent(new Event('change'))
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.underlinePalette.dark[4]).toBe('#654321')
+    expect(settings.underlinePalette.light).toEqual(
+      defaultUnderlinePalette().light,
+    )
+  })
+
+  it('restores the underline palette with the slots and the wash on reset', async () => {
+    const { container, settingsStore } = await setup({
+      storedSettings: {
+        underlinePalette: {
+          light: ['#111111', '#222222', '#333333', '#444444', '#555555'],
+          dark: ['#666666', '#777777', '#888888', '#999999', '#aaaaaa'],
+        },
+        highlightWash: { light: 90, dark: 80 },
+      },
+    })
+    expect(colorPickersOf(underlineRow(container, 1))[0]?.value).toBe('#111111')
+
+    resetButton(container).click()
+    await flushAsync()
+
+    const settings = await settingsStore.loadSettings()
+    expect(settings.underlinePalette).toEqual(defaultUnderlinePalette())
+    expect(settings.highlightPalette).toEqual(defaultHighlightPalette())
+    expect(settings.highlightWash).toEqual(defaultHighlightWash())
+    expect(colorPickersOf(underlineRow(container, 1))[0]?.value).toBe(
+      defaultUnderlinePalette().light[0],
+    )
+  })
+
+  it('falls back to the shipped colour for a malformed stored underline slot', async () => {
+    const { container } = await setup({
+      storedSettings: { underlinePalette: { light: ['nonsense'] } as never },
+    })
+
+    expect(colorPickersOf(underlineRow(container, 1))[0]?.value).toBe(
+      defaultUnderlinePalette().light[0],
+    )
   })
 })
