@@ -92,14 +92,32 @@ A reader-toolbar toggle (visible only when the viewed translation is tagged and 
 ### Highlight
 A colored span over part of one occurrence's rendered passage, anchored as character offsets into one translation's stored verse text (verse id + start/end chars, end-exclusive). Belongs to that single occurrence — never a vault-wide property of the verse. Exists only while the occurrence displays its requested translation; a substituted (fallback) passage renders none.
 
+### Underline
+A line drawn under part of one occurrence's rendered passage, anchored exactly as a Highlight is (verse id + start/end chars into one translation's stored verse text, per occurrence). A channel of its own, not a Highlight: an Underline and a Highlight may cover the same characters, and each is added, merged and removed without touching the other. Painted in one of five Underline Slots.
+_Avoid_: sixth slot
+
+### Underline Slot
+One of five global, positional colour roles (`u1`–`u5`) for Underlines, each with a light-mode and dark-mode colour configured in settings, never washed. Parallel to the Highlight Slots but independent of them: a cue stores only the slot index, and recolouring a slot re-tints every underline in the vault that uses it. Within the underline channel, slots are exclusive on a character as Highlight Slots are.
+
 ### Highlight Cue
-The serialized form of a highlight: an option token `h<slot>/<verse>.<start>-<verse>.<end>` inside the reference's curly braces. Machine-canonical (sorted, merged, non-overlapping, split at reference gaps); hand-typed shorthand is accepted but rewritten on the next machine edit.
+The serialized form of a highlight: an option token `h<slot>/<verse>.<start>-<verse>.<end>` inside the reference's curly braces. Machine-canonical (sorted, merged, non-overlapping, split at reference gaps); hand-typed shorthand is accepted but rewritten on the next machine edit. Underlines (`u<slot>/…`) and Excerpt parts (`x/…`) serialize as sibling token families with the same canon, each family kept independently of the others.
 
 ### Highlight Slot
 One of five global, positional color roles (`h1`–`h5`), each with a light-mode and dark-mode color configured in settings and rendered through the Highlight Wash. A cue stores only the slot index, so recoloring a slot re-tints every highlight in the vault that uses it. Slots have no names or semantics — they are colors, not tags.
 
 ### Highlight Wash
 The single per-mode translucency — one value for light mode, one for dark — applied to every Highlight Slot's color, so a slot color always tints the text without hiding it. Configured in settings alongside the slots, never per slot; resetting the highlights restores the slots' colors and the wash together.
+
+### Excerpt
+The parts of one occurrence's passage that display; everything outside them is elided and stands as an ellipsis. Anchored like a Highlight: character offsets into one translation's stored verse text, belonging to that single occurrence and never a vault-wide property of the verse. May be several non-joining parts. An occurrence with no Excerpt shows its whole passage. Decoration only — the Occurrence still points at whole verses, and a Highlight over elided text lies dormant rather than being lost.
+_Avoid_: clip, trim, snippet
+
+### Passage Editing
+A Live Preview mode on one occurrence, entered from a control that appears while hovering a displayed passage, in which the whole passage shows (elided text faded, not hidden) and its Highlights, Underlines and Excerpt are added, changed and removed. Left with Done, Escape or a click outside. Only one occurrence is in Passage Editing at a time; never offered in reading mode, on mobile, or on a fallback-served passage.
+_Avoid_: mark mode, annotate mode (Annotation is a note)
+
+### Verse Gap
+Two consecutive verses of one reference that are not adjacent on the Canonical Grid (`John 15:4-6,9` has one between 6 and 9). Adjacency across a chapter boundary is not a gap. Wherever the reference's passage renders as text, an ellipsis stands at the gap.
 
 ### Heading
 A title printed inside a Book section, at one of three levels: *part* (the title a run of chapters sits under), *section*, or *sub-section* (e.g. *7.1 They knew that they were naked*). A heading is attached to the paragraph it precedes. Like an epigraph it lives beside the grid, not on it: a heading consumes no id and is never part of an atom's text, yet it is searched with its paragraph — a Hit may be earned by words that appear only in the heading, and those words are emphasized there. Headings, epigraphs and Figures are the kinds of section furniture.
