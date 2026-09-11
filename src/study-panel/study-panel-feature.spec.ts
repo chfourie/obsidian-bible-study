@@ -1219,6 +1219,7 @@ describe('StudyPanelFeature entry points', () => {
       {
         file: 'Annotations/John 15.1.md',
         label: 'John 15:1',
+        title: 'John 15.1',
         body: 'The true vine.',
       },
     ])

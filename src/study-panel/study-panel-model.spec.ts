@@ -1312,6 +1312,7 @@ describe('annotations and mentions in the Study Panel', () => {
       {
         file: 'Annotations/John 15.1.md',
         label: 'John 15:1',
+        title: 'John 15.1',
         body: 'The true vine.',
       },
     ])
@@ -1401,6 +1402,7 @@ describe('annotations and mentions in the Study Panel', () => {
       {
         file: 'Annotations/John 14.1.md',
         label: 'John 14:1',
+        title: 'John 14.1',
         body: 'Compare {John 15:1}.',
       },
     ])
@@ -1679,8 +1681,18 @@ describe('annotation folds in the Study Panel', () => {
     const panel = await panelFor()
     const reader = fakeStudyMaterial()
     reader.showAnnotations([
-      { file: 'Annotations/Vine.md', label: 'John 15:1', body: 'The vine.' },
-      { file: 'Annotations/Word.md', label: 'John 1:1', body: 'The word.' },
+      {
+        file: 'Annotations/Vine.md',
+        label: 'John 15:1',
+        title: 'Vine',
+        body: 'The vine.',
+      },
+      {
+        file: 'Annotations/Word.md',
+        label: 'John 1:1',
+        title: 'Word',
+        body: 'The word.',
+      },
     ])
     panel.showStudyMaterial(reader.source)
 
