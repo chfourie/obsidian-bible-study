@@ -166,4 +166,49 @@ describe('SettingsFeature', () => {
     expect(paletteVariable('--ss-hl-light-1')).toBe('')
     expect(paletteVariable('--ss-hl-dark-5')).toBe('')
   })
+
+  it('emits the underline palette as solid colours, untouched by the wash', async () => {
+    const { feature } = setup()
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      highlightWash: { light: 10, dark: 10 },
+      underlinePalette: {
+        light: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'],
+        dark: [...DEFAULT_SETTINGS.underlinePalette.dark],
+      },
+    })
+
+    await feature.load()
+
+    expect(paletteVariable('--ss-ul-light-1')).toBe('#ff0000')
+    expect(paletteVariable('--ss-ul-dark-5')).toBe(
+      DEFAULT_SETTINGS.underlinePalette.dark[4],
+    )
+  })
+
+  it('re-emits the underline variables when the palette changes', async () => {
+    const { feature } = setup()
+    await feature.load()
+
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      underlinePalette: {
+        ...DEFAULT_SETTINGS.underlinePalette,
+        light: ['#123456', '#00ff00', '#0000ff', '#ffffff', '#000000'],
+      },
+    })
+    feature.onSettingsChanged()
+
+    expect(paletteVariable('--ss-ul-light-1')).toBe('#123456')
+  })
+
+  it('removes the underline variables on unload', async () => {
+    const { feature } = setup()
+    await feature.load()
+
+    feature.unload()
+
+    expect(paletteVariable('--ss-ul-light-1')).toBe('')
+    expect(paletteVariable('--ss-ul-dark-5')).toBe('')
+  })
 })

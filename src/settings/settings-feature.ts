@@ -62,6 +62,7 @@ export class SettingsFeature extends PluginFeature {
       document.body,
       this.settings.highlightPalette,
       this.settings.highlightWash,
+      this.settings.underlinePalette,
     )
     applyEditorialMarksVariables(document.body, this.settings)
   }

@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { defaultHighlightPalette, defaultHighlightWash } from '../data-access'
+import {
+  defaultHighlightPalette,
+  defaultHighlightWash,
+  defaultUnderlinePalette,
+} from '../data-access'
 import {
   highlightPaletteVariables,
   resolveHighlightPalette,
   resolveHighlightWash,
+  resolveUnderlinePalette,
+  underlinePaletteVariables,
 } from './highlight-palette'
 
 describe('resolveHighlightPalette', () => {
@@ -125,5 +131,46 @@ describe('highlightPaletteVariables with a stored wash', () => {
     })
 
     expect(variables['--ss-hl-light-1']).toBe('rgba(255, 0, 0, 0.45)')
+  })
+})
+
+describe('resolveUnderlinePalette', () => {
+  it('resolves undefined to the shipped highlight hues at full opacity', () => {
+    expect(resolveUnderlinePalette(undefined)).toEqual(
+      defaultUnderlinePalette(),
+    )
+    expect(defaultUnderlinePalette()).toEqual(defaultHighlightPalette())
+  })
+
+  it('falls back to the shipped default for a malformed slot', () => {
+    const resolved = resolveUnderlinePalette({
+      light: ['#112233', 'not-a-color'],
+    })
+
+    expect(resolved.light[0]).toBe('#112233')
+    expect(resolved.light[1]).toBe(defaultUnderlinePalette().light[1])
+    expect(resolved.dark).toEqual(defaultUnderlinePalette().dark)
+  })
+})
+
+describe('underlinePaletteVariables', () => {
+  it('emits one solid variable per Underline Slot and theme', () => {
+    const variables = underlinePaletteVariables({
+      light: ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000'],
+      dark: ['#102030', '#102030', '#102030', '#102030', '#102030'],
+    })
+
+    expect(Object.keys(variables)).toHaveLength(10)
+    expect(variables['--ss-ul-light-1']).toBe('#ff0000')
+    expect(variables['--ss-ul-light-5']).toBe('#000000')
+    expect(variables['--ss-ul-dark-3']).toBe('#102030')
+  })
+
+  it('never tints an underline colour with the Highlight Wash', () => {
+    const variables = underlinePaletteVariables(defaultUnderlinePalette())
+
+    expect(Object.values(variables).every((value) => value.startsWith('#'))).toBe(
+      true,
+    )
   })
 })
