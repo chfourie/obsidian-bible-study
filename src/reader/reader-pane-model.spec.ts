@@ -3512,8 +3512,13 @@ describe('chapter annotations in the study material', () => {
 
     expect(model.studyMaterial.selectedVerseId).toBe(null)
     expect(model.studyMaterial.chapterAnnotations).toEqual([
-      { file: 'branch.md', label: 'John 15:2', body: 'Pruning' },
-      { file: 'abide.md', label: 'John 15:4-6', body: 'Abiding' },
+      { file: 'branch.md', label: 'John 15:2', title: 'branch', body: 'Pruning' },
+      {
+        file: 'abide.md',
+        label: 'John 15:4-6',
+        title: 'abide',
+        body: 'Abiding',
+      },
     ])
   })
 
@@ -3641,7 +3646,7 @@ describe('chapter annotations in the study material', () => {
     await model.refreshOccurrences()
 
     expect(model.studyMaterial.chapterAnnotations).toEqual([
-      { file: 'abide.md', label: 'John 15:4', body: 'Abiding' },
+      { file: 'abide.md', label: 'John 15:4', title: 'abide', body: 'Abiding' },
     ])
   })
 
@@ -3663,11 +3668,13 @@ describe('chapter annotations in the study material', () => {
       {
         file: 'Annotations/Farewell.md',
         label: 'John 14:1',
+        title: 'Farewell',
         body: 'Annotations/Farewell.md',
       },
       {
         file: 'Annotations/Later.md',
         label: 'John 15:4',
+        title: 'Later',
         body: 'Annotations/Later.md',
       },
     ])

@@ -1,6 +1,7 @@
 import type { ChapterAnnotationView } from '../contracts'
 import type { AnnotationOrdering } from '../data-access'
 import { formatReference, type Reference, type VerseRange } from '../reference'
+import { noteTitle } from '../vault-index'
 import type { AnnotationDetails } from './annotation-details'
 import {
   orderChapterAnnotations,
@@ -44,8 +45,9 @@ export const loadChapterAnnotations = async (
 }
 
 // Shapes loaded annotations for display: ordered for the scope, each labelled
-// by the reference its frontmatter declares. Pure, so a surface can re-shape
-// what it already loaded when the ordering setting changes.
+// by the reference its frontmatter declares and titled by its note name. Pure,
+// so a surface can re-shape what it already loaded when the ordering setting
+// changes.
 export const chapterAnnotationViews = (
   items: readonly LoadedChapterAnnotation[],
   scope: readonly VerseRange[],
@@ -55,6 +57,7 @@ export const chapterAnnotationViews = (
     ({ file, reference, body }) => ({
       file,
       label: formatReference(reference),
+      title: noteTitle(file),
       body,
     }),
   )

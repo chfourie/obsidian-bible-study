@@ -29,10 +29,12 @@ export type TranslationRowView = {
 }
 
 // One annotation intersecting the chapter on screen, headed by the reference
-// its frontmatter declares.
+// its frontmatter declares and named beside it by its note name, so two
+// annotations on one address are told apart while folded.
 export type ChapterAnnotationView = {
   file: string
   label: string
+  title: string
   body: string
 }
 
