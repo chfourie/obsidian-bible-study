@@ -84,3 +84,28 @@ export const stepSegments = (
   const { lineBreakBefore, ...head } = first
   return [head, ...rest]
 }
+
+// The spans one channel keeps of a stretch of text, as its own offsets: each
+// shifted by where the stretch starts in the atom, clipped to the stretch,
+// sorted, and those that touch or overlap joined into one.
+export const keptSpans = (
+  spans: readonly TextSpan[],
+  offset: number,
+  end: number,
+): TextSpan[] => {
+  const clipped = spans
+    .map((span) => ({
+      start: Math.max(span.start, offset) - offset,
+      end: Math.min(span.end, end) - offset,
+    }))
+    .filter((span) => span.end > span.start)
+    .sort((a, b) => a.start - b.start)
+  const joined: TextSpan[] = []
+  for (const span of clipped) {
+    const open = joined[joined.length - 1]
+    if (open !== undefined && span.start <= open.end) {
+      open.end = Math.max(open.end, span.end)
+    } else joined.push({ ...span })
+  }
+  return joined
+}
