@@ -344,21 +344,33 @@ describe('highlight editing in Live Preview', () => {
     )
   })
 
-  it('offers no highlight popover on a relative reference', async () => {
+  it('writes the cue into a relative reference’s own braces, never pinning a translation', async () => {
     const hosts = await verseTextsOver('note {John 15:4-9 web inline} and {:4 inline}')
-    const verseText = hosts[hosts.length - 1]
-    const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
-      .nextNode() as Text
-    const range = document.createRange()
-    range.setStart(text, 0)
-    range.setEnd(text, 6)
-    const selection = document.getSelection()
-    selection?.removeAllRanges()
-    selection?.addRange(range)
 
-    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+    paint(hosts[hosts.length - 1], 0)
 
-    expect(document.querySelector('.scripture-study-highlight-swatch')).toBeNull()
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4-9 web inline} and {:4 inline h1/4.0-4.6}',
+    )
+  })
+
+  it('keeps the translation a relative reference names itself', async () => {
+    const hosts = await verseTextsOver('note {John 15:4-9 inline} and {:4 web block}')
+
+    paint(hosts[hosts.length - 1], 1)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4-9 inline} and {:4 web block h2/4.0-4.6}',
+    )
+  })
+
+  it('erases a cue out of a relative reference', async () => {
+    const hosts = await verseTextsOver(
+      'note {John 15:4-9 web inline} and {:4 inline h1/4.0-6}',
+    )
+
+    paint(hosts[hosts.length - 1], 5)
+
     expect(view.state.doc.toString()).toBe('note {John 15:4-9 web inline} and {:4 inline}')
   })
 
