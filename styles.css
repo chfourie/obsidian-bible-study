@@ -111,13 +111,14 @@ body {
   font-style: normal;
 }
 
-/* A Verse Gap's ellipsis (CONTEXT.md — Verse Gap): muted chrome standing for
-   the verses the author skipped. It carries no verse id, so a drag over the
-   passage never selects it and no highlight cue can cover it. Inline it
-   follows the preceding verse's text directly, so the padding gives it air
-   without putting a copyable space in the passage. */
+/* The passage's ellipsis: a Verse Gap's (CONTEXT.md — Verse Gap), standing
+   for the verses the author skipped, or an Excerpt's cut (CONTEXT.md —
+   Excerpt), standing for the text outside the kept parts. Muted chrome that
+   carries no verse id, so a drag over the passage never selects it and no
+   cue can cover it. It sits against the text it cuts, so the padding gives
+   it air on either side without putting a copyable space in the passage. */
 .scripture-study-passage-ellipsis {
-  padding-left: 0.15em;
+  padding-inline: 0.15em;
   color: var(--text-faint);
 }
 
