@@ -323,6 +323,57 @@ body {
   background-color: var(--ss-hl-5);
 }
 
+/* Palette for the five Underline Slots. Settings publishes them as
+   --ss-ul-light-N / --ss-ul-dark-N on `body`, in the solid color they were
+   picked in: the Highlight Wash tints a background and never reaches a line
+   (CONTEXT.md — Underline Slot). */
+.theme-light {
+  --ss-ul-1: var(--ss-ul-light-1, #ffd652);
+  --ss-ul-2: var(--ss-ul-light-2, #7ed98a);
+  --ss-ul-3: var(--ss-ul-light-3, #7dbeff);
+  --ss-ul-4: var(--ss-ul-light-4, #ff96be);
+  --ss-ul-5: var(--ss-ul-light-5, #ffb066);
+}
+
+.theme-dark {
+  --ss-ul-1: var(--ss-ul-dark-1, #ffd652);
+  --ss-ul-2: var(--ss-ul-dark-2, #7ed98a);
+  --ss-ul-3: var(--ss-ul-dark-3, #7dbeff);
+  --ss-ul-4: var(--ss-ul-dark-4, #ff96be);
+  --ss-ul-5: var(--ss-ul-dark-5, #ffb066);
+}
+
+/* A line under the text only — the same span may carry a Highlight Slot, and
+   the background it paints stays visible under the line. */
+.scripture-study-underline {
+  text-decoration-line: underline;
+  text-decoration-thickness: 0.12em;
+  text-underline-offset: 0.18em;
+  text-decoration-skip-ink: none;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.scripture-study-underline-1 {
+  text-decoration-color: var(--ss-ul-1);
+}
+
+.scripture-study-underline-2 {
+  text-decoration-color: var(--ss-ul-2);
+}
+
+.scripture-study-underline-3 {
+  text-decoration-color: var(--ss-ul-3);
+}
+
+.scripture-study-underline-4 {
+  text-decoration-color: var(--ss-ul-4);
+}
+
+.scripture-study-underline-5 {
+  text-decoration-color: var(--ss-ul-5);
+}
+
 /* The selection popover (Live Preview, desktop): five slots plus an eraser. */
 .scripture-study-highlight-editable {
   cursor: text;
