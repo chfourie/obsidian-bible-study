@@ -475,6 +475,179 @@ describe('highlight editing in Live Preview', () => {
   })
 })
 
+describe('Passage Editing in Live Preview', () => {
+  const HIDE = 12
+  const CONTROL = '.scripture-study-passage-edit'
+  const TOOLBAR = '.scripture-study-passage-editing-toolbar'
+
+  const renderingDeps: ReferenceRenderDeps = {
+    passages: {
+      passage: async () => ({
+        status: 'ok',
+        attribution: null,
+        verses: [
+          { verseId: 43015004, segments: [{ text: 'Remain in me', redLetter: false }] },
+        ],
+      }),
+    },
+    openReference: vi.fn(),
+  }
+
+  const widgetsOver = async (doc: string): Promise<HTMLElement[]> => {
+    view = new EditorView({
+      state: EditorState.create({
+        doc,
+        extensions: [
+          editorLivePreviewField,
+          createLivePreviewExtension(
+            () => webDefault,
+            renderingDeps,
+            attachHighlightEditing,
+          ),
+        ],
+      }),
+      parent: document.body,
+    })
+    const expected = [...doc.matchAll(/\{/g)].length
+    return await vi.waitFor(() => {
+      const widgets = [
+        ...view.contentDOM.querySelectorAll<HTMLElement>('.scripture-study-reference'),
+      ].filter((widget) => widget.querySelector(CONTROL) !== null)
+      if (widgets.length < expected) throw new Error('passage not rendered')
+      return widgets
+    })
+  }
+
+  const click = (target: Element): void => {
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+
+  const enter = (widget: HTMLElement): void => {
+    click(widget.querySelector(CONTROL)!)
+  }
+
+  const toolbarOf = (widget: HTMLElement): HTMLElement | null =>
+    widget.querySelector<HTMLElement>(TOOLBAR)
+
+  const toolbarButton = (widget: HTMLElement, label: string): HTMLElement => {
+    const button = [...toolbarOf(widget)!.querySelectorAll<HTMLElement>('[role=button]')]
+      .find((candidate) => candidate.textContent === label)
+    if (button === undefined) throw new Error(`no ${label}`)
+    return button
+  }
+
+  const selectAndChoose = (widget: HTMLElement, swatch: number): void => {
+    const verseText = widget.querySelector<HTMLElement>('[data-verse-id]')!
+    const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
+      .nextNode() as Text
+    const range = document.createRange()
+    range.setStart(text, 0)
+    range.setEnd(text, 6)
+    const selection = document.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+    const swatches = document.querySelectorAll('.scripture-study-highlight-swatch')
+    swatches[swatch].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+
+  // The write rebuilds the widget, so the mode lives on in a fresh one.
+  const rebuiltInMode = async (): Promise<HTMLElement> =>
+    await vi.waitFor(() => {
+      const widget = [
+        ...view.contentDOM.querySelectorAll<HTMLElement>('.scripture-study-reference'),
+      ].find((candidate) => toolbarOf(candidate) !== null)
+      if (widget === undefined) throw new Error('not rebuilt in the mode')
+      return widget
+    })
+
+  it('Hide writes the excerpt at once and the rebuilt occurrence is still in the mode', async () => {
+    const [widget] = await widgetsOver('before {John 15:4 web inline} after')
+
+    enter(widget)
+    selectAndChoose(widget, HIDE)
+
+    expect(view.state.doc.toString()).toBe(
+      'before {John 15:4 web inline x/4.6-4.12} after',
+    )
+    const rebuilt = await rebuiltInMode()
+    expect(rebuilt.querySelector('.scripture-study-elided')?.textContent).toBe('Remain')
+    expect(rebuilt.querySelector('.scripture-study-passage-ellipsis')).toBeNull()
+  })
+
+  it('Clear excerpt drops every x token and keeps the mode', async () => {
+    const [widget] = await widgetsOver('note {John 15:4 web inline h1/4.0-4.6 x/4.0-4.6}')
+
+    enter(widget)
+    click(toolbarButton(widget, 'Clear excerpt'))
+
+    expect(view.state.doc.toString()).toBe('note {John 15:4 web inline h1/4.0-4.6}')
+    await rebuiltInMode()
+  })
+
+  it('Done leaves the mode and the passage renders trimmed again', async () => {
+    const [widget] = await widgetsOver('note {John 15:4 web inline x/4.0-4.6}')
+
+    enter(widget)
+    expect(widget.querySelector('.scripture-study-passage-ellipsis')).toBeNull()
+    click(toolbarButton(widget, 'Done'))
+
+    expect(toolbarOf(widget)).toBeNull()
+    expect(widget.querySelector('.scripture-study-passage-ellipsis')).not.toBeNull()
+    expect(view.state.doc.toString()).toBe('note {John 15:4 web inline x/4.0-4.6}')
+  })
+
+  it('ends when the token is changed from elsewhere and the widget is rebuilt', async () => {
+    const [widget] = await widgetsOver('note {John 15:4 web inline x/4.0-4.6}')
+
+    enter(widget)
+    view.dispatch({ changes: { from: 20, to: 26, insert: 'block' } })
+
+    const rebuilt = await vi.waitFor(() => {
+      const candidate = view.contentDOM.querySelector<HTMLElement>('.scripture-study-reference')
+      if (candidate === null || candidate === widget || candidate.querySelector(CONTROL) === null)
+        throw new Error('not rebuilt')
+      return candidate
+    })
+    expect(toolbarOf(rebuilt)).toBeNull()
+    expect(view.contentDOM.querySelector(TOOLBAR)).toBeNull()
+  })
+
+  it('survives an edit elsewhere in the note that leaves the token alone', async () => {
+    const [widget] = await widgetsOver('note {John 15:4 web inline x/4.0-4.6}')
+
+    enter(widget)
+    view.dispatch({ changes: { from: 0, insert: 'a ' } })
+
+    expect(view.contentDOM.querySelector(TOOLBAR)).not.toBeNull()
+  })
+
+  it('ends on the first occurrence when a second enters', async () => {
+    const [first, second] = await widgetsOver(
+      'note {John 15:4 web inline} and {John 15:4 web block}',
+    )
+
+    enter(first)
+    enter(second)
+
+    expect(toolbarOf(first)).toBeNull()
+    expect(toolbarOf(second)).not.toBeNull()
+  })
+
+  it('edits a relative reference in its own braces, never pinning', async () => {
+    const widgets = await widgetsOver('note {John 15:4-9 web inline} and {:4 inline}')
+    const relative = widgets[widgets.length - 1]
+
+    enter(relative)
+    selectAndChoose(relative, HIDE)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4-9 web inline} and {:4 inline x/4.6-4.12}',
+    )
+    await rebuiltInMode()
+  })
+})
+
 describe('verifiedTokenStart', () => {
   const doc = 'a {John 15:4} b {John 15:4}'
 

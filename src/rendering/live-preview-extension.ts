@@ -10,6 +10,7 @@ import {
 import { editorInfoField, editorLivePreviewField } from 'obsidian'
 import { rewriteCueTokens, type CueLists } from '../highlights'
 import type {
+  CueWriteOptions,
   HighlightCueWriter,
   HighlightEditContext,
   PassageEditingOptions,
@@ -32,6 +33,16 @@ const RED_LETTER_DECORATION = Decoration.mark({ class: RED_LETTER_CLASS })
 const HIDDEN_PREFIX = Decoration.replace({})
 
 export const renderContextChangedEffect = StateEffect.define<null>()
+
+// A write made from Passage Editing rebuilds the widget it came from, since
+// the token changed; the mode belongs to the author, not the widget, so the
+// occurrence rebuilt at the same place from the token just written opens in
+// the mode again. A token changed from anywhere else rebuilds without it
+// (spec story 55).
+type PassageEditingResumeTarget = { start: number; source: string }
+
+const resumePassageEditingEffect =
+  StateEffect.define<PassageEditingResumeTarget>()
 
 export const refreshRenderedReferences = (view: EditorView): void =>
   view.dispatch({ effects: renderContextChangedEffect.of(null) })
@@ -70,6 +81,7 @@ const tokenStart = (
 
 export class ReferenceWidget extends WidgetType {
   #detachEditing: (() => void) | null = null
+  #resumePassageEditing: boolean
 
   constructor(
     private readonly source: string,
@@ -77,8 +89,10 @@ export class ReferenceWidget extends WidgetType {
     private readonly deps: ReferenceRenderDeps,
     private readonly sourcePath: string | null = null,
     private readonly editing: WidgetHighlightEditing | null = null,
+    resumePassageEditing = false,
   ) {
     super()
+    this.#resumePassageEditing = resumePassageEditing
   }
 
   override eq(other: ReferenceWidget): boolean {
@@ -115,11 +129,20 @@ export class ReferenceWidget extends WidgetType {
         this.#detachEditing = editing.attach(
           host,
           context,
-          (cues) => this.#writeCues(view, holder, cues, editing.translationIds()),
-          { surface },
+          (cues, options) =>
+            this.#writeCues(view, holder, cues, editing.translationIds(), options),
+          { surface, resume: this.#takeResume() },
         )
       },
     }
+  }
+
+  // The DOM may be drawn again for the same widget; only the first drawing
+  // after the mode's own write resumes it.
+  #takeResume(): boolean {
+    const resume = this.#resumePassageEditing
+    this.#resumePassageEditing = false
+    return resume
   }
 
   #writeCues(
@@ -127,20 +150,22 @@ export class ReferenceWidget extends WidgetType {
     holder: HTMLElement,
     cues: CueLists,
     translationIds: readonly string[],
+    options?: CueWriteOptions,
   ): void {
     const start = tokenStart(view, holder, this.source)
     if (start === null) return
     const rewritten = rewriteCueTokens(this.source.slice(1, -1), cues, {
-        translation: this.model.translationId,
-        translationIds,
+      translation: this.model.translationId,
+      translationIds,
       reference: this.model.reference,
     })
+    const insert = `{${rewritten}}`
     view.dispatch({
-      changes: {
-        from: start,
-        to: start + this.source.length,
-        insert: `{${rewritten}}`,
-      },
+      changes: { from: start, to: start + this.source.length, insert },
+      effects:
+        options?.passageEditing === true
+          ? [resumePassageEditingEffect.of({ start, source: insert })]
+          : [],
     })
   }
 }
@@ -174,6 +199,17 @@ const hasRenderContextChange = (update: ViewUpdate): boolean =>
     ),
   )
 
+const passageEditingResumeTarget = (
+  update: ViewUpdate,
+): PassageEditingResumeTarget | null => {
+  for (const transaction of update.transactions) {
+    for (const effect of transaction.effects) {
+      if (effect.is(resumePassageEditingEffect)) return effect.value
+    }
+  }
+  return null
+}
+
 const livePreviewToggled = (update: ViewUpdate): boolean =>
   update.state.field(editorLivePreviewField) !==
   update.startState.field(editorLivePreviewField)
@@ -190,7 +226,10 @@ export const createLivePreviewExtension = (
           attach: highlightEditing,
           translationIds: () => contextProvider().knownTranslationIds,
         }
-  const buildDecorations = (view: EditorView): DecorationSet => {
+  const buildDecorations = (
+    view: EditorView,
+    resume: PassageEditingResumeTarget | null,
+  ): DecorationSet => {
     if (!view.state.field(editorLivePreviewField)) return Decoration.none
     const selections = view.state.selection.ranges.map((range) => ({
       from: range.from,
@@ -200,18 +239,21 @@ export const createLivePreviewExtension = (
       view.state.field(editorInfoField, false)?.file?.path ?? null
     const decorate = (spec: LiveDecorationSpec): Range<Decoration>[] => {
       switch (spec.kind) {
-        case 'reference':
+        case 'reference': {
+          const source = view.state.sliceDoc(spec.start, spec.end)
           return [
             Decoration.replace({
               widget: new ReferenceWidget(
-                view.state.sliceDoc(spec.start, spec.end),
+                source,
                 spec.model,
                 deps,
                 sourcePath,
                 editing,
+                resume?.start === spec.start && resume.source === source,
               ),
             }).range(spec.start, spec.end),
           ]
+        }
         case 'christ-quote':
           return [
             ...(spec.prefixHidden
@@ -243,7 +285,7 @@ export const createLivePreviewExtension = (
       decorations: DecorationSet
 
       constructor(view: EditorView) {
-        this.decorations = buildDecorations(view)
+        this.decorations = buildDecorations(view, null)
       }
 
       update(update: ViewUpdate): void {
@@ -254,7 +296,10 @@ export const createLivePreviewExtension = (
           livePreviewToggled(update) ||
           hasRenderContextChange(update)
         ) {
-          this.decorations = buildDecorations(update.view)
+          this.decorations = buildDecorations(
+            update.view,
+            passageEditingResumeTarget(update),
+          )
         }
       }
     },
