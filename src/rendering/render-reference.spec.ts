@@ -2094,3 +2094,91 @@ describe('renderReference excerpts', () => {
     expect(fetchPassage).not.toHaveBeenCalled()
   })
 })
+
+describe('renderReference Passage Editing surface', () => {
+  const CONTROL = '.scripture-study-passage-edit'
+  const john = (...verses: [number, string][]): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: verses.map(([verse, text]) => ({
+      verseId: makeVerseId(43, 15, verse),
+      segments: [{ text, redLetter: false }],
+    })),
+  })
+  type Surface = Parameters<NonNullable<ReferenceRenderDeps['editHighlights']>>[2]
+  const captureSurface = (deps: ReferenceRenderDeps) => {
+    let surface: Surface | null = null
+    const editHighlights = vi.fn((_host: HTMLElement, _context: unknown, lent: Surface) => {
+      surface = lent
+    })
+    return { deps: { ...deps, editHighlights }, surface: () => surface }
+  }
+
+  it('stands the control at the chip’s end when an editing surface is asked for', async () => {
+    const { parent, deps } = setup(john([4, 'Remain in me.']))
+
+    await renderReference(parent, model('John 15:4 block'), captureSurface(deps).deps)
+
+    const control = parent.querySelector<HTMLElement>(CONTROL)
+    expect(control?.parentElement?.classList).toContain('scripture-study-chip')
+    expect(control?.parentElement?.lastElementChild).toBe(control)
+    expect(control?.getAttribute('role')).toBe('button')
+  })
+
+  it('stands no control where highlights are not editable', async () => {
+    const { parent, deps } = setup(john([4, 'Remain in me.']))
+
+    await renderReference(parent, model('John 15:4 block'), deps)
+
+    expect(parent.querySelector(CONTROL)).toBeNull()
+  })
+
+  it('draws the passage again whole, elided text faded, and trimmed once more', async () => {
+    const { parent, deps } = setup(john([4, 'Remain in me.']))
+    const captured = captureSurface(deps)
+
+    await renderReference(parent, model('John 15:4 inline x/4.7-9'), captured.deps)
+    captured.surface()!.render({ elision: false })
+
+    const passage = parent.querySelector('.scripture-study-passage')!
+    expect(passage.textContent).toBe('Remain in me.')
+    expect(
+      [...passage.querySelectorAll('.scripture-study-elided')].map((span) => span.textContent),
+    ).toEqual(['Remain ', ' me.'])
+    expect(passage.querySelector('.scripture-study-passage-ellipsis')).toBeNull()
+
+    captured.surface()!.render({})
+    expect(passage.textContent).toBe('…in…')
+    expect(passage.querySelector('.scripture-study-elided')).toBeNull()
+    expect(parent.querySelectorAll(CONTROL)).toHaveLength(1)
+  })
+
+  it('stands a Book block’s control at the end of its citation line and keeps it there when the passage is redrawn', async () => {
+    installHumilityBook()
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: makeVerseId(HUMILITY_BOOK, 1, 2),
+          segments: [{ text: 'The second paragraph.', redLetter: false }],
+        },
+      ],
+    })
+    const captured = captureSurface(deps)
+
+    await renderReference(parent, model('Humility 1:2 block x/2.4-10'), captured.deps)
+    const slotOf = (control: Element | null) => control?.parentElement
+    expect(slotOf(parent.querySelector(CONTROL))?.classList).toContain(
+      'scripture-study-attribution-nav',
+    )
+
+    captured.surface()!.render({ elision: false })
+    const control = parent.querySelector(CONTROL)
+    expect(parent.querySelectorAll(CONTROL)).toHaveLength(1)
+    expect(slotOf(control)?.classList).toContain('scripture-study-attribution-nav')
+    expect(slotOf(control)?.lastElementChild).toBe(control)
+    expect(parent.querySelector('.scripture-study-elided')).not.toBeNull()
+    uninstallHumilityBook()
+  })
+})

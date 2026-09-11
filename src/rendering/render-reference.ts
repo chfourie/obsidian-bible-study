@@ -117,12 +117,11 @@ const renderChip = (
 // while the passage is hovered, that the editing surface wires. It is drawn
 // once and moved to the slot again whenever the passage is redrawn, since a
 // Book block's slot — its citation line — is redrawn with the passage.
-const createPassageEditingControl = (doc: Document): HTMLElement => {
-  const control = doc.createElement('span')
-  control.addClass('scripture-study-passage-edit')
-  control.setAttribute('role', 'button')
-  control.setAttribute('tabindex', '0')
-  control.setAttribute('aria-label', 'Edit passage')
+const createPassageEditingControl = (host: HTMLElement): HTMLElement => {
+  const control = host.createSpan({
+    cls: 'scripture-study-passage-edit',
+    attr: { role: 'button', tabindex: 0, 'aria-label': 'Edit passage' },
+  })
   setIcon(control, 'highlighter')
   return control
 }
@@ -466,13 +465,18 @@ const mountPassage = async (
   }
   renderPassage(host, buildPassageView(model, passage))
   if (!deps.editHighlights || !highlightsEditable(passage)) return
-  const control = createPassageEditingControl(host.ownerDocument)
+  const control = createPassageEditingControl(host)
+  const placeControl = (): void => {
+    const slot = controlSlot()
+    if (slot === null) control.remove()
+    else slot.appendChild(control)
+  }
   const render = (options: PassageViewOptions): void => {
     host.empty()
     renderPassage(host, buildPassageView(model, passage, options))
-    controlSlot()?.appendChild(control)
+    placeControl()
   }
-  controlSlot()?.appendChild(control)
+  placeControl()
   deps.editHighlights(
     host,
     {

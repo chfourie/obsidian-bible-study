@@ -220,8 +220,7 @@ const passageEditingMode = (
   }
 
   const mountToolbar = (): HTMLElement => {
-    const bar = doc.createElement('div')
-    bar.addClass(TOOLBAR_CLASS)
+    const bar = host.createDiv({ cls: TOOLBAR_CLASS })
     const clear = addToolbarButton(
       bar,
       'Clear excerpt',

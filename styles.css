@@ -463,6 +463,61 @@ body {
   --ss-ul-swatch: var(--ss-ul-5);
 }
 
+/* Passage Editing (CONTEXT.md): the control at the chip's end shows while
+   the passage is hovered, focused, or in the mode. */
+.scripture-study-passage-edit {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease-in-out;
+}
+
+.scripture-study-block:hover .scripture-study-passage-edit,
+.scripture-study-passage-edit:focus-visible,
+.scripture-study-passage-edit[aria-pressed='true'] {
+  opacity: 1;
+}
+
+.scripture-study-passage-edit svg {
+  width: 0.85em;
+  height: 0.85em;
+}
+
+/* In the mode the whole passage shows; the text outside the Excerpt's kept
+   parts is faded, not hidden, so a drag can still reach it. */
+.scripture-study-elided {
+  opacity: 0.4;
+}
+
+.scripture-study-passage-editing-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5em;
+  margin-top: 0.4em;
+}
+
+.scripture-study-passage-editing-button {
+  padding: 0.1em 0.6em;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.scripture-study-passage-editing-button:hover,
+.scripture-study-passage-editing-button:focus-visible {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+}
+
+.scripture-study-passage-editing-button[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* The excerpt row carries words, not colour, so it sheds the swatch's square
    shape and takes the width its label needs. */
 .scripture-study-excerpt-choice {

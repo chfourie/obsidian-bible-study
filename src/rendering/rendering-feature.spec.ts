@@ -308,6 +308,9 @@ describe('RenderingFeature highlight editing surfaces', () => {
     const passage = await livePreviewPassage(editorExtension)
 
     expect(passage.classList).toContain('scripture-study-highlight-editable')
+    expect(
+      passage.parentElement?.querySelector('.scripture-study-passage-edit'),
+    ).not.toBeNull()
   })
 
   it('leaves Live Preview passages read-only on mobile', async () => {
@@ -317,6 +320,9 @@ describe('RenderingFeature highlight editing surfaces', () => {
     const passage = await livePreviewPassage(editorExtension)
 
     expect(passage.classList).not.toContain('scripture-study-highlight-editable')
+    expect(
+      passage.parentElement?.querySelector('.scripture-study-passage-edit'),
+    ).toBeNull()
   })
 
   it('leaves Reading-mode passages read-only', async () => {
@@ -334,6 +340,7 @@ describe('RenderingFeature highlight editing surfaces', () => {
     expect(passage?.classList).not.toContain(
       'scripture-study-highlight-editable',
     )
+    expect(element.querySelector('.scripture-study-passage-edit')).toBeNull()
   })
 })
 
