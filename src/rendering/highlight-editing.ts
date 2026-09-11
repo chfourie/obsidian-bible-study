@@ -37,7 +37,7 @@ export type HighlightCueWriter = (
 
 // What the renderer lends Passage Editing (CONTEXT.md): the control that
 // stands at the chip's end, and a way to draw the passage again, whole with
-// its elided text faded or trimmed as usual.
+// its elided text faded or cut to its kept parts as usual.
 export type PassageEditingSurface = {
   control: HTMLElement
   render: (options: PassageViewOptions) => void

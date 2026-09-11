@@ -582,7 +582,7 @@ describe('Passage Editing', () => {
       expect(passage.querySelector('[data-verse-id]')!.textContent).toBe('Remain in me')
     })
 
-    it('renders trimmed again after Done', async () => {
+    it('renders cut to its kept parts again after Done', async () => {
       const { parent } = await render('John 15:4 nkjv inline x/4.7-4.9')
 
       enter(parent)

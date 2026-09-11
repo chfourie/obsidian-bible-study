@@ -8,7 +8,7 @@ opens the reference in the reader with the entry's translation.
   import type { NavigationOptions } from '../contracts'
   import type { CrossReferenceView } from '../cross-references'
   import type { Reference } from '../reference'
-  import type { VerseSegment } from '../rendering'
+  import { PASSAGE_ELLIPSIS, type VerseSegment } from '../rendering'
   import ChapterAnnotationList from '../study-material/ChapterAnnotationList.svelte'
   import ChapterMentionList from '../study-material/ChapterMentionList.svelte'
   import CrossReferenceRow from '../study-material/CrossReferenceRow.svelte'
@@ -197,7 +197,7 @@ opens the reference in the reader with the entry's translation.
                   {#each entry.lines as line, index (index)}
                     <p class="bsp-verse">
                       {#if line.kind === 'ellipsis'}<span
-                          class="bsp-verse-gap">…</span
+                          class="bsp-verse-gap">{PASSAGE_ELLIPSIS}</span
                         >{:else}{#if line.verse.label !== null}
                           <span class="bsp-verse-number">{line.verse.label}</span>
                         {/if}{#each line.verse.segments as segment, part (part)}{@render markedText(segment)}{/each}{/if}

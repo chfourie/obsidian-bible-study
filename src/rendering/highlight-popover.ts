@@ -130,7 +130,7 @@ export const openHighlightPopover = (options: {
   } = options
   const popover = doc.body.createDiv({
     cls: 'scripture-study-highlight-popover',
-    attr: { role: 'menu', 'aria-label': 'Highlight' },
+    attr: { role: 'menu', 'aria-label': 'Highlight, underline and excerpt' },
   })
   const highlights = addRow(popover)
   const items = HIGHLIGHT_SLOTS.map((slot) =>

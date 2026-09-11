@@ -585,7 +585,7 @@ describe('Passage Editing in Live Preview', () => {
     await rebuiltInMode()
   })
 
-  it('Done leaves the mode and the passage renders trimmed again', async () => {
+  it('Done leaves the mode and the passage renders cut to its kept parts again', async () => {
     const [widget] = await widgetsOver('note {John 15:4 web inline x/4.0-4.6}')
 
     enter(widget)

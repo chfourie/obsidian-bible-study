@@ -95,7 +95,7 @@ const textLengthOf = (segments: readonly VerseSegment[]): number =>
 
 // The stretches of one block that the Excerpt keeps, in the block's own
 // offsets: each part's span within the atom, shifted to where the block's
-// text starts and clipped to what the block prints.
+// text starts and cut down to what the block prints.
 const keptInBlock = (
   block: VerseBlock,
   excerpt: readonly ExcerptPart[],

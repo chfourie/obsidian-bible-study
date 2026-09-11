@@ -1956,7 +1956,7 @@ describe('renderReference excerpts', () => {
     expect(holdersOf(passage).map((holder) => holder.textContent)).toEqual(['in'])
   })
 
-  it('maps a selection inside the trimmed verse back to the stored text’s offsets', async () => {
+  it('maps a selection inside the cut verse back to the stored text’s offsets', async () => {
     const { parent, deps } = setup(john([4, 'Remain in me.']))
 
     await renderReference(parent, model('John 15:4 inline x/4.7-9'), deps)
@@ -2051,7 +2051,7 @@ describe('renderReference excerpts', () => {
     expect(passageOf(parent).textContent).toBe('…in me.')
   })
 
-  it('trims a Book paragraph the same way', async () => {
+  it('cuts a Book paragraph to its kept parts the same way', async () => {
     installHumilityBook()
     const { parent, deps } = setup({
       status: 'ok',
@@ -2133,7 +2133,7 @@ describe('renderReference Passage Editing surface', () => {
     expect(parent.querySelector(CONTROL)).toBeNull()
   })
 
-  it('draws the passage again whole, elided text faded, and trimmed once more', async () => {
+  it('draws the passage again whole, elided text faded, and cut to its kept parts once more', async () => {
     const { parent, deps } = setup(john([4, 'Remain in me.']))
     const captured = captureSurface(deps)
 
