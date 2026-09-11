@@ -180,6 +180,20 @@ describe('processRenderedElement', () => {
     expect(root.querySelector('.scripture-study-chip')).toBeNull()
   })
 
+  it('renders an Annotation body’s excerpt as the note shows it', async () => {
+    const { root, deps } = setup()
+    root.innerHTML = '<p>{John 15:4 inline x/4.0-6}</p>'
+
+    await process(root, deps)
+
+    expect(root.querySelector('.scripture-study-passage')?.textContent).toBe(
+      'Remain…',
+    )
+    expect(
+      root.querySelector('.scripture-study-passage-ellipsis')?.closest('[data-verse-id]'),
+    ).toBeNull()
+  })
+
   it('renders inline passages beside the chip', async () => {
     const { root, deps } = setup()
     root.innerHTML = '<p>He said {John 15:4 inline} to them.</p>'

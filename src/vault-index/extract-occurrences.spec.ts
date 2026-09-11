@@ -97,6 +97,17 @@ describe('extractOccurrences', () => {
     ])
   })
 
+  it('points an occurrence at its whole verses whatever Excerpt it carries', () => {
+    expect(extractOccurrences('{John 15:4-5 inline x/4.0-3}')).toEqual([
+      {
+        position: 0,
+        reference: { book: 43, ranges: [{ startId: john(15, 4), endId: john(15, 5) }] },
+        source: 'body',
+        translation: null,
+      },
+    ])
+  })
+
   it('carries the translation token when the id is known', () => {
     const occurrences = extractOccurrences('{John 15:4 nkjv} {John 15:9}', {
       translationIds: ['nkjv'],

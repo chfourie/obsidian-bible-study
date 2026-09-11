@@ -271,34 +271,48 @@ const renderSegments = (parent: HTMLElement, block: VerseBlock): void => {
       text: block.letterLabel,
     })
   }
-  // The verse text lives in its own holder so a drag can be mapped back to
-  // character offsets in this verse, with the number and chrome left out. A
-  // table's cells are runs of their own — the separators between them print
+  // A table's cells are runs of their own — the separators between them print
   // as the grid rather than as text — so its holder carries no verse id and
   // stays out of the highlight surface. Cues already stored still paint: they
   // are marked onto the segments before a cell ever reads them.
-  const holder = parent.createSpan({
-    cls: VERSE_TEXT_CLASS,
-    ...(block.table === null
-      ? {
-          attr: {
-            'data-verse-id': block.verseId,
-            ...(block.textOffset > 0
-              ? { [TEXT_OFFSET_ATTRIBUTE]: block.textOffset }
-              : {}),
-          },
-        }
-      : {}),
-  })
   if (block.table !== null) {
-    renderTable(holder, block.table, block.segments)
+    renderTable(
+      parent.createSpan({ cls: VERSE_TEXT_CLASS }),
+      block.table,
+      block.segments,
+    )
     return
   }
+  // The verse text lives in holders of its own so a drag can be mapped back
+  // to character offsets in this verse, with the number and chrome left out.
+  // An Excerpt's cut closes the holder and stands its ellipsis outside every
+  // holder, so the next kept stretch opens a holder at its own offset.
+  let holder: HTMLElement | null = null
   for (const segment of block.segments) {
+    if (segment.ellipsis === true) {
+      renderEllipsis(parent)
+      holder = null
+      continue
+    }
+    holder ??= verseTextHolder(parent, block, segment.textOffset ?? block.textOffset)
     if (segment.lineBreakBefore) holder.createEl('br')
     renderSegment(holder, segment)
   }
+  if (block.segments.length === 0) verseTextHolder(parent, block, block.textOffset)
 }
+
+const verseTextHolder = (
+  parent: HTMLElement,
+  block: VerseBlock,
+  textOffset: number,
+): HTMLElement =>
+  parent.createSpan({
+    cls: VERSE_TEXT_CLASS,
+    attr: {
+      'data-verse-id': block.verseId,
+      ...(textOffset > 0 ? { [TEXT_OFFSET_ATTRIBUTE]: textOffset } : {}),
+    },
+  })
 
 // The one place an ellipsis is drawn, whatever stood it there: a real U+2026
 // in a muted span outside every verse-text holder, so a drag over the passage
