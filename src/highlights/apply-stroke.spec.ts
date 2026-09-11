@@ -11,9 +11,7 @@ import {
   applyExcerptStroke,
   applyHighlightStroke,
   applyUnderlineStroke,
-  canonicalExcerptParts,
-  canonicalHighlightCues,
-  canonicalUnderlineCues,
+  canonicalChannelCues,
   type ExcerptStroke,
   type HighlightStroke,
   type VerseText,
@@ -200,28 +198,28 @@ describe('applyHighlightStroke — text the translation does not serve', () => {
   })
 })
 
-describe('canonicalHighlightCues', () => {
+describe('canonicalChannelCues — highlights', () => {
   it('sorts cues by verse and start offset', () => {
     expect(
-      canonicalHighlightCues([cue(2, 9, 20, 9, 25), cue(1, 5, 4, 5, 9)], passage),
+      canonicalChannelCues([cue(2, 9, 20, 9, 25), cue(1, 5, 4, 5, 9)], passage),
     ).toEqual([cue(1, 5, 4, 5, 9), cue(2, 9, 20, 9, 25)])
   })
 
   it('resolves overlapping cues in favour of the later one', () => {
     expect(
-      canonicalHighlightCues([cue(1, 5, 0, 5, 10), cue(2, 5, 5, 5, 15)], passage),
+      canonicalChannelCues([cue(1, 5, 0, 5, 10), cue(2, 5, 5, 5, 15)], passage),
     ).toEqual([cue(1, 5, 0, 5, 5), cue(2, 5, 5, 5, 15)])
   })
 
   it('keeps cues addressing verses outside the passage', () => {
-    expect(canonicalHighlightCues([cue(1, 20, 0, 20, 5)], passage)).toEqual([
+    expect(canonicalChannelCues([cue(1, 20, 0, 20, 5)], passage)).toEqual([
       cue(1, 20, 0, 20, 5),
     ])
   })
 
   it('keeps a cue spanning a gap in the passage whole', () => {
     const gapped = [...versesOf(15, 4, 3), ...versesOf(15, 9, 1)]
-    expect(canonicalHighlightCues([cue(1, 4, 2, 9, 4)], gapped)).toEqual([
+    expect(canonicalChannelCues([cue(1, 4, 2, 9, 4)], gapped)).toEqual([
       cue(1, 4, 2, 9, 4),
     ])
   })
@@ -317,10 +315,10 @@ describe('applyUnderlineStroke — the underline channel', () => {
   })
 })
 
-describe('canonicalUnderlineCues', () => {
+describe('canonicalChannelCues — underlines', () => {
   it('sorts and resolves overlaps in favour of the later cue', () => {
     expect(
-      canonicalUnderlineCues(
+      canonicalChannelCues(
         [underline(2, 9, 20, 9, 25), underline(1, 5, 0, 5, 10), underline(2, 5, 5, 5, 15)],
         passage,
       ),
@@ -381,13 +379,15 @@ describe('applyExcerptStroke — the excerpt channel', () => {
   })
 })
 
-describe('canonicalExcerptParts', () => {
+describe('canonicalChannelCues — the excerpt channel on its one slot', () => {
+  const kept = (excerptPart: ExcerptPart) => ({ ...excerptPart, slot: 1 })
+
   it('sorts and merges parts that touch or overlap', () => {
     expect(
-      canonicalExcerptParts(
-        [part(9, 20, 9, 25), part(5, 5, 5, 15), part(5, 0, 5, 10)],
+      canonicalChannelCues(
+        [part(9, 20, 9, 25), part(5, 5, 5, 15), part(5, 0, 5, 10)].map(kept),
         passage,
       ),
-    ).toEqual([part(5, 0, 5, 15), part(9, 20, 9, 25)])
+    ).toEqual([part(5, 0, 5, 15), part(9, 20, 9, 25)].map(kept))
   })
 })

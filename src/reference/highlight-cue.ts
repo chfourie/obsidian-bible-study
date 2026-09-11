@@ -124,30 +124,6 @@ export const parseCueToken = (
     : null
 }
 
-export const parseHighlightCue = (
-  text: string,
-  reference: Reference,
-): HighlightCue | null => {
-  const token = parseCueToken(text, reference)
-  return token?.family === 'highlight' ? token.cue : null
-}
-
-export const parseUnderlineCue = (
-  text: string,
-  reference: Reference,
-): UnderlineCue | null => {
-  const token = parseCueToken(text, reference)
-  return token?.family === 'underline' ? token.cue : null
-}
-
-export const parseExcerptPart = (
-  text: string,
-  reference: Reference,
-): ExcerptPart | null => {
-  const token = parseCueToken(text, reference)
-  return token?.family === 'excerpt' ? token.part : null
-}
-
 const endpointText = (
   verseId: number,
   char: number,
@@ -179,9 +155,6 @@ export const formatExcerptPart = (
   part: ExcerptPart,
   reference: Reference,
 ): string => `x/${cueRangeText(part, reference)}`
-
-export const isHighlightCueToken = (text: string): boolean =>
-  /^h\d+\//i.test(text)
 
 // Loose on purpose: a malformed token of any family is still a cue token the
 // rewriter sweeps away rather than user text it must preserve.

@@ -184,11 +184,11 @@ export const takeVerseSpecTokens = <T extends { text: string }>(
 
 export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'block']
 
-type CueLists = Pick<ParsedReference, 'highlights' | 'underlines' | 'excerpt'>
+type ParsedCues = Pick<ParsedReference, 'highlights' | 'underlines' | 'excerpt'>
 
 // Each family keeps its own list; a token repeating one already kept is a
 // duplicate in that family alone.
-const addCue = (lists: CueLists, token: CueToken): boolean => {
+const addCue = (lists: ParsedCues, token: CueToken): boolean => {
   switch (token.family) {
     case 'highlight':
       if (lists.highlights.some((cue) => sameHighlightCue(cue, token.cue)))
@@ -216,7 +216,7 @@ export const classifyOptionTokens = (
   let translation: string | null = null
   let display: DisplayMode | null = null
   const invalidTokens: ReferenceToken[] = []
-  const cues: CueLists = { highlights: [], underlines: [], excerpt: [] }
+  const cues: ParsedCues = { highlights: [], underlines: [], excerpt: [] }
   // A book has exactly one edition, pinned by its manifest — naming a
   // translation (or the edition code itself) says nothing (spec-books §3).
   const acceptsTranslation = !isNonBiblicalBook(reference.book)

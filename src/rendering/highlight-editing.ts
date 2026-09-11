@@ -169,13 +169,28 @@ const addToolbarButton = (
   return button
 }
 
+const wireControl = (control: HTMLElement, toggle: () => void): void => {
+  // The control sits inside the chip, whose own activation opens the reader.
+  control.addEventListener('click', (event) => {
+    event.stopPropagation()
+    toggle()
+  })
+  control.addEventListener(
+    'keydown',
+    activate((event) => {
+      event.stopPropagation()
+      toggle()
+    }),
+  )
+  control.setAttribute('aria-pressed', 'false')
+}
+
 // Only one occurrence is in Passage Editing at a time (CONTEXT.md): entering
 // it elsewhere ends it here.
-let current: (() => void) | null = null
+let leaveCurrentPassageEditing: (() => void) | null = null
 
 type PassageEditingMode = {
   active: () => boolean
-  toggle: () => void
   leave: () => void
   // Drops the mode's listeners and toolbar without drawing the passage again,
   // for a host that is being torn down anyway.
@@ -186,7 +201,7 @@ const passageEditingMode = (
   host: HTMLElement,
   context: HighlightEditContext,
   write: HighlightCueWriter,
-  surface: PassageEditingSurface,
+  { surface, resume }: PassageEditingOptions,
   popover: () => HighlightPopover | null,
   closePopover: () => void,
 ): PassageEditingMode => {
@@ -210,7 +225,7 @@ const passageEditingMode = (
     closePopover()
     host.removeClass(EDITING_CLASS)
     control.setAttribute('aria-pressed', 'false')
-    if (current === leave) current = null
+    if (leaveCurrentPassageEditing === leave) leaveCurrentPassageEditing = null
   }
 
   const leave = (): void => {
@@ -252,8 +267,8 @@ const passageEditingMode = (
 
   const enter = (): void => {
     if (active()) return
-    current?.()
-    current = leave
+    leaveCurrentPassageEditing?.()
+    leaveCurrentPassageEditing = leave
     host.addClass(EDITING_CLASS)
     control.setAttribute('aria-pressed', 'true')
     surface.render({ elision: false })
@@ -261,30 +276,17 @@ const passageEditingMode = (
     unwire = wireLeaving()
   }
 
+  const toggle = (): void => (active() ? leave() : enter())
+  wireControl(control, toggle)
+  if (resume === true) toggle()
+
   return {
     active,
-    toggle: () => (active() ? leave() : enter()),
     leave,
     detach: () => {
       if (active()) teardown()
     },
   }
-}
-
-const wireControl = (control: HTMLElement, toggle: () => void): void => {
-  // The control sits inside the chip, whose own activation opens the reader.
-  control.addEventListener('click', (event) => {
-    event.stopPropagation()
-    toggle()
-  })
-  control.addEventListener(
-    'keydown',
-    activate((event) => {
-      event.stopPropagation()
-      toggle()
-    }),
-  )
-  control.setAttribute('aria-pressed', 'false')
 }
 
 export const attachHighlightEditing = (
@@ -305,14 +307,7 @@ export const attachHighlightEditing = (
   const mode =
     passageEditing === undefined
       ? null
-      : passageEditingMode(
-          host,
-          context,
-          write,
-          passageEditing.surface,
-          () => popover,
-          close,
-        )
+      : passageEditingMode(host, context, write, passageEditing, () => popover, close)
   const inMode = (): boolean => mode?.active() ?? false
 
   const strokeAndClose = (
@@ -363,11 +358,6 @@ export const attachHighlightEditing = (
     else mode?.leave()
   }
   doc.addEventListener('keydown', onKeyDown)
-
-  if (mode !== null && passageEditing !== undefined) {
-    wireControl(passageEditing.surface.control, mode.toggle)
-    if (passageEditing.resume === true) mode.toggle()
-  }
 
   return () => {
     mode?.detach()

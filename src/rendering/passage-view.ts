@@ -1,4 +1,4 @@
-import { highlightSpans, rangeWithinVerse } from '../highlights'
+import { highlightSpans, rangeWithinVerse, type Slotted } from '../highlights'
 import {
   decodeVerseId,
   type ExcerptPart,
@@ -293,7 +293,7 @@ export type PaintedCues = {
 }
 
 type SpanChannel = {
-  cues: readonly HighlightCue[]
+  cues: readonly Slotted<number>[]
   mark: (segment: VerseSegment, slot: number) => void
 }
 

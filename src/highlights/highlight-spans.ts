@@ -1,5 +1,3 @@
-import type { HighlightCue, HighlightSlot } from '../reference'
-
 export type HighlightRange = {
   startVerseId: number
   startChar: number
@@ -16,8 +14,6 @@ export type SlotRun<Slot extends number> = {
   end: number
   slot: Slot
 }
-
-export type HighlightSpan = SlotRun<HighlightSlot>
 
 export const rangeWithinVerse = (
   range: HighlightRange,
@@ -71,8 +67,8 @@ export const paintedSlots = <Slot extends number>(
   return slots
 }
 
-export const highlightSpans = (
-  cues: readonly HighlightCue[],
+export const highlightSpans = <Slot extends number>(
+  cues: readonly Slotted<Slot>[],
   verseId: number,
   textLength: number,
-): HighlightSpan[] => slotRuns(paintedSlots(cues, verseId, textLength))
+): SlotRun<Slot>[] => slotRuns(paintedSlots(cues, verseId, textLength))

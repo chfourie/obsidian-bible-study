@@ -285,21 +285,11 @@ export const applyHighlightStroke = (
   verses: readonly VerseText[],
 ): HighlightCue[] => applyChannelStroke(cues, stroke, verses)
 
-export const canonicalHighlightCues = (
-  cues: readonly HighlightCue[],
-  verses: readonly VerseText[],
-): HighlightCue[] => canonicalChannelCues(cues, verses)
-
 export const applyUnderlineStroke = (
   cues: readonly UnderlineCue[],
   stroke: UnderlineStroke,
   verses: readonly VerseText[],
 ): UnderlineCue[] => applyChannelStroke(cues, stroke, verses)
-
-export const canonicalUnderlineCues = (
-  cues: readonly UnderlineCue[],
-  verses: readonly VerseText[],
-): UnderlineCue[] => canonicalChannelCues(cues, verses)
 
 const EXCERPT_SLOT = 1
 
@@ -324,9 +314,3 @@ export const applyExcerptStroke = (
     verses,
   ).map(excerptPart)
 }
-
-export const canonicalExcerptParts = (
-  parts: readonly ExcerptPart[],
-  verses: readonly VerseText[],
-): ExcerptPart[] =>
-  canonicalChannelCues(parts.map(keptPart), verses).map(excerptPart)

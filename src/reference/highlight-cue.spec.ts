@@ -4,11 +4,7 @@ import {
   formatHighlightCue,
   formatUnderlineCue,
   isCueToken,
-  isHighlightCueToken,
   parseCueToken,
-  parseExcerptPart,
-  parseHighlightCue,
-  parseUnderlineCue,
   type HighlightCue,
   type HighlightSlot,
 } from './highlight-cue'
@@ -71,8 +67,8 @@ describe('formatHighlightCue', () => {
   it('round-trips through the parser', () => {
     const reference = referenceOf('John 15:26-16:4')
     const original = cue(5, john(15, 27), 3, john(16, 1), 8)
-    expect(parseHighlightCue(formatHighlightCue(original, reference), reference))
-      .toEqual(original)
+    expect(parseCueToken(formatHighlightCue(original, reference), reference))
+      .toEqual({ family: 'highlight', cue: original })
   })
 })
 
@@ -119,21 +115,6 @@ describe('parseCueToken — cue families', () => {
     expect(parseCueToken('x/9.0-9.5', narrow)).toBeNull()
   })
 
-  it('offers one parser per family that ignores the other families', () => {
-    expect(parseHighlightCue('u1/5.4-25', reference)).toBeNull()
-    expect(parseUnderlineCue('u1/5.4-25', reference)).toEqual(
-      cue(1, john(15, 5), 4, john(15, 5), 25),
-    )
-    expect(parseUnderlineCue('h1/5.4-25', reference)).toBeNull()
-    expect(parseExcerptPart('x/5.4-25', reference)).toEqual({
-      startVerseId: john(15, 5),
-      startChar: 4,
-      endVerseId: john(15, 5),
-      endChar: 25,
-    })
-    expect(parseExcerptPart('h1/5.4-25', reference)).toBeNull()
-  })
-
   it('formats underlines and excerpt parts with the shared endpoint text', () => {
     const wide = referenceOf('John 15:26-16:4')
     expect(
@@ -161,10 +142,14 @@ describe('parseCueToken — cue families', () => {
       endVerseId: john(16, 2),
       endChar: 12,
     }
-    expect(
-      parseUnderlineCue(formatUnderlineCue(underline, wide), wide),
-    ).toEqual(underline)
-    expect(parseExcerptPart(formatExcerptPart(part, wide), wide)).toEqual(part)
+    expect(parseCueToken(formatUnderlineCue(underline, wide), wide)).toEqual({
+      family: 'underline',
+      cue: underline,
+    })
+    expect(parseCueToken(formatExcerptPart(part, wide), wide)).toEqual({
+      family: 'excerpt',
+      part,
+    })
   })
 })
 
@@ -186,21 +171,5 @@ describe('isCueToken', () => {
     expect(isCueToken('nkjv')).toBe(false)
     expect(isCueToken('block')).toBe(false)
     expect(isCueToken('hux')).toBe(false)
-  })
-})
-
-describe('isHighlightCueToken', () => {
-  it('recognises canonical and shorthand cue tokens', () => {
-    expect(isHighlightCueToken('h1/5.4-5.25')).toBe(true)
-    expect(isHighlightCueToken('H2/5.4-25')).toBe(true)
-  })
-
-  it('recognises a malformed cue token by its prefix', () => {
-    expect(isHighlightCueToken('h1/nonsense')).toBe(true)
-  })
-
-  it('leaves other option tokens alone', () => {
-    expect(isHighlightCueToken('nkjv')).toBe(false)
-    expect(isHighlightCueToken('block')).toBe(false)
   })
 })

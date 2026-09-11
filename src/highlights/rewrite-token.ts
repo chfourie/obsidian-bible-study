@@ -66,24 +66,31 @@ const withTranslationAfterSpec = (
   return `${text.slice(0, specToken.end)} ${translation}${text.slice(specToken.end)}`
 }
 
+const byPlace = (a: CueRange, b: CueRange): number =>
+  a.startVerseId - b.startVerseId || a.startChar - b.startChar
+
 const byPlaceThenSlot = (
-  a: CueRange & { slot?: number },
-  b: CueRange & { slot?: number },
-): number =>
-  a.startVerseId - b.startVerseId ||
-  a.startChar - b.startChar ||
-  (a.slot ?? 0) - (b.slot ?? 0)
+  a: CueRange & { slot: number },
+  b: CueRange & { slot: number },
+): number => byPlace(a, b) || a.slot - b.slot
 
 const familyTail = <Cue extends CueRange>(
   cues: readonly Cue[],
+  order: (a: Cue, b: Cue) => number,
   format: (cue: Cue) => string,
-): string[] => [...cues].sort(byPlaceThenSlot).map(format)
+): string[] => [...cues].sort(order).map(format)
 
 const cueTail = (cues: CueLists, reference: Reference): string =>
   [
-    ...familyTail(cues.highlights, (cue) => formatHighlightCue(cue, reference)),
-    ...familyTail(cues.underlines, (cue) => formatUnderlineCue(cue, reference)),
-    ...familyTail(cues.excerpt, (part) => formatExcerptPart(part, reference)),
+    ...familyTail(cues.highlights, byPlaceThenSlot, (cue) =>
+      formatHighlightCue(cue, reference),
+    ),
+    ...familyTail(cues.underlines, byPlaceThenSlot, (cue) =>
+      formatUnderlineCue(cue, reference),
+    ),
+    ...familyTail(cues.excerpt, byPlace, (part) =>
+      formatExcerptPart(part, reference),
+    ),
   ].join(' ')
 
 const hasAnyCue = (cues: CueLists): boolean =>
