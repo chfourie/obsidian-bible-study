@@ -122,6 +122,8 @@ describe('scanReferenceMatches relative references', () => {
         display: null,
         invalidTokens: [],
         highlights: [],
+        underlines: [],
+        excerpt: [],
       },
     })
   })

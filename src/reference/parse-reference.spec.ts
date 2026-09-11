@@ -20,6 +20,8 @@ describe('parseReference — single verse', () => {
       display: null,
       invalidTokens: [],
       highlights: [],
+      underlines: [],
+      excerpt: [],
     })
   })
 
@@ -399,6 +401,101 @@ describe('parseReference — highlight cues', () => {
     expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
       'h1/99.0-99.5',
     ])
+  })
+})
+
+describe('parseReference — underline and excerpt cue families', () => {
+  const cue = (
+    slot: number,
+    startVerseId: number,
+    startChar: number,
+    endVerseId: number,
+    endChar: number,
+  ) => ({ slot, startVerseId, startChar, endVerseId, endChar })
+
+  const part = (
+    startVerseId: number,
+    startChar: number,
+    endVerseId: number,
+    endChar: number,
+  ) => ({ startVerseId, startChar, endVerseId, endChar })
+
+  it('parses an underline token into its slot with no invalid tokens', () => {
+    const parsed = parseReference('John 3:16 u2/16.0-16.10')
+
+    expect(parsed?.underlines).toEqual([cue(2, john(3, 16), 0, john(3, 16), 10)])
+    expect(parsed?.highlights).toEqual([])
+    expect(parsed?.invalidTokens).toEqual([])
+  })
+
+  it('parses an excerpt token into one part with no invalid tokens', () => {
+    const parsed = parseReference('John 3:16 x/16.0-16.10')
+
+    expect(parsed?.excerpt).toEqual([part(john(3, 16), 0, john(3, 16), 10)])
+    expect(parsed?.highlights).toEqual([])
+    expect(parsed?.invalidTokens).toEqual([])
+  })
+
+  it('keeps the three families apart in written order', () => {
+    const parsed = parseReference(
+      'John 15:1-16 nkjv x/9.0-9.8 u1/5.4-25 h2/7.0-9.12 u3/2.0-2.5 block',
+      { translationIds: ['nkjv'] },
+    )
+
+    expect(parsed?.translation).toBe('nkjv')
+    expect(parsed?.display).toBe('block')
+    expect(parsed?.highlights).toEqual([cue(2, john(15, 7), 0, john(15, 9), 12)])
+    expect(parsed?.underlines).toEqual([
+      cue(1, john(15, 5), 4, john(15, 5), 25),
+      cue(3, john(15, 2), 0, john(15, 2), 5),
+    ])
+    expect(parsed?.excerpt).toEqual([part(john(15, 9), 0, john(15, 9), 8)])
+    expect(parsed?.invalidTokens).toEqual([])
+  })
+
+  it('flags malformed underline and excerpt tokens as invalid', () => {
+    for (const token of ['u0/5.4-25', 'u6/5.4-25', 'x1/5.4-25', 'u/5.4-25']) {
+      const parsed = parseReference(`John 15:1-16 ${token}`)
+      expect(parsed?.reference.book, token).toBe(43)
+      expect(parsed?.underlines, token).toEqual([])
+      expect(parsed?.excerpt, token).toEqual([])
+      expect(parsed?.invalidTokens.map((invalid) => invalid.text), token).toEqual(
+        [token],
+      )
+    }
+  })
+
+  it('flags underline and excerpt tokens addressing verses outside the reference', () => {
+    const parsed = parseReference('John 15:4-6 u1/9.0-9.5 x/9.0-9.5')
+
+    expect(parsed?.underlines).toEqual([])
+    expect(parsed?.excerpt).toEqual([])
+    expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
+      'u1/9.0-9.5',
+      'x/9.0-9.5',
+    ])
+  })
+
+  it('flags a repeated underline or excerpt token as invalid', () => {
+    const parsed = parseReference(
+      'John 15:1-16 u1/5.4-25 u1/5.4-5.25 x/7.0-9.12 x/7.0-9.12',
+    )
+
+    expect(parsed?.underlines).toEqual([cue(1, john(15, 5), 4, john(15, 5), 25)])
+    expect(parsed?.excerpt).toEqual([part(john(15, 7), 0, john(15, 9), 12)])
+    expect(parsed?.invalidTokens.map((token) => token.text)).toEqual([
+      'u1/5.4-5.25',
+      'x/7.0-9.12',
+    ])
+  })
+
+  it('lets the same span carry a highlight, an underline and an excerpt part', () => {
+    const parsed = parseReference('John 15:1-16 h1/5.4-25 u1/5.4-25 x/5.4-25')
+
+    expect(parsed?.highlights).toHaveLength(1)
+    expect(parsed?.underlines).toHaveLength(1)
+    expect(parsed?.excerpt).toHaveLength(1)
+    expect(parsed?.invalidTokens).toEqual([])
   })
 })
 

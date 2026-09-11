@@ -1,8 +1,13 @@
 import { bookIdForName, isNonBiblicalBook } from './books'
 import {
-  parseHighlightCue,
+  parseCueToken,
+  sameExcerptPart,
   sameHighlightCue,
+  sameUnderlineCue,
+  type CueToken,
+  type ExcerptPart,
   type HighlightCue,
+  type UnderlineCue,
 } from './highlight-cue'
 import { makeVerseId } from './verse-id'
 import {
@@ -27,6 +32,8 @@ export type ParsedReference = {
   display: DisplayMode | null
   invalidTokens: ReferenceToken[]
   highlights: HighlightCue[]
+  underlines: UnderlineCue[]
+  excerpt: ExcerptPart[]
 }
 
 export const matchBook = (
@@ -177,6 +184,30 @@ export const takeVerseSpecTokens = <T extends { text: string }>(
 
 export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'block']
 
+type CueLists = Pick<ParsedReference, 'highlights' | 'underlines' | 'excerpt'>
+
+// Each family keeps its own list; a token repeating one already kept is a
+// duplicate in that family alone.
+const addCue = (lists: CueLists, token: CueToken): boolean => {
+  switch (token.family) {
+    case 'highlight':
+      if (lists.highlights.some((cue) => sameHighlightCue(cue, token.cue)))
+        return false
+      lists.highlights.push(token.cue)
+      return true
+    case 'underline':
+      if (lists.underlines.some((cue) => sameUnderlineCue(cue, token.cue)))
+        return false
+      lists.underlines.push(token.cue)
+      return true
+    case 'excerpt':
+      if (lists.excerpt.some((part) => sameExcerptPart(part, token.part)))
+        return false
+      lists.excerpt.push(token.part)
+      return true
+  }
+}
+
 export const classifyOptionTokens = (
   tokens: ReferenceToken[],
   translationIds: readonly string[],
@@ -185,7 +216,7 @@ export const classifyOptionTokens = (
   let translation: string | null = null
   let display: DisplayMode | null = null
   const invalidTokens: ReferenceToken[] = []
-  const highlights: HighlightCue[] = []
+  const cues: CueLists = { highlights: [], underlines: [], excerpt: [] }
   // A book has exactly one edition, pinned by its manifest — naming a
   // translation (or the edition code itself) says nothing (spec-books §3).
   const acceptsTranslation = !isNonBiblicalBook(reference.book)
@@ -195,21 +226,16 @@ export const classifyOptionTokens = (
     const translationId = acceptsTranslation
       ? translationIds.find((id) => id.toLowerCase() === lowered)
       : undefined
-    const cue = parseHighlightCue(token.text, reference)
+    const cue = parseCueToken(token.text, reference)
     if (displayMode && display === null) {
       display = displayMode
     } else if (translationId !== undefined && translation === null) {
       translation = translationId
-    } else if (
-      cue !== null &&
-      !highlights.some((existing) => sameHighlightCue(existing, cue))
-    ) {
-      highlights.push(cue)
-    } else {
+    } else if (cue === null || !addCue(cues, cue)) {
       invalidTokens.push(token)
     }
   }
-  return { translation, display, invalidTokens, highlights }
+  return { translation, display, invalidTokens, ...cues }
 }
 
 export const parseReference = (
