@@ -1,4 +1,7 @@
-import { highlightPaletteVariables } from './highlight-palette'
+import {
+  highlightPaletteVariables,
+  underlinePaletteVariables,
+} from './highlight-palette'
 
 // The palette is applied as custom properties on `body`; styles.css maps
 // `--ss-hl-light-N` / `--ss-hl-dark-N` onto `--ss-hl-N` per theme, so the
@@ -7,12 +10,15 @@ export const applyHighlightPaletteVariables = (
   body: HTMLElement,
   palette: unknown,
   wash: unknown,
+  underlinePalette: unknown,
 ): void =>
-  Object.entries(highlightPaletteVariables(palette, wash)).forEach(
-    ([name, value]) => body.style.setProperty(name, value),
-  )
+  Object.entries({
+    ...highlightPaletteVariables(palette, wash),
+    ...underlinePaletteVariables(underlinePalette),
+  }).forEach(([name, value]) => body.style.setProperty(name, value))
 
 export const removeHighlightPaletteVariables = (body: HTMLElement): void =>
-  Object.keys(highlightPaletteVariables(undefined)).forEach((name) =>
-    body.style.removeProperty(name),
-  )
+  [
+    ...Object.keys(highlightPaletteVariables(undefined)),
+    ...Object.keys(underlinePaletteVariables(undefined)),
+  ].forEach((name) => body.style.removeProperty(name))

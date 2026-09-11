@@ -1,5 +1,10 @@
 import { highlightSpans } from '../highlights'
-import { decodeVerseId, type HighlightCue, type Reference } from '../reference'
+import {
+  decodeVerseId,
+  type HighlightCue,
+  type Reference,
+  type UnderlineCue,
+} from '../reference'
 import {
   lineLetterLabel,
   walkSteps,
@@ -107,27 +112,58 @@ const verseLabels = (verses: PassageVerse[]): string[] => {
   })
 }
 
-const highlightedSegments = (
+// The two decoration channels a cue paints, each kept on its own (CONTEXT.md
+// — Underline): a Highlight and an Underline may cover the same characters,
+// so both are laid over the same segments and neither erases the other.
+export type PaintedCues = {
+  highlights: readonly HighlightCue[]
+  underlines: readonly UnderlineCue[]
+}
+
+type SpanChannel = {
+  cues: readonly HighlightCue[]
+  mark: (segment: VerseSegment, slot: number) => void
+}
+
+const decoratedSegments = (
   verse: PassageVerse,
-  cues: readonly HighlightCue[],
+  cues: PaintedCues,
 ): VerseSegment[] => {
-  if (cues.length === 0) return verse.segments
+  if (cues.highlights.length === 0 && cues.underlines.length === 0) {
+    return verse.segments
+  }
   const textLength = verse.segments.reduce(
     (total, segment) => total + segment.text.length,
     0,
   )
-  const spans = highlightSpans(cues, verse.verseId, textLength)
-  return spans.length === 0
-    ? verse.segments
-    : markSpanChannel(verse.segments, spans, (segment, span) => {
-        segment.highlightSlot = span.slot
-      })
+  const channels: SpanChannel[] = [
+    {
+      cues: cues.highlights,
+      mark: (segment, slot) => {
+        segment.highlightSlot = slot
+      },
+    },
+    {
+      cues: cues.underlines,
+      mark: (segment, slot) => {
+        segment.underlineSlot = slot
+      },
+    },
+  ]
+  return channels.reduce<VerseSegment[]>((segments, channel) => {
+    const spans = highlightSpans(channel.cues, verse.verseId, textLength)
+    return spans.length === 0
+      ? segments
+      : markSpanChannel(segments, spans, (segment, span) =>
+          channel.mark(segment, span.slot),
+        )
+  }, verse.segments)
 }
 
 const atomBlocks = (
   model: ReferenceRenderModel,
   verses: readonly PassageVerse[],
-  cues: readonly HighlightCue[],
+  cues: PaintedCues,
   numbered: boolean,
 ): VerseBlock[] => {
   const labels = verseLabels([...verses])
@@ -135,7 +171,7 @@ const atomBlocks = (
     verseId: verse.verseId,
     label: numbered ? labels[index] : null,
     letterLabel: null,
-    segments: highlightedSegments(verse, cues),
+    segments: decoratedSegments(verse, cues),
     table: verse.table ?? null,
     startsNewLine:
       verse.hasLineData === true || model.reference.book === PSALMS_BOOK,
@@ -152,7 +188,7 @@ const stepBlocks = (
   model: ReferenceRenderModel,
   verses: readonly PassageVerse[],
   steps: readonly PassageStep[],
-  cues: readonly HighlightCue[],
+  cues: PaintedCues,
   numbered: boolean,
 ): VerseBlock[] => {
   const labels = verseLabels([...verses])
@@ -160,7 +196,7 @@ const stepBlocks = (
     verseId: verse.verseId,
     label: labels[index],
     table: verse.table ?? null,
-    segments: highlightedSegments(verse, cues),
+    segments: decoratedSegments(verse, cues),
   }))
   return walkSteps(atoms, steps).map(({ step, atom, entersAtom }) => {
     const lined = step.line !== undefined
@@ -184,7 +220,10 @@ export const buildPassageView = (
 ): PassageView => {
   const numbered =
     model.display === 'block' || passage.verses.length > 1
-  const cues = passage.fallback === undefined ? model.highlights : []
+  const cues: PaintedCues =
+    passage.fallback === undefined
+      ? { highlights: model.highlights, underlines: model.underlines }
+      : { highlights: [], underlines: [] }
   const blocks =
     passage.steps === undefined
       ? atomBlocks(model, passage.verses, cues, numbered)

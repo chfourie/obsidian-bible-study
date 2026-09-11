@@ -14,6 +14,7 @@ import {
   atomNumbersOf,
   defaultHighlightPalette,
   defaultHighlightWash,
+  defaultUnderlinePalette,
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
   FONT_SCALE_STEP,
@@ -33,6 +34,9 @@ import {
   type AtomNumbersBook,
   type ReaderDevice,
   type ScriptureStudySettings,
+  UNDERLINE_SLOTS,
+  type UnderlinePalette,
+  type UnderlineSlot,
 } from '../data-access'
 import { LSJ_ATTRIBUTION, STRONGS_ATTRIBUTION } from '../strongs'
 import {
@@ -42,6 +46,7 @@ import {
 import {
   resolveHighlightPalette,
   resolveHighlightWash,
+  resolveUnderlinePalette,
 } from './highlight-palette'
 import type {
   BookRowView,
@@ -852,6 +857,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
   ): SettingDefinitionGroup<SettingsControlKey> {
     const palette = resolveHighlightPalette(view.settings.highlightPalette)
     const wash = resolveHighlightWash(view.settings.highlightWash)
+    const underlines = resolveUnderlinePalette(view.settings.underlinePalette)
     return {
       type: 'group',
       heading: 'Highlights',
@@ -869,8 +875,18 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
             this.#renderHighlightWash(setting, wash, mode),
         })),
         {
+          name: 'Underline',
+          render: (setting: Setting) => void setting.setHeading(),
+        },
+        ...UNDERLINE_SLOTS.map((slot) => ({
+          name: `Underline slot ${slot}`,
+          desc: 'Light mode color, then dark mode color. Never washed.',
+          render: (setting: Setting) =>
+            this.#renderUnderlineSlot(setting, underlines, slot),
+        })),
+        {
           name: 'Reset highlights',
-          desc: 'Restores the shipped palette and opacity.',
+          desc: 'Restores the shipped palettes and opacity.',
           render: (setting: Setting) =>
             void setting.addButton((button) =>
               button.setButtonText('Reset').onClick(() =>
@@ -878,6 +894,7 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
                   ...settings,
                   highlightPalette: defaultHighlightPalette(),
                   highlightWash: defaultHighlightWash(),
+                  underlinePalette: defaultUnderlinePalette(),
                 })),
               ),
             ),
@@ -921,6 +938,38 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
           })),
         ),
     )
+  }
+
+  #renderUnderlineSlot(
+    setting: Setting,
+    palette: UnderlinePalette,
+    slot: UnderlineSlot,
+  ): void {
+    for (const mode of HIGHLIGHT_THEME_MODES) {
+      setting.addColorPicker((picker) => {
+        picker.setValue(palette[mode][slot - 1] ?? '')
+        picker.onChange((color) => {
+          this.#setUnderlineColor(palette, mode, slot, color)
+        })
+      })
+    }
+  }
+
+  #setUnderlineColor(
+    palette: UnderlinePalette,
+    mode: HighlightThemeMode,
+    slot: UnderlineSlot,
+    color: string,
+  ): void {
+    this.#update((settings) => ({
+      ...settings,
+      underlinePalette: {
+        ...palette,
+        [mode]: palette[mode].map((current, index) =>
+          index === slot - 1 ? color : current,
+        ),
+      },
+    }))
   }
 
   #setHighlightColor(

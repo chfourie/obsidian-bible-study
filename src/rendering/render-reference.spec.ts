@@ -1837,3 +1837,89 @@ describe('renderReference highlight editing on relative references', () => {
     expect(editHighlights).not.toHaveBeenCalled()
   })
 })
+
+describe('renderReference underlines', () => {
+  const remain = (): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: [
+      {
+        verseId: 43015004,
+        segments: [{ text: 'Remain in me.', redLetter: false }],
+      },
+    ],
+  })
+
+  it('draws the cued span in an inline passage in its Underline Slot', async () => {
+    const { parent, deps } = setup(remain())
+
+    await renderReference(parent, model('John 15:4 inline u2/4.0-6'), deps)
+
+    const underline = parent.querySelector('.scripture-study-underline-2')
+    expect(underline?.textContent).toBe('Remain')
+    expect(underline?.classList.contains('scripture-study-underline')).toBe(true)
+    expect(parent.querySelector('.scripture-study-passage')?.textContent).toBe(
+      'Remain in me.',
+    )
+  })
+
+  it('draws the cued span in a block passage', async () => {
+    const { parent, deps } = setup(remain())
+
+    await renderReference(parent, model('John 15:4 block u5/4.7-13'), deps)
+
+    expect(
+      parent.querySelector('.scripture-study-underline-5')?.textContent,
+    ).toBe('in me.')
+  })
+
+  it('paints a highlight and an underline over the same characters', async () => {
+    const { parent, deps } = setup(remain())
+
+    await renderReference(
+      parent,
+      model('John 15:4 inline h1/4.0-6 u3/4.0-6'),
+      deps,
+    )
+
+    const painted = parent.querySelector('.scripture-study-underline-3')
+    expect(painted?.textContent).toBe('Remain')
+    expect(painted?.classList.contains('scripture-study-highlight-1')).toBe(true)
+    expect(painted?.classList.contains('scripture-study-highlight')).toBe(true)
+  })
+
+  it('keeps red-letter text red under an underline', async () => {
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: 43015004,
+          segments: [{ text: 'Remain in me.', redLetter: true }],
+        },
+      ],
+    })
+
+    await renderReference(parent, model('John 15:4 inline u2/4.0-6'), deps)
+
+    expect(
+      parent
+        .querySelector('.scripture-study-underline-2')
+        ?.classList.contains('scripture-study-red-letter'),
+    ).toBe(true)
+  })
+
+  it('renders no underlines on a fallback-served passage', async () => {
+    const { parent, deps } = setup({
+      ...remain(),
+      fallback: { requested: 'nkjv', served: 'web' },
+    } as Passage)
+
+    await renderReference(parent, model('John 15:4 nkjv inline u1/4.0-6'), deps)
+
+    expect(parent.querySelector('.scripture-study-underline-1')).toBeNull()
+    expect(
+      parent.querySelector('.scripture-study-passage')?.textContent,
+    ).toContain('Remain in me.')
+  })
+})

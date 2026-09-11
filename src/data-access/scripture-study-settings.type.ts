@@ -1,4 +1,9 @@
-export { HIGHLIGHT_SLOTS, type HighlightSlot } from '../reference'
+export {
+  HIGHLIGHT_SLOTS,
+  UNDERLINE_SLOTS,
+  type HighlightSlot,
+  type UnderlineSlot,
+} from '../reference'
 // From the file rather than the search barrel: the barrel pulls in the plugin
 // features, which depend on this layer.
 import {
@@ -55,6 +60,16 @@ export const defaultHighlightPalette = (): HighlightPalette => ({
   dark: [...SHIPPED_HIGHLIGHT_HUES],
 })
 
+// The five Underline Slots: the same shape as the Highlight Palette and the
+// same shipped hues, but the Highlight Wash never reaches them, so an
+// underline is always drawn in the solid colour picked here.
+export type UnderlinePalette = Record<HighlightThemeMode, string[]>
+
+export const defaultUnderlinePalette = (): UnderlinePalette => ({
+  light: [...SHIPPED_HIGHLIGHT_HUES],
+  dark: [...SHIPPED_HIGHLIGHT_HUES],
+})
+
 // Every reader option with a global settings default is seeded per device —
 // a new pane picks its slot by the device it opens on; in-pane switching
 // never writes back to either slot.
@@ -96,6 +111,7 @@ export type ScriptureStudySettings = {
   annotationOrdering: AnnotationOrdering
   highlightPalette: HighlightPalette
   highlightWash: HighlightWash
+  underlinePalette: UnderlinePalette
   // The user's own Cloud Exclusions, as Strong's Families, on top of the
   // built-in list (CONTEXT.md — Cloud Exclusions).
   wordCloudExclusions: string[]
@@ -127,5 +143,6 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   annotationOrdering: 'created-oldest-first',
   highlightPalette: defaultHighlightPalette(),
   highlightWash: defaultHighlightWash(),
+  underlinePalette: defaultUnderlinePalette(),
   wordCloudExclusions: [],
 }

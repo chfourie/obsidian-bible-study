@@ -334,13 +334,13 @@ describe('highlight editing in Live Preview', () => {
 
   it('keeps hand-typed underline and excerpt tokens beside a highlight edit', async () => {
     const verseText = await verseTextOver(
-      'note {John 15:4 web inline x/4.0-20 u1/4.2-4.5}',
+      'note {John 15:4 web inline x/4.0-20 u1/4.7-4.9}',
     )
 
     paint(verseText, 0)
 
     expect(view.state.doc.toString()).toBe(
-      'note {John 15:4 web inline h1/4.0-4.6 u1/4.2-4.5 x/4.0-4.20}',
+      'note {John 15:4 web inline h1/4.0-4.6 u1/4.7-4.9 x/4.0-4.20}',
     )
   })
 

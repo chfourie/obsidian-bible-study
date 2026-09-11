@@ -218,6 +218,12 @@ const renderSegment = (parent: HTMLElement, segment: VerseSegment): void => {
           'scripture-study-highlight',
           `scripture-study-highlight-${segment.highlightSlot}`,
         ]),
+    ...(segment.underlineSlot === undefined
+      ? []
+      : [
+          'scripture-study-underline',
+          `scripture-study-underline-${segment.underlineSlot}`,
+        ]),
     ...(segment.redLetter ? [RED_LETTER_CLASS] : []),
     ...(segment.supplied ? ['scripture-study-supplied'] : []),
     ...(segment.marks ? ['scripture-study-marks'] : []),
