@@ -899,6 +899,77 @@ describe('StudyPanelFeature entry points', () => {
     ])
   })
 
+  it('folds a fresh tab’s annotations, and opens them when the setting says they start expanded', async () => {
+    const annotations = {
+      'a.md': '{John 15:1}',
+      'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nThe true vine.',
+    }
+    const folded = harness({ ...annotations })
+    folded.indexNote('Annotations/John 15.1.md')
+    await folded.feature.load()
+    folded.commands[0].callback()
+    await flushAsync()
+    folded.focusNote('a.md')
+    await flushAsync()
+
+    expect([...panelView(folded.leaves[0]).model.view.foldedAnnotations]).toEqual([
+      'Annotations/John 15.1.md',
+    ])
+
+    const open = harness({ ...annotations }, { annotationsStartExpanded: true })
+    open.indexNote('Annotations/John 15.1.md')
+    await open.feature.load()
+    open.commands[0].callback()
+    await flushAsync()
+    open.focusNote('a.md')
+    await flushAsync()
+    const view = panelView(open.leaves[0]).model.view
+
+    expect([...view.foldedAnnotations]).toEqual([])
+    expect([...view.folded]).toEqual(['|John 15:1'])
+  })
+
+  it('hands a changed start-expanded default to the tabs that have arranged no annotation, and to no other', async () => {
+    const { feature, commands, leaves, focusNote, focusTab, indexNote } =
+      harness({
+        'a.md': '{John 15:1}',
+        'b.md': '{John 15:1}',
+        'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nThe true vine.',
+      })
+    indexNote('Annotations/John 15.1.md')
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const arranged = focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    view.model.toggleAnnotationFold('Annotations/John 15.1.md')
+    const untouched = focusNote('b.md')
+    await flushAsync()
+
+    expect([...view.model.view.foldedAnnotations]).toEqual([
+      'Annotations/John 15.1.md',
+    ])
+
+    feature.useSettings({
+      ...DEFAULT_SETTINGS,
+      defaultTranslationId: 'web',
+      annotationsStartExpanded: true,
+    })
+    feature.onSettingsChanged()
+    await flushAsync()
+
+    expect([...view.model.view.foldedAnnotations]).toEqual([])
+
+    focusTab(arranged)
+    await flushAsync()
+    expect([...view.model.view.foldedAnnotations]).toEqual([])
+
+    focusTab(untouched)
+    await flushAsync()
+    expect([...view.model.view.foldedAnnotations]).toEqual([])
+  })
+
   it('restores each reader tab’s sub-tab as focus moves between them', async () => {
     const { feature, commands, leaves, focusReader, focusTab } = harness()
     await feature.load()

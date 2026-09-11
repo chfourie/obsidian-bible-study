@@ -49,6 +49,15 @@ export class TabMemory<Tab> {
     return state
   }
 
+  // A changed annotation default reaches every tab that has toggled no
+  // annotation row of its own; a tab with memory keeps how its own started.
+  adoptAnnotationDefault(): void {
+    const startExpanded = this.annotationsStartExpanded()
+    for (const state of this.#states.values())
+      if (!hasAnnotationMemory(state))
+        state.annotationsStartExpanded = startExpanded
+  }
+
   retain(tabs: Iterable<Tab>): void {
     const live = new Set(tabs)
     for (const tab of [...this.#states.keys()])

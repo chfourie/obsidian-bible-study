@@ -836,6 +836,20 @@ describe('ScriptureStudySettingTab annotations section', () => {
     )
   })
 
+  it('persists the start expanded toggle, default off', async () => {
+    const { container, settingsStore } = await setup()
+
+    const setting = settingNamed(container, 'Annotations start expanded')
+    expect(toggleOf(setting).checked).toBe(false)
+
+    changeToggle(setting, true)
+    await flushAsync()
+
+    expect(
+      (await settingsStore.loadSettings()).annotationsStartExpanded,
+    ).toBe(true)
+  })
+
   type SuggestUnderTest = {
     selectSuggestion(
       value: TFile | TFolder,

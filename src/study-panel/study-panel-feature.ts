@@ -91,7 +91,9 @@ export class StudyPanelFeature extends PluginFeature {
   // A tab that took focus without anything the panel could read on it — a
   // reader whose view was not in place yet — kept for another look.
   #unread: WorkspaceLeaf | null = null
-  readonly #tabs = new TabMemory<WorkspaceLeaf>()
+  readonly #tabs = new TabMemory<WorkspaceLeaf>(
+    () => this.settings.annotationsStartExpanded,
+  )
   readonly #index: StudyPanelVaultIndex
   readonly #wordStudy: WordStudyOpener
   readonly #cloudExclusions: CloudExclusionEditor
@@ -164,9 +166,11 @@ export class StudyPanelFeature extends PluginFeature {
 
   override onSettingsChanged(): void {
     this.#repository.clear()
+    this.#tabs.adoptAnnotationDefault()
     this.#models.forEach((model) => {
       void model.setTranslation(this.settings.defaultTranslationId)
       model.setAnnotationOrdering(this.settings.annotationOrdering)
+      model.setAnnotationsStartExpanded(this.settings.annotationsStartExpanded)
     })
     // Installing a module can change which translation tokens parse, so the
     // active note is re-extracted too.
@@ -196,6 +200,7 @@ export class StudyPanelFeature extends PluginFeature {
       {
         translationId: this.settings.defaultTranslationId,
         annotationOrdering: this.settings.annotationOrdering,
+        annotationsStartExpanded: this.settings.annotationsStartExpanded,
       },
     )
     this.#models.add(model)

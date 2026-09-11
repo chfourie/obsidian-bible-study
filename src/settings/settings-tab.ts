@@ -118,6 +118,7 @@ type SettingsControlKey =
   | 'annotationsFolder'
   | 'annotationTemplatePath'
   | 'annotationOrdering'
+  | 'annotationsStartExpanded'
   | 'crossReferencesFolder'
   | 'crossReferenceTemplatePath'
 
@@ -296,6 +297,8 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return settings.annotationTemplatePath ?? ''
       case 'annotationOrdering':
         return settings.annotationOrdering
+      case 'annotationsStartExpanded':
+        return settings.annotationsStartExpanded
       case 'crossReferencesFolder':
         return settings.crossReferencesFolder
       case 'crossReferenceTemplatePath':
@@ -380,6 +383,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
         return this.#update((settings) => ({
           ...settings,
           annotationOrdering: value as AnnotationOrdering,
+        }))
+      case 'annotationsStartExpanded':
+        return this.#update((settings) => ({
+          ...settings,
+          annotationsStartExpanded: value === true,
         }))
       case 'crossReferencesFolder':
         return this.#update((settings) => ({
@@ -999,6 +1007,11 @@ export class ScriptureStudySettingTab extends PluginSettingTab {
               'path-a-z': 'File path, A to Z',
             },
           },
+        },
+        {
+          name: 'Annotations start expanded',
+          desc: 'Opens the annotation rows of a Study Panel tab with no folds of its own. With this off, they start folded. Tabs already arranged keep their folds.',
+          control: { type: 'toggle', key: 'annotationsStartExpanded' },
         },
       ],
     }

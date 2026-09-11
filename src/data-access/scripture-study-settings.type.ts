@@ -109,6 +109,7 @@ export type ScriptureStudySettings = {
   crossReferenceTemplatePath: string | null
   annotationTemplatePath: string | null
   annotationOrdering: AnnotationOrdering
+  annotationsStartExpanded: boolean
   highlightPalette: HighlightPalette
   highlightWash: HighlightWash
   underlinePalette: UnderlinePalette
@@ -141,6 +142,7 @@ export const DEFAULT_SETTINGS: ScriptureStudySettings = {
   crossReferenceTemplatePath: null,
   annotationTemplatePath: null,
   annotationOrdering: 'created-oldest-first',
+  annotationsStartExpanded: false,
   highlightPalette: defaultHighlightPalette(),
   highlightWash: defaultHighlightWash(),
   underlinePalette: defaultUnderlinePalette(),
