@@ -14,7 +14,7 @@ opens the reference in the reader with the entry's translation.
   import CrossReferenceRow from '../study-material/CrossReferenceRow.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
   import type { AnnotationFolds, StudyMaterialHost } from '../study-material'
-  import { activate, icon, opensInNewPane } from '../ui'
+  import { FoldAllPair, FoldRow, activate, icon, opensInNewPane } from '../ui'
   import type {
     ReferenceEntryView,
     StudyPanelModel,
@@ -43,8 +43,6 @@ opens the reference in the reader with the entry's translation.
     }),
   )
 
-  // The followed tab's annotation folds, the same in both modes: the list
-  // component reads and acts on them without knowing the model.
   const annotationFolds: AnnotationFolds = $derived({
     folded: view.foldedAnnotations,
     toggle: (file) => model.toggleAnnotationFold(file),
@@ -140,52 +138,21 @@ opens the reference in the reader with the entry's translation.
       {#if view.entries.length > 0}
         <div class="bsp-entries-head">
           <div class="bsp-group-label">References</div>
-          <span
-            role="button"
-            tabindex="0"
-            class="bsp-fold-all"
-            aria-label="Collapse all"
-            title="Collapse all"
-            use:icon={'chevrons-down-up'}
-            onclick={() => model.foldAll()}
-            onkeydown={activate(() => model.foldAll())}
-          ></span>
-          <span
-            role="button"
-            tabindex="0"
-            class="bsp-fold-all"
-            aria-label="Expand all"
-            title="Expand all"
-            use:icon={'chevrons-up-down'}
-            onclick={() => model.expandAll()}
-            onkeydown={activate(() => model.expandAll())}
-          ></span>
+          <FoldAllPair
+            onFoldAll={() => model.foldAll()}
+            onExpandAll={() => model.expandAll()}
+          />
         </div>
       {/if}
       <div class="bsp-entries">
         {#each view.entries as entry (entry.key)}
-          <section class="bsp-entry">
-            <div class="bsp-entry-head">
-              <span
-                role="button"
-                tabindex="0"
-                class="bsp-entry-title"
-                aria-expanded={!view.folded.has(entry.key)}
-                onclick={() => model.toggleFold(entry.key)}
-                onkeydown={activate(() => model.toggleFold(entry.key))}
-              >
-                <span
-                  class="bsp-fold-icon"
-                  aria-hidden="true"
-                  use:icon={view.folded.has(entry.key)
-                    ? 'chevron-right'
-                    : 'chevron-down'}
-                ></span>
-                {entry.label}
-                {#if entry.translationLabel !== null}
-                  <span class="bsp-translation">· {entry.translationLabel}</span>
-                {/if}
-              </span>
+          <FoldRow
+            open={!view.folded.has(entry.key)}
+            label={entry.label}
+            subtitle={entry.translationLabel}
+            toggle={() => model.toggleFold(entry.key)}
+          >
+            {#snippet trailing()}
               <span
                 role="button"
                 tabindex="0"
@@ -196,8 +163,8 @@ opens the reference in the reader with the entry's translation.
                 onclick={(event) => open(entry, event)}
                 onkeydown={activate((event) => open(entry, event))}
               ></span>
-            </div>
-            {#if !view.folded.has(entry.key)}
+            {/snippet}
+            {#snippet body()}
               {#if entry.status === 'loading'}
                 <p class="bsp-entry-state">Loading…</p>
               {:else if entry.status === 'unavailable'}
@@ -222,8 +189,8 @@ opens the reference in the reader with the entry's translation.
                   <p class="bsp-attribution">{entry.attribution}</p>
                 {/if}
               {/if}
-            {/if}
-          </section>
+            {/snippet}
+          </FoldRow>
         {/each}
       </div>
     {/if}
@@ -303,25 +270,6 @@ opens the reference in the reader with the entry's translation.
     margin-right: auto;
   }
 
-  .bsp-fold-all {
-    display: flex;
-    align-items: center;
-    padding: 2px;
-    border-radius: var(--radius-s);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsp-fold-all:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
-  }
-
-  .bsp-fold-all :global(svg) {
-    width: var(--icon-s);
-    height: var(--icon-s);
-  }
-
   .bsp-entries {
     display: flex;
     flex-direction: column;
@@ -340,45 +288,6 @@ opens the reference in the reader with the entry's translation.
     font-size: var(--font-ui-smaller);
     font-weight: 600;
     text-transform: uppercase;
-  }
-
-  .bsp-entry {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-
-  .bsp-entry-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .bsp-entry-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3em;
-    font-weight: 600;
-    color: var(--text-accent);
-    cursor: pointer;
-  }
-
-  .bsp-fold-icon {
-    display: inline-flex;
-    align-items: center;
-    color: var(--text-muted);
-  }
-
-  .bsp-fold-icon :global(svg) {
-    width: var(--icon-xs);
-    height: var(--icon-xs);
-  }
-
-  .bsp-translation {
-    font-weight: 400;
-    color: var(--text-muted);
-    font-size: var(--font-ui-smaller);
   }
 
   .bsp-open-reader {

@@ -6,7 +6,7 @@ the far edge of the heading line as the References heading has it.
 Sections with neither render the bare heading.
 -->
 <script lang="ts">
-  import { activate, icon } from '../ui'
+  import { FoldAllPair, icon } from '../ui'
 
   let {
     label,
@@ -38,26 +38,7 @@ Sections with neither render the bare heading.
     ><span class="bsm-section-add-icon" use:icon={'circle-plus'}></span></button>
   {/if}
   {#if onFoldAll !== null && onExpandAll !== null}
-    <span
-      role="button"
-      tabindex="0"
-      class="bsm-section-fold-all"
-      aria-label="Collapse all"
-      title="Collapse all"
-      use:icon={'chevrons-down-up'}
-      onclick={onFoldAll}
-      onkeydown={activate(onFoldAll)}
-    ></span>
-    <span
-      role="button"
-      tabindex="0"
-      class="bsm-section-fold-all"
-      aria-label="Expand all"
-      title="Expand all"
-      use:icon={'chevrons-up-down'}
-      onclick={onExpandAll}
-      onkeydown={activate(onExpandAll)}
-    ></span>
+    <FoldAllPair {onFoldAll} {onExpandAll} />
   {/if}
 </div>
 
@@ -110,25 +91,6 @@ Sections with neither render the bare heading.
   }
 
   .bsm-section-add-icon :global(svg) {
-    width: var(--icon-s);
-    height: var(--icon-s);
-  }
-
-  .bsm-section-fold-all {
-    display: flex;
-    align-items: center;
-    padding: 2px;
-    border-radius: var(--radius-s);
-    color: var(--text-muted);
-    cursor: pointer;
-  }
-
-  .bsm-section-fold-all:hover {
-    color: var(--text-normal);
-    background: var(--background-modifier-hover);
-  }
-
-  .bsm-section-fold-all :global(svg) {
     width: var(--icon-s);
     height: var(--icon-s);
   }
