@@ -51,6 +51,15 @@ export type VerseSegment = {
   // segment may carry a highlight and an underline at once (CONTEXT.md —
   // Underline).
   underlineSlot?: number
+  // An Excerpt's cut (CONTEXT.md — Excerpt): the stretch outside the kept
+  // parts, cut away and standing as an ellipsis, or — with elision off, as
+  // Passage Editing shows it — kept in place and flagged elided.
+  ellipsis?: boolean
+  elided?: boolean
+  // Where this stretch starts in its atom's stored string, stated only on the
+  // first stretch after an ellipsis, where the count the block's own offset
+  // began was broken by the cut.
+  textOffset?: number
   // Set on the words an entry asked the reader to emphasize — a search hit's
   // matched words, which live only as long as the entry banner does.
   emphasized?: boolean

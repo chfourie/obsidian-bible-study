@@ -732,3 +732,263 @@ describe('buildPassageView — underlines on a verse-atom Book’s page walk', (
     ).toEqual(painted)
   })
 })
+
+describe('buildPassageView — excerpts', () => {
+  const ellipsis = { text: '…', redLetter: false, ellipsis: true }
+  const kinds = (view: ReturnType<typeof buildPassageView>) =>
+    view.entries.map((entry) =>
+      entry.kind === 'verse' ? entry.verse.label : entry.reason,
+    )
+  const texts = (view: ReturnType<typeof buildPassageView>) =>
+    view.entries.map((entry) =>
+      entry.kind === 'verse'
+        ? entry.verse.segments.map((segment) => segment.text).join('')
+        : entry.reason,
+    )
+
+  it('cuts the verse to the kept part with an ellipsis at each cut', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline x/4.7-9'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      ellipsis,
+      { text: 'in', redLetter: false, textOffset: 7 },
+      ellipsis,
+    ])
+  })
+
+  it('stands no leading ellipsis when the part starts at the verse start', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline x/4.0-6'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      { text: 'Remain', redLetter: false },
+      ellipsis,
+    ])
+  })
+
+  it('stands no trailing ellipsis when the part reaches the verse end', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline x/4.7-13'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      ellipsis,
+      { text: 'in me.', redLetter: false, textOffset: 7 },
+    ])
+  })
+
+  it('keeps several parts with one ellipsis between them', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline x/4.0-6 x/4.10-13'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      { text: 'Remain', redLetter: false },
+      ellipsis,
+      { text: 'me.', redLetter: false, textOffset: 10 },
+    ])
+  })
+
+  it('collapses a verse with nothing kept to one ellipsis and numbers the verse that keeps text', () => {
+    const view = buildPassageView(
+      model('John 15:4-5 block x/5.0-5.4'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 5, 'I am the vine.')]),
+    )
+
+    expect(kinds(view)).toEqual(['excerpt', '5'])
+    expect(texts(view)).toEqual(['excerpt', 'I am…'])
+  })
+
+  it('collapses neighbouring verses with nothing kept to one ellipsis', () => {
+    const view = buildPassageView(
+      model('John 15:4-6 block x/6.0-6.2'),
+      passage([
+        verse(15, 4, 'Remain in me.'),
+        verse(15, 5, 'I am the vine.'),
+        verse(15, 6, 'He is thrown away.'),
+      ]),
+    )
+
+    expect(kinds(view)).toEqual(['excerpt', '6'])
+  })
+
+  it('collapses a Verse Gap ellipsis into the trailing cut before it', () => {
+    const view = buildPassageView(
+      model('John 15:4,9 inline x/4.0-6 x/9.0-6'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 9, 'Remain in my love.')]),
+    )
+
+    expect(kinds(view)).toEqual(['4', '9'])
+    expect(texts(view)).toEqual(['Remain…', 'Remain…'])
+  })
+
+  it('collapses a Verse Gap ellipsis into the leading cut after it', () => {
+    const view = buildPassageView(
+      model('John 15:4,9 inline x/4.0-13 x/9.7-18'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 9, 'Remain in my love.')]),
+    )
+
+    expect(kinds(view)).toEqual(['4', '9'])
+    expect(texts(view)).toEqual(['Remain in me.', '…in my love.'])
+  })
+
+  it('folds a wholly elided verse and the Verse Gap beyond it into the trailing cut before them', () => {
+    const view = buildPassageView(
+      model('John 15:4-5,9 inline x/4.0-6'),
+      passage([
+        verse(15, 4, 'Remain in me.'),
+        verse(15, 5, 'I am the vine.'),
+        verse(15, 9, 'Remain in my love.'),
+      ]),
+    )
+
+    expect(kinds(view)).toEqual(['4'])
+    expect(texts(view)).toEqual(['Remain…'])
+  })
+
+  it('keeps each verse’s own cut when verses meet at a number', () => {
+    const view = buildPassageView(
+      model('John 15:4-5 inline x/4.0-6 x/5.5-14'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 5, 'I am the vine.')]),
+    )
+
+    expect(texts(view)).toEqual(['Remain…', '…the vine.'])
+  })
+
+  it('paints nothing of a highlight or underline lying inside the elided text', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.0-6 u2/4.1-3 x/4.7-13'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      ellipsis,
+      { text: 'in me.', redLetter: false, textOffset: 7 },
+    ])
+  })
+
+  it('paints only the visible part of a highlight straddling a cut', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.0-9 u3/4.8-13 x/4.7-13'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      ellipsis,
+      { text: 'i', redLetter: false, highlightSlot: 1, textOffset: 7 },
+      { text: 'n', redLetter: false, highlightSlot: 1, underlineSlot: 3 },
+      { text: ' me.', redLetter: false, underlineSlot: 3 },
+    ])
+  })
+
+  it('shows the whole passage when the Fallback Translation served it', () => {
+    const view = buildPassageView(model('John 15:4 nkjv inline x/4.7-9'), {
+      ...passage([verse(15, 4, 'Remain in me.')]),
+      fallback: { requested: 'nkjv', served: 'web' },
+    })
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      { text: 'Remain in me.', redLetter: false },
+    ])
+  })
+
+  it('leaves the segments untouched when the reference carries no excerpt', () => {
+    const segments = [{ text: 'Remain in me.', redLetter: false }]
+    const view = buildPassageView(
+      model('John 15:4 inline'),
+      passage([{ verseId: makeVerseId(43, 15, 4), segments }]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toBe(segments)
+  })
+
+  it('leaves a table atom whole', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline x/4.0-6'),
+      passage([
+        {
+          verseId: makeVerseId(43, 15, 4),
+          segments: [{ text: 'Remain in me.', redLetter: false }],
+          table: [{ header: false, cells: [{ start: 0, end: 6 }, { start: 7, end: 13 }] }],
+        },
+      ]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      { text: 'Remain in me.', redLetter: false },
+    ])
+  })
+
+  it('flags the text outside the kept parts as elided instead when elision is off', () => {
+    const view = buildPassageView(
+      model('John 15:4-5 inline x/4.7-9'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 5, 'I am the vine.')]),
+      { elision: false },
+    )
+
+    expect(kinds(view)).toEqual(['4', '5'])
+    expect(verseBlocks(view).map((block) => block.segments)).toEqual([
+      [
+        { text: 'Remain ', redLetter: false, elided: true },
+        { text: 'in', redLetter: false },
+        { text: ' me.', redLetter: false, elided: true },
+      ],
+      [{ text: 'I am the vine.', redLetter: false, elided: true }],
+    ])
+  })
+})
+
+describe('buildPassageView — excerpts on a Book', () => {
+  beforeEach(() => {
+    installHumilityBook()
+    installEnochBook()
+  })
+  afterEach(() => {
+    uninstallHumilityBook()
+    uninstallEnochBook()
+  })
+
+  it('cuts a paragraph to its kept part', () => {
+    const view = buildPassageView(
+      model('Humility 1:2 block x/2.4-10'),
+      passage([
+        {
+          verseId: makeVerseId(HUMILITY_BOOK, 1, 2),
+          segments: [{ text: 'The second paragraph.', redLetter: false }],
+        },
+      ]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      { text: '…', redLetter: false, ellipsis: true },
+      { text: 'second', redLetter: false, textOffset: 4 },
+      { text: '…', redLetter: false, ellipsis: true },
+    ])
+  })
+
+  it('cuts a page walk step by step, the steps outside the part folding into the cut', async () => {
+    const rendered = model('1 Enoch 5:7 block x/7.0-10')
+    const walkedPassage = await new ModulePassageSource(
+      enochPassageStore(),
+    ).passage(rendered.reference, ENOCH_MODULE_ID)
+    if (walkedPassage.status !== 'ok') throw new Error('unavailable')
+
+    const view = buildPassageView(rendered, walkedPassage)
+
+    expect(
+      view.entries.map((entry) =>
+        entry.kind === 'verse'
+          ? entry.verse.segments.map((segment) => segment.text).join('')
+          : entry.reason,
+      ),
+    ).toEqual(['But for th…'])
+    expect(verseBlocks(view)[0].label).toBe('7')
+  })
+})

@@ -1923,3 +1923,174 @@ describe('renderReference underlines', () => {
     ).toContain('Remain in me.')
   })
 })
+
+describe('renderReference excerpts', () => {
+  const ELLIPSIS_CLASS = '.scripture-study-passage-ellipsis'
+  const john = (...verses: [number, string][]): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: verses.map(([verse, text]) => ({
+      verseId: makeVerseId(43, 15, verse),
+      segments: [{ text, redLetter: false }],
+    })),
+  })
+  const passageOf = (parent: HTMLElement): HTMLElement => {
+    const host = parent.querySelector<HTMLElement>('.scripture-study-passage')
+    if (host === null) throw new Error('no passage')
+    return host
+  }
+  const holdersOf = (parent: HTMLElement) => [
+    ...parent.querySelectorAll<HTMLElement>('[data-verse-id]'),
+  ]
+
+  it('shows the kept part between real ellipses that carry no verse id', async () => {
+    const { parent, deps } = setup(john([4, 'Remain in me.']))
+
+    await renderReference(parent, model('John 15:4 inline x/4.7-9'), deps)
+
+    const passage = passageOf(parent)
+    expect(passage.textContent).toBe('…in…')
+    const ellipses = [...passage.querySelectorAll(ELLIPSIS_CLASS)]
+    expect(ellipses.map((ellipsis) => ellipsis.textContent)).toEqual(['…', '…'])
+    expect(ellipses.every((ellipsis) => ellipsis.closest('[data-verse-id]') === null)).toBe(true)
+    expect(holdersOf(passage).map((holder) => holder.textContent)).toEqual(['in'])
+  })
+
+  it('maps a selection inside the trimmed verse back to the stored text’s offsets', async () => {
+    const { parent, deps } = setup(john([4, 'Remain in me.']))
+
+    await renderReference(parent, model('John 15:4 inline x/4.7-9'), deps)
+
+    const host = passageOf(parent)
+    const text = holdersOf(host)[0].firstChild as Text
+    const range = host.ownerDocument.createRange()
+    range.setStart(text, 1)
+    range.setEnd(text, 2)
+    expect(passageSelectionRange(host, range)).toEqual({
+      startVerseId: makeVerseId(43, 15, 4),
+      startChar: 8,
+      endVerseId: makeVerseId(43, 15, 4),
+      endChar: 9,
+    })
+  })
+
+  it('gives each kept part its own holder at its own offset', async () => {
+    const { parent, deps } = setup(john([4, 'Remain in me.']))
+
+    await renderReference(
+      parent,
+      model('John 15:4 inline x/4.0-6 x/4.10-13'),
+      deps,
+    )
+
+    const host = passageOf(parent)
+    expect(host.textContent).toBe('Remain…me.')
+    const [remain, me] = holdersOf(host)
+    const range = host.ownerDocument.createRange()
+    range.setStart(remain.firstChild as Text, 2)
+    range.setEnd(me.firstChild as Text, 2)
+    expect(passageSelectionRange(host, range)).toEqual({
+      startVerseId: makeVerseId(43, 15, 4),
+      startChar: 2,
+      endVerseId: makeVerseId(43, 15, 4),
+      endChar: 12,
+    })
+  })
+
+  it('collapses a block verse with nothing kept to one ellipsis line and numbers the verse that keeps text', async () => {
+    const { parent, deps } = setup(
+      john([4, 'Remain in me.'], [5, 'I am the vine.']),
+    )
+
+    await renderReference(parent, model('John 15:4-5 block x/5.0-5.4'), deps)
+
+    const lines = [...parent.querySelectorAll('.scripture-study-verse-line')]
+    expect(lines.map((line) => line.textContent)).toEqual(['…', '5I am…'])
+    expect(lines[0].querySelector('.scripture-study-verse-number')).toBeNull()
+    expect(lines[0].querySelector('[data-verse-id]')).toBeNull()
+    expect(
+      lines[1].querySelector('.scripture-study-verse-number')?.textContent,
+    ).toBe('5')
+  })
+
+  it('keeps the verse numbers on the inline verses that keep text', async () => {
+    const { parent, deps } = setup(
+      john([4, 'Remain in me.'], [5, 'I am the vine.'], [6, 'He is thrown away.']),
+    )
+
+    await renderReference(
+      parent,
+      model('John 15:4-6 inline x/4.0-6 x/6.9-18'),
+      deps,
+    )
+
+    expect(passageOf(parent).textContent).toBe('4Remain… 6…own away.')
+  })
+
+  it('folds a Verse Gap into the cut beside it, one ellipsis for both', async () => {
+    const { parent, deps } = setup(
+      john([4, 'Remain in me.'], [9, 'Remain in my love.']),
+    )
+
+    await renderReference(parent, model('John 15:4,9 inline x/4.0-6 x/9.0-6'), deps)
+
+    expect(passageOf(parent).textContent).toBe('4Remain… 9Remain…')
+  })
+
+  it('paints nothing of a highlight inside the elided text and only the visible part of one straddling a cut', async () => {
+    const { parent, deps } = setup(john([4, 'Remain in me.']))
+
+    await renderReference(
+      parent,
+      model('John 15:4 inline h1/4.0-9 u2/4.1-3 x/4.7-13'),
+      deps,
+    )
+
+    expect(parent.querySelector('.scripture-study-highlight-1')?.textContent).toBe('in')
+    expect(parent.querySelector('.scripture-study-underline-2')).toBeNull()
+    expect(passageOf(parent).textContent).toBe('…in me.')
+  })
+
+  it('trims a Book paragraph the same way', async () => {
+    installHumilityBook()
+    const { parent, deps } = setup({
+      status: 'ok',
+      attribution: null,
+      verses: [
+        {
+          verseId: makeVerseId(HUMILITY_BOOK, 1, 2),
+          segments: [{ text: 'The second paragraph.', redLetter: false }],
+        },
+      ],
+    })
+
+    await renderReference(parent, model('Humility 1:2 block x/2.4-10'), deps)
+
+    expect(
+      parent.querySelector('.scripture-study-book-paragraph')?.textContent,
+    ).toBe('2…second…')
+    uninstallHumilityBook()
+  })
+
+  it('shows the whole passage when the Fallback Translation served it', async () => {
+    const { parent, deps } = setup({
+      ...john([4, 'Remain in me.']),
+      fallback: { requested: 'nkjv', served: 'web' },
+    } as Passage)
+
+    await renderReference(parent, model('John 15:4 nkjv inline x/4.7-9'), deps)
+
+    expect(passageOf(parent).querySelector(ELLIPSIS_CLASS)).toBeNull()
+    expect(passageOf(parent).textContent).toContain('Remain in me.')
+  })
+
+  it('renders a bare chip with an excerpt token as the chip it is', async () => {
+    const { parent, deps, fetchPassage } = setup(john([4, 'Remain in me.']))
+
+    await renderReference(parent, model('John 15:4 x/4.7-9'), deps)
+
+    expect(parent.querySelector('.scripture-study-chip-ref')?.textContent).toBe('John 15:4')
+    expect(parent.querySelector('.scripture-study-invalid-token')).toBeNull()
+    expect(fetchPassage).not.toHaveBeenCalled()
+  })
+})

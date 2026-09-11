@@ -401,6 +401,24 @@ describe('StudyPanelModel', () => {
     ).toEqual(['4', '5', '6', 'ellipsis', '9'])
   })
 
+  it('lists the whole verses of a reference whatever Excerpt its occurrence carries', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4 x/4.0-3}' })
+
+    expect(panel.view.entries[0].lines).toEqual([
+      {
+        kind: 'verse',
+        verse: {
+          label: null,
+          segments: [
+            { text: `text-${makeVerseId(43, 15, 4)}`, redLetter: false },
+          ],
+        },
+      },
+    ])
+  })
+
   it('stands no ellipsis across a chapter boundary', async () => {
     const panel = model(fakeSource().source)
 

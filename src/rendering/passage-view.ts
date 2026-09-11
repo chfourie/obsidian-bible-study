@@ -1,6 +1,7 @@
-import { highlightSpans } from '../highlights'
+import { highlightSpans, rangeWithinVerse } from '../highlights'
 import {
   decodeVerseId,
+  type ExcerptPart,
   type HighlightCue,
   type Reference,
   type UnderlineCue,
@@ -15,8 +16,13 @@ import {
   type VerseSegment,
 } from './module-passage-source'
 import type { ReferenceRenderModel } from './reference-render-model'
-import { markSpanChannel, stepSegments } from './segment-spans'
-import { isVerseGap } from './verse-gap'
+import {
+  keptSpans,
+  markSpanChannel,
+  stepSegments,
+  type TextSpan,
+} from './segment-spans'
+import { isVerseGap, PASSAGE_ELLIPSIS } from './verse-gap'
 
 export type VerseBlock = {
   verseId: number
@@ -49,10 +55,10 @@ export const isPoetryVerse = (
       segment.indent !== undefined || segment.psalmHeading === true,
   )
 
-// Why the passage stands an ellipsis in place of text. A Verse Gap is the
-// only reason today; an Excerpt's cut is the next one, and two reasons meeting
-// at one place still print one ellipsis.
-export type PassageEllipsisReason = 'gap'
+// Why the passage stands an ellipsis in place of text: a Verse Gap, or an
+// Excerpt's cut that left a whole block out. Two reasons meeting at one place
+// still print one ellipsis.
+export type PassageEllipsisReason = 'gap' | 'excerpt'
 
 // One thing the passage prints, in reading order: a verse block, or an
 // ellipsis standing between two of them. The ellipsis is an entry of its own
@@ -70,6 +76,152 @@ export type PassageView = {
 
 export const verseBlocks = (view: PassageView): VerseBlock[] =>
   view.entries.flatMap((entry) => (entry.kind === 'verse' ? [entry.verse] : []))
+
+export type PassageViewOptions = {
+  // Passage Editing shows the whole passage with the cut text faded, not
+  // hidden (CONTEXT.md — Passage Editing): with elision off the segments
+  // outside the kept parts are flagged elided and no ellipsis stands.
+  elision?: boolean
+}
+
+const ellipsisSegment = (): VerseSegment => ({
+  text: PASSAGE_ELLIPSIS,
+  redLetter: false,
+  ellipsis: true,
+})
+
+const textLengthOf = (segments: readonly VerseSegment[]): number =>
+  segments.reduce((total, segment) => total + segment.text.length, 0)
+
+// The stretches of one block that the Excerpt keeps, in the block's own
+// offsets: each part's span within the atom, shifted to where the block's
+// text starts and clipped to what the block prints.
+const keptInBlock = (
+  block: VerseBlock,
+  excerpt: readonly ExcerptPart[],
+): TextSpan[] => {
+  const end = block.textOffset + textLengthOf(block.segments)
+  return keptSpans(
+    excerpt.flatMap((part) => {
+      const span = rangeWithinVerse(part, block.verseId, end)
+      return span === null ? [] : [span]
+    }),
+    block.textOffset,
+    end,
+  )
+}
+
+const withoutSpans = (spans: readonly TextSpan[], length: number): TextSpan[] => {
+  const gaps: TextSpan[] = []
+  let start = 0
+  for (const span of spans) {
+    if (span.start > start) gaps.push({ start, end: span.start })
+    start = span.end
+  }
+  if (start < length) gaps.push({ start, end: length })
+  return gaps
+}
+
+// The block's segments cut to the kept spans, an ellipsis standing at every
+// cut: before the first kept stretch when it does not start the block, after
+// the last when it does not end it, and between two of them. The first
+// stretch after a cut states its own offset, since the block's count no
+// longer reaches it.
+const elidedSegments = (
+  block: VerseBlock,
+  kept: readonly TextSpan[],
+): VerseSegment[] => {
+  const covered = new Set<VerseSegment>()
+  const pieces = markSpanChannel(block.segments, kept, (piece) => {
+    covered.add(piece)
+  })
+  const elided: VerseSegment[] = []
+  let offset = 0
+  let cut = false
+  for (const piece of pieces) {
+    if (covered.has(piece)) {
+      if (cut) {
+        elided.push(ellipsisSegment())
+        elided.push({ ...piece, textOffset: block.textOffset + offset })
+      } else elided.push(piece)
+      cut = false
+    } else if (piece.text.length > 0) cut = true
+    offset += piece.text.length
+  }
+  if (cut) elided.push(ellipsisSegment())
+  return elided
+}
+
+// Elision is applied last (spec #161, Passage view model): after the cue
+// channels painted, each block is cut to its kept parts, and a block with
+// nothing kept collapses to one ellipsis. A table atom stays whole — its
+// cells read the atom's own offsets, and no drag over a table ever made an
+// excerpt to begin with.
+const excerptedEntry = (
+  block: VerseBlock,
+  excerpt: readonly ExcerptPart[],
+  elision: boolean,
+): PassageEntry => {
+  if (excerpt.length === 0 || block.table !== null) {
+    return { kind: 'verse', verse: block }
+  }
+  const kept = keptInBlock(block, excerpt)
+  if (!elision) {
+    const outside = withoutSpans(kept, textLengthOf(block.segments))
+    const segments = markSpanChannel(block.segments, outside, (piece) => {
+      piece.elided = true
+    })
+    return { kind: 'verse', verse: { ...block, segments } }
+  }
+  if (kept.length === 0) return { kind: 'ellipsis', reason: 'excerpt' }
+  return { kind: 'verse', verse: { ...block, segments: elidedSegments(block, kept) } }
+}
+
+const isEllipsis = (segment: VerseSegment | undefined): boolean =>
+  segment?.ellipsis === true
+
+const endsInEllipsis = (entry: PassageEntry): boolean =>
+  entry.kind === 'ellipsis' ||
+  isEllipsis(entry.verse.segments[entry.verse.segments.length - 1])
+
+const startsInEllipsis = (entry: PassageEntry): boolean =>
+  entry.kind === 'ellipsis' || isEllipsis(entry.verse.segments[0])
+
+const withoutLeadingEllipsis = (block: VerseBlock): VerseBlock => ({
+  ...block,
+  segments: block.segments.slice(1),
+})
+
+// Two ellipses at one place print as one (spec #161, story 63): an ellipsis
+// entry — a Verse Gap or a block cut away whole — folds into a cut ending the
+// block before it or opening the block after it, and a cut spanning two steps
+// of one atom is one cut. Cuts of two different verses stay each verse's own:
+// a verse number or a line stands between them.
+const collapsedEllipses = (entries: readonly PassageEntry[]): PassageEntry[] => {
+  const collapsed: PassageEntry[] = []
+  entries.forEach((entry, index) => {
+    const previous = collapsed[collapsed.length - 1]
+    const next = entries[index + 1]
+    if (entry.kind === 'ellipsis') {
+      const folded =
+        (previous !== undefined && endsInEllipsis(previous)) ||
+        (next !== undefined && startsInEllipsis(next))
+      if (!folded) collapsed.push(entry)
+      return
+    }
+    const continuesCut =
+      previous?.kind === 'verse' &&
+      previous.verse.verseId === entry.verse.verseId &&
+      endsInEllipsis(previous) &&
+      startsInEllipsis(entry)
+    collapsed.push(
+      continuesCut
+        ? { kind: 'verse', verse: withoutLeadingEllipsis(entry.verse) }
+        : entry,
+    )
+  })
+  return collapsed
+}
 
 // Reading order with a Verse Gap ellipsis wherever the author skipped verses
 // (spec §Verse Gap). Steps of one atom share a verse id, so a page walk's
@@ -217,19 +369,26 @@ const stepBlocks = (
 export const buildPassageView = (
   model: ReferenceRenderModel,
   passage: Extract<Passage, { status: 'ok' }>,
+  options: PassageViewOptions = {},
 ): PassageView => {
   const numbered =
     model.display === 'block' || passage.verses.length > 1
-  const cues: PaintedCues =
-    passage.fallback === undefined
-      ? { highlights: model.highlights, underlines: model.underlines }
-      : { highlights: [], underlines: [] }
+  const served = passage.fallback === undefined
+  const cues: PaintedCues = served
+    ? { highlights: model.highlights, underlines: model.underlines }
+    : { highlights: [], underlines: [] }
+  const excerpt = served ? model.excerpt : []
   const blocks =
     passage.steps === undefined
       ? atomBlocks(model, passage.verses, cues, numbered)
       : stepBlocks(model, passage.verses, passage.steps, cues, numbered)
+  const entries = withVerseGaps(blocks, model.reference).map((entry) =>
+    entry.kind === 'verse'
+      ? excerptedEntry(entry.verse, excerpt, options.elision ?? true)
+      : entry,
+  )
   return {
-    entries: withVerseGaps(blocks, model.reference),
+    entries: collapsedEllipses(entries),
     attribution:
       model.display === 'block'
         ? (model.book?.attribution ?? passage.attribution)
