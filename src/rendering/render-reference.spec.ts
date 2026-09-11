@@ -1201,22 +1201,6 @@ describe('renderReference highlights', () => {
     ).toBe('Remain')
   })
 
-  it('offers no highlight editing on a relative reference', async () => {
-    const { parent, deps } = setup(remain())
-    const editHighlights = vi.fn()
-
-    await renderReference(
-      parent,
-      { ...model('John 15:4 inline h1/4.0-6'), relativeSpec: ':4' },
-      { ...deps, editHighlights },
-    )
-
-    expect(editHighlights).not.toHaveBeenCalled()
-    expect(
-      parent.querySelector('.scripture-study-highlight-1')?.textContent,
-    ).toBe('Remain')
-  })
-
   it('offers highlight editing on a full reference', async () => {
     const { parent, deps } = setup(remain())
     const editHighlights = vi.fn()
@@ -1806,5 +1790,50 @@ describe('renderReference verse gaps', () => {
       '5Paragraph 5.',
     ])
     uninstallHumilityBook()
+  })
+})
+
+describe('renderReference highlight editing on relative references', () => {
+  const remain = (): Passage => ({
+    status: 'ok',
+    attribution: null,
+    verses: [
+      {
+        verseId: 43015004,
+        segments: [{ text: 'Remain in me.', redLetter: false }],
+      },
+    ],
+  })
+
+  it('offers highlight editing on a relative reference, its cues still painted', async () => {
+    const { parent, deps } = setup(remain())
+    const editHighlights = vi.fn()
+
+    await renderReference(
+      parent,
+      { ...model('John 15:4 inline h1/4.0-6'), relativeSpec: ':4' },
+      { ...deps, editHighlights },
+    )
+
+    expect(editHighlights).toHaveBeenCalled()
+    expect(
+      parent.querySelector('.scripture-study-highlight-1')?.textContent,
+    ).toBe('Remain')
+  })
+
+  it('offers no highlight editing on a fallback-served relative reference', async () => {
+    const { parent, deps } = setup({
+      ...remain(),
+      fallback: { requested: 'nkjv', served: 'web' },
+    } as Passage)
+    const editHighlights = vi.fn()
+
+    await renderReference(
+      parent,
+      { ...model('John 15:4 nkjv inline'), relativeSpec: ':4' },
+      { ...deps, editHighlights },
+    )
+
+    expect(editHighlights).not.toHaveBeenCalled()
   })
 })

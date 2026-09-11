@@ -133,7 +133,11 @@ export class ReferenceWidget extends WidgetType {
         underlines: this.model.underlines,
         excerpt: this.model.excerpt,
       },
-      { translation: this.model.translationId, translationIds },
+      {
+        translation: this.model.translationId,
+        translationIds,
+        reference: this.model.reference,
+      },
     )
     view.dispatch({
       changes: {

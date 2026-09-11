@@ -367,12 +367,10 @@ const renderUnavailable = (
 }
 
 // Offsets index the requested translation's text, so a substituted passage
-// stays read-only; a relative reference is never rewritten in place, so its
-// cues render but the popover is not offered (spec ticket #102).
+// stays read-only; a relative reference is rewritten in place like a full one.
 const highlightsEditable = (
-  model: ReferenceRenderModel,
   passage: Extract<Passage, { status: 'ok' }>,
-): boolean => model.relativeSpec === null && passage.fallback === undefined
+): boolean => passage.fallback === undefined
 
 const renderTooLong = (host: HTMLElement): void => {
   host.createSpan({
@@ -420,7 +418,7 @@ const mountPassage = async (
     return
   }
   renderPassage(host, buildPassageView(model, passage))
-  if (deps.editHighlights && highlightsEditable(model, passage)) {
+  if (deps.editHighlights && highlightsEditable(passage)) {
     deps.editHighlights(host, {
       cues: model.highlights,
       verses: passage.verses.map((verse) => ({

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   makeVerseId,
   parseReference,
+  parseRelativeReference,
   type ExcerptPart,
   type HighlightCue,
   type HighlightSlot,
@@ -316,5 +317,86 @@ describe('rewriteHighlightToken — non-biblical books', () => {
     expect(
       rewriteHighlightToken('Humility 1:2 h1/1:2.0-1:2.10', [], options),
     ).toBe('Humility 1:2')
+  })
+})
+
+describe('rewriteCueTokens — relative references', () => {
+  const anchor = (text: string) =>
+    parseReference(text, { translationIds: options.translationIds })!
+
+  const resolvedBy = (text: string, anchorText: string) =>
+    parseRelativeReference(text, anchor(anchorText))!.parsed.reference
+
+  const rewriteRelative = (
+    text: string,
+    cues: Partial<CueLists>,
+    anchorText = 'John 15:1-16',
+  ) =>
+    rewriteCueTokens(
+      text,
+      { highlights: [], underlines: [], excerpt: [], ...cues },
+      { ...options, reference: resolvedBy(text, anchorText) },
+    )
+
+  it('writes the cue into the relative token, addressed against the resolved reference', () => {
+    expect(rewriteRelative(':4 inline', { highlights: [cue(1, 4, 0, 4, 6)] })).toBe(
+      ':4 inline h1/4.0-4.6',
+    )
+  })
+
+  it('never pins a translation on a relative reference', () => {
+    expect(
+      rewriteRelative(':4 inline', { highlights: [cue(1, 4, 0, 4, 6)] }),
+    ).not.toContain('nkjv')
+  })
+
+  it('keeps a translation the relative reference names itself', () => {
+    expect(
+      rewriteRelative(':4 kjv inline', { highlights: [cue(1, 4, 0, 4, 6)] }),
+    ).toBe(':4 kjv inline h1/4.0-4.6')
+  })
+
+  it('addresses a chaptered spec against the resolved reference', () => {
+    expect(
+      rewriteRelative('15:2-:4 block', { highlights: [cue(1, 3, 0, 3, 5)] }),
+    ).toBe('15:2-:4 block h1/3.0-3.5')
+  })
+
+  it('qualifies cues outside the resolved reference’s first chapter', () => {
+    expect(
+      rewriteRelative(
+        '15:27-16:2',
+        { highlights: [cue(2, 1, 0, 1, 5, 16)] },
+        'John 15:26-16:4',
+      ),
+    ).toBe('15:27-16:2 h2/16:1.0-16:1.5')
+  })
+
+  it('preserves spelling, spacing and token order, replacing the old cue tail', () => {
+    expect(
+      rewriteRelative(':4,:6   BLOCK h1/4.0-6 kjv', {
+        highlights: [cue(2, 6, 0, 6, 3)],
+      }),
+    ).toBe(':4,:6   BLOCK kjv h2/6.0-6.3')
+  })
+
+  it('appends underline and excerpt tails after the highlights', () => {
+    expect(
+      rewriteRelative(':4-:9 inline', {
+        excerpt: [part(9, 0, 9, 8)],
+        underlines: [cue(2, 7, 0, 7, 9)],
+        highlights: [cue(1, 5, 4, 5, 25)],
+      }),
+    ).toBe(':4-:9 inline h1/5.4-5.25 u2/7.0-7.9 x/9.0-9.8')
+  })
+
+  it('erases the last cue and leaves no translation behind', () => {
+    expect(rewriteRelative(':4 inline h1/4.0-6', {})).toBe(':4 inline')
+  })
+
+  it('leaves a relative token untouched when nothing says what it resolves to', () => {
+    expect(
+      rewriteCueTokens(':4 inline', highlightsOnly([cue(1, 4, 0, 4, 6)]), options),
+    ).toBe(':4 inline')
   })
 })

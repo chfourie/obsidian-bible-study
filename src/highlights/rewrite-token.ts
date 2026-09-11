@@ -6,6 +6,7 @@ import {
   isNonBiblicalBook,
   matchBook,
   parseReference,
+  takeRelativeSpec,
   type CueRange,
   type ExcerptPart,
   type HighlightCue,
@@ -16,6 +17,10 @@ import {
 export type CueTokenRewriteOptions = {
   translation?: string | null
   translationIds?: readonly string[]
+  // What the token displays. A Relative Reference has no book of its own, so
+  // its cues are addressed against this resolved reference (CONTEXT.md —
+  // Relative Reference); a full reference is parsed from the token itself.
+  reference?: Reference
 }
 
 // The three cue families of one reference, each list already canonical
@@ -84,16 +89,20 @@ const cueTail = (cues: CueLists, reference: Reference): string =>
 const hasAnyCue = (cues: CueLists): boolean =>
   cues.highlights.length + cues.underlines.length + cues.excerpt.length > 0
 
-export const rewriteCueTokens = (
-  tokenText: string,
-  cues: CueLists,
-  options: CueTokenRewriteOptions = {},
-): string => {
-  const translationIds = options.translationIds ?? []
-  const parsed = parseReference(tokenText, { translationIds })
-  if (!parsed) return tokenText
+const withTail = (body: string, tail: string): string =>
+  // Everything outside the cue tail is the user's text, trailing spaces and all.
+  tail === '' ? body : `${body.trimEnd()} ${tail}`
 
-  const tokens = tokensOf(tokenText)
+const rewriteFullReference = (
+  tokenText: string,
+  tokens: readonly TextToken[],
+  cues: CueLists,
+  options: CueTokenRewriteOptions,
+): string | null => {
+  const parsed = parseReference(tokenText, {
+    translationIds: options.translationIds ?? [],
+  })
+  if (!parsed) return null
   const body = withoutCueTokens(tokenText, tokens)
   // A cue's offsets index one translation's text, so the first cue of any
   // family pins the translation the reader was looking at. A book has exactly
@@ -105,7 +114,35 @@ export const rewriteCueTokens = (
       ? options.translation
       : null
   const pinned = pin ? withTranslationAfterSpec(body, tokens, pin) : body
-  const tail = cueTail(cues, parsed.reference)
-  // Everything outside the cue tail is the user's text, trailing spaces and all.
-  return tail === '' ? pinned : `${pinned.trimEnd()} ${tail}`
+  return withTail(pinned, cueTail(cues, parsed.reference))
+}
+
+// A Relative Reference follows its Anchor's translation and never pins one of
+// its own; a translation it names itself is user text and stays. No plugin UI
+// today changes a reference's translation token. Should one be added, changing
+// an Anchor's translation must also strip the cues of the relative references
+// that resolve to it and name no translation of their own, or their offsets
+// would point into the wrong text.
+const rewriteRelativeReference = (
+  tokenText: string,
+  tokens: readonly TextToken[],
+  cues: CueLists,
+  options: CueTokenRewriteOptions,
+): string | null => {
+  if (!options.reference || !takeRelativeSpec(tokens)) return null
+  const body = withoutCueTokens(tokenText, tokens)
+  return withTail(body, cueTail(cues, options.reference))
+}
+
+export const rewriteCueTokens = (
+  tokenText: string,
+  cues: CueLists,
+  options: CueTokenRewriteOptions = {},
+): string => {
+  const tokens = tokensOf(tokenText)
+  return (
+    rewriteFullReference(tokenText, tokens, cues, options) ??
+    rewriteRelativeReference(tokenText, tokens, cues, options) ??
+    tokenText
+  )
 }

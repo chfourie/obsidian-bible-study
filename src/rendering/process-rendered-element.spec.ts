@@ -239,7 +239,7 @@ describe('processRenderedElement', () => {
     expect(chipLabels(root)).toEqual(['John 15:4-9'])
   })
 
-  it('renders a relative block passage with its cue and no highlight editing', async () => {
+  it('renders a relative block passage with its cue, editable when a writer is supplied', async () => {
     const { root, deps } = setup()
     const editHighlights = vi.fn()
     const source = '{John 15:4-9 web} says {:4 block h1/4.0-6} here.'
@@ -259,7 +259,7 @@ describe('processRenderedElement', () => {
     expect(
       root.querySelector('.scripture-study-highlight-1')?.textContent,
     ).toBe('Remain')
-    expect(editHighlights).not.toHaveBeenCalled()
+    expect(editHighlights).toHaveBeenCalled()
   })
 
   it('keeps an escaped relative reference literal', async () => {
