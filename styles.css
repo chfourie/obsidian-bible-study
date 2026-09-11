@@ -692,6 +692,14 @@ body {
   color: var(--text-accent);
 }
 
+/* The count indicator is a screen affordance; a PDF export (print media)
+   shows the rendered reference without it. */
+@media print {
+  .scripture-study-intersections {
+    display: none;
+  }
+}
+
 /* ---- Annotations (spec §5) --------------------------------------------- */
 
 .scripture-study-ref-input {
