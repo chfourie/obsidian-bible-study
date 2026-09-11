@@ -463,6 +463,16 @@ body {
   --ss-ul-swatch: var(--ss-ul-5);
 }
 
+/* The excerpt row carries words, not colour, so it sheds the swatch's square
+   shape and takes the width its label needs. */
+.scripture-study-excerpt-choice {
+  width: auto;
+  padding-inline: 0.5em;
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
 .scripture-study-highlight-eraser {
   color: var(--text-muted);
 }

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CueLists } from '../highlights'
-import { attachHighlightEditing } from './highlight-editing'
+import { attachHighlightEditing, strokedCues } from './highlight-editing'
 import type { Passage, PassageSource } from './module-passage-source'
 import { buildReferenceRenderModel } from './reference-render-model'
 import { renderReference, type ReferenceRenderDeps } from './render-reference'
@@ -86,22 +86,25 @@ beforeEach(() => {
 })
 
 describe('attachHighlightEditing popover gating', () => {
-  it('offers five highlight slots, five underline slots and an eraser last, in two rows', async () => {
+  it('offers five highlight slots, five underline slots, an eraser and show only this, in three rows', async () => {
     const { parent } = await render('John 15:4 nkjv inline')
 
     const verse = verseTextOf(parent)
     select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
 
     const choices = swatches()
-    expect(choices).toHaveLength(11)
+    expect(choices).toHaveLength(12)
     expect(choices[0].classList).toContain('scripture-study-highlight-1')
     expect(choices[5].classList).toContain('scripture-study-underline-swatch-1')
     expect(choices[9].classList).toContain('scripture-study-underline-swatch-5')
     expect(choices[10].classList).toContain('scripture-study-highlight-eraser')
+    expect(choices[11].classList).toContain('scripture-study-excerpt-choice')
+    expect(choices[11].textContent).toBe('Show only this')
     const rows = popover()!.querySelectorAll('.scripture-study-highlight-popover-row')
-    expect(rows).toHaveLength(2)
+    expect(rows).toHaveLength(3)
     expect(rows[0].querySelectorAll('.scripture-study-highlight-swatch')).toHaveLength(5)
     expect(rows[1].lastElementChild).toBe(choices[10])
+    expect(rows[2].lastElementChild).toBe(choices[11])
   })
 
   it('stays away when the selection never touches the verse text', async () => {
@@ -281,7 +284,7 @@ describe('attachHighlightEditing keyboard navigation', () => {
     const { choices } = await open()
 
     expect([...choices].map((choice) => choice.tabIndex)).toEqual([
-      0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+      0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     ])
   })
 
@@ -295,11 +298,11 @@ describe('attachHighlightEditing keyboard navigation', () => {
     expect(choices[0].tabIndex).toBe(-1)
     press(choices[1], 'ArrowLeft')
     press(choices[0], 'ArrowLeft')
-    expect(document.activeElement).toBe(choices[10])
-    press(choices[10], 'ArrowDown')
+    expect(document.activeElement).toBe(choices[11])
+    press(choices[11], 'ArrowDown')
     expect(document.activeElement).toBe(choices[0])
     press(choices[0], 'ArrowUp')
-    expect(document.activeElement).toBe(choices[10])
+    expect(document.activeElement).toBe(choices[11])
   })
 
   it('jumps to the first and last choice with Home and End', async () => {
@@ -307,8 +310,8 @@ describe('attachHighlightEditing keyboard navigation', () => {
 
     choices[3].focus()
     press(choices[3], 'End')
-    expect(document.activeElement).toBe(choices[10])
-    press(choices[10], 'Home')
+    expect(document.activeElement).toBe(choices[11])
+    press(choices[11], 'Home')
     expect(document.activeElement).toBe(choices[0])
   })
 
@@ -338,5 +341,112 @@ describe('attachHighlightEditing keyboard navigation', () => {
     press(choices[0], 'Escape')
 
     expect(popover()).toBeNull()
+  })
+})
+
+describe('attachHighlightEditing show only this', () => {
+  const SHOW_ONLY = 11
+
+  const versedPassage = (...verses: [number, string][]): Passage => ({
+    status: 'ok',
+    attribution: 'World English Bible',
+    verses: verses.map(([verseId, text]) => ({
+      verseId,
+      segments: [{ text, redLetter: false }],
+    })),
+  })
+
+  const part = (
+    startVerseId: number,
+    startChar: number,
+    endVerseId: number,
+    endChar: number,
+  ) => ({ startVerseId, startChar, endVerseId, endChar })
+
+  it('creates one excerpt part from the word-snapped selection on a clean passage', async () => {
+    const { parent, write } = await render('John 15:4 nkjv inline')
+
+    const verse = verseTextOf(parent)
+    select({ node: verse, offset: 0 }, { node: verse, offset: 4 })
+    choose(SHOW_ONLY)
+
+    expect(write).toHaveBeenCalledWith({
+      highlights: [],
+      underlines: [],
+      excerpt: [part(43015004, 0, 43015004, 6)],
+    })
+  })
+
+  it('leaves highlights and underlines untouched', async () => {
+    const { parent, write } = await render(
+      'John 15:4 nkjv inline h1/4.0-4.12 u2/4.7-4.12',
+    )
+
+    const verse = verseTextOf(parent)
+    select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+    choose(SHOW_ONLY)
+
+    expect(write).toHaveBeenCalledWith({
+      highlights: [cueAt(1, 0, 12)],
+      underlines: [cueAt(2, 7, 12)],
+      excerpt: [part(43015004, 0, 43015004, 6)],
+    })
+  })
+
+  it('yields one part per contiguous run when the selection crosses a Verse Gap', async () => {
+    const { parent, write } = await render(
+      'John 15:4,9 nkjv inline',
+      versedPassage([43015004, 'Remain in me'], [43015009, 'Abide here now']),
+    )
+
+    const first = verseTextOf(parent, 0)
+    const second = verseTextOf(parent, 1)
+    select({ node: first, offset: 0 }, { node: second, offset: 14 })
+    choose(SHOW_ONLY)
+
+    expect(write).toHaveBeenCalledWith({
+      highlights: [],
+      underlines: [],
+      excerpt: [part(43015004, 0, 43015004, 12), part(43015009, 0, 43015009, 14)],
+    })
+  })
+
+  it('merges a selection reaching over elided text into one part', async () => {
+    const { parent, write } = await render(
+      'John 15:4-5 nkjv inline x/4.0-4.6 x/5.0-5.4',
+      versedPassage([43015004, 'Remain in me'], [43015005, 'I am the vine']),
+    )
+
+    const first = verseTextOf(parent, 0)
+    const second = verseTextOf(parent, 1)
+    select({ node: first, offset: 0 }, { node: second, offset: 4 })
+    choose(SHOW_ONLY)
+
+    expect(write).toHaveBeenCalledWith({
+      highlights: [],
+      underlines: [],
+      excerpt: [part(43015004, 0, 43015005, 4)],
+    })
+  })
+
+  it('adds a second, non-joining part when the gesture is repeated elsewhere', () => {
+    const context = {
+      highlights: [],
+      underlines: [],
+      excerpt: [part(43015004, 0, 43015004, 6)],
+      verses: [{ verseId: 43015004, text: 'Remain in me, and I in you' }],
+    }
+
+    expect(
+      strokedCues(
+        context,
+        { startVerseId: 43015004, startChar: 18, endVerseId: 43015004, endChar: 26 },
+        { kind: 'showOnly' },
+      ),
+    ).toEqual({
+      highlights: [],
+      underlines: [],
+      excerpt: [part(43015004, 0, 43015004, 6), part(43015004, 18, 43015004, 26)],
+    })
   })
 })

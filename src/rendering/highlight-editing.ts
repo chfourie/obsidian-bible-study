@@ -1,4 +1,5 @@
 import {
+  applyExcerptStroke,
   applyHighlightStroke,
   applyUnderlineStroke,
   highlightSelectionRange,
@@ -65,6 +66,16 @@ export const strokedCues = (
           verses,
         ),
         excerpt,
+      }
+    case 'showOnly':
+      return {
+        highlights,
+        underlines,
+        excerpt: applyExcerptStroke(
+          excerpt,
+          { ...range, action: 'show' },
+          verses,
+        ),
       }
   }
 }

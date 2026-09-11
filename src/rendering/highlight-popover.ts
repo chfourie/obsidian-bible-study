@@ -7,12 +7,24 @@ import {
 } from '../data-access'
 import { activate, computeMenuPanelPosition, type AnchorRect } from '../ui'
 
-// What the popover offers: a slot on one channel, or the eraser that clears
-// both. Later rows add `show`, `hide` and `showOnly` kinds for the excerpt.
+// The excerpt row's choices. Outside Passage Editing it is "show only this"
+// alone; Passage Editing swaps it for Show and Hide, so the caller names the
+// set and this module holds only how each one reads.
+export type ExcerptChoiceKind = 'showOnly'
+
+const EXCERPT_CHOICE_LABELS: Record<ExcerptChoiceKind, string> = {
+  showOnly: 'Show only this',
+}
+
+const QUICK_PATH_EXCERPT_CHOICES: readonly ExcerptChoiceKind[] = ['showOnly']
+
+// What the popover offers: a slot on one channel, the eraser that clears both,
+// or an excerpt choice.
 export type PopoverChoice =
   | { kind: 'highlight'; slot: HighlightSlot }
   | { kind: 'underline'; slot: UnderlineSlot }
   | { kind: 'erase' }
+  | { kind: ExcerptChoiceKind }
 
 export type HighlightPopover = {
   element: HTMLElement
@@ -99,8 +111,14 @@ export const openHighlightPopover = (options: {
   doc: Document
   anchor: AnchorRect
   onChoose: (choice: PopoverChoice) => void
+  excerptChoices?: readonly ExcerptChoiceKind[]
 }): HighlightPopover => {
-  const { doc, anchor, onChoose } = options
+  const {
+    doc,
+    anchor,
+    onChoose,
+    excerptChoices = QUICK_PATH_EXCERPT_CHOICES,
+  } = options
   const popover = doc.body.createDiv({
     cls: 'scripture-study-highlight-popover',
     attr: { role: 'menu', 'aria-label': 'Highlight' },
@@ -133,6 +151,18 @@ export const openHighlightPopover = (options: {
   )
   setIcon(eraser, 'eraser')
   items.push(eraser)
+  const excerpt = addRow(popover)
+  for (const kind of excerptChoices) {
+    const label = EXCERPT_CHOICE_LABELS[kind]
+    const choice = addChoice(
+      excerpt,
+      label,
+      'scripture-study-highlight-swatch scripture-study-excerpt-choice',
+      () => onChoose({ kind }),
+    )
+    choice.setText(label)
+    items.push(choice)
+  }
   wireRovingFocus(popover, items)
 
   const view = doc.defaultView

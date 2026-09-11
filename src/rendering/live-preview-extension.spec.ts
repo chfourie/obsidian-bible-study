@@ -292,6 +292,7 @@ describe('highlight editing in Live Preview', () => {
 
   const UNDERLINE_1 = 5
   const ERASER = 10
+  const SHOW_ONLY = 11
 
   const paint = (verseText: HTMLElement, swatch: number): void => {
     const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
@@ -425,6 +426,40 @@ describe('highlight editing in Live Preview', () => {
     paint(hosts[hosts.length - 1], ERASER)
 
     expect(view.state.doc.toString()).toBe('note {John 15:4-9 web inline} and {:4 inline}')
+  })
+
+  it('writes the first excerpt part and pins the effective translation', async () => {
+    const verseText = await verseTextOver('before {John 15:4 inline} after')
+
+    paint(verseText, SHOW_ONLY)
+
+    expect(view.state.doc.toString()).toBe(
+      'before {John 15:4 web inline x/4.0-4.6} after',
+    )
+  })
+
+  it('shows only the selection without disturbing the other cue families', async () => {
+    const verseText = await verseTextOver(
+      'note {John 15:4 web inline h1/4.0-4.12 u2/4.7-4.12}',
+    )
+
+    paint(verseText, SHOW_ONLY)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4 web inline h1/4.0-4.12 u2/4.7-4.12 x/4.0-4.6}',
+    )
+  })
+
+  it('never pins a translation when the excerpt is made on a relative reference', async () => {
+    const hosts = await verseTextsOver(
+      'note {John 15:4-9 web inline} and {:4 inline}',
+    )
+
+    paint(hosts[hosts.length - 1], SHOW_ONLY)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4-9 web inline} and {:4 inline x/4.0-4.6}',
+    )
   })
 
   it('rewrites the occurrence the stroke was made in, not its twin', async () => {
