@@ -527,3 +527,124 @@ describe('buildPassageView — a verse-atom Book’s page walk', () => {
     expect(view.verses.map((block) => block.label)).toEqual(['7', null, null])
   })
 })
+
+describe('buildPassageView — underlines', () => {
+  it('splits a verse segment at the underline boundaries', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline u2/4.0-6'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain', redLetter: false, underlineSlot: 2 },
+      { text: ' in me.', redLetter: false },
+    ])
+  })
+
+  it('paints an underline and a highlight over the same characters', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.0-6 u3/4.0-6'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain', redLetter: false, highlightSlot: 1, underlineSlot: 3 },
+      { text: ' in me.', redLetter: false },
+    ])
+  })
+
+  it('cuts the segments at both channels’ boundaries when they only overlap', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline h1/4.0-9 u4/4.7-13'),
+      passage([verse(15, 4, 'Remain in me.')]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain ', redLetter: false, highlightSlot: 1 },
+      { text: 'in', redLetter: false, highlightSlot: 1, underlineSlot: 4 },
+      { text: ' me.', redLetter: false, underlineSlot: 4 },
+    ])
+  })
+
+  it('carries an underline across neighbouring segments and keeps their flags', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline u5/4.3-10'),
+      passage([
+        {
+          verseId: makeVerseId(43, 15, 4),
+          segments: [
+            { text: 'Remain ', redLetter: true },
+            { text: 'in me.', redLetter: false, supplied: true },
+          ],
+        },
+      ]),
+    )
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Rem', redLetter: true },
+      { text: 'ain ', redLetter: true, underlineSlot: 5 },
+      { text: 'in ', redLetter: false, supplied: true, underlineSlot: 5 },
+      { text: 'me.', redLetter: false, supplied: true },
+    ])
+  })
+
+  it('paints only the verses the reference contains across a gap', () => {
+    const view = buildPassageView(
+      model('John 15:4,9 block u1/4.7-9.6'),
+      passage([verse(15, 4, 'Remain in me.'), verse(15, 9, 'Remain in my love.')]),
+    )
+
+    expect(view.verses.map((block) => block.segments)).toEqual([
+      [
+        { text: 'Remain ', redLetter: false },
+        { text: 'in me.', redLetter: false, underlineSlot: 1 },
+      ],
+      [
+        { text: 'Remain', redLetter: false, underlineSlot: 1 },
+        { text: ' in my love.', redLetter: false },
+      ],
+    ])
+  })
+
+  it('suppresses underlines on a fallback-served passage', () => {
+    const view = buildPassageView(model('John 15:4 nkjv inline h1/4.0-6 u1/4.0-6'), {
+      ...passage([verse(15, 4, 'Remain in me.')]),
+      fallback: { requested: 'nkjv', served: 'web' },
+    })
+
+    expect(view.verses[0].segments).toEqual([
+      { text: 'Remain in me.', redLetter: false },
+    ])
+  })
+
+  it('leaves segments untouched when the reference carries neither cue family', () => {
+    const segments = [{ text: 'Remain in me.', redLetter: false }]
+    const view = buildPassageView(
+      model('John 15:4 inline'),
+      passage([{ verseId: makeVerseId(43, 15, 4), segments }]),
+    )
+
+    expect(view.verses[0].segments).toBe(segments)
+  })
+})
+
+describe('buildPassageView — underlines on a verse-atom Book’s page walk', () => {
+  beforeEach(installEnochBook)
+  afterEach(uninstallEnochBook)
+
+  it('paints an underline over 5:7 on every step of 7 and on no step of 6', async () => {
+    const rendered = model('1 Enoch 5:6-7 block u2/7.0-140')
+    const walkedPassage = await new ModulePassageSource(
+      enochPassageStore(),
+    ).passage(rendered.reference, ENOCH_MODULE_ID)
+    if (walkedPassage.status !== 'ok') throw new Error('unavailable')
+    const view = buildPassageView(rendered, walkedPassage)
+
+    const painted = view.verses.map((block) =>
+      block.segments.some((segment) => segment.underlineSlot === 2),
+    )
+    expect(
+      view.verses.map((block) => block.verseId === makeVerseId(ENOCH_BOOK, 5, 7)),
+    ).toEqual(painted)
+  })
+})

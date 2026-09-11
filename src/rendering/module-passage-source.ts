@@ -47,6 +47,10 @@ export type VerseSegment = {
   indent?: number
   psalmHeading?: boolean
   highlightSlot?: number
+  // The Underline Slot drawn under this stretch — its own channel, so a
+  // segment may carry a highlight and an underline at once (CONTEXT.md —
+  // Underline).
+  underlineSlot?: number
   // Set on the words an entry asked the reader to emphasize — a search hit's
   // matched words, which live only as long as the entry banner does.
   emphasized?: boolean
