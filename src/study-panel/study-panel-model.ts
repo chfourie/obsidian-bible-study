@@ -31,6 +31,7 @@ import {
 } from '../reference'
 import {
   exceedsDisplayVerseLimit,
+  isVerseGap,
   type PassageSource,
   type PassageVerse,
   type VerseSegment,
@@ -54,6 +55,18 @@ export type ReferenceEntryVerse = {
   segments: VerseSegment[]
 }
 
+// One line the panel prints for an entry: a cited verse, or the ellipsis that
+// stands where the reference skipped verses (CONTEXT.md — Verse Gap). The
+// panel lists whole verses, so a gap is the only thing that ever elides here.
+export type ReferenceEntryLine =
+  | { kind: 'verse'; verse: ReferenceEntryVerse }
+  | { kind: 'ellipsis' }
+
+export const entryVerses = (entry: {
+  lines: readonly ReferenceEntryLine[]
+}): ReferenceEntryVerse[] =>
+  entry.lines.flatMap((line) => (line.kind === 'verse' ? [line.verse] : []))
+
 export type ReferenceEntryStatus =
   | 'loading'
   | 'ok'
@@ -69,7 +82,7 @@ export type ReferenceEntryView = {
   translation: string | null
   translationLabel: string | null
   status: ReferenceEntryStatus
-  verses: ReferenceEntryVerse[]
+  lines: ReferenceEntryLine[]
   attribution: string | null
   // Present for an installed non-biblical book: its edition module fills the
   // translation slot outright and its full citation stands in for the
@@ -143,6 +156,32 @@ const verseLabels = (verses: PassageVerse[]): (string | null)[] => {
   return locations.map((location) =>
     multiChapter ? `${location.chapter}:${location.verse}` : `${location.verse}`,
   )
+}
+
+// The entry's lines in reading order, with an ellipsis wherever the reference
+// skipped verses; a verse the translation does not serve is a content gap and
+// stands for nothing (spec §Verse Gap).
+const entryLines = (
+  verses: PassageVerse[],
+  labels: (string | null)[],
+  reference: Reference,
+): ReferenceEntryLine[] => {
+  const lines: ReferenceEntryLine[] = []
+  let previousVerseId: number | null = null
+  verses.forEach((verse, index) => {
+    if (
+      previousVerseId !== null &&
+      isVerseGap(previousVerseId, verse.verseId, reference)
+    ) {
+      lines.push({ kind: 'ellipsis' })
+    }
+    lines.push({
+      kind: 'verse',
+      verse: { label: labels[index], segments: verse.segments },
+    })
+    previousVerseId = verse.verseId
+  })
+  return lines
 }
 
 type PanelReference = { reference: Reference; translation: string | null }
@@ -505,7 +544,7 @@ export class StudyPanelModel {
       translationLabel:
         entry.book === null ? this.#translationLabel(entry.translation) : null,
       status: 'loading',
-      verses: [],
+      lines: [],
       attribution: null,
     }))
     this.#notify()
@@ -530,7 +569,7 @@ export class StudyPanelModel {
         translationLabel:
           book === null ? this.#translationLabel(translation) : null,
         status: exceedsDisplayVerseLimit(reference) ? 'too-long' : 'loading',
-        verses: [],
+        lines: [],
         attribution: null,
         book,
       }
@@ -570,15 +609,12 @@ export class StudyPanelModel {
     this.#entries = this.#entries.map((entry) => {
       if (entry.key !== key) return entry
       if (passage.status !== 'ok')
-        return { ...entry, status: 'unavailable', verses: [], attribution: null }
+        return { ...entry, status: 'unavailable', lines: [], attribution: null }
       const labels = verseLabels(passage.verses)
       return {
         ...entry,
         status: 'ok',
-        verses: passage.verses.map((verse, index) => ({
-          label: labels[index],
-          segments: verse.segments,
-        })),
+        lines: entryLines(passage.verses, labels, entry.reference),
         attribution: entry.book?.attribution ?? passage.attribution,
       }
     })

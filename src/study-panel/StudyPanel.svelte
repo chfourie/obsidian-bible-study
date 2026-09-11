@@ -194,11 +194,13 @@ opens the reference in the reader with the entry's translation.
                 <p class="bsp-entry-state">Reference too long to display</p>
               {:else}
                 <div class="bsp-verses">
-                  {#each entry.verses as verse, index (index)}
+                  {#each entry.lines as line, index (index)}
                     <p class="bsp-verse">
-                      {#if verse.label !== null}
-                        <span class="bsp-verse-number">{verse.label}</span>
-                      {/if}{#each verse.segments as segment, part (part)}{@render markedText(segment)}{/each}
+                      {#if line.kind === 'ellipsis'}<span
+                          class="bsp-verse-gap">…</span
+                        >{:else}{#if line.verse.label !== null}
+                          <span class="bsp-verse-number">{line.verse.label}</span>
+                        {/if}{#each line.verse.segments as segment, part (part)}{@render markedText(segment)}{/each}{/if}
                     </p>
                   {/each}
                 </div>
@@ -400,6 +402,12 @@ opens the reference in the reader with the entry's translation.
   .bsp-verse {
     margin: 0;
     line-height: var(--line-height-normal);
+  }
+
+  /* The Verse Gap ellipsis (CONTEXT.md — Verse Gap): muted, on its own line
+     and without a verse number, as it is in a block passage. */
+  .bsp-verse-gap {
+    color: var(--text-faint);
   }
 
   .bsp-verse-number {
