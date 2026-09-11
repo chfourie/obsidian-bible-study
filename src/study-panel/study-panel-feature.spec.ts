@@ -20,6 +20,7 @@ import {
   StudyPanelFeature,
   type CloudExclusionEditor,
 } from './study-panel-feature'
+import { entryVerses } from './study-panel-model'
 import { StudyPanelView } from './study-panel-view'
 
 const manifest = (id: string): ModuleManifest => ({
@@ -399,7 +400,7 @@ describe('StudyPanelFeature entry points', () => {
       'John 15:1',
     ])
     expect(
-      view.model.view.entries[0].verses[0].segments
+      entryVerses(view.model.view.entries[0])[0].segments
         .map((segment) => segment.text)
         .join(''),
     ).toBe('I am the true vine.')

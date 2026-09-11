@@ -25,6 +25,7 @@ import type { Passage, PassageSource } from '../rendering'
 import { ModulePassageSource } from '../rendering/module-passage-source'
 import { extractOccurrences, VaultReferenceIndex } from '../vault-index'
 import {
+  entryVerses,
   StudyPanelModel,
   type AnnotationDetails,
   type StudyPanelDeps,
@@ -223,7 +224,7 @@ describe('StudyPanelModel', () => {
       'Genesis 1:1',
     ])
     expect(panel.view.entries[0].status).toBe('ok')
-    expect(panel.view.entries[0].verses).toEqual([
+    expect(entryVerses(panel.view.entries[0])).toEqual([
       {
         label: null,
         segments: [{ text: `text-${makeVerseId(43, 15, 1)}`, redLetter: false }],
@@ -369,7 +370,7 @@ describe('StudyPanelModel', () => {
 
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:1-2}' })
 
-    expect(panel.view.entries[0].verses.map((verse) => verse.label)).toEqual([
+    expect(entryVerses(panel.view.entries[0]).map((verse) => verse.label)).toEqual([
       '1',
       '2',
     ])
@@ -380,11 +381,52 @@ describe('StudyPanelModel', () => {
 
     await panel.setActiveNote({ file: 'note.md', content: '{John 15:26-16:2}' })
 
-    expect(panel.view.entries[0].verses.map((verse) => verse.label)).toEqual([
+    expect(entryVerses(panel.view.entries[0]).map((verse) => verse.label)).toEqual([
       '15:26',
       '15:27',
       '16:1',
       '16:2',
+    ])
+  })
+
+  it('stands an ellipsis where a listed reference skips verses', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4-6,9}' })
+
+    expect(
+      panel.view.entries[0].lines.map((line) =>
+        line.kind === 'verse' ? line.verse.label : line.kind,
+      ),
+    ).toEqual(['4', '5', '6', 'ellipsis', '9'])
+  })
+
+  it('stands no ellipsis across a chapter boundary', async () => {
+    const panel = model(fakeSource().source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:27,16:1}' })
+
+    expect(panel.view.entries[0].lines.map((line) => line.kind)).toEqual([
+      'verse',
+      'verse',
+    ])
+  })
+
+  it('stands no ellipsis where the translation does not serve a verse the reference asks for', async () => {
+    const fake = fakeSource()
+    fake.useResponse((reference) => ({
+      ...(versesFor(reference) as Extract<Passage, { status: 'ok' }>),
+      verses: (
+        versesFor(reference) as Extract<Passage, { status: 'ok' }>
+      ).verses.filter((verse) => verse.verseId !== makeVerseId(43, 15, 5)),
+    }))
+    const panel = model(fake.source)
+
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:4-6}' })
+
+    expect(panel.view.entries[0].lines.map((line) => line.kind)).toEqual([
+      'verse',
+      'verse',
     ])
   })
 
@@ -417,7 +459,7 @@ describe('StudyPanelModel', () => {
 
     expect(panel.view.status).toBe('ok')
     expect(panel.view.entries[0].status).toBe('unavailable')
-    expect(panel.view.entries[0].verses).toEqual([])
+    expect(entryVerses(panel.view.entries[0])).toEqual([])
   })
 
   it('still loads a passage at the 180-verse display limit', async () => {
@@ -430,7 +472,7 @@ describe('StudyPanelModel', () => {
     })
 
     expect(panel.view.entries[0].status).toBe('ok')
-    expect(panel.view.entries[0].verses).not.toEqual([])
+    expect(entryVerses(panel.view.entries[0])).not.toEqual([])
     expect(fake.requests).toHaveLength(1)
   })
 
@@ -441,7 +483,7 @@ describe('StudyPanelModel', () => {
     await panel.setActiveNote({ file: 'note.md', content: '{John}' })
 
     expect(panel.view.entries[0].status).toBe('too-long')
-    expect(panel.view.entries[0].verses).toEqual([])
+    expect(entryVerses(panel.view.entries[0])).toEqual([])
     expect(fake.requests).toEqual([])
   })
 
@@ -1615,7 +1657,7 @@ describe('book references in the Study Panel', () => {
 
     await panel.setActiveNote({ file: 'note.md', content: '{1 Enoch 1:4-5}' })
 
-    const [even, steadfast] = panel.view.entries[0].verses
+    const [even, steadfast] = entryVerses(panel.view.entries[0])
     expect(even.segments.map((segment) => segment.text).join('')).toBe('earth, even on Mount Sinai, [And appear from His camp]')
     expect(even.segments.filter((segment) => segment.supplied).map((segment) => segment.text)).toEqual(['even'])
     expect(even.segments.filter((segment) => segment.marks).map((segment) => segment.text)).toEqual(['[', ']'])

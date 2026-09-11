@@ -26,8 +26,10 @@ import {
   loadingText,
   unavailableText,
   type PassageView,
+  type VerseBlock,
 } from './passage-view'
 import type { ReferenceRenderModel } from './reference-render-model'
+import { PASSAGE_ELLIPSIS } from './verse-gap'
 
 export type NoteIntersectionSource = {
   intersecting: (reference: Reference) => OccurrenceGroup[]
@@ -236,7 +238,7 @@ const renderSegment = (parent: HTMLElement, segment: VerseSegment): void => {
 // it does in prose.
 const renderTable = (
   holder: HTMLElement,
-  rows: NonNullable<PassageView['verses'][number]['table']>,
+  rows: NonNullable<VerseBlock['table']>,
   segments: VerseSegment[],
 ): void => {
   const table = holder.createEl('table', { cls: 'scripture-study-table' })
@@ -250,7 +252,7 @@ const renderTable = (
   }
 }
 
-const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number]): void => {
+const renderSegments = (parent: HTMLElement, block: VerseBlock): void => {
   if (block.label !== null) {
     parent.createEl('sup', {
       cls: 'scripture-study-verse-number',
@@ -290,6 +292,16 @@ const renderSegments = (parent: HTMLElement, block: PassageView['verses'][number
     if (segment.lineBreakBefore) holder.createEl('br')
     renderSegment(holder, segment)
   }
+}
+
+// The one place an ellipsis is drawn, whatever stood it there: a real U+2026
+// in a muted span outside every verse-text holder, so a drag over the passage
+// never maps it to a verse and copying the passage copies the character.
+const renderEllipsis = (parent: HTMLElement): void => {
+  parent.createSpan({
+    cls: 'scripture-study-passage-ellipsis',
+    text: PASSAGE_ELLIPSIS,
+  })
 }
 
 const renderFallbackNotice = (host: HTMLElement, view: PassageView): void => {
@@ -382,7 +394,7 @@ const mountPassage = async (
       renderNavigableAttribution(
         host,
         {
-          verses: [],
+          entries: [],
           attribution: model.book.attribution,
           fallbackNotice: null,
         },
@@ -451,8 +463,10 @@ const renderNavigableAttribution = (
 // paragraph, so the same stack reads as prose instead (spec-books §4).
 const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
-  for (const block of view.verses) {
-    renderSegments(host.createDiv({ cls: 'scripture-study-verse-line' }), block)
+  for (const entry of view.entries) {
+    const line = host.createDiv({ cls: 'scripture-study-verse-line' })
+    if (entry.kind === 'ellipsis') renderEllipsis(line)
+    else renderSegments(line, entry.verse)
   }
   renderAttribution(host, view)
 }
@@ -461,19 +475,18 @@ const renderBookParagraphs =
   (model: ReferenceRenderModel, deps: ReferenceRenderDeps) =>
   (host: HTMLElement, view: PassageView): void => {
     renderFallbackNotice(host, view)
-    for (const block of view.verses) {
-      renderSegments(
-        host.createDiv({ cls: 'scripture-study-book-paragraph' }),
-        block,
-      )
+    for (const entry of view.entries) {
+      const paragraph = host.createDiv({ cls: 'scripture-study-book-paragraph' })
+      if (entry.kind === 'ellipsis') renderEllipsis(paragraph)
+      else renderSegments(paragraph, entry.verse)
     }
     renderNavigableAttribution(host, view, model, deps)
   }
 
 const joinBlocks = (
   host: HTMLElement,
-  block: PassageView['verses'][number],
-  previous: PassageView['verses'][number],
+  block: VerseBlock,
+  previous: VerseBlock,
 ): void => {
   if (block.startsNewLine || previous.startsNewLine) host.createEl('br')
   else host.appendText(' ')
@@ -487,29 +500,43 @@ const renderBookProse =
   (host: HTMLElement, view: PassageView): void => {
     renderFallbackNotice(host, view)
     let prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
-    view.verses.forEach((block, index) => {
-      if (index > 0) {
-        if (block.startsParagraph)
-          prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
-        else joinBlocks(prose, block, view.verses[index - 1])
+    let previous: VerseBlock | null = null
+    for (const entry of view.entries) {
+      if (entry.kind === 'ellipsis') {
+        renderEllipsis(prose)
+        continue
       }
-      renderSegments(prose, block)
-    })
+      if (previous !== null) {
+        if (entry.verse.startsParagraph)
+          prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
+        else joinBlocks(prose, entry.verse, previous)
+      }
+      renderSegments(prose, entry.verse)
+      previous = entry.verse
+    }
     renderNavigableAttribution(host, view, model, deps)
   }
 
 // Inline has no runs to open: a stanza blank is a blank line in the quote.
 const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
   renderFallbackNotice(host, view)
-  view.verses.forEach((block, index) => {
-    if (index > 0) {
-      if (block.startsParagraph) {
-        host.createEl('br')
-        host.createEl('br')
-      } else joinBlocks(host, block, view.verses[index - 1])
+  let previous: VerseBlock | null = null
+  for (const entry of view.entries) {
+    // The gap ellipsis follows the preceding verse's text and precedes the
+    // joining space, so the run reads `…6 He is thrown away.… 9Remain`.
+    if (entry.kind === 'ellipsis') {
+      renderEllipsis(host)
+      continue
     }
-    renderSegments(host, block)
-  })
+    if (previous !== null) {
+      if (entry.verse.startsParagraph) {
+        host.createEl('br')
+        host.createEl('br')
+      } else joinBlocks(host, entry.verse, previous)
+    }
+    renderSegments(host, entry.verse)
+    previous = entry.verse
+  }
 }
 
 const renderBlock = (

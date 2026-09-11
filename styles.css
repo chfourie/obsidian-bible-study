@@ -111,6 +111,16 @@ body {
   font-style: normal;
 }
 
+/* A Verse Gap's ellipsis (CONTEXT.md — Verse Gap): muted chrome standing for
+   the verses the author skipped. It carries no verse id, so a drag over the
+   passage never selects it and no highlight cue can cover it. Inline it
+   follows the preceding verse's text directly, so the padding gives it air
+   without putting a copyable space in the passage. */
+.scripture-study-passage-ellipsis {
+  padding-left: 0.15em;
+  color: var(--text-faint);
+}
+
 /* A Line letter in a block quote's number slot (spec-books §4, §11): the
    print's `6a`, chrome beside the text and never part of it. */
 .scripture-study-line-letter {
