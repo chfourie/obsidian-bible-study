@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import {
   makeVerseId,
+  type ExcerptPart,
   type HighlightCue,
   type HighlightSlot,
+  type UnderlineCue,
+  type UnderlineSlot,
 } from '../reference'
 import {
+  applyExcerptStroke,
   applyHighlightStroke,
+  applyUnderlineStroke,
+  canonicalExcerptParts,
   canonicalHighlightCues,
+  canonicalUnderlineCues,
+  type ExcerptStroke,
   type HighlightStroke,
   type VerseText,
 } from './apply-stroke'
@@ -216,5 +224,170 @@ describe('canonicalHighlightCues', () => {
     expect(canonicalHighlightCues([cue(1, 4, 2, 9, 4)], gapped)).toEqual([
       cue(1, 4, 2, 9, 4),
     ])
+  })
+})
+
+const underline = (
+  slot: UnderlineSlot,
+  startVerse: number,
+  startChar: number,
+  endVerse: number,
+  endChar: number,
+): UnderlineCue => ({
+  slot,
+  startVerseId: john(15, startVerse),
+  startChar,
+  endVerseId: john(15, endVerse),
+  endChar,
+})
+
+const part = (
+  startVerse: number,
+  startChar: number,
+  endVerse: number,
+  endChar: number,
+): ExcerptPart => ({
+  startVerseId: john(15, startVerse),
+  startChar,
+  endVerseId: john(15, endVerse),
+  endChar,
+})
+
+const excerptStroke = (
+  action: ExcerptStroke['action'],
+  startVerse: number,
+  startChar: number,
+  endVerse: number,
+  endChar: number,
+): ExcerptStroke => ({ action, ...part(startVerse, startChar, endVerse, endChar) })
+
+describe('applyUnderlineStroke — the underline channel', () => {
+  it('records a stroke over untouched text', () => {
+    expect(applyUnderlineStroke([], stroke(4, 5, 4, 5, 25), passage)).toEqual([
+      underline(4, 5, 4, 5, 25),
+    ])
+  })
+
+  it('lets a second slot claim the overlap of the first', () => {
+    expect(
+      applyUnderlineStroke(
+        [underline(1, 5, 0, 5, 10)],
+        stroke(2, 5, 5, 5, 15),
+        passage,
+      ),
+    ).toEqual([underline(1, 5, 0, 5, 5), underline(2, 5, 5, 5, 15)])
+  })
+
+  it('merges a same-slot stroke that touches a span', () => {
+    expect(
+      applyUnderlineStroke(
+        [underline(3, 5, 0, 5, 10)],
+        stroke(3, 5, 10, 5, 18),
+        passage,
+      ),
+    ).toEqual([underline(3, 5, 0, 5, 18)])
+  })
+
+  it('splits a stroke that crosses a gap in the passage', () => {
+    const gapped = [...versesOf(15, 4, 3), ...versesOf(15, 9, 1)]
+    expect(applyUnderlineStroke([], stroke(1, 4, 2, 9, 4), gapped)).toEqual([
+      underline(1, 4, 2, 6, 40),
+      underline(1, 9, 0, 9, 4),
+    ])
+  })
+
+  it('erases the covered part of a span', () => {
+    expect(
+      applyUnderlineStroke(
+        [underline(1, 5, 0, 5, 20)],
+        stroke(null, 5, 8, 5, 12),
+        passage,
+      ),
+    ).toEqual([underline(1, 5, 0, 5, 8), underline(1, 5, 12, 5, 20)])
+  })
+
+  it('leaves a cue on an unserved verse where the user wrote it', () => {
+    expect(
+      applyUnderlineStroke(
+        [underline(1, 20, 0, 20, 5)],
+        stroke(2, 5, 0, 5, 10),
+        passage,
+      ),
+    ).toEqual([underline(2, 5, 0, 5, 10), underline(1, 20, 0, 20, 5)])
+  })
+})
+
+describe('canonicalUnderlineCues', () => {
+  it('sorts and resolves overlaps in favour of the later cue', () => {
+    expect(
+      canonicalUnderlineCues(
+        [underline(2, 9, 20, 9, 25), underline(1, 5, 0, 5, 10), underline(2, 5, 5, 5, 15)],
+        passage,
+      ),
+    ).toEqual([
+      underline(1, 5, 0, 5, 5),
+      underline(2, 5, 5, 5, 15),
+      underline(2, 9, 20, 9, 25),
+    ])
+  })
+})
+
+describe('applyExcerptStroke — the excerpt channel', () => {
+  it('shows a part over a passage with no excerpt', () => {
+    expect(applyExcerptStroke([], excerptStroke('show', 5, 4, 5, 25), passage)).toEqual([
+      part(5, 4, 5, 25),
+    ])
+  })
+
+  it('keeps a second non-joining part beside the first', () => {
+    expect(
+      applyExcerptStroke([part(5, 0, 5, 10)], excerptStroke('show', 5, 20, 5, 30), passage),
+    ).toEqual([part(5, 0, 5, 10), part(5, 20, 5, 30)])
+  })
+
+  it('merges a part the shown selection touches or overlaps', () => {
+    expect(
+      applyExcerptStroke([part(5, 0, 5, 10)], excerptStroke('show', 5, 10, 5, 18), passage),
+    ).toEqual([part(5, 0, 5, 18)])
+    expect(
+      applyExcerptStroke([part(5, 0, 5, 10)], excerptStroke('show', 5, 6, 5, 18), passage),
+    ).toEqual([part(5, 0, 5, 18)])
+  })
+
+  it('splits a shown selection at a gap in the passage', () => {
+    const gapped = [...versesOf(15, 4, 3), ...versesOf(15, 9, 1)]
+    expect(applyExcerptStroke([], excerptStroke('show', 4, 2, 9, 4), gapped)).toEqual([
+      part(4, 2, 6, 40),
+      part(9, 0, 9, 4),
+    ])
+  })
+
+  it('hides the middle of a part, splitting it', () => {
+    expect(
+      applyExcerptStroke([part(5, 0, 5, 20)], excerptStroke('hide', 5, 8, 5, 12), passage),
+    ).toEqual([part(5, 0, 5, 8), part(5, 12, 5, 20)])
+  })
+
+  it('hides a part entirely', () => {
+    expect(
+      applyExcerptStroke([part(5, 8, 5, 12)], excerptStroke('hide', 5, 0, 5, 20), passage),
+    ).toEqual([])
+  })
+
+  it('leaves a part on an unserved verse where the user wrote it', () => {
+    expect(
+      applyExcerptStroke([part(20, 0, 20, 5)], excerptStroke('show', 5, 0, 5, 10), passage),
+    ).toEqual([part(5, 0, 5, 10), part(20, 0, 20, 5)])
+  })
+})
+
+describe('canonicalExcerptParts', () => {
+  it('sorts and merges parts that touch or overlap', () => {
+    expect(
+      canonicalExcerptParts(
+        [part(9, 20, 9, 25), part(5, 5, 5, 15), part(5, 0, 5, 10)],
+        passage,
+      ),
+    ).toEqual([part(5, 0, 5, 15), part(9, 20, 9, 25)])
   })
 })

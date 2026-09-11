@@ -7,11 +7,17 @@ export type HighlightRange = {
   endChar: number
 }
 
-export type HighlightSpan = {
+// A slot channel: any cue family whose members carry a numbered slot. The
+// excerpt channel runs on one implicit slot.
+export type Slotted<Slot extends number> = HighlightRange & { slot: Slot }
+
+export type SlotRun<Slot extends number> = {
   start: number
   end: number
-  slot: HighlightSlot
+  slot: Slot
 }
+
+export type HighlightSpan = SlotRun<HighlightSlot>
 
 export const rangeWithinVerse = (
   range: HighlightRange,
@@ -28,10 +34,10 @@ export const rangeWithinVerse = (
     : null
 }
 
-export const slotRuns = (
-  slots: readonly (HighlightSlot | null)[],
-): HighlightSpan[] => {
-  const spans: HighlightSpan[] = []
+export const slotRuns = <Slot extends number>(
+  slots: readonly (Slot | null)[],
+): SlotRun<Slot>[] => {
+  const spans: SlotRun<Slot>[] = []
   slots.forEach((slot, index) => {
     if (slot === null) return
     const open = spans[spans.length - 1]
@@ -46,12 +52,12 @@ export const slotRuns = (
 
 // Later cues paint over earlier ones: a stroke always claims the whole
 // selection it covers, the way a physical highlighter pass does.
-export const paintedSlots = (
-  cues: readonly HighlightCue[],
+export const paintedSlots = <Slot extends number>(
+  cues: readonly Slotted<Slot>[],
   verseId: number,
   textLength: number,
-): (HighlightSlot | null)[] => {
-  const slots: (HighlightSlot | null)[] = Array.from(
+): (Slot | null)[] => {
+  const slots: (Slot | null)[] = Array.from(
     { length: textLength },
     () => null,
   )

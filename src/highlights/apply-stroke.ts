@@ -1,13 +1,17 @@
 import {
   nextVerse,
+  type ExcerptPart,
   type HighlightCue,
   type HighlightSlot,
+  type UnderlineCue,
+  type UnderlineSlot,
 } from '../reference'
 import {
   paintedSlots,
   rangeWithinVerse,
   slotRuns,
   type HighlightRange,
+  type Slotted,
 } from './highlight-spans'
 
 export type VerseText = {
@@ -16,9 +20,18 @@ export type VerseText = {
 }
 
 // A null slot erases: the eraser is a stroke like any other.
-export type HighlightStroke = HighlightRange & {
-  slot: HighlightSlot | null
+export type ChannelStroke<Slot extends number> = HighlightRange & {
+  slot: Slot | null
 }
+
+export type HighlightStroke = ChannelStroke<HighlightSlot>
+
+export type UnderlineStroke = ChannelStroke<UnderlineSlot>
+
+// The excerpt channel has one implicit slot: Show paints it, Hide erases it,
+// and the kept parts are what remains painted (spec — Stroke engine per
+// channel).
+export type ExcerptStroke = HighlightRange & { action: 'show' | 'hide' }
 
 // A place in the passage: the character boundary before `char` of `verseId`.
 type Position = {
@@ -26,8 +39,8 @@ type Position = {
   char: number
 }
 
-type Portion = {
-  slot: HighlightSlot
+type Portion<Slot extends number> = {
+  slot: Slot
   start: Position
   end: Position
 }
@@ -45,13 +58,13 @@ const samePlace = (a: Position, b: Position): boolean =>
 
 const later = (a: Position, b: Position): Position => (before(a, b) ? b : a)
 
-const portionOf = (cue: HighlightCue): Portion => ({
+const portionOf = <Slot extends number>(cue: Slotted<Slot>): Portion<Slot> => ({
   slot: cue.slot,
   start: { verseId: cue.startVerseId, char: cue.startChar },
   end: { verseId: cue.endVerseId, char: cue.endChar },
 })
 
-const cueOf = (portion: Portion): HighlightCue => ({
+const cueOf = <Slot extends number>(portion: Portion<Slot>): Slotted<Slot> => ({
   slot: portion.slot,
   startVerseId: portion.start.verseId,
   startChar: portion.start.char,
@@ -107,10 +120,13 @@ const servedRegions = (
     rangeWithinVerse(range, verse.verseId, verse.text.length),
   )
 
-const outsideRegion = (portion: Portion, region: Region): Portion[] => {
+const outsideRegion = <Slot extends number>(
+  portion: Portion<Slot>,
+  region: Region,
+): Portion<Slot>[] => {
   if (!before(region.start, portion.end) || !before(portion.start, region.end))
     return [portion]
-  const kept: Portion[] = []
+  const kept: Portion<Slot>[] = []
   if (before(portion.start, region.start))
     kept.push({ ...portion, end: region.start })
   if (before(region.end, portion.end))
@@ -118,11 +134,11 @@ const outsideRegion = (portion: Portion, region: Region): Portion[] => {
   return kept
 }
 
-const outsideRegions = (
-  portions: readonly Portion[],
+const outsideRegions = <Slot extends number>(
+  portions: readonly Portion<Slot>[],
   regions: readonly Region[],
-): Portion[] =>
-  regions.reduce<Portion[]>(
+): Portion<Slot>[] =>
+  regions.reduce<Portion<Slot>[]>(
     (kept, region) =>
       kept.flatMap((portion) => outsideRegion(portion, region)),
     [...portions],
@@ -161,10 +177,10 @@ const tightenedEnd = (
   }
 }
 
-const tightened = (
-  portions: readonly Portion[],
+const tightened = <Slot extends number>(
+  portions: readonly Portion<Slot>[],
   verses: readonly VerseText[],
-): Portion[] =>
+): Portion<Slot>[] =>
   portions
     .map((portion) => ({
       ...portion,
@@ -188,11 +204,11 @@ const adjoins = (
   )
 }
 
-const joined = (
-  portions: readonly Portion[],
+const joined = <Slot extends number>(
+  portions: readonly Portion<Slot>[],
   verses: readonly VerseText[],
-): Portion[] => {
-  const merged: Portion[] = []
+): Portion<Slot>[] => {
+  const merged: Portion<Slot>[] = []
   for (const portion of portions) {
     const open = merged[merged.length - 1]
     if (
@@ -208,10 +224,10 @@ const joined = (
   return merged
 }
 
-const settled = (
-  portions: readonly Portion[],
+const settled = <Slot extends number>(
+  portions: readonly Portion<Slot>[],
   verses: readonly VerseText[],
-): HighlightCue[] =>
+): Slotted<Slot>[] =>
   joined(
     [...tightened(portions, verses)].sort(
       (a, b) =>
@@ -222,10 +238,10 @@ const settled = (
     verses,
   ).map(cueOf)
 
-const paintedPortions = (
-  cues: readonly HighlightCue[],
+const paintedPortions = <Slot extends number>(
+  cues: readonly Slotted<Slot>[],
   verses: readonly VerseText[],
-): Portion[] =>
+): Portion<Slot>[] =>
   verses.flatMap((verse) =>
     slotRuns(paintedSlots(cues, verse.verseId, verse.text.length)).map(
       (run) => ({
@@ -236,11 +252,13 @@ const paintedPortions = (
     ),
   )
 
-export const applyHighlightStroke = (
-  cues: readonly HighlightCue[],
-  stroke: HighlightStroke,
+// One engine, one channel at a time: a stroke on the highlight list never
+// sees the underline list, and neither sees the excerpt.
+export const applyChannelStroke = <Slot extends number>(
+  cues: readonly Slotted<Slot>[],
+  stroke: ChannelStroke<Slot>,
   verses: readonly VerseText[],
-): HighlightCue[] => {
+): Slotted<Slot>[] => {
   const stroked = servedRegions(stroke, verses)
   const slot = stroke.slot
   const painted =
@@ -251,12 +269,64 @@ export const applyHighlightStroke = (
   )
 }
 
-export const canonicalHighlightCues = (
-  cues: readonly HighlightCue[],
+export const canonicalChannelCues = <Slot extends number>(
+  cues: readonly Slotted<Slot>[],
   verses: readonly VerseText[],
-): HighlightCue[] => {
+): Slotted<Slot>[] => {
   const unserved = cues.flatMap((cue) =>
     outsideRegions([portionOf(cue)], servedRegions(cue, verses)),
   )
   return settled([...unserved, ...paintedPortions(cues, verses)], verses)
 }
+
+export const applyHighlightStroke = (
+  cues: readonly HighlightCue[],
+  stroke: HighlightStroke,
+  verses: readonly VerseText[],
+): HighlightCue[] => applyChannelStroke(cues, stroke, verses)
+
+export const canonicalHighlightCues = (
+  cues: readonly HighlightCue[],
+  verses: readonly VerseText[],
+): HighlightCue[] => canonicalChannelCues(cues, verses)
+
+export const applyUnderlineStroke = (
+  cues: readonly UnderlineCue[],
+  stroke: UnderlineStroke,
+  verses: readonly VerseText[],
+): UnderlineCue[] => applyChannelStroke(cues, stroke, verses)
+
+export const canonicalUnderlineCues = (
+  cues: readonly UnderlineCue[],
+  verses: readonly VerseText[],
+): UnderlineCue[] => canonicalChannelCues(cues, verses)
+
+const EXCERPT_SLOT = 1
+
+type KeptPart = Slotted<typeof EXCERPT_SLOT>
+
+const keptPart = (part: ExcerptPart): KeptPart => ({
+  ...part,
+  slot: EXCERPT_SLOT,
+})
+
+const excerptPart = ({ slot: _slot, ...part }: KeptPart): ExcerptPart => part
+
+export const applyExcerptStroke = (
+  parts: readonly ExcerptPart[],
+  stroke: ExcerptStroke,
+  verses: readonly VerseText[],
+): ExcerptPart[] => {
+  const { action, ...range } = stroke
+  return applyChannelStroke(
+    parts.map(keptPart),
+    { ...range, slot: action === 'show' ? EXCERPT_SLOT : null },
+    verses,
+  ).map(excerptPart)
+}
+
+export const canonicalExcerptParts = (
+  parts: readonly ExcerptPart[],
+  verses: readonly VerseText[],
+): ExcerptPart[] =>
+  canonicalChannelCues(parts.map(keptPart), verses).map(excerptPart)
