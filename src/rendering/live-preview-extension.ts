@@ -8,8 +8,7 @@ import {
   type ViewUpdate,
 } from '@codemirror/view'
 import { editorInfoField, editorLivePreviewField } from 'obsidian'
-import { rewriteCueTokens } from '../highlights'
-import type { HighlightCue } from '../reference'
+import { rewriteCueTokens, type CueLists } from '../highlights'
 import type {
   HighlightCueWriter,
   HighlightEditContext,
@@ -121,24 +120,16 @@ export class ReferenceWidget extends WidgetType {
   #writeCues(
     view: EditorView,
     holder: HTMLElement,
-    cues: readonly HighlightCue[],
+    cues: CueLists,
     translationIds: readonly string[],
   ): void {
     const start = tokenStart(view, holder, this.source)
     if (start === null) return
-    const rewritten = rewriteCueTokens(
-      this.source.slice(1, -1),
-      {
-        highlights: cues,
-        underlines: this.model.underlines,
-        excerpt: this.model.excerpt,
-      },
-      {
+    const rewritten = rewriteCueTokens(this.source.slice(1, -1), cues, {
         translation: this.model.translationId,
         translationIds,
-        reference: this.model.reference,
-      },
-    )
+      reference: this.model.reference,
+    })
     view.dispatch({
       changes: {
         from: start,

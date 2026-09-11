@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { HighlightCue } from '../reference'
+import type { CueLists } from '../highlights'
 import { attachHighlightEditing } from './highlight-editing'
 import type { Passage, PassageSource } from './module-passage-source'
 import { buildReferenceRenderModel } from './reference-render-model'
@@ -24,7 +24,7 @@ const render = async (
   source: string,
   passage: Passage = passageOf('Remain in me'),
 ) => {
-  const write = vi.fn<(cues: readonly HighlightCue[]) => void>()
+  const write = vi.fn<(cues: CueLists) => void>()
   const passages: PassageSource = { passage: async () => passage }
   const deps: ReferenceRenderDeps = {
     passages,
@@ -61,10 +61,24 @@ const select = (
 const popover = (): HTMLElement | null =>
   document.querySelector('.scripture-study-highlight-popover')
 
+const swatches = (): NodeListOf<HTMLElement> =>
+  popover()!.querySelectorAll('.scripture-study-highlight-swatch')
+
 const choose = (index: number): void => {
-  const buttons = popover()!.querySelectorAll('.scripture-study-highlight-swatch')
-  buttons[index].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  swatches()[index].dispatchEvent(new MouseEvent('click', { bubbles: true }))
 }
+
+const press = (target: Element, key: string): void => {
+  target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }))
+}
+
+const cueAt = (slot: number, startChar: number, endChar: number) => ({
+  slot,
+  startVerseId: 43015004,
+  startChar,
+  endVerseId: 43015004,
+  endChar,
+})
 
 beforeEach(() => {
   document.body.replaceChildren()
@@ -72,17 +86,22 @@ beforeEach(() => {
 })
 
 describe('attachHighlightEditing popover gating', () => {
-  it('offers five slots and an eraser for a selection inside the verse text', async () => {
+  it('offers five highlight slots, five underline slots and an eraser last, in two rows', async () => {
     const { parent } = await render('John 15:4 nkjv inline')
 
     const verse = verseTextOf(parent)
     select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
 
-    const swatches = popover()!.querySelectorAll(
-      '.scripture-study-highlight-swatch',
-    )
-    expect(swatches).toHaveLength(6)
-    expect(swatches[5].classList).toContain('scripture-study-highlight-eraser')
+    const choices = swatches()
+    expect(choices).toHaveLength(11)
+    expect(choices[0].classList).toContain('scripture-study-highlight-1')
+    expect(choices[5].classList).toContain('scripture-study-underline-swatch-1')
+    expect(choices[9].classList).toContain('scripture-study-underline-swatch-5')
+    expect(choices[10].classList).toContain('scripture-study-highlight-eraser')
+    const rows = popover()!.querySelectorAll('.scripture-study-highlight-popover-row')
+    expect(rows).toHaveLength(2)
+    expect(rows[0].querySelectorAll('.scripture-study-highlight-swatch')).toHaveLength(5)
+    expect(rows[1].lastElementChild).toBe(choices[10])
   })
 
   it('stays away when the selection never touches the verse text', async () => {
@@ -135,15 +154,11 @@ describe('attachHighlightEditing strokes', () => {
     select({ node: verse, offset: 0 }, { node: verse, offset: 4 })
     choose(1)
 
-    expect(write).toHaveBeenCalledWith([
-      {
-        slot: 2,
-        startVerseId: 43015004,
-        startChar: 0,
-        endVerseId: 43015004,
-        endChar: 6,
-      },
-    ])
+    expect(write).toHaveBeenCalledWith({
+      highlights: [cueAt(2, 0, 6)],
+      underlines: [],
+      excerpt: [],
+    })
   })
 
   it('erases the cues the selection covers', async () => {
@@ -153,9 +168,62 @@ describe('attachHighlightEditing strokes', () => {
 
     const verse = verseTextOf(parent)
     select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
-    choose(5)
+    choose(10)
 
-    expect(write).toHaveBeenCalledWith([])
+    expect(write).toHaveBeenCalledWith({
+      highlights: [],
+      underlines: [],
+      excerpt: [],
+    })
+  })
+
+  it('underlines the snapped selection, leaving a highlight under it intact', async () => {
+    const { parent, write } = await render(
+      'John 15:4 nkjv inline h3/4.0-4.6',
+    )
+
+    const verse = verseTextOf(parent)
+    select({ node: verse, offset: 1 }, { node: verse, offset: 4 })
+    choose(6)
+
+    expect(write).toHaveBeenCalledWith({
+      highlights: [cueAt(3, 0, 6)],
+      underlines: [cueAt(2, 0, 6)],
+      excerpt: [],
+    })
+  })
+
+  it('lets a second underline slot claim the overlap and leaves the excerpt as it was', async () => {
+    const { parent, write } = await render(
+      'John 15:4 nkjv inline u1/4.0-4.12 x/4.0-4.12',
+    )
+
+    const verse = verseTextOf(parent)
+    select({ node: verse, offset: 7 }, { node: verse, offset: 12 })
+    choose(9)
+
+    expect(write).toHaveBeenCalledWith({
+      highlights: [],
+      underlines: [cueAt(1, 0, 7), cueAt(5, 7, 12)],
+      excerpt: [{ startVerseId: 43015004, startChar: 0, endVerseId: 43015004, endChar: 12 }],
+    })
+  })
+
+  it('erases both channels under the selection in one write', async () => {
+    const { parent, write } = await render(
+      'John 15:4 nkjv inline h1/4.0-4.12 u2/4.0-4.12',
+    )
+
+    const verse = verseTextOf(parent)
+    select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+    choose(10)
+
+    expect(write).toHaveBeenCalledTimes(1)
+    expect(write).toHaveBeenCalledWith({
+      highlights: [cueAt(1, 6, 12)],
+      underlines: [cueAt(2, 6, 12)],
+      excerpt: [],
+    })
   })
 
   it('clears the selection and closes the popover once a slot is chosen', async () => {
@@ -193,14 +261,82 @@ describe('attachHighlightEditing strokes', () => {
     select({ node: verse, offset: 7 }, { node: attribution, offset: 5 })
     choose(0)
 
-    expect(write).toHaveBeenCalledWith([
-      {
-        slot: 1,
-        startVerseId: 43015004,
-        startChar: 7,
-        endVerseId: 43015004,
-        endChar: 12,
-      },
+    expect(write).toHaveBeenCalledWith({
+      highlights: [cueAt(1, 7, 12)],
+      underlines: [],
+      excerpt: [],
+    })
+  })
+})
+
+describe('attachHighlightEditing keyboard navigation', () => {
+  const open = async () => {
+    const { parent, write } = await render('John 15:4 nkjv inline')
+    const verse = verseTextOf(parent)
+    select({ node: verse, offset: 0 }, { node: verse, offset: 6 })
+    return { write, choices: swatches() }
+  }
+
+  it('makes only the first choice tabbable', async () => {
+    const { choices } = await open()
+
+    expect([...choices].map((choice) => choice.tabIndex)).toEqual([
+      0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     ])
+  })
+
+  it('moves focus with the arrow keys across both rows and wraps at the ends', async () => {
+    const { choices } = await open()
+
+    choices[0].focus()
+    press(choices[0], 'ArrowRight')
+    expect(document.activeElement).toBe(choices[1])
+    expect(choices[1].tabIndex).toBe(0)
+    expect(choices[0].tabIndex).toBe(-1)
+    press(choices[1], 'ArrowLeft')
+    press(choices[0], 'ArrowLeft')
+    expect(document.activeElement).toBe(choices[10])
+    press(choices[10], 'ArrowDown')
+    expect(document.activeElement).toBe(choices[0])
+    press(choices[0], 'ArrowUp')
+    expect(document.activeElement).toBe(choices[10])
+  })
+
+  it('jumps to the first and last choice with Home and End', async () => {
+    const { choices } = await open()
+
+    choices[3].focus()
+    press(choices[3], 'End')
+    expect(document.activeElement).toBe(choices[10])
+    press(choices[10], 'Home')
+    expect(document.activeElement).toBe(choices[0])
+  })
+
+  it('activates the focused choice with Enter or Space', async () => {
+    const { choices, write } = await open()
+
+    choices[0].focus()
+    press(choices[0], 'ArrowRight')
+    press(choices[1], 'ArrowRight')
+    press(choices[2], 'ArrowRight')
+    press(choices[3], 'ArrowRight')
+    press(choices[4], 'ArrowRight')
+    press(choices[5], 'ArrowRight')
+    press(document.activeElement!, 'Enter')
+
+    expect(write).toHaveBeenCalledWith({
+      highlights: [],
+      underlines: [cueAt(2, 0, 6)],
+      excerpt: [],
+    })
+  })
+
+  it('closes on Escape', async () => {
+    const { choices } = await open()
+
+    choices[0].focus()
+    press(choices[0], 'Escape')
+
+    expect(popover()).toBeNull()
   })
 })

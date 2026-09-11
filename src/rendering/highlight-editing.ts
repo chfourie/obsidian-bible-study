@@ -1,24 +1,73 @@
 import {
   applyHighlightStroke,
+  applyUnderlineStroke,
   highlightSelectionRange,
+  type CueLists,
   type HighlightRange,
   type VerseText,
 } from '../highlights'
-import type { HighlightCue } from '../reference'
 import type { AnchorRect } from '../ui'
 import {
   openHighlightPopover,
-  type HighlightChoice,
   type HighlightPopover,
+  type PopoverChoice,
 } from './highlight-popover'
 import { passageSelectionRange } from './passage-selection'
 
-export type HighlightEditContext = {
-  cues: readonly HighlightCue[]
+// Every channel the occurrence carries: a stroke on one channel writes the
+// other two back untouched, so the writer always receives all three.
+export type HighlightEditContext = CueLists & {
   verses: readonly VerseText[]
 }
 
-export type HighlightCueWriter = (cues: readonly HighlightCue[]) => void
+export type HighlightCueWriter = (cues: CueLists) => void
+
+// Channels never see each other; the eraser is the one gesture that runs on
+// two of them, and it still does so one channel at a time (spec — Stroke
+// engine per channel).
+export const strokedCues = (
+  context: HighlightEditContext,
+  range: HighlightRange,
+  choice: PopoverChoice,
+): CueLists => {
+  const { highlights, underlines, excerpt, verses } = context
+  switch (choice.kind) {
+    case 'highlight':
+      return {
+        highlights: applyHighlightStroke(
+          highlights,
+          { ...range, slot: choice.slot },
+          verses,
+        ),
+        underlines,
+        excerpt,
+      }
+    case 'underline':
+      return {
+        highlights,
+        underlines: applyUnderlineStroke(
+          underlines,
+          { ...range, slot: choice.slot },
+          verses,
+        ),
+        excerpt,
+      }
+    case 'erase':
+      return {
+        highlights: applyHighlightStroke(
+          highlights,
+          { ...range, slot: null },
+          verses,
+        ),
+        underlines: applyUnderlineStroke(
+          underlines,
+          { ...range, slot: null },
+          verses,
+        ),
+        excerpt,
+      }
+  }
+}
 
 const EDITABLE_CLASS = 'scripture-study-highlight-editable'
 
@@ -52,15 +101,9 @@ export const attachHighlightEditing = (
 
   const strokeAndClose = (
     range: HighlightRange,
-    choice: HighlightChoice,
+    choice: PopoverChoice,
   ): void => {
-    write(
-      applyHighlightStroke(
-        context.cues,
-        { ...range, slot: choice },
-        context.verses,
-      ),
-    )
+    write(strokedCues(context, range, choice))
     doc.getSelection()?.removeAllRanges()
     close()
   }

@@ -426,7 +426,9 @@ const mountPassage = async (
   renderPassage(host, buildPassageView(model, passage))
   if (deps.editHighlights && highlightsEditable(passage)) {
     deps.editHighlights(host, {
-      cues: model.highlights,
+      highlights: model.highlights,
+      underlines: model.underlines,
+      excerpt: model.excerpt,
       verses: passage.verses.map((verse) => ({
         verseId: verse.verseId,
         text: verse.segments.map((segment) => segment.text).join(''),

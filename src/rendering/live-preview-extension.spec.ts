@@ -290,6 +290,9 @@ describe('highlight editing in Live Preview', () => {
   const verseTextOver = async (doc: string): Promise<HTMLElement> =>
     (await verseTextsOver(doc))[0]
 
+  const UNDERLINE_1 = 5
+  const ERASER = 10
+
   const paint = (verseText: HTMLElement, swatch: number): void => {
     const text = document.createTreeWalker(verseText, NodeFilter.SHOW_TEXT)
       .nextNode() as Text
@@ -327,7 +330,7 @@ describe('highlight editing in Live Preview', () => {
   it('erases a cue back out of the token, keeping the pin', async () => {
     const verseText = await verseTextOver('note {John 15:4 web inline h1/4.0-4.6}')
 
-    paint(verseText, 5)
+    paint(verseText, ERASER)
 
     expect(view.state.doc.toString()).toBe('note {John 15:4 web inline}')
   })
@@ -369,7 +372,57 @@ describe('highlight editing in Live Preview', () => {
       'note {John 15:4-9 web inline} and {:4 inline h1/4.0-6}',
     )
 
-    paint(hosts[hosts.length - 1], 5)
+    paint(hosts[hosts.length - 1], ERASER)
+
+    expect(view.state.doc.toString()).toBe('note {John 15:4-9 web inline} and {:4 inline}')
+  })
+
+  it('writes the first underline and pins the effective translation', async () => {
+    const verseText = await verseTextOver('before {John 15:4 inline} after')
+
+    paint(verseText, UNDERLINE_1)
+
+    expect(view.state.doc.toString()).toBe(
+      'before {John 15:4 web inline u1/4.0-4.6} after',
+    )
+  })
+
+  it('leaves an explicit translation alone when underlining', async () => {
+    const verseText = await verseTextOver('note {John 15:4 web inline}')
+
+    paint(verseText, UNDERLINE_1 + 2)
+
+    expect(view.state.doc.toString()).toBe('note {John 15:4 web inline u3/4.0-4.6}')
+  })
+
+  it('underlines over a highlight and leaves the highlight intact', async () => {
+    const verseText = await verseTextOver('note {John 15:4 web inline h2/4.0-4.12}')
+
+    paint(verseText, UNDERLINE_1)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4 web inline h2/4.0-4.12 u1/4.0-4.6}',
+    )
+  })
+
+  it('erases the highlight and the underline under the selection in one write', async () => {
+    const verseText = await verseTextOver(
+      'note {John 15:4 web inline h1/4.0-4.12 u2/4.0-4.12}',
+    )
+
+    paint(verseText, ERASER)
+
+    expect(view.state.doc.toString()).toBe(
+      'note {John 15:4 web inline h1/4.6-4.12 u2/4.6-4.12}',
+    )
+  })
+
+  it('erases an underline out of a relative reference, never pinning', async () => {
+    const hosts = await verseTextsOver(
+      'note {John 15:4-9 web inline} and {:4 inline u1/4.0-6}',
+    )
+
+    paint(hosts[hosts.length - 1], ERASER)
 
     expect(view.state.doc.toString()).toBe('note {John 15:4-9 web inline} and {:4 inline}')
   })

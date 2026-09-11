@@ -384,7 +384,8 @@ body {
   text-decoration-color: var(--ss-ul-5);
 }
 
-/* The selection popover (Live Preview, desktop): five slots plus an eraser. */
+/* The selection popover (Live Preview, desktop): a row of five Highlight
+   Slots, then a row of five Underline Slots with the eraser last. */
 .scripture-study-highlight-editable {
   cursor: text;
 }
@@ -393,6 +394,7 @@ body {
   position: fixed;
   z-index: var(--layer-menu);
   display: flex;
+  flex-direction: column;
   gap: 4px;
   padding: 4px;
   border: 1px solid var(--background-modifier-border);
@@ -401,7 +403,13 @@ body {
   box-shadow: var(--shadow-s);
 }
 
+.scripture-study-highlight-popover-row {
+  display: flex;
+  gap: 4px;
+}
+
 .scripture-study-highlight-swatch {
+  position: relative;
   width: 1.4em;
   height: 1.4em;
   display: flex;
@@ -415,6 +423,43 @@ body {
 .scripture-study-highlight-swatch:hover,
 .scripture-study-highlight-swatch:focus-visible {
   border-color: var(--interactive-accent);
+}
+
+/* An underline swatch is a neutral square with a short bar under it, drawn in
+   the slot's solid colour, so the row reads as underline. */
+.scripture-study-underline-swatch {
+  background-color: var(--background-primary);
+}
+
+.scripture-study-underline-swatch::after {
+  content: '';
+  position: absolute;
+  left: 0.25em;
+  right: 0.25em;
+  bottom: 0.2em;
+  height: 0.16em;
+  border-radius: 0.08em;
+  background-color: var(--ss-ul-swatch);
+}
+
+.scripture-study-underline-swatch-1 {
+  --ss-ul-swatch: var(--ss-ul-1);
+}
+
+.scripture-study-underline-swatch-2 {
+  --ss-ul-swatch: var(--ss-ul-2);
+}
+
+.scripture-study-underline-swatch-3 {
+  --ss-ul-swatch: var(--ss-ul-3);
+}
+
+.scripture-study-underline-swatch-4 {
+  --ss-ul-swatch: var(--ss-ul-4);
+}
+
+.scripture-study-underline-swatch-5 {
+  --ss-ul-swatch: var(--ss-ul-5);
 }
 
 .scripture-study-highlight-eraser {
