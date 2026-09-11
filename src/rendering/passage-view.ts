@@ -122,11 +122,22 @@ const withoutSpans = (spans: readonly TextSpan[], length: number): TextSpan[] =>
   return gaps
 }
 
+const lineHeadOf = ({
+  lineStart,
+  lineBreakBefore,
+}: VerseSegment): Pick<VerseSegment, 'lineStart' | 'lineBreakBefore'> => ({
+  ...(lineStart === true ? { lineStart } : {}),
+  ...(lineBreakBefore === true ? { lineBreakBefore } : {}),
+})
+
 // The block's segments cut to the kept spans, an ellipsis standing at every
 // cut: before the first kept stretch when it does not start the block, after
 // the last when it does not end it, and between two of them. The first
 // stretch after a cut states its own offset, since the block's count no
-// longer reaches it.
+// longer reaches it, and opens the line the cut took the head of, so a
+// poetry line keeps its break when only its tail is kept. Every segment has
+// text — the source cuts at distinct offsets — so an elided piece is never
+// an empty one carrying line structure alone.
 const elidedSegments = (
   block: VerseBlock,
   kept: readonly TextSpan[],
@@ -138,14 +149,23 @@ const elidedSegments = (
   const elided: VerseSegment[] = []
   let offset = 0
   let cut = false
+  let cutLineHead: VerseSegment | null = null
   for (const piece of pieces) {
     if (covered.has(piece)) {
       if (cut) {
+        const lineHead =
+          cutLineHead === null || piece.lineStart === true
+            ? {}
+            : lineHeadOf(cutLineHead)
         elided.push(ellipsisSegment())
-        elided.push({ ...piece, textOffset: block.textOffset + offset })
+        elided.push({ ...piece, ...lineHead, textOffset: block.textOffset + offset })
       } else elided.push(piece)
       cut = false
-    } else if (piece.text.length > 0) cut = true
+      cutLineHead = null
+    } else {
+      cut = true
+      if (piece.lineStart === true) cutLineHead = piece
+    }
     offset += piece.text.length
   }
   if (cut) elided.push(ellipsisSegment())

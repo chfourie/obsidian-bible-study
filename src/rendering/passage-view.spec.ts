@@ -796,6 +796,42 @@ describe('buildPassageView — excerpts', () => {
     ])
   })
 
+  it('keeps the line a cut opens on: a kept tail of a poetry line still starts that line', () => {
+    const view = buildPassageView(
+      model('John 15:4 inline x/4.7-14 x/4.18-23'),
+      passage([
+        {
+          verseId: makeVerseId(43, 15, 4),
+          segments: [
+            { text: 'Remain in me, ', redLetter: false, lineStart: true, indent: 1 },
+            {
+              text: 'and I in you.',
+              redLetter: false,
+              lineStart: true,
+              lineBreakBefore: true,
+              indent: 2,
+            },
+          ],
+        },
+      ]),
+    )
+
+    expect(verseBlocks(view)[0].segments).toEqual([
+      ellipsis,
+      { text: 'in me, ', redLetter: false, lineStart: true, indent: 1, textOffset: 7 },
+      ellipsis,
+      {
+        text: 'I in ',
+        redLetter: false,
+        lineStart: true,
+        lineBreakBefore: true,
+        indent: 2,
+        textOffset: 18,
+      },
+      ellipsis,
+    ])
+  })
+
   it('collapses a verse with nothing kept to one ellipsis and numbers the verse that keeps text', () => {
     const view = buildPassageView(
       model('John 15:4-5 block x/5.0-5.4'),
