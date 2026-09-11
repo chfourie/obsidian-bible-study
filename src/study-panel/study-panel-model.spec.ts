@@ -11,6 +11,7 @@ import {
 } from '../../tests/fixtures/enoch-book'
 import { crossReferenceNote } from '../../tests/fixtures/cross-reference-note'
 import type {
+  ChapterAnnotationView,
   CrossReference,
   StudyMaterial,
   StudyMaterialSource,
@@ -28,6 +29,7 @@ import {
   entryVerses,
   StudyPanelModel,
   type AnnotationDetails,
+  type StudyPanelConfig,
   type StudyPanelDeps,
 } from './study-panel-model'
 import { freshTabState } from './tab-memory'
@@ -105,6 +107,10 @@ const fakeStudyMaterial = () => {
       material = { ...material, title: 'Humility — Preface', bookMode: true }
       listeners.forEach((listener) => listener())
     },
+    showAnnotations: (chapterAnnotations: ChapterAnnotationView[]) => {
+      material = { ...material, chapterAnnotations }
+      listeners.forEach((listener) => listener())
+    },
     select: (verseId: number) => {
       material = { ...material, selectedVerseId: verseId }
       listeners.forEach((listener) => listener())
@@ -139,6 +145,7 @@ const model = (
   intersections: Partial<
     Pick<StudyPanelDeps, 'intersecting' | 'annotationDetails'>
   > = {},
+  config: Omit<StudyPanelConfig, 'translationId'> = {},
 ): StudyPanelModel =>
   new StudyPanelModel(
     {
@@ -149,7 +156,7 @@ const model = (
       intersecting: intersections.intersecting ?? (() => []),
       annotationDetails: intersections.annotationDetails ?? (async () => null),
     },
-    { translationId },
+    { translationId, ...config },
   )
 
 // The vault seen through the intersection query, indexed with the real index
@@ -194,6 +201,7 @@ describe('StudyPanelModel', () => {
       studyMaterial: null,
       subTab: 'chapter',
       folded: new Set(),
+      foldedAnnotations: new Set(),
       collapsedTranslations: new Set(),
     })
   })
@@ -536,6 +544,7 @@ describe('StudyPanelModel', () => {
       studyMaterial: null,
       subTab: 'chapter',
       folded: new Set(),
+      foldedAnnotations: new Set(),
       collapsedTranslations: new Set(),
     })
   })
@@ -1532,6 +1541,178 @@ describe('annotations and mentions in the Study Panel', () => {
       'Sermons/Abiding.md',
     ])
     expect(notified).toBeGreaterThan(0)
+  })
+})
+
+describe('annotation folds in the Study Panel', () => {
+  const twoAnnotations = () =>
+    fakeVault({
+      'Annotations/Vine.md': '---\nref: John 15:1\n---\nThe true vine.',
+      'Annotations/Branches.md': '---\nref: John 15:1\n---\nThe branches.',
+    })
+  const files = ['Annotations/Vine.md', 'Annotations/Branches.md']
+
+  const panelFor = async (
+    config: Omit<StudyPanelConfig, 'translationId'> = {},
+  ): Promise<StudyPanelModel> => {
+    const panel = model(
+      fakeSource().source,
+      'web',
+      () => {},
+      twoAnnotations(),
+      config,
+    )
+    await panel.setActiveNote({ file: 'note.md', content: '{John 15:1}' })
+    return panel
+  }
+
+  it('folds every annotation until the followed tab opens one', async () => {
+    const panel = await panelFor()
+    const state = freshTabState()
+    panel.useTabState(state)
+
+    expect([...panel.view.foldedAnnotations]).toEqual(files)
+
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+
+    expect([...panel.view.foldedAnnotations]).toEqual(['Annotations/Branches.md'])
+    expect([...state.toggledAnnotations]).toEqual(['Annotations/Vine.md'])
+  })
+
+  it('opens every annotation on a memory-less tab when the config says they start expanded', async () => {
+    const panel = await panelFor({ annotationsStartExpanded: true })
+    panel.useTabState(null)
+
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+
+    expect([...panel.view.foldedAnnotations]).toEqual(['Annotations/Vine.md'])
+  })
+
+  it('shows a tab’s annotations as its own memory has them, whatever the config says', async () => {
+    const panel = await panelFor({ annotationsStartExpanded: true })
+    panel.useTabState(freshTabState(false))
+
+    expect([...panel.view.foldedAnnotations]).toEqual(files)
+  })
+
+  it('opens every annotation at once, and folds them all again', async () => {
+    const panel = await panelFor()
+
+    panel.expandAllAnnotations()
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+
+    panel.foldAllAnnotations()
+    expect([...panel.view.foldedAnnotations]).toEqual(files)
+  })
+
+  it('folds them all again on a tab whose annotations start expanded', async () => {
+    const panel = await panelFor()
+    const state = freshTabState(true)
+    panel.useTabState(state)
+
+    panel.foldAllAnnotations()
+    expect([...panel.view.foldedAnnotations]).toEqual(files)
+    expect([...state.toggledAnnotations]).toEqual(files)
+
+    panel.expandAllAnnotations()
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+    expect(state.toggledAnnotations.size).toBe(0)
+  })
+
+  it('leaves the passage entries alone when annotations fold, and the annotations alone when passages fold', async () => {
+    const panel = await panelFor()
+
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+    panel.expandAllAnnotations()
+    expect([...panel.view.folded]).toEqual(['|John 15:1'])
+
+    panel.toggleFold('|John 15:1')
+    panel.foldAll()
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+  })
+
+  it('keeps an annotation’s fold across an ordering change', async () => {
+    const panel = await panelFor()
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+
+    panel.setAnnotationOrdering('path-a-z')
+
+    expect(panel.view.annotations.map((item) => item.file)).toEqual([
+      'Annotations/Branches.md',
+      'Annotations/Vine.md',
+    ])
+    expect([...panel.view.foldedAnnotations]).toEqual(['Annotations/Branches.md'])
+  })
+
+  it('keeps an annotation’s fold across a reload of the same annotations', async () => {
+    const panel = await panelFor()
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+
+    await panel.refreshIntersectingNotes()
+
+    expect([...panel.view.foldedAnnotations]).toEqual(['Annotations/Branches.md'])
+  })
+
+  it('folds the annotations of the reader tab it mirrors', async () => {
+    const panel = await panelFor()
+    const reader = fakeStudyMaterial()
+    reader.showAnnotations([
+      { file: 'Annotations/Vine.md', label: 'John 15:1', body: 'The vine.' },
+      { file: 'Annotations/Word.md', label: 'John 1:1', body: 'The word.' },
+    ])
+    panel.showStudyMaterial(reader.source)
+
+    expect([...panel.view.foldedAnnotations]).toEqual([
+      'Annotations/Vine.md',
+      'Annotations/Word.md',
+    ])
+
+    panel.expandAllAnnotations()
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+  })
+
+  it('applies a changed start-expanded default to a tab that has toggled nothing, and to no other', async () => {
+    const panel = await panelFor()
+    const untouched = freshTabState()
+    const arranged = freshTabState()
+    panel.useTabState(arranged)
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+
+    panel.setAnnotationsStartExpanded(true)
+    expect([...panel.view.foldedAnnotations]).toEqual(['Annotations/Branches.md'])
+
+    panel.useTabState(untouched)
+    expect([...panel.view.foldedAnnotations]).toEqual(files)
+
+    panel.useTabState(null)
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+  })
+
+  it('applies a changed start-expanded default to the tab it follows when that tab has toggled nothing', async () => {
+    const panel = await panelFor()
+    const untouched = freshTabState()
+    panel.useTabState(untouched)
+
+    panel.setAnnotationsStartExpanded(true)
+
+    expect(untouched.annotationsStartExpanded).toBe(true)
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+  })
+
+  it('tells its listeners when annotation folds change', async () => {
+    const panel = await panelFor()
+    let notifications = 0
+    panel.subscribe(() => {
+      notifications += 1
+    })
+
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+    panel.foldAllAnnotations()
+    panel.expandAllAnnotations()
+
+    expect(notifications).toBe(3)
   })
 })
 

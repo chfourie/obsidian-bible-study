@@ -9,6 +9,7 @@ selected paragraph's details above its section material (spec-books §5).
 -->
 <script lang="ts">
   import type { StudyMaterial, StudyMaterialSource } from '../contracts'
+  import type { AnnotationFolds } from './annotation-folds'
   import ChapterAnnotationList from './ChapterAnnotationList.svelte'
   import ChapterMentionList from './ChapterMentionList.svelte'
   import CrossReferenceList from './CrossReferenceList.svelte'
@@ -22,6 +23,7 @@ selected paragraph's details above its section material (spec-books §5).
     host,
     tab,
     selectTab,
+    annotationFolds,
     collapsedTranslations,
     toggleTranslation,
     collapseAllTranslations,
@@ -33,6 +35,7 @@ selected paragraph's details above its section material (spec-books §5).
     // The sub-tab belongs to the tab being surfaced, so the surface owns it.
     tab: StudySubTab
     selectTab: (tab: StudySubTab) => void
+    annotationFolds: AnnotationFolds
     collapsedTranslations: ReadonlySet<string>
     toggleTranslation: (id: string) => void
     collapseAllTranslations: () => void
@@ -44,6 +47,7 @@ selected paragraph's details above its section material (spec-books §5).
   <ChapterAnnotationList
     items={material.chapterAnnotations}
     {host}
+    folds={annotationFolds}
     annotate={() => host.promptAnnotate(source.chapterAnnotationReference())}
   />
   <ChapterMentionList items={material.chapterMentions} {host} />

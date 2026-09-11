@@ -1,22 +1,29 @@
 <!--
-The annotations intersecting the scripture in view, each headed by its
-reference with the note's body rendered beneath. The reader's chapter section
-carries an add action opening the annotation prompt prefilled from its
-selection; a surface passing no add action — the note-tab panel — gets a bare
-heading instead, and the whole section hides itself when empty.
+The annotations intersecting the scripture in view, one folded row each:
+the chevron and the reference heading both toggle the row, and an open row
+renders the note's whole body beneath in the panel's own scroll. Which rows
+stand open is the followed tab's memory, handed in as `folds`. The reader's
+chapter section carries an add action opening the annotation prompt
+prefilled from its selection; a surface passing no add action — the note-tab
+panel — gets a bare heading instead, and the whole section hides itself when
+empty.
 -->
 <script lang="ts">
   import type { ChapterAnnotationView } from '../contracts'
+  import { activate, icon } from '../ui'
+  import type { AnnotationFolds } from './annotation-folds'
   import SectionHeading from './SectionHeading.svelte'
   import type { StudyMaterialHost } from './study-material-host'
 
   let {
     items,
     host,
+    folds,
     annotate = null,
   }: {
     items: ChapterAnnotationView[]
     host: StudyMaterialHost
+    folds: AnnotationFolds
     annotate?: (() => void) | null
   } = $props()
 
@@ -44,20 +51,37 @@ heading instead, and the whole section hides itself when empty.
   {/if}
 {:else}
   {#each items as item, index (item.file)}
+    {@const open = !folds.folded.has(item.file)}
     {#if index > 0}<hr class="bsm-chapter-anno-sep" />{/if}
-    <div class="bsm-chapter-anno-block">
+    <section class="bsm-chapter-anno-block">
       <button
         type="button"
         class="bsm-chapter-anno-open"
         aria-label="Open annotation in editor"
         onclick={() => host.openNote(item.file)}
       >✎</button>
-      <div class="bsm-chapter-anno-ref">{item.label}</div>
-      <div
-        class="bsm-chapter-anno-body"
-        use:markdown={{ text: item.body, path: item.file }}
-      ></div>
-    </div>
+      <span
+        role="button"
+        tabindex="0"
+        class="bsm-chapter-anno-ref"
+        aria-expanded={open}
+        onclick={() => folds.toggle(item.file)}
+        onkeydown={activate(() => folds.toggle(item.file))}
+      >
+        <span
+          class="bsm-chapter-anno-fold-icon"
+          aria-hidden="true"
+          use:icon={open ? 'chevron-down' : 'chevron-right'}
+        ></span>
+        {item.label}
+      </span>
+      {#if open}
+        <div
+          class="bsm-chapter-anno-body"
+          use:markdown={{ text: item.body, path: item.file }}
+        ></div>
+      {/if}
+    </section>
   {/each}
 {/if}
 
@@ -92,8 +116,23 @@ heading instead, and the whole section hides itself when empty.
   }
 
   .bsm-chapter-anno-ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
     color: var(--text-accent);
     font-weight: 600;
+    cursor: pointer;
+  }
+
+  .bsm-chapter-anno-fold-icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-muted);
+  }
+
+  .bsm-chapter-anno-fold-icon :global(svg) {
+    width: var(--icon-xs);
+    height: var(--icon-xs);
   }
 
   /* Rendered markdown brings its own paragraph margins; trimming the outer
@@ -106,9 +145,9 @@ heading instead, and the whole section hides itself when empty.
     margin-bottom: 0;
   }
 
+  /* The whole body, in the panel's own scroll: never a box scrolling inside
+     a scrolling panel. */
   .bsm-chapter-anno-body {
-    max-height: 240px;
-    overflow-y: auto;
     user-select: text;
   }
 

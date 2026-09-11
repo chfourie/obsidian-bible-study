@@ -866,6 +866,39 @@ describe('StudyPanelFeature entry points', () => {
     expect([...view.model.view.folded]).toEqual(['|Genesis 1:1'])
   })
 
+  it('restores each note tab’s annotation folds as focus moves between them', async () => {
+    const { feature, commands, leaves, focusNote, focusTab, indexNote } =
+      harness({
+        'a.md': '{John 15:1}',
+        'b.md': '{John 15:1}',
+        'Annotations/John 15.1.md': '---\nref: John 15:1\n---\nThe true vine.',
+      })
+    indexNote('Annotations/John 15.1.md')
+    await feature.load()
+    commands[0].callback()
+    await flushAsync()
+    const first = focusNote('a.md')
+    await flushAsync()
+    const view = panelView(leaves[0])
+    view.model.toggleAnnotationFold('Annotations/John 15.1.md')
+    const second = focusNote('b.md')
+    await flushAsync()
+
+    expect([...view.model.view.foldedAnnotations]).toEqual([
+      'Annotations/John 15.1.md',
+    ])
+
+    focusTab(first)
+    await flushAsync()
+    expect([...view.model.view.foldedAnnotations]).toEqual([])
+
+    focusTab(second)
+    await flushAsync()
+    expect([...view.model.view.foldedAnnotations]).toEqual([
+      'Annotations/John 15.1.md',
+    ])
+  })
+
   it('restores each reader tab’s sub-tab as focus moves between them', async () => {
     const { feature, commands, leaves, focusReader, focusTab } = harness()
     await feature.load()

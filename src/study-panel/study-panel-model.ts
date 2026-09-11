@@ -45,7 +45,11 @@ import {
   type Occurrence,
   type OccurrenceGroup,
 } from '../vault-index'
-import { freshTabState, type StudyTabState } from './tab-memory'
+import {
+  freshTabState,
+  hasAnnotationMemory,
+  type StudyTabState,
+} from './tab-memory'
 
 // A cited verse as the panel prints it: its segments from the one segmenter,
 // so a supplied word or an Editorial mark paints here as it does in the
@@ -115,9 +119,11 @@ export type StudyPanelViewState = {
   studyMaterial: StudyMaterial | null
   // The followed tab's own state: the sub-tab its material shows under,
   // which passage entries stay folded — every entry the tab has not
-  // unfolded — and which translation blocks it collapsed.
+  // unfolded — which annotation rows stay folded, keyed by the annotation
+  // note's path, and which translation blocks it collapsed.
   subTab: StudySubTab
   folded: ReadonlySet<string>
+  foldedAnnotations: ReadonlySet<string>
   collapsedTranslations: ReadonlySet<string>
 }
 
@@ -141,6 +147,9 @@ export type StudyPanelDeps = {
 export type StudyPanelConfig = {
   translationId: string | null
   annotationOrdering?: AnnotationOrdering
+  // Whether annotation rows start open on a tab the panel has no memory of;
+  // they start folded unless told otherwise.
+  annotationsStartExpanded?: boolean
 }
 
 export type ActiveNote = { file: string; content: string }
@@ -228,12 +237,13 @@ export class StudyPanelModel {
   #annotationScope: readonly VerseRange[] = []
   #mentions: ChapterMentionView[] = []
   #annotationOrdering: AnnotationOrdering
+  #annotationsStartExpanded: boolean
   #translationId: string | null
   #loadToken = 0
   #intersectionToken = 0
   #studySource: StudyMaterialSource | null = null
   #unsubscribeStudySource: (() => void) | null = null
-  #tabState: StudyTabState = freshTabState()
+  #tabState: StudyTabState
   readonly #listeners = new Set<() => void>()
 
   constructor(
@@ -242,6 +252,8 @@ export class StudyPanelModel {
   ) {
     this.#translationId = config.translationId
     this.#annotationOrdering = config.annotationOrdering ?? 'created-oldest-first'
+    this.#annotationsStartExpanded = config.annotationsStartExpanded ?? false
+    this.#tabState = freshTabState(this.#annotationsStartExpanded)
   }
 
   subscribe(listener: () => void): () => void {
@@ -261,6 +273,7 @@ export class StudyPanelModel {
       studyMaterial: this.#studySource?.studyMaterial ?? null,
       subTab: this.#tabState.subTab,
       folded: this.#folded(),
+      foldedAnnotations: this.#foldedAnnotations(),
       collapsedTranslations: this.#tabState.collapsedTranslations,
     }
   }
@@ -268,7 +281,7 @@ export class StudyPanelModel {
   // The state of the tab now being followed, or null while none is: state the
   // panel writes lands in the tab's own memory, so refocusing it restores it.
   useTabState(state: StudyTabState | null): void {
-    this.#tabState = state ?? freshTabState()
+    this.#tabState = state ?? freshTabState(this.#annotationsStartExpanded)
     this.#syncWanted()
     this.#notify()
   }
@@ -345,6 +358,63 @@ export class StudyPanelModel {
 
   #setExpanded(expanded: ReadonlySet<string>): void {
     this.#tabState.expanded = expanded
+    this.#notify()
+  }
+
+  toggleAnnotationFold(file: string): void {
+    const toggled = new Set(this.#tabState.toggledAnnotations)
+    if (!toggled.delete(file)) toggled.add(file)
+    this.#setToggledAnnotations(toggled)
+  }
+
+  foldAllAnnotations(): void {
+    this.#setToggledAnnotations(
+      this.#tabState.annotationsStartExpanded
+        ? this.#shownAnnotationFiles()
+        : new Set(),
+    )
+  }
+
+  expandAllAnnotations(): void {
+    this.#setToggledAnnotations(
+      this.#tabState.annotationsStartExpanded
+        ? new Set()
+        : this.#shownAnnotationFiles(),
+    )
+  }
+
+  // A changed default reaches the tabs that have arranged no annotation row
+  // of their own — including the one followed now — and every tab followed
+  // from here on; a tab with memory keeps what it arranged.
+  setAnnotationsStartExpanded(startExpanded: boolean): void {
+    this.#annotationsStartExpanded = startExpanded
+    if (!hasAnnotationMemory(this.#tabState))
+      this.#tabState.annotationsStartExpanded = startExpanded
+    this.#notify()
+  }
+
+  // Annotation rows start as the tab's memory says they start, and each row
+  // the tab toggled stands the other way: keyed by the note's path, so a
+  // re-sort or a reload of the same notes changes nothing.
+  #foldedAnnotations(): ReadonlySet<string> {
+    const { annotationsStartExpanded, toggledAnnotations } = this.#tabState
+    return new Set(
+      [...this.#shownAnnotationFiles()].filter(
+        (file) => toggledAnnotations.has(file) === annotationsStartExpanded,
+      ),
+    )
+  }
+
+  // The annotations on screen: the mirrored reader's chapter annotations
+  // while a reader is followed, otherwise the note's.
+  #shownAnnotationFiles(): Set<string> {
+    const shown =
+      this.#studySource?.studyMaterial.chapterAnnotations ?? this.#annotations
+    return new Set(shown.map((item) => item.file))
+  }
+
+  #setToggledAnnotations(toggled: ReadonlySet<string>): void {
+    this.#tabState.toggledAnnotations = toggled
     this.#notify()
   }
 

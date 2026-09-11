@@ -11,7 +11,28 @@ describe('TabMemory', () => {
       subTab: 'chapter',
       expanded: new Set(),
       collapsedTranslations: new Set(),
+      annotationsStartExpanded: false,
+      toggledAnnotations: new Set(),
     })
+  })
+
+  it('starts a tab’s annotations open when told they start expanded', () => {
+    const memory = new TabMemory<Tab>(() => true)
+
+    expect(memory.stateFor({ id: 'a' }).annotationsStartExpanded).toBe(true)
+    expect(memory.stateFor({ id: 'a' }).toggledAnnotations.size).toBe(0)
+  })
+
+  it('reads the annotation default afresh for each new tab, leaving followed tabs as they were', () => {
+    let startExpanded = false
+    const memory = new TabMemory<Tab>(() => startExpanded)
+    const earlier = { id: 'a' }
+    memory.stateFor(earlier)
+
+    startExpanded = true
+
+    expect(memory.stateFor(earlier).annotationsStartExpanded).toBe(false)
+    expect(memory.stateFor({ id: 'b' }).annotationsStartExpanded).toBe(true)
   })
 
   it('hands the same tab back its own state', () => {
@@ -20,10 +41,14 @@ describe('TabMemory', () => {
     memory.stateFor(tab).subTab = 'selection'
     memory.stateFor(tab).expanded = new Set(['John 15:1'])
     memory.stateFor(tab).collapsedTranslations = new Set(['kjv'])
+    memory.stateFor(tab).toggledAnnotations = new Set(['Annotations/Vine.md'])
 
     expect(memory.stateFor(tab).subTab).toBe('selection')
     expect([...memory.stateFor(tab).expanded]).toEqual(['John 15:1'])
     expect([...memory.stateFor(tab).collapsedTranslations]).toEqual(['kjv'])
+    expect([...memory.stateFor(tab).toggledAnnotations]).toEqual([
+      'Annotations/Vine.md',
+    ])
   })
 
   it('keeps two tabs on the same content independent', () => {

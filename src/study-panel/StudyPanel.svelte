@@ -13,7 +13,7 @@ opens the reference in the reader with the entry's translation.
   import ChapterMentionList from '../study-material/ChapterMentionList.svelte'
   import CrossReferenceRow from '../study-material/CrossReferenceRow.svelte'
   import StudyMaterialView from '../study-material/StudyMaterialView.svelte'
-  import type { StudyMaterialHost } from '../study-material'
+  import type { AnnotationFolds, StudyMaterialHost } from '../study-material'
   import { activate, icon, opensInNewPane } from '../ui'
   import type {
     ReferenceEntryView,
@@ -42,6 +42,15 @@ opens the reference in the reader with the entry's translation.
       view = model.view
     }),
   )
+
+  // The followed tab's annotation folds, the same in both modes: the list
+  // component reads and acts on them without knowing the model.
+  const annotationFolds: AnnotationFolds = $derived({
+    folded: view.foldedAnnotations,
+    toggle: (file) => model.toggleAnnotationFold(file),
+    foldAll: () => model.foldAllAnnotations(),
+    expandAll: () => model.expandAllAnnotations(),
+  })
 
   function open(entry: ReferenceEntryView, event: MouseEvent | KeyboardEvent) {
     openReference(entry.reference, entry.translation, {
@@ -83,6 +92,7 @@ opens the reference in the reader with the entry's translation.
       {host}
       tab={view.subTab}
       selectTab={(tab) => model.selectSubTab(tab)}
+      {annotationFolds}
       collapsedTranslations={view.collapsedTranslations}
       toggleTranslation={(id) => model.toggleTranslationFold(id)}
       collapseAllTranslations={() => model.collapseAllTranslations()}
@@ -107,7 +117,11 @@ opens the reference in the reader with the entry's translation.
            displayed exactly as the reader-tab sections show them. Both are
            derived here, so neither offers an add action and each hides
            itself when empty. -->
-      <ChapterAnnotationList items={view.annotations} {host} />
+      <ChapterAnnotationList
+        items={view.annotations}
+        {host}
+        folds={annotationFolds}
+      />
       <ChapterMentionList items={view.mentions} {host} />
       {#if view.crossReferences.length > 0}
         <div class="bsp-xrefs">
