@@ -9,16 +9,36 @@ export type HighlightSlot = (typeof HIGHLIGHT_SLOTS)[number]
 export const isHighlightSlot = (value: number): value is HighlightSlot =>
   HIGHLIGHT_SLOTS.some((slot) => slot === value)
 
-export type HighlightCue = {
-  slot: HighlightSlot
+export const UNDERLINE_SLOTS = [1, 2, 3, 4, 5] as const
+
+export type UnderlineSlot = (typeof UNDERLINE_SLOTS)[number]
+
+export const isUnderlineSlot = (value: number): value is UnderlineSlot =>
+  UNDERLINE_SLOTS.some((slot) => slot === value)
+
+// The endpoints every cue family shares (CONTEXT.md — Highlight Cue):
+// character offsets into one translation's verse text, end exclusive.
+export type CueRange = {
   startVerseId: number
   startChar: number
   endVerseId: number
   endChar: number
 }
 
+export type HighlightCue = CueRange & { slot: HighlightSlot }
+
+export type UnderlineCue = CueRange & { slot: UnderlineSlot }
+
+// An Excerpt part has no slot: there is one excerpt channel per occurrence.
+export type ExcerptPart = CueRange
+
+export type CueToken =
+  | { family: 'highlight'; cue: HighlightCue }
+  | { family: 'underline'; cue: UnderlineCue }
+  | { family: 'excerpt'; part: ExcerptPart }
+
 const CUE_PATTERN =
-  /^h(\d+)\/(?:(\d+):)?(\d+)\.(\d+)-(?:(?:(\d+):)?(\d+)\.)?(\d+)$/i
+  /^([hux])(\d*)\/(?:(\d+):)?(\d+)\.(\d+)-(?:(?:(\d+):)?(\d+)\.)?(\d+)$/i
 
 const verseIdIn = (
   reference: Reference,
@@ -35,15 +55,14 @@ const inheritedChapter = (reference: Reference): number =>
 const addressesReference = (reference: Reference, verseId: number): boolean =>
   reference.ranges.some((range) => rangeContains(range, verseId))
 
-export const parseHighlightCue = (
-  text: string,
+const cueRangeOf = (
+  match: RegExpExecArray,
   reference: Reference,
-): HighlightCue | null => {
-  const match = CUE_PATTERN.exec(text)
-  if (!match) return null
+): CueRange | null => {
   const [
     ,
-    rawSlot,
+    ,
+    ,
     startChapter,
     startVerse,
     rawStartChar,
@@ -51,9 +70,6 @@ export const parseHighlightCue = (
     endVerse,
     rawEndChar,
   ] = match
-
-  const slot = Number(rawSlot)
-  if (!isHighlightSlot(slot)) return null
 
   const chapter = inheritedChapter(reference)
   const startVerseId = verseIdIn(
@@ -81,7 +97,55 @@ export const parseHighlightCue = (
   const endChar = Number(rawEndChar)
   if (startVerseId === endVerseId && endChar <= startChar) return null
 
-  return { slot, startVerseId, startChar, endVerseId, endChar }
+  return { startVerseId, startChar, endVerseId, endChar }
+}
+
+export const parseCueToken = (
+  text: string,
+  reference: Reference,
+): CueToken | null => {
+  const match = CUE_PATTERN.exec(text)
+  if (!match) return null
+  const range = cueRangeOf(match, reference)
+  if (range === null) return null
+  const family = match[1].toLowerCase()
+  const rawSlot = match[2]
+  if (family === 'x')
+    return rawSlot === '' ? { family: 'excerpt', part: range } : null
+  if (rawSlot === '') return null
+  const slot = Number(rawSlot)
+  if (family === 'h') {
+    return isHighlightSlot(slot)
+      ? { family: 'highlight', cue: { ...range, slot } }
+      : null
+  }
+  return isUnderlineSlot(slot)
+    ? { family: 'underline', cue: { ...range, slot } }
+    : null
+}
+
+export const parseHighlightCue = (
+  text: string,
+  reference: Reference,
+): HighlightCue | null => {
+  const token = parseCueToken(text, reference)
+  return token?.family === 'highlight' ? token.cue : null
+}
+
+export const parseUnderlineCue = (
+  text: string,
+  reference: Reference,
+): UnderlineCue | null => {
+  const token = parseCueToken(text, reference)
+  return token?.family === 'underline' ? token.cue : null
+}
+
+export const parseExcerptPart = (
+  text: string,
+  reference: Reference,
+): ExcerptPart | null => {
+  const token = parseCueToken(text, reference)
+  return token?.family === 'excerpt' ? token.part : null
 }
 
 const endpointText = (
@@ -94,22 +158,45 @@ const endpointText = (
   return `${verseText}.${char}`
 }
 
+const cueRangeText = (range: CueRange, reference: Reference): string => {
+  const inherited = inheritedChapter(reference)
+  const start = endpointText(range.startVerseId, range.startChar, inherited)
+  const end = endpointText(range.endVerseId, range.endChar, inherited)
+  return `${start}-${end}`
+}
+
 export const formatHighlightCue = (
   cue: HighlightCue,
   reference: Reference,
-): string => {
-  const inherited = inheritedChapter(reference)
-  const start = endpointText(cue.startVerseId, cue.startChar, inherited)
-  const end = endpointText(cue.endVerseId, cue.endChar, inherited)
-  return `h${cue.slot}/${start}-${end}`
-}
+): string => `h${cue.slot}/${cueRangeText(cue, reference)}`
+
+export const formatUnderlineCue = (
+  cue: UnderlineCue,
+  reference: Reference,
+): string => `u${cue.slot}/${cueRangeText(cue, reference)}`
+
+export const formatExcerptPart = (
+  part: ExcerptPart,
+  reference: Reference,
+): string => `x/${cueRangeText(part, reference)}`
 
 export const isHighlightCueToken = (text: string): boolean =>
   /^h\d+\//i.test(text)
 
-export const sameHighlightCue = (a: HighlightCue, b: HighlightCue): boolean =>
-  a.slot === b.slot &&
+// Loose on purpose: a malformed token of any family is still a cue token the
+// rewriter sweeps away rather than user text it must preserve.
+export const isCueToken = (text: string): boolean => /^[hux]\d*\//i.test(text)
+
+export const sameCueRange = (a: CueRange, b: CueRange): boolean =>
   a.startVerseId === b.startVerseId &&
   a.startChar === b.startChar &&
   a.endVerseId === b.endVerseId &&
   a.endChar === b.endChar
+
+export const sameHighlightCue = (a: HighlightCue, b: HighlightCue): boolean =>
+  a.slot === b.slot && sameCueRange(a, b)
+
+export const sameUnderlineCue = (a: UnderlineCue, b: UnderlineCue): boolean =>
+  a.slot === b.slot && sameCueRange(a, b)
+
+export const sameExcerptPart = sameCueRange
