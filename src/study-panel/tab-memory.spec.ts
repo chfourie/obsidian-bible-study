@@ -12,6 +12,7 @@ describe('TabMemory', () => {
       expanded: new Set(),
       collapsedTranslations: new Set(),
       annotationsStartExpanded: false,
+      annotationsArranged: false,
       toggledAnnotations: new Set(),
     })
   })
@@ -35,11 +36,12 @@ describe('TabMemory', () => {
     expect(memory.stateFor({ id: 'b' }).annotationsStartExpanded).toBe(true)
   })
 
-  it('hands a changed annotation default to the tabs that have toggled nothing', () => {
+  it('hands a changed annotation default to the tabs that have arranged no annotation row', () => {
     let startExpanded = false
     const memory = new TabMemory<Tab>(() => startExpanded)
     const arranged = { id: 'a' }
     const untouched = { id: 'b' }
+    memory.stateFor(arranged).annotationsArranged = true
     memory.stateFor(arranged).toggledAnnotations = new Set([
       'Annotations/Vine.md',
     ])
@@ -53,6 +55,18 @@ describe('TabMemory', () => {
     expect([...memory.stateFor(arranged).toggledAnnotations]).toEqual([
       'Annotations/Vine.md',
     ])
+  })
+
+  it('leaves a tab arranged back to how its annotations started as it stands', () => {
+    let startExpanded = false
+    const memory = new TabMemory<Tab>(() => startExpanded)
+    const foldedAgain = { id: 'a' }
+    memory.stateFor(foldedAgain).annotationsArranged = true
+
+    startExpanded = true
+    memory.adoptAnnotationDefault()
+
+    expect(memory.stateFor(foldedAgain).annotationsStartExpanded).toBe(false)
   })
 
   it('hands the same tab back its own state', () => {

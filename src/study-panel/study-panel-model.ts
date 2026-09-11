@@ -47,7 +47,7 @@ import {
 } from '../vault-index'
 import {
   freshTabState,
-  hasAnnotationMemory,
+  hasArrangedAnnotations,
   type StudyTabState,
 } from './tab-memory'
 
@@ -226,6 +226,14 @@ const combineIntersecting = (references: PanelReference[]): PanelReference[] => 
   return combined
 }
 
+// A set with one member flipped: taken out when it was in, put in when it
+// was not. Every fold set the tab remembers toggles this way.
+const toggledIn = (set: ReadonlySet<string>, key: string): Set<string> => {
+  const toggled = new Set(set)
+  if (!toggled.delete(key)) toggled.add(key)
+  return toggled
+}
+
 export class StudyPanelModel {
   #file: string | null = null
   #entries: ReferenceEntryView[] = []
@@ -307,9 +315,9 @@ export class StudyPanelModel {
   }
 
   toggleTranslationFold(id: string): void {
-    const collapsed = new Set(this.#tabState.collapsedTranslations)
-    if (!collapsed.delete(id)) collapsed.add(id)
-    this.#setCollapsedTranslations(collapsed)
+    this.#setCollapsedTranslations(
+      toggledIn(this.#tabState.collapsedTranslations, id),
+    )
   }
 
   collapseAllTranslations(): void {
@@ -332,9 +340,7 @@ export class StudyPanelModel {
   }
 
   toggleFold(key: string): void {
-    const expanded = new Set(this.#tabState.expanded)
-    if (!expanded.delete(key)) expanded.add(key)
-    this.#setExpanded(expanded)
+    this.#setExpanded(toggledIn(this.#tabState.expanded, key))
   }
 
   foldAll(): void {
@@ -362,33 +368,35 @@ export class StudyPanelModel {
   }
 
   toggleAnnotationFold(file: string): void {
-    const toggled = new Set(this.#tabState.toggledAnnotations)
-    if (!toggled.delete(file)) toggled.add(file)
-    this.#setToggledAnnotations(toggled)
+    this.#arrangeAnnotations(
+      toggledIn(this.#tabState.toggledAnnotations, file),
+    )
   }
 
   foldAllAnnotations(): void {
-    this.#setToggledAnnotations(
-      this.#tabState.annotationsStartExpanded
+    this.#setAnnotationsFolded(true)
+  }
+
+  expandAllAnnotations(): void {
+    this.#setAnnotationsFolded(false)
+  }
+
+  // Every shown row stands one way: toggled away from how the tab's rows
+  // started when that is the other way, untoggled when it is the same.
+  #setAnnotationsFolded(folded: boolean): void {
+    this.#arrangeAnnotations(
+      folded === this.#tabState.annotationsStartExpanded
         ? this.#shownAnnotationFiles()
         : new Set(),
     )
   }
 
-  expandAllAnnotations(): void {
-    this.#setToggledAnnotations(
-      this.#tabState.annotationsStartExpanded
-        ? new Set()
-        : this.#shownAnnotationFiles(),
-    )
-  }
-
   // A changed default reaches the tabs that have arranged no annotation row
   // of their own — including the one followed now — and every tab followed
-  // from here on; a tab with memory keeps what it arranged.
+  // from here on; an arranged tab keeps how its rows started.
   setAnnotationsStartExpanded(startExpanded: boolean): void {
     this.#annotationsStartExpanded = startExpanded
-    if (!hasAnnotationMemory(this.#tabState))
+    if (!hasArrangedAnnotations(this.#tabState))
       this.#tabState.annotationsStartExpanded = startExpanded
     this.#notify()
   }
@@ -413,8 +421,11 @@ export class StudyPanelModel {
     return new Set(shown.map((item) => item.file))
   }
 
-  #setToggledAnnotations(toggled: ReadonlySet<string>): void {
+  // Any fold action over the annotation rows arranges the tab, whatever the
+  // rows land on: a tab folded back to how it started is arranged still.
+  #arrangeAnnotations(toggled: ReadonlySet<string>): void {
     this.#tabState.toggledAnnotations = toggled
+    this.#tabState.annotationsArranged = true
     this.#notify()
   }
 

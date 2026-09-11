@@ -1733,6 +1733,39 @@ describe('annotation folds in the Study Panel', () => {
     expect([...panel.view.foldedAnnotations]).toEqual([])
   })
 
+  it('keeps a tab folded by collapse-all folded when the default later flips to expanded', async () => {
+    const panel = await panelFor()
+    const state = freshTabState()
+    panel.useTabState(state)
+    panel.foldAllAnnotations()
+
+    panel.setAnnotationsStartExpanded(true)
+
+    expect(state.annotationsArranged).toBe(true)
+    expect([...panel.view.foldedAnnotations]).toEqual(files)
+  })
+
+  it('keeps a tab whose row was opened and shut again as arranged when the default flips', async () => {
+    const panel = await panelFor()
+    panel.useTabState(freshTabState())
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+
+    panel.setAnnotationsStartExpanded(true)
+
+    expect([...panel.view.foldedAnnotations]).toEqual(files)
+  })
+
+  it('keeps a tab opened by expand-all open when the default later flips to folded', async () => {
+    const panel = await panelFor({ annotationsStartExpanded: true })
+    panel.useTabState(freshTabState(true))
+    panel.expandAllAnnotations()
+
+    panel.setAnnotationsStartExpanded(false)
+
+    expect([...panel.view.foldedAnnotations]).toEqual([])
+  })
+
   it('tells its listeners when annotation folds change', async () => {
     const panel = await panelFor()
     let notifications = 0

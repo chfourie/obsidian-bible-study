@@ -5,13 +5,15 @@ import type { StudySubTab } from '../study-material'
 // collapsed on the Selection tab, and the annotation rows toggled away from
 // how they started. Entries start folded and translations start open, so
 // each set holds the departures worth remembering; annotations start as the
-// setting chose when the tab was first followed, recorded here so a later
-// setting change can tell an untouched tab from an arranged one.
+// setting chose when the tab was first followed, recorded here with whether
+// the tab has arranged its rows at all, so a later setting change can tell
+// an untouched tab from one folded back to how it started.
 export type StudyTabState = {
   subTab: StudySubTab
   expanded: ReadonlySet<string>
   collapsedTranslations: ReadonlySet<string>
   annotationsStartExpanded: boolean
+  annotationsArranged: boolean
   toggledAnnotations: ReadonlySet<string>
 }
 
@@ -22,13 +24,15 @@ export const freshTabState = (
   expanded: new Set(),
   collapsedTranslations: new Set(),
   annotationsStartExpanded,
+  annotationsArranged: false,
   toggledAnnotations: new Set(),
 })
 
-// A tab that has toggled no annotation row has arranged nothing there, so a
-// changed start-expanded default may still take hold of it.
-export const hasAnnotationMemory = (state: StudyTabState): boolean =>
-  state.toggledAnnotations.size > 0
+// A tab that has arranged its annotation rows — toggled one, folded or
+// opened them all — keeps how they started, however they stand now; only a
+// tab that has touched none of them takes a changed start-expanded default.
+export const hasArrangedAnnotations = (state: StudyTabState): boolean =>
+  state.annotationsArranged
 
 // Panel state one tab at a time, in memory for that tab's lifetime: two tabs
 // on the same content hold their own state, and a closed tab takes its state
@@ -49,12 +53,12 @@ export class TabMemory<Tab> {
     return state
   }
 
-  // A changed annotation default reaches every tab that has toggled no
-  // annotation row of its own; a tab with memory keeps how its own started.
+  // A changed annotation default reaches every tab that has arranged no
+  // annotation row of its own; an arranged tab keeps how its own started.
   adoptAnnotationDefault(): void {
     const startExpanded = this.annotationsStartExpanded()
     for (const state of this.#states.values())
-      if (!hasAnnotationMemory(state))
+      if (!hasArrangedAnnotations(state))
         state.annotationsStartExpanded = startExpanded
   }
 
