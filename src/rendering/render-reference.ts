@@ -128,7 +128,10 @@ const createPassageEditingControl = (host: HTMLElement): HTMLElement => {
 
 // Where the Passage Editing control stands: the chip's end, or for a Book
 // block, which has no chip (ticket #79), the end of its citation line.
-type ControlSlot = () => HTMLElement | null
+// Draws one passage view into a host and hands back the citation line it drew
+// when the passage has no chip — a Book block's — since that line is where
+// the Passage Editing control stands.
+type PassageRenderer = (host: HTMLElement, view: PassageView) => HTMLElement | null
 
 // The in-note intersection surface (spec §5): a count indicator beside the
 // rendered reference that expands to the intersecting notes, annotations
@@ -428,8 +431,8 @@ const mountPassage = async (
   host: HTMLElement,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
-  renderPassage: (host: HTMLElement, view: PassageView) => void,
-  controlSlot: ControlSlot,
+  renderPassage: PassageRenderer,
+  chip: HTMLElement | null,
 ): Promise<void> => {
   if (exceedsDisplayVerseLimit(model.reference)) {
     host.empty()
@@ -459,24 +462,23 @@ const mountPassage = async (
   host.removeClass('scripture-study-loading')
   if (passage.status !== 'ok' || passage.verses.length === 0) {
     renderUnavailable(host, model, deps, () => {
-      void mountPassage(host, model, deps, renderPassage, controlSlot)
+      void mountPassage(host, model, deps, renderPassage, chip)
     })
     return
   }
-  renderPassage(host, buildPassageView(model, passage))
+  const citation = renderPassage(host, buildPassageView(model, passage))
   if (!deps.editHighlights || !highlightsEditable(passage)) return
   const control = createPassageEditingControl(host)
-  const placeControl = (): void => {
-    const slot = controlSlot()
+  const placeControl = (drawnCitation: HTMLElement | null): void => {
+    const slot = chip ?? drawnCitation
     if (slot === null) control.remove()
     else slot.appendChild(control)
   }
   const render = (options: PassageViewOptions): void => {
     host.empty()
-    renderPassage(host, buildPassageView(model, passage, options))
-    placeControl()
+    placeControl(renderPassage(host, buildPassageView(model, passage, options)))
   }
-  placeControl()
+  placeControl(citation)
   deps.editHighlights(
     host,
     {
@@ -508,8 +510,8 @@ const renderNavigableAttribution = (
   view: PassageView,
   model: ReferenceRenderModel,
   deps: ReferenceRenderDeps,
-): void => {
-  if (view.attribution === null) return
+): HTMLElement | null => {
+  if (view.attribution === null) return null
   const attribution = host.createDiv({
     cls: 'scripture-study-attribution scripture-study-attribution-nav',
     text: view.attribution,
@@ -518,30 +520,55 @@ const renderNavigableAttribution = (
   activateAsButton(attribution, (event) =>
     deps.openReference(model, { newPane: opensInNewPane(event) }),
   )
+  return attribution
+}
+
+// The walk over what a passage prints, once for every shape: a renderer says
+// only how it draws an ellipsis and how it draws a verse block after the
+// block before it — an ellipsis between two blocks leaves them neighbours.
+type EntryDrawing = {
+  ellipsis: () => void
+  verse: (block: VerseBlock, previous: VerseBlock | null) => void
+}
+
+const drawEntries = (view: PassageView, draw: EntryDrawing): void => {
+  let previous: VerseBlock | null = null
+  for (const entry of view.entries) {
+    if (entry.kind === 'ellipsis') {
+      draw.ellipsis()
+      continue
+    }
+    draw.verse(entry.verse, previous)
+    previous = entry.verse
+  }
 }
 
 // Scripture's `block` gives each verse its own line; a book atom is already a
 // paragraph, so the same stack reads as prose instead (spec-books §4).
-const renderVerseLines = (host: HTMLElement, view: PassageView): void => {
+const renderVerseLines: PassageRenderer = (host, view) => {
   renderFallbackNotice(host, view)
-  for (const entry of view.entries) {
-    const line = host.createDiv({ cls: 'scripture-study-verse-line' })
-    if (entry.kind === 'ellipsis') renderEllipsis(line)
-    else renderSegments(line, entry.verse)
-  }
+  const line = (): HTMLElement =>
+    host.createDiv({ cls: 'scripture-study-verse-line' })
+  drawEntries(view, {
+    ellipsis: () => renderEllipsis(line()),
+    verse: (block) => renderSegments(line(), block),
+  })
   renderAttribution(host, view)
+  return null
 }
 
+const bookParagraph = (host: HTMLElement): HTMLElement =>
+  host.createDiv({ cls: 'scripture-study-book-paragraph' })
+
 const renderBookParagraphs =
-  (model: ReferenceRenderModel, deps: ReferenceRenderDeps) =>
-  (host: HTMLElement, view: PassageView): void => {
+  (model: ReferenceRenderModel, deps: ReferenceRenderDeps): PassageRenderer =>
+  (host, view) => {
     renderFallbackNotice(host, view)
-    for (const entry of view.entries) {
-      const paragraph = host.createDiv({ cls: 'scripture-study-book-paragraph' })
-      if (entry.kind === 'ellipsis') renderEllipsis(paragraph)
-      else renderSegments(paragraph, entry.verse)
-    }
-    renderNavigableAttribution(host, view, model, deps)
+    drawEntries(view, {
+      ellipsis: () => renderEllipsis(bookParagraph(host)),
+      verse: (block) => renderSegments(bookParagraph(host), block),
+    })
+    return renderNavigableAttribution(host, view, model, deps)
   }
 
 const joinBlocks = (
@@ -557,47 +584,41 @@ const joinBlocks = (
 // flow together rather than one to a line, each keeping whatever breaks its
 // own `lines` channel asks for; a stanza blank inside an atom opens a new run.
 const renderBookProse =
-  (model: ReferenceRenderModel, deps: ReferenceRenderDeps) =>
-  (host: HTMLElement, view: PassageView): void => {
+  (model: ReferenceRenderModel, deps: ReferenceRenderDeps): PassageRenderer =>
+  (host, view) => {
     renderFallbackNotice(host, view)
-    let prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
-    let previous: VerseBlock | null = null
-    for (const entry of view.entries) {
-      if (entry.kind === 'ellipsis') {
-        renderEllipsis(prose)
-        continue
-      }
-      if (previous !== null) {
-        if (entry.verse.startsParagraph)
-          prose = host.createDiv({ cls: 'scripture-study-book-paragraph' })
-        else joinBlocks(prose, entry.verse, previous)
-      }
-      renderSegments(prose, entry.verse)
-      previous = entry.verse
-    }
-    renderNavigableAttribution(host, view, model, deps)
+    let prose = bookParagraph(host)
+    drawEntries(view, {
+      ellipsis: () => renderEllipsis(prose),
+      verse: (block, previous) => {
+        if (previous !== null) {
+          if (block.startsParagraph) prose = bookParagraph(host)
+          else joinBlocks(prose, block, previous)
+        }
+        renderSegments(prose, block)
+      },
+    })
+    return renderNavigableAttribution(host, view, model, deps)
   }
 
 // Inline has no runs to open: a stanza blank is a blank line in the quote.
-const renderVerseRun = (host: HTMLElement, view: PassageView): void => {
+const renderVerseRun: PassageRenderer = (host, view) => {
   renderFallbackNotice(host, view)
-  let previous: VerseBlock | null = null
-  for (const entry of view.entries) {
+  drawEntries(view, {
     // The gap ellipsis follows the preceding verse's text and precedes the
     // joining space, so the run reads `…6 He is thrown away.… 9Remain`.
-    if (entry.kind === 'ellipsis') {
-      renderEllipsis(host)
-      continue
-    }
-    if (previous !== null) {
-      if (entry.verse.startsParagraph) {
-        host.createEl('br')
-        host.createEl('br')
-      } else joinBlocks(host, entry.verse, previous)
-    }
-    renderSegments(host, entry.verse)
-    previous = entry.verse
-  }
+    ellipsis: () => renderEllipsis(host),
+    verse: (block, previous) => {
+      if (previous !== null) {
+        if (block.startsParagraph) {
+          host.createEl('br')
+          host.createEl('br')
+        } else joinBlocks(host, block, previous)
+      }
+      renderSegments(host, block)
+    },
+  })
+  return null
 }
 
 const renderBlock = (
@@ -625,8 +646,6 @@ const renderBlock = (
   const host = inline
     ? block.createSpan({ cls: 'scripture-study-passage' })
     : block.createDiv({ cls: 'scripture-study-passage' })
-  const controlSlot: ControlSlot = () =>
-    chip ?? host.querySelector<HTMLElement>('.scripture-study-attribution-nav')
   const renderPassage = inline
     ? renderVerseRun
     : model.book === null
@@ -634,7 +653,7 @@ const renderBlock = (
       : bookAtomKind(model.book) === 'verse'
         ? renderBookProse(model, deps)
         : renderBookParagraphs(model, deps)
-  const mounted = mountPassage(host, model, deps, renderPassage, controlSlot)
+  const mounted = mountPassage(host, model, deps, renderPassage, chip)
   if (deps.intersections) {
     renderIntersections(block, model, deps.intersections, sourcePath)
   }
