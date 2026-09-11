@@ -1,26 +1,28 @@
 <!--
 A labelled section of study material, optionally carrying its single add
-action, which stays out of the way until the heading line is hovered.
-Sections without an add action render the bare heading.
+action, which stays out of the way until the heading line is hovered, and
+optionally the fold-all pair acting on the section's own rows, which sits at
+the far edge of the heading line as the References heading has it.
+Sections with neither render the bare heading.
 -->
 <script lang="ts">
-  import { setIcon } from 'obsidian'
+  import { activate, icon } from '../ui'
 
   let {
     label,
     action = '',
     onAdd = null,
     disabled = false,
+    onFoldAll = null,
+    onExpandAll = null,
   }: {
     label: string
     action?: string
     onAdd?: (() => void) | null
     disabled?: boolean
+    onFoldAll?: (() => void) | null
+    onExpandAll?: (() => void) | null
   } = $props()
-
-  const icon = (node: HTMLElement, name: string) => {
-    setIcon(node, name)
-  }
 </script>
 
 <div class="bsm-section-head">
@@ -35,19 +37,43 @@ Sections without an add action render the bare heading.
       onclick={onAdd}
     ><span class="bsm-section-add-icon" use:icon={'circle-plus'}></span></button>
   {/if}
+  {#if onFoldAll !== null && onExpandAll !== null}
+    <span
+      role="button"
+      tabindex="0"
+      class="bsm-section-fold-all"
+      aria-label="Collapse all"
+      title="Collapse all"
+      use:icon={'chevrons-down-up'}
+      onclick={onFoldAll}
+      onkeydown={activate(onFoldAll)}
+    ></span>
+    <span
+      role="button"
+      tabindex="0"
+      class="bsm-section-fold-all"
+      aria-label="Expand all"
+      title="Expand all"
+      use:icon={'chevrons-up-down'}
+      onclick={onExpandAll}
+      onkeydown={activate(onExpandAll)}
+    ></span>
+  {/if}
 </div>
 
 <style>
   .bsm-section-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 0.25rem;
     margin-top: 16px;
   }
 
+  /* The label holds the line's left edge; every action sits out at the right,
+     as the References heading has them. */
   .bsm-group-label {
     display: block;
+    margin-right: auto;
     font-size: var(--font-smallest);
     color: var(--text-faint);
     text-transform: uppercase;
@@ -84,6 +110,25 @@ Sections without an add action render the bare heading.
   }
 
   .bsm-section-add-icon :global(svg) {
+    width: var(--icon-s);
+    height: var(--icon-s);
+  }
+
+  .bsm-section-fold-all {
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    border-radius: var(--radius-s);
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .bsm-section-fold-all:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
+
+  .bsm-section-fold-all :global(svg) {
     width: var(--icon-s);
     height: var(--icon-s);
   }

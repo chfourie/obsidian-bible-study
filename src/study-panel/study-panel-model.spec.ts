@@ -1633,6 +1633,26 @@ describe('annotation folds in the Study Panel', () => {
     expect([...panel.view.foldedAnnotations]).toEqual([])
   })
 
+  it('leaves the passage entries alone when annotations expand, and the annotations alone when passages expand', async () => {
+    const panel = await panelFor()
+
+    panel.toggleFold('|John 15:1')
+    panel.expandAllAnnotations()
+    expect([...panel.view.folded]).toEqual([])
+
+    panel.foldAllAnnotations()
+    expect([...panel.view.folded]).toEqual([])
+
+    panel.toggleAnnotationFold('Annotations/Vine.md')
+    const annotations = [...panel.view.foldedAnnotations]
+
+    panel.expandAll()
+    expect([...panel.view.foldedAnnotations]).toEqual(annotations)
+
+    panel.foldAll()
+    expect([...panel.view.foldedAnnotations]).toEqual(annotations)
+  })
+
   it('keeps an annotation’s fold across an ordering change', async () => {
     const panel = await panelFor()
     panel.toggleAnnotationFold('Annotations/Vine.md')

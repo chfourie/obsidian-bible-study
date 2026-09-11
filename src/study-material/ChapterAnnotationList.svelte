@@ -2,7 +2,8 @@
 The annotations intersecting the scripture in view, one folded row each:
 the chevron and the reference heading both toggle the row, and an open row
 renders the note's whole body beneath in the panel's own scroll. Which rows
-stand open is the followed tab's memory, handed in as `folds`. The reader's
+stand open is the followed tab's memory, handed in as `folds`, which the
+heading's fold-all pair acts on whole once there is a row to fold. The reader's
 chapter section carries an add action opening the annotation prompt
 prefilled from its selection; a surface passing no add action — the note-tab
 panel — gets a bare heading instead, and the whole section hides itself when
@@ -43,6 +44,8 @@ empty.
     label="Annotations"
     action="Annotate the selection or chapter"
     onAdd={annotate}
+    onFoldAll={items.length > 0 ? folds.foldAll : null}
+    onExpandAll={items.length > 0 ? folds.expandAll : null}
   />
 {/if}
 {#if items.length === 0}
