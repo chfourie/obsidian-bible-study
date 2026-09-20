@@ -113,8 +113,8 @@ const renderChip = (
   return chip
 }
 
-// The Passage Editing control (CONTEXT.md): an icon at the chip's end, shown
-// while the passage is hovered, that the editing surface wires. It is drawn
+// The Passage Editing control (CONTEXT.md): an icon at the chip's end, always
+// shown, that the editing surface wires. It is drawn
 // once and moved to the slot again whenever the passage is redrawn, since a
 // Book block's slot — its citation line — is redrawn with the passage.
 const createPassageEditingControl = (host: HTMLElement): HTMLElement => {

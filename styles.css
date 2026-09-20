@@ -470,20 +470,11 @@ body {
   --ss-ul-swatch: var(--ss-ul-5);
 }
 
-/* Passage Editing (CONTEXT.md): the control at the chip's end shows while
-   the passage is hovered, focused, or in the mode. */
+/* Passage Editing (CONTEXT.md): the control at the chip's end always shows. */
 .scripture-study-passage-edit {
   display: inline-flex;
   align-items: center;
-  opacity: 0;
   cursor: pointer;
-  transition: opacity 120ms ease-in-out;
-}
-
-.scripture-study-block:hover .scripture-study-passage-edit,
-.scripture-study-passage-edit:focus-visible,
-.scripture-study-passage-edit[aria-pressed='true'] {
-  opacity: 1;
 }
 
 .scripture-study-passage-edit svg {

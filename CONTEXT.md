@@ -113,7 +113,7 @@ The parts of one occurrence's passage that display; everything outside them is e
 _Avoid_: clip, trim, snippet
 
 ### Passage Editing
-A Live Preview mode on one occurrence, entered from a control that appears while hovering a displayed passage, in which the whole passage shows (elided text faded, not hidden) and its Highlights, Underlines and Excerpt are added, changed and removed. Left with Done, Escape or a click outside. Only one occurrence is in Passage Editing at a time; never offered in reading mode, on mobile, or on a fallback-served passage.
+A Live Preview mode on one occurrence, entered from a control that stands at the end of a displayed passage's chip, in which the whole passage shows (elided text faded, not hidden) and its Highlights, Underlines and Excerpt are added, changed and removed. Left with Done, Escape or a click outside. Only one occurrence is in Passage Editing at a time; never offered in reading mode, on mobile, or on a fallback-served passage.
 _Avoid_: mark mode, annotate mode (Annotation is a note)
 
 ### Verse Gap
