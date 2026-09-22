@@ -18,7 +18,7 @@ describe('parseReference — single verse', () => {
       },
       translation: null,
       display: null,
-      pinned: false,
+      pinnedAnchor: false,
       invalidTokens: [],
       highlights: [],
       underlines: [],
@@ -296,56 +296,77 @@ describe('parseReference — anchor option', () => {
 
   it('marks a reference carrying anchor as pinned, leaving no invalid token', () => {
     const parsed = parseReference('John 15 anchor', options)
-    expect(parsed?.pinned).toBe(true)
+    expect(parsed?.pinnedAnchor).toBe(true)
     expect(parsed?.invalidTokens).toEqual([])
   })
 
   it('leaves a reference without anchor unpinned', () => {
-    expect(parseReference('John 15', options)?.pinned).toBe(false)
-    expect(parseReference('John 15 nkjv block', options)?.pinned).toBe(false)
+    expect(parseReference('John 15', options)?.pinnedAnchor).toBe(false)
+    expect(parseReference('John 15 nkjv block', options)?.pinnedAnchor).toBe(false)
   })
 
   it('matches anchor case-insensitively', () => {
-    expect(parseReference('John 15 Anchor', options)?.pinned).toBe(true)
-    expect(parseReference('John 15 ANCHOR', options)?.pinned).toBe(true)
+    expect(parseReference('John 15 Anchor', options)?.pinnedAnchor).toBe(true)
+    expect(parseReference('John 15 ANCHOR', options)?.pinnedAnchor).toBe(true)
   })
 
   it('accepts anchor in any position among the option tokens', () => {
     const leading = parseReference('John 15 anchor nkjv block', options)
-    expect(leading?.pinned).toBe(true)
+    expect(leading?.pinnedAnchor).toBe(true)
     expect(leading?.translation).toBe('nkjv')
     expect(leading?.display).toBe('block')
     expect(leading?.invalidTokens).toEqual([])
 
     const trailing = parseReference('John 15 block anchor', options)
-    expect(trailing?.pinned).toBe(true)
+    expect(trailing?.pinnedAnchor).toBe(true)
     expect(trailing?.display).toBe('block')
     expect(trailing?.invalidTokens).toEqual([])
   })
 
   it('flags a repeated anchor as an invalid token and stays pinned', () => {
     const parsed = parseReference('John 15 anchor Anchor', options)
-    expect(parsed?.pinned).toBe(true)
+    expect(parsed?.pinnedAnchor).toBe(true)
     expect(parsed?.invalidTokens).toEqual([
       { text: 'Anchor', start: 15, end: 21 },
     ])
   })
 
   it('pins a whole-book reference and a whole-chapter reference', () => {
-    expect(parseReference('John anchor', options)?.pinned).toBe(true)
-    expect(parseReference('John 15 anchor', options)?.pinned).toBe(true)
+    expect(parseReference('John anchor', options)?.pinnedAnchor).toBe(true)
+    expect(parseReference('John 15 anchor', options)?.pinnedAnchor).toBe(true)
   })
 
-  it('takes option tokens after a bare book only when every one classifies', () => {
+  it('takes option tokens after a bare book once one of them classifies', () => {
     const pinned = parseReference('John anchor block', options)
     expect(pinned?.reference.ranges).toEqual([
       { startId: john(1, 1), endId: john(21, 25) },
     ])
-    expect(pinned?.pinned).toBe(true)
+    expect(pinned?.pinnedAnchor).toBe(true)
     expect(pinned?.display).toBe('block')
     expect(parseReference('John nkjv', options)?.translation).toBe('nkjv')
+  })
+
+  it('highlights the tokens after a bare book that do not classify', () => {
+    const trailing = parseReference('John anchor bogus', options)
+    expect(trailing?.pinnedAnchor).toBe(true)
+    expect(trailing?.invalidTokens).toEqual([
+      { text: 'bogus', start: 12, end: 17 },
+    ])
+
+    const leading = parseReference('John foo anchor', options)
+    expect(leading?.pinnedAnchor).toBe(true)
+    expect(leading?.invalidTokens).toEqual([{ text: 'foo', start: 5, end: 8 }])
+
+    const repeated = parseReference('John anchor anchor', options)
+    expect(repeated?.pinnedAnchor).toBe(true)
+    expect(repeated?.invalidTokens).toEqual([
+      { text: 'anchor', start: 12, end: 18 },
+    ])
+  })
+
+  it('leaves a bare book whose every token is unclassified as plain text', () => {
     expect(parseReference('Mark Twain', options)).toBeNull()
-    expect(parseReference('John anchor bogus', options)).toBeNull()
+    expect(parseReference('John bogus nonsense', options)).toBeNull()
   })
 
   it('never pins an invalid reference', () => {

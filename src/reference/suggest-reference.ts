@@ -9,6 +9,7 @@ import {
   isVerseSpecLike,
   matchBook,
   takeVerseSpecTokens,
+  type OptionTokenContext,
   type ParseOptions,
 } from './parse-reference'
 import { takeRelativeSpec } from './relative-reference'
@@ -31,7 +32,7 @@ const optionSuggestions = (
   optionTokens: Token[],
   current: Token,
   translationIds: readonly string[],
-  { pinnable }: { pinnable: boolean },
+  { pinnable }: OptionTokenContext,
 ): ReferenceSuggestion[] => {
   const used = optionTokens.map((token) => token.text.toLowerCase())
   const displayUsed = used.some((token) =>

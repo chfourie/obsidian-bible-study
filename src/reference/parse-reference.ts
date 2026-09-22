@@ -30,9 +30,7 @@ export type ParsedReference = {
   reference: Reference
   translation: string | null
   display: DisplayMode | null
-  // A Pinned Anchor (CONTEXT.md): the reference carried the `anchor` option,
-  // so later Relative References prefer it over a nearer full reference.
-  pinned: boolean
+  pinnedAnchor: boolean
   invalidTokens: ReferenceToken[]
   highlights: HighlightCue[]
   underlines: UnderlineCue[]
@@ -228,7 +226,7 @@ export const classifyOptionTokens = (
 ): Omit<ParsedReference, 'reference'> => {
   let translation: string | null = null
   let display: DisplayMode | null = null
-  let pinned = false
+  let pinnedAnchor = false
   const invalidTokens: ReferenceToken[] = []
   const cues: ParsedCues = { highlights: [], underlines: [], excerpt: [] }
   // A book has exactly one edition, pinned by its manifest — naming a
@@ -245,13 +243,13 @@ export const classifyOptionTokens = (
       display = displayMode
     } else if (translationId !== undefined && translation === null) {
       translation = translationId
-    } else if (lowered === ANCHOR_OPTION && pinnable && !pinned) {
-      pinned = true
+    } else if (lowered === ANCHOR_OPTION && pinnable && !pinnedAnchor) {
+      pinnedAnchor = true
     } else if (cue === null || !addCue(cues, cue)) {
       invalidTokens.push(token)
     }
   }
-  return { translation, display, pinned, invalidTokens, ...cues }
+  return { translation, display, pinnedAnchor, invalidTokens, ...cues }
 }
 
 export const parseReference = (
@@ -272,9 +270,11 @@ export const parseReference = (
     options.translationIds ?? [],
     reference,
   )
-  // A bare book takes option tokens only when every one classifies: a stray
-  // word after a book name (`{Mark Twain}`) is not a whole-book reference with
-  // an invalid token but plain text, the interop safety valve of spec §2.
-  if (!taken && classified.invalidTokens.length > 0) return null
+  // A bare book takes option tokens once one of them classifies, the rest
+  // highlighted as invalid like any reference's; with none classifying, a book
+  // name followed by stray words (`{Mark Twain}`) is plain text rather than a
+  // whole-book reference, the interop safety valve of spec §2.
+  const noneClassified = classified.invalidTokens.length === rest.length
+  if (!taken && rest.length > 0 && noneClassified) return null
   return { reference, ...classified }
 }

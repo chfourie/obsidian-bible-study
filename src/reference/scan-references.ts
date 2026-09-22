@@ -19,19 +19,19 @@ export type ReferenceMatch = {
 class AnchoredScan {
   readonly found: ReferenceMatch[] = []
   #nearestFull: ParsedReference | null = null
-  #pinned: ParsedReference | null = null
+  #pinnedAnchor: ParsedReference | null = null
 
   constructor(private readonly options: ParseOptions) {}
 
   get #anchor(): ParsedReference | null {
-    return this.#pinned ?? this.#nearestFull
+    return this.#pinnedAnchor ?? this.#nearestFull
   }
 
   tryMatch(text: string, start: number, end: number): boolean {
     const parsed = parseReference(text, this.options)
     if (parsed) {
       this.#nearestFull = parsed
-      if (parsed.pinned) this.#pinned = parsed
+      if (parsed.pinnedAnchor) this.#pinnedAnchor = parsed
       this.found.push({ start, end, parsed, relativeSpec: null })
       return true
     }

@@ -120,7 +120,7 @@ describe('scanReferenceMatches relative references', () => {
         reference: { book: 43, ranges: single(john(15, 5)) },
         translation: null,
         display: null,
-        pinned: false,
+        pinnedAnchor: false,
         invalidTokens: [],
         highlights: [],
         underlines: [],
@@ -432,7 +432,7 @@ describe('scanReferenceMatches pinned anchors', () => {
     expect(matches).toHaveLength(4)
     expect(matches[2].relativeSpec).toBe(':5')
     expect(matches[2].parsed.reference.ranges).toEqual(single(john(15, 5)))
-    expect(matches[2].parsed.pinned).toBe(false)
+    expect(matches[2].parsed.pinnedAnchor).toBe(false)
     expect(matches[2].parsed.invalidTokens.map((token) => token.text)).toEqual([
       'anchor',
     ])
@@ -442,7 +442,7 @@ describe('scanReferenceMatches pinned anchors', () => {
   it('reports the pinned reference as pinned and the rest as not', () => {
     const matches = scanReferenceMatches('{John 15 anchor} {Romans 8} {:3}')
 
-    expect(matches.map((match) => match.parsed.pinned)).toEqual([
+    expect(matches.map((match) => match.parsed.pinnedAnchor)).toEqual([
       true,
       false,
       false,
@@ -455,11 +455,26 @@ describe('scanReferenceMatches pinned anchors', () => {
     )
   })
 
+  it('pins a whole-book reference carrying a token that does not classify', () => {
+    const matches = scanReferenceMatches('{John anchor bogus} {Romans 8} {3:16}')
+
+    expect(matches).toHaveLength(3)
+    expect(matches[0].parsed.pinnedAnchor).toBe(true)
+    expect(matches[0].parsed.invalidTokens.map((token) => token.text)).toEqual([
+      'bogus',
+    ])
+    expect(matches[2].parsed.reference.ranges).toEqual(single(john(3, 16)))
+  })
+
+  it('leaves a bare book followed only by unclassified tokens out of the scan', () => {
+    expect(scanReferenceMatches('{Mark Twain} {John 15}')).toHaveLength(1)
+  })
+
   it('pins a Book reference', () => {
     installHumilityBook()
     const matches = scanReferenceMatches('{Humility 1:2-8 anchor} {John 15} {:5}')
 
-    expect(matches[0].parsed.pinned).toBe(true)
+    expect(matches[0].parsed.pinnedAnchor).toBe(true)
     expect(matches[2].parsed.reference).toEqual({
       book: HUMILITY_BOOK,
       ranges: single(makeVerseId(HUMILITY_BOOK, 1, 5)),
