@@ -66,6 +66,7 @@ describe('suggestReference — option tokens', () => {
     expect(labels('John 15:4 ')).toEqual([
       'inline',
       'block',
+      'anchor',
       'nkjv',
       'web',
       'kjv',
@@ -73,6 +74,7 @@ describe('suggestReference — option tokens', () => {
     expect(labels('John 2, 4:5-8 ')).toEqual([
       'inline',
       'block',
+      'anchor',
       'nkjv',
       'web',
       'kjv',
@@ -90,8 +92,13 @@ describe('suggestReference — option tokens', () => {
   })
 
   it('omits option kinds that are already present', () => {
-    expect(labels('John 15:4 block ')).toEqual(['nkjv', 'web', 'kjv'])
-    expect(labels('John 15:4 nkjv ')).toEqual(['inline', 'block'])
+    expect(labels('John 15:4 block ')).toEqual([
+      'anchor',
+      'nkjv',
+      'web',
+      'kjv',
+    ])
+    expect(labels('John 15:4 nkjv ')).toEqual(['inline', 'block', 'anchor'])
   })
 
   it('offers no cue token for any cue family prefix', () => {
@@ -101,6 +108,7 @@ describe('suggestReference — option tokens', () => {
     expect(labels('John 15:4 h1/4.0-4.6 ')).toEqual([
       'inline',
       'block',
+      'anchor',
       'nkjv',
       'web',
       'kjv',
@@ -108,7 +116,49 @@ describe('suggestReference — option tokens', () => {
   })
 
   it('suggests no translations when none are known', () => {
-    expect(labels('John 15:4 ', {})).toEqual(['inline', 'block'])
+    expect(labels('John 15:4 ', {})).toEqual(['inline', 'block', 'anchor'])
+  })
+})
+
+describe('suggestReference — anchor option', () => {
+  it('offers the anchor keyword once a full reference carries a verse spec', () => {
+    expect(labels('John 15:4 ')).toContain('anchor')
+    expect(labels('John 15 ')).toContain('anchor')
+    expect(labels('John 15:26-16:4 ')).toContain('anchor')
+  })
+
+  it('filters the anchor keyword case-insensitively and replaces only the partial token', () => {
+    expect(suggestReference('John 15:4 an', options)).toEqual([
+      { label: 'anchor', insert: 'anchor', replaceFrom: 10 },
+    ])
+    expect(labels('John 15:4 ANCH')).toEqual(['anchor'])
+  })
+
+  it('omits the anchor keyword once the reference is already pinned', () => {
+    expect(labels('John 15:4 anchor ')).toEqual([
+      'inline',
+      'block',
+      'nkjv',
+      'web',
+      'kjv',
+    ])
+    expect(labels('John 15:4 ANCHOR block ')).toEqual(['nkjv', 'web', 'kjv'])
+  })
+
+  it('offers the anchor keyword on a Book reference too', () => {
+    installHumilityBook()
+    try {
+      expect(labels('Humility 1:6 ')).toEqual(['inline', 'block', 'anchor'])
+    } finally {
+      uninstallHumilityBook()
+    }
+  })
+
+  it('never offers the anchor keyword after a relative spec', () => {
+    expect(labels(':5 ')).not.toContain('anchor')
+    expect(labels(':5 an')).toEqual([])
+    expect(labels('15:2 ')).not.toContain('anchor')
+    expect(labels(':5, :7 ')).not.toContain('anchor')
   })
 })
 
@@ -145,7 +195,7 @@ describe('suggestReference — installed books', () => {
   })
 
   it('offers display keywords but never translations on a book reference', () => {
-    expect(labels('Humility 1:6 ')).toEqual(['inline', 'block'])
+    expect(labels('Humility 1:6 ')).toEqual(['inline', 'block', 'anchor'])
   })
 
   it('leaves scripture without section suggestions', () => {

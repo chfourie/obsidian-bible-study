@@ -4,6 +4,7 @@ import {
   registeredBook,
 } from './books'
 import {
+  ANCHOR_OPTION,
   DISPLAY_MODES,
   isVerseSpecLike,
   matchBook,
@@ -30,6 +31,7 @@ const optionSuggestions = (
   optionTokens: Token[],
   current: Token,
   translationIds: readonly string[],
+  { pinnable }: { pinnable: boolean },
 ): ReferenceSuggestion[] => {
   const used = optionTokens.map((token) => token.text.toLowerCase())
   const displayUsed = used.some((token) =>
@@ -38,8 +40,10 @@ const optionSuggestions = (
   const translationUsed = translationIds.some((id) =>
     used.includes(id.toLowerCase()),
   )
+  const anchorUsed = used.includes(ANCHOR_OPTION)
   const candidates = [
     ...(displayUsed ? [] : DISPLAY_MODES),
+    ...(pinnable && !anchorUsed ? [ANCHOR_OPTION] : []),
     ...(translationUsed ? [] : translationIds),
   ]
   const prefix = current.text.toLowerCase()
@@ -97,6 +101,7 @@ export const suggestReference = (
       afterRelativeSpec,
       current,
       options.translationIds ?? [],
+      { pinnable: false },
     )
   }
   const book = matchBook(prior.map((token) => token.text))
@@ -113,6 +118,7 @@ export const suggestReference = (
           taken.optionTokens,
           current,
           isNonBiblicalBook(book.bookId) ? [] : (options.translationIds ?? []),
+          { pinnable: true },
         )
       }
     }

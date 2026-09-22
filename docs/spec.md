@@ -37,7 +37,7 @@ Curly braces with bare space-separated tokens: `{John 15:1-17}`, `{John 15:4 nkj
 - **Errors:** invalid reference part (unknown book, bad structure, out-of-range chapter/verse per versification data) → the whole `{...}` renders as plain text, unstyled (interop safety valve for Templater/JSON braces). Valid reference with unknown/duplicate/conflicting trailing tokens → invalid tokens highlighted and ignored (first valid token wins), reference renders normally.
 - **Escaping:** inline code spans and fenced code blocks never parsed; `\{John 15:4}` escapes to literal text. No per-note disable flag in v1.
 - **Editor modes:** Reading mode renders fully. Live Preview renders identically via CodeMirror 6 decorations, collapsing to raw source when the cursor enters the range (standard Obsidian convention; no partial editing UI). Source mode shows raw text.
-- **Autocompletion:** typing inside an unclosed `{` pops an editor suggest: book names while the book part is typed (canonical name inserted, matched against all aliases), then option keywords and known translation ids once the verse spec is present; option kinds already used are omitted.
+- **Autocompletion:** typing inside an unclosed `{` pops an editor suggest: book names while the book part is typed (canonical name inserted, matched against all aliases), then option keywords (`inline`, `block`, `anchor`) and known translation ids once the verse spec is present; option kinds already used are omitted, and `anchor` is offered only after a full reference's spec, never after a relative one.
 
 ## 3. Rendering in notes
 
