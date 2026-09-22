@@ -179,6 +179,7 @@ export const parseRelativeReference = (
     taken.optionTokens,
     options.translationIds ?? [],
     reference,
+    { pinnable: false },
   )
   const specEnd = tokens[tokens.length - taken.optionTokens.length - 1].end
   return {

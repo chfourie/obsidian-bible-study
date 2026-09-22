@@ -320,6 +320,54 @@ describe('rewriteHighlightToken — non-biblical books', () => {
   })
 })
 
+describe('rewriteCueTokens — pinned anchors', () => {
+  it('leaves the anchor token in place, spelling and order preserved, on a cue write', () => {
+    expect(
+      rewriteCueTokens(
+        'John 15:1-16 Anchor block',
+        highlightsOnly([cue(1, 4, 0, 4, 6)]),
+        options,
+      ),
+    ).toBe('John 15:1-16 nkjv Anchor block h1/4.0-4.6')
+  })
+
+  it('keeps the anchor token when the last cue is erased', () => {
+    expect(
+      rewriteCueTokens('John 15:1-16 nkjv anchor h1/4.0-4.6', highlightsOnly([]), options),
+    ).toBe('John 15:1-16 nkjv anchor')
+  })
+
+  it('keeps anchor between other option tokens', () => {
+    expect(
+      rewriteCueTokens(
+        'John 15:1-16 kjv anchor inline h1/4.0-4.6',
+        highlightsOnly([cue(2, 5, 0, 5, 3)]),
+        options,
+      ),
+    ).toBe('John 15:1-16 kjv anchor inline h2/5.0-5.3')
+  })
+
+  it('pins the translation after the book name of a whole-book reference', () => {
+    expect(
+      rewriteCueTokens('John anchor', highlightsOnly([cue(1, 4, 0, 4, 6)]), options),
+    ).toBe('John nkjv anchor h1/15:4.0-15:4.6')
+  })
+
+  it('addresses cues on a relative reference against the pin it resolved to', () => {
+    const pin = parseReference('John 15 anchor', {
+      translationIds: options.translationIds,
+    })!
+    const resolved = parseRelativeReference(':3', pin)!.parsed.reference
+
+    expect(
+      rewriteCueTokens(':3 inline', highlightsOnly([cue(1, 3, 0, 3, 5)]), {
+        ...options,
+        reference: resolved,
+      }),
+    ).toBe(':3 inline h1/3.0-3.5')
+  })
+})
+
 describe('rewriteCueTokens — relative references', () => {
   const anchor = (text: string) =>
     parseReference(text, { translationIds: options.translationIds })!

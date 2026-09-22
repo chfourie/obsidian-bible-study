@@ -30,6 +30,9 @@ export type ParsedReference = {
   reference: Reference
   translation: string | null
   display: DisplayMode | null
+  // A Pinned Anchor (CONTEXT.md): the reference carried the `anchor` option,
+  // so later Relative References prefer it over a nearer full reference.
+  pinned: boolean
   invalidTokens: ReferenceToken[]
   highlights: HighlightCue[]
   underlines: UnderlineCue[]
@@ -184,6 +187,8 @@ export const takeVerseSpecTokens = <T extends { text: string }>(
 
 export const DISPLAY_MODES: readonly DisplayMode[] = ['inline', 'block']
 
+export const ANCHOR_OPTION = 'anchor'
+
 type ParsedCues = Pick<ParsedReference, 'highlights' | 'underlines' | 'excerpt'>
 
 // Each family keeps its own list; a token repeating one already kept is a
@@ -208,13 +213,22 @@ const addCue = (lists: ParsedCues, token: CueToken): boolean => {
   }
 }
 
+export type OptionTokenContext = {
+  // Only a full reference can anchor, so only a full reference may be pinned:
+  // on a Relative Reference the `anchor` token is invalid (CONTEXT.md — Pinned
+  // Anchor).
+  pinnable: boolean
+}
+
 export const classifyOptionTokens = (
   tokens: ReferenceToken[],
   translationIds: readonly string[],
   reference: Reference,
+  { pinnable }: OptionTokenContext = { pinnable: true },
 ): Omit<ParsedReference, 'reference'> => {
   let translation: string | null = null
   let display: DisplayMode | null = null
+  let pinned = false
   const invalidTokens: ReferenceToken[] = []
   const cues: ParsedCues = { highlights: [], underlines: [], excerpt: [] }
   // A book has exactly one edition, pinned by its manifest — naming a
@@ -231,11 +245,13 @@ export const classifyOptionTokens = (
       display = displayMode
     } else if (translationId !== undefined && translation === null) {
       translation = translationId
+    } else if (lowered === ANCHOR_OPTION && pinnable && !pinned) {
+      pinned = true
     } else if (cue === null || !addCue(cues, cue)) {
       invalidTokens.push(token)
     }
   }
-  return { translation, display, invalidTokens, ...cues }
+  return { translation, display, pinned, invalidTokens, ...cues }
 }
 
 export const parseReference = (
@@ -249,16 +265,16 @@ export const parseReference = (
   const taken = takeVerseSpecTokens(rest)
   const reference = taken
     ? parseVerseSpec(bookMatch.bookId, taken.spec)
-    : rest.length === 0
-      ? wholeBookReference(bookMatch.bookId)
-      : null
+    : wholeBookReference(bookMatch.bookId)
   if (!reference) return null
-  return {
+  const classified = classifyOptionTokens(
+    taken?.optionTokens ?? rest,
+    options.translationIds ?? [],
     reference,
-    ...classifyOptionTokens(
-      taken?.optionTokens ?? [],
-      options.translationIds ?? [],
-      reference,
-    ),
-  }
+  )
+  // A bare book takes option tokens only when every one classifies: a stray
+  // word after a book name (`{Mark Twain}`) is not a whole-book reference with
+  // an invalid token but plain text, the interop safety valve of spec §2.
+  if (!taken && classified.invalidTokens.length > 0) return null
+  return { reference, ...classified }
 }

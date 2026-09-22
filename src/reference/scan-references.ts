@@ -12,21 +12,32 @@ export type ReferenceMatch = {
   relativeSpec: string | null
 }
 
+// The Anchor a Relative Reference resolves against (CONTEXT.md): the nearest
+// Pinned Anchor earlier in the body when one stands, else the nearest full
+// reference. Every full reference becomes the nearest full one; only a pinned
+// one replaces the pin, and nothing unpins short of the end of the body.
 class AnchoredScan {
   readonly found: ReferenceMatch[] = []
-  #anchor: ParsedReference | null = null
+  #nearestFull: ParsedReference | null = null
+  #pinned: ParsedReference | null = null
 
   constructor(private readonly options: ParseOptions) {}
+
+  get #anchor(): ParsedReference | null {
+    return this.#pinned ?? this.#nearestFull
+  }
 
   tryMatch(text: string, start: number, end: number): boolean {
     const parsed = parseReference(text, this.options)
     if (parsed) {
-      this.#anchor = parsed
+      this.#nearestFull = parsed
+      if (parsed.pinned) this.#pinned = parsed
       this.found.push({ start, end, parsed, relativeSpec: null })
       return true
     }
-    if (this.#anchor === null) return false
-    const relative = parseRelativeReference(text, this.#anchor, this.options)
+    const anchor = this.#anchor
+    if (anchor === null) return false
+    const relative = parseRelativeReference(text, anchor, this.options)
     if (!relative) return false
     this.found.push({
       start,

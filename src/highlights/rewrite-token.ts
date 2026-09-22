@@ -7,6 +7,7 @@ import {
   matchBook,
   parseReference,
   takeRelativeSpec,
+  takeVerseSpecTokens,
   type CueRange,
   type ExcerptPart,
   type HighlightCue,
@@ -55,15 +56,21 @@ const withoutCueTokens = (text: string, tokens: readonly TextToken[]): string =>
   return kept + text.slice(cursor)
 }
 
+// The translation goes where the grammar puts option tokens: after the verse
+// spec, or after the book name of a whole-book reference (spec §2).
 const withTranslationAfterSpec = (
   text: string,
   tokens: readonly TextToken[],
   translation: string,
 ): string => {
   const bookMatch = matchBook(tokens.map((token) => token.text))
-  const specToken = bookMatch && tokens[bookMatch.wordsUsed]
-  if (!specToken) return text
-  return `${text.slice(0, specToken.end)} ${translation}${text.slice(specToken.end)}`
+  if (!bookMatch) return text
+  const afterBook = tokens.slice(bookMatch.wordsUsed)
+  const spec = takeVerseSpecTokens(afterBook)
+  const insertAfter = spec
+    ? afterBook[afterBook.length - spec.optionTokens.length - 1]
+    : tokens[bookMatch.wordsUsed - 1]
+  return `${text.slice(0, insertAfter.end)} ${translation}${text.slice(insertAfter.end)}`
 }
 
 const byPlace = (a: CueRange, b: CueRange): number =>

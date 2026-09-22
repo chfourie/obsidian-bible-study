@@ -18,6 +18,7 @@ describe('parseReference — single verse', () => {
       },
       translation: null,
       display: null,
+      pinned: false,
       invalidTokens: [],
       highlights: [],
       underlines: [],
@@ -287,6 +288,69 @@ describe('parseReference — option tokens', () => {
     expect(parsed?.invalidTokens).toEqual([
       { text: 'nkjv', start: 10, end: 14 },
     ])
+  })
+})
+
+describe('parseReference — anchor option', () => {
+  const options = { translationIds: ['nkjv'] }
+
+  it('marks a reference carrying anchor as pinned, leaving no invalid token', () => {
+    const parsed = parseReference('John 15 anchor', options)
+    expect(parsed?.pinned).toBe(true)
+    expect(parsed?.invalidTokens).toEqual([])
+  })
+
+  it('leaves a reference without anchor unpinned', () => {
+    expect(parseReference('John 15', options)?.pinned).toBe(false)
+    expect(parseReference('John 15 nkjv block', options)?.pinned).toBe(false)
+  })
+
+  it('matches anchor case-insensitively', () => {
+    expect(parseReference('John 15 Anchor', options)?.pinned).toBe(true)
+    expect(parseReference('John 15 ANCHOR', options)?.pinned).toBe(true)
+  })
+
+  it('accepts anchor in any position among the option tokens', () => {
+    const leading = parseReference('John 15 anchor nkjv block', options)
+    expect(leading?.pinned).toBe(true)
+    expect(leading?.translation).toBe('nkjv')
+    expect(leading?.display).toBe('block')
+    expect(leading?.invalidTokens).toEqual([])
+
+    const trailing = parseReference('John 15 block anchor', options)
+    expect(trailing?.pinned).toBe(true)
+    expect(trailing?.display).toBe('block')
+    expect(trailing?.invalidTokens).toEqual([])
+  })
+
+  it('flags a repeated anchor as an invalid token and stays pinned', () => {
+    const parsed = parseReference('John 15 anchor Anchor', options)
+    expect(parsed?.pinned).toBe(true)
+    expect(parsed?.invalidTokens).toEqual([
+      { text: 'Anchor', start: 15, end: 21 },
+    ])
+  })
+
+  it('pins a whole-book reference and a whole-chapter reference', () => {
+    expect(parseReference('John anchor', options)?.pinned).toBe(true)
+    expect(parseReference('John 15 anchor', options)?.pinned).toBe(true)
+  })
+
+  it('takes option tokens after a bare book only when every one classifies', () => {
+    const pinned = parseReference('John anchor block', options)
+    expect(pinned?.reference.ranges).toEqual([
+      { startId: john(1, 1), endId: john(21, 25) },
+    ])
+    expect(pinned?.pinned).toBe(true)
+    expect(pinned?.display).toBe('block')
+    expect(parseReference('John nkjv', options)?.translation).toBe('nkjv')
+    expect(parseReference('Mark Twain', options)).toBeNull()
+    expect(parseReference('John anchor bogus', options)).toBeNull()
+  })
+
+  it('never pins an invalid reference', () => {
+    expect(parseReference('John 99 anchor', options)).toBeNull()
+    expect(parseReference('Johnny 15 anchor', options)).toBeNull()
   })
 })
 

@@ -120,6 +120,7 @@ describe('scanReferenceMatches relative references', () => {
         reference: { book: 43, ranges: single(john(15, 5)) },
         translation: null,
         display: null,
+        pinned: false,
         invalidTokens: [],
         highlights: [],
         underlines: [],
@@ -371,6 +372,121 @@ describe('scanReferenceMatches relative references', () => {
     expect(matches[1].parsed.translation).toBeNull()
     expect(matches[1].parsed.invalidTokens.map((token) => token.text)).toEqual([
       'web',
+    ])
+  })
+})
+
+describe('scanReferenceMatches pinned anchors', () => {
+  const rangesOf = (content: string, options = {}) =>
+    scanReferenceMatches(content, options).map(
+      (match) => match.parsed.reference.ranges,
+    )
+
+  it('resolves a relative reference against the pin over a nearer full reference', () => {
+    expect(rangesOf('{John 15 anchor} {Romans 8} {:3}')).toEqual([
+      [{ startId: john(15, 1), endId: john(15, 27) }],
+      [{ startId: makeVerseId(45, 8, 1), endId: makeVerseId(45, 8, 39) }],
+      single(john(15, 3)),
+    ])
+  })
+
+  it('falls back to the nearest full reference when nothing is pinned', () => {
+    expect(rangesOf('{John 15} {Romans 8} {:3}')[2]).toEqual(
+      single(makeVerseId(45, 8, 3)),
+    )
+  })
+
+  it('lets a later pin replace the earlier one', () => {
+    expect(
+      rangesOf('{John 15 anchor} {Psalm 23 anchor} {John 3} {:4}')[3],
+    ).toEqual(single(makeVerseId(19, 23, 4)))
+  })
+
+  it('holds the pin across lines to the end of the note body', () => {
+    const content =
+      '# A\n{John 15 anchor}\n\n## B\n{John 3:16-17}\n\ntext {:17}\n\n{Romans 8}\n{:5}\n'
+
+    expect(rangesOf(content).slice(2)).toEqual([
+      single(john(15, 17)),
+      [{ startId: makeVerseId(45, 8, 1), endId: makeVerseId(45, 8, 39) }],
+      single(john(15, 5)),
+    ])
+  })
+
+  it('never anchors on an invalid pinned reference', () => {
+    expect(rangesOf('{John 15} {John 99 anchor} {:3}')).toEqual([
+      [{ startId: john(15, 1), endId: john(15, 27) }],
+      single(john(15, 3)),
+    ])
+  })
+
+  it('never takes a pin from frontmatter', () => {
+    const content = '---\nref: John 15 anchor\n---\n{Romans 8} {:3}\n'
+
+    expect(rangesOf(content)[1]).toEqual(single(makeVerseId(45, 8, 3)))
+  })
+
+  it('flags anchor on a relative reference as invalid and still resolves the chip', () => {
+    const matches = scanReferenceMatches('{John 15 anchor} {Romans 8} {:5 anchor} {:3}')
+
+    expect(matches).toHaveLength(4)
+    expect(matches[2].relativeSpec).toBe(':5')
+    expect(matches[2].parsed.reference.ranges).toEqual(single(john(15, 5)))
+    expect(matches[2].parsed.pinned).toBe(false)
+    expect(matches[2].parsed.invalidTokens.map((token) => token.text)).toEqual([
+      'anchor',
+    ])
+    expect(matches[3].parsed.reference.ranges).toEqual(single(john(15, 3)))
+  })
+
+  it('reports the pinned reference as pinned and the rest as not', () => {
+    const matches = scanReferenceMatches('{John 15 anchor} {Romans 8} {:3}')
+
+    expect(matches.map((match) => match.parsed.pinned)).toEqual([
+      true,
+      false,
+      false,
+    ])
+  })
+
+  it('pins a whole-book reference', () => {
+    expect(rangesOf('{John anchor} {Romans 8} {3:16}')[2]).toEqual(
+      single(john(3, 16)),
+    )
+  })
+
+  it('pins a Book reference', () => {
+    installHumilityBook()
+    const matches = scanReferenceMatches('{Humility 1:2-8 anchor} {John 15} {:5}')
+
+    expect(matches[0].parsed.pinned).toBe(true)
+    expect(matches[2].parsed.reference).toEqual({
+      book: HUMILITY_BOOK,
+      ranges: single(makeVerseId(HUMILITY_BOOK, 1, 5)),
+    })
+  })
+
+  it('inherits the translation from the pin, not the nearer full reference', () => {
+    const matches = scanReferenceMatches(
+      '{John 15 niv anchor} {Romans 8 kjv} {:3} {:4 kjv}',
+      { translationIds: ['niv', 'kjv'] },
+    )
+
+    expect(matches[2].parsed.translation).toBe('niv')
+    expect(matches[3].parsed.translation).toBe('kjv')
+  })
+
+  it('leaves a verse outside the pin as plain text even when the nearer full reference holds it', () => {
+    expect(scanReferenceMatches('{John 15 anchor} {Romans 8} {:30}')).toHaveLength(2)
+  })
+
+  it('leaves notes without anchor resolving as before', () => {
+    expect(rangesOf('{John 15:4-9} {Romans 8} {:3} {John 3} {:16}')).toEqual([
+      [{ startId: john(15, 4), endId: john(15, 9) }],
+      [{ startId: makeVerseId(45, 8, 1), endId: makeVerseId(45, 8, 39) }],
+      single(makeVerseId(45, 8, 3)),
+      [{ startId: john(3, 1), endId: john(3, 36) }],
+      single(john(3, 16)),
     ])
   })
 })
